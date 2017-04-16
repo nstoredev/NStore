@@ -52,5 +52,18 @@ namespace NStore.Tests
         {
 			await Store.PersistAsync("Stream_1",1, new { data = "this is a test"});
         }
+
+		[Fact]
+		public void InsertMany()
+		{
+			var all = new Task[100];
+
+			for (var i = 0; i < 100; i++)
+			{
+				all[i] = Store.PersistAsync("Stream_2", i, new { data = "this is a test" });
+			}
+
+			Task.WaitAll(all);
+		}
     }
 }
