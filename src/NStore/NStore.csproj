@@ -7,7 +7,6 @@
 
   <ItemGroup>
     <Folder Include="Contracts\" />
-    <Folder Include="MemoryStore\" />
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Program.cs" />

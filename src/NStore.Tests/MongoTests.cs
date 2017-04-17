@@ -6,30 +6,9 @@ using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Linq;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
 
 namespace NStore.Tests
 {
-	public static class AsyncExtensions
-	{
-		public static Task ForEachAsync<T>(
-		  this IEnumerable<T> source, int dop, Func<T, Task> body)
-		{
-			return Task.WhenAll(
-				from partition in Partitioner.Create(source).GetPartitions(dop)
-				select Task.Run(async delegate
-				{
-					using (partition)
-						while (partition.MoveNext())
-							await body(partition.Current).ContinueWith(t =>
-								  {
-									  //observe exceptions
-								  });
-
-				}));
-		}
-	}
-
 	public class MongoFixture : IDisposable
 	{
 		public IStore Store { get; }
@@ -97,6 +76,13 @@ namespace NStore.Tests
 			await Store.PersistAsync("Stream_1", 1, new { data = "this is a test" });
 		}
 
+		[Fact]
+		public async Task InsertLast()
+		{
+			Clear();
+			await Store.PersistAsync("Stream_1", long.MaxValue, new { data = "this is a test" });
+		}
+
 		[Fact(Skip = "long running")]
 		public async Task InsertMany()
 		{
@@ -148,7 +134,7 @@ namespace NStore.Tests
 			await Store.PersistAsync("Id_1", 1, new { data = "this is a test" }, opId);
 
 			var list = new List<object>();
-			await Store.GetAsync("Id_1", 0, (i, p) => { list.Add(p); });
+			await Store.ScanAsync("Id_1", 0, ScanDirection.Forward, (i, p) => { list.Add(p); return ScanCallbackResult.Continue; });
 
 			Assert.Equal(1, list.Count());
 		}
@@ -163,8 +149,8 @@ namespace NStore.Tests
 			await Store.PersistAsync("Id_2", 1, "b", opId);
 
 			var list = new List<object>();
-			await Store.GetAsync("Id_1", 0, (i, p) => { list.Add(p); });
-			await Store.GetAsync("Id_2", 0, (i, p) => { list.Add(p); });
+			await Store.ScanAsync("Id_1", 0, ScanDirection.Forward, (i, p) => { list.Add(p); return ScanCallbackResult.Continue; });
+			await Store.ScanAsync("Id_2", 0, ScanDirection.Forward, (i, p) => { list.Add(p); return ScanCallbackResult.Continue; });
 
 			Assert.Equal(2, list.Count());
 		}

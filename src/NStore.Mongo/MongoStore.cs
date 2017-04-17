@@ -31,7 +31,7 @@ namespace NStore.Mongo
 			_db = db;
 		}
 
-		public async Task GetAsync(string streamId, long indexStart, Action<long, object> callback)
+		public async Task ScanAsync(string streamId, long indexStart, ScanDirection direction, Func<long, object, ScanCallbackResult> callback)
 		{
 			var filter = Builders<MongoCommit>.Filter.And(
 				Builders<MongoCommit>.Filter.Eq(x => x.StreamId, streamId),
@@ -48,7 +48,10 @@ namespace NStore.Mongo
 					var batch = cursor.Current;
 					foreach (var b in batch)
 					{
-						callback(b.Index, b.Payload);
+						if (ScanCallbackResult.Stop == callback(b.Index, b.Payload))
+						{
+							return;
+						}
 					}
 				}
 			}
