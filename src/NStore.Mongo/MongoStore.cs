@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
-using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace NStore.Mongo
 {
-	internal class MongoCommit
+	internal class Chunk
 	{
 		public long Id { get; set; }
 		public string StreamId { get; set; }
@@ -14,7 +13,7 @@ namespace NStore.Mongo
 		public string OpId { get; set; }
 	}
 
-	internal class MongoId
+	internal class Counter
 	{
 		public string Id { get; set; }
 		public long LastValue { get; set; }
@@ -23,8 +22,8 @@ namespace NStore.Mongo
 	public class MongoStore : IStore
 	{
 		private IMongoDatabase _db;
-		private IMongoCollection<MongoCommit> _events;
-		private IMongoCollection<MongoId> _id;
+		private IMongoCollection<Chunk> _chunks;
+		private IMongoCollection<Counter> _counters;
 
 		public MongoStore(IMongoDatabase db)
 		{
@@ -33,29 +32,29 @@ namespace NStore.Mongo
 
 		public async Task ScanAsync(string streamId, long indexStart, ScanDirection direction, Func<long, object, ScanCallbackResult> callback)
 		{
-			SortDefinition<MongoCommit> sort;
-			FilterDefinition<MongoCommit> filter;
+			SortDefinition<Chunk> sort;
+			FilterDefinition<Chunk> filter;
 
 			if (direction == ScanDirection.Forward)
 			{
-				sort = Builders<MongoCommit>.Sort.Ascending(x => x.Index);
-				filter = Builders<MongoCommit>.Filter.And(
-					Builders<MongoCommit>.Filter.Eq(x => x.StreamId, streamId),
-					Builders<MongoCommit>.Filter.Gte(x => x.Index, indexStart)
+				sort = Builders<Chunk>.Sort.Ascending(x => x.Index);
+				filter = Builders<Chunk>.Filter.And(
+					Builders<Chunk>.Filter.Eq(x => x.StreamId, streamId),
+					Builders<Chunk>.Filter.Gte(x => x.Index, indexStart)
 				);
 			}
 			else
 			{
-				sort = Builders<MongoCommit>.Sort.Descending(x => x.Index);
-				filter = Builders<MongoCommit>.Filter.And(
-					Builders<MongoCommit>.Filter.Eq(x => x.StreamId, streamId),
-					Builders<MongoCommit>.Filter.Lte(x => x.Index, indexStart)
+				sort = Builders<Chunk>.Sort.Descending(x => x.Index);
+				filter = Builders<Chunk>.Filter.And(
+					Builders<Chunk>.Filter.Eq(x => x.StreamId, streamId),
+					Builders<Chunk>.Filter.Lte(x => x.Index, indexStart)
 				);
 			}
 
-			var options = new FindOptions<MongoCommit>() { Sort = sort };
+			var options = new FindOptions<Chunk>() { Sort = sort };
 
-			using (var cursor = await _events.FindAsync(filter, options))
+			using (var cursor = await _chunks.FindAsync(filter, options))
 			{
 				while (await cursor.MoveNextAsync())
 				{
@@ -74,7 +73,7 @@ namespace NStore.Mongo
 		public async Task PersistAsync(string streamId, long index, object payload, string operationId)
 		{
 			long id = await GetNextId();
-			var doc = new MongoCommit()
+			var doc = new Chunk()
 			{
 				Id = id,
 				StreamId = streamId,
@@ -88,7 +87,7 @@ namespace NStore.Mongo
 
 		private async Task PersistEmptyAsync(long id)
 		{
-			var commit = new MongoCommit()
+			var empty = new Chunk()
 			{
 				Id = id,
 				StreamId = "_empty",
@@ -97,14 +96,14 @@ namespace NStore.Mongo
 				OpId = "_" + id
 			};
 
-			await InternalPersistAsync(commit);
+			await InternalPersistAsync(empty);
 		}
 
-		private async Task InternalPersistAsync(MongoCommit commit)
+		private async Task InternalPersistAsync(Chunk chunk)
 		{
 			try
 			{
-				await _events.InsertOneAsync(commit);
+				await _chunks.InsertOneAsync(chunk);
 			}
 			catch (MongoWriteException ex)
 			{
@@ -112,7 +111,7 @@ namespace NStore.Mongo
 				{
 					if (ex.Message.Contains("stream_operation"))
 					{
-						await PersistEmptyAsync(commit.Id);
+						await PersistEmptyAsync(chunk.Id);
 					}
 					return;
 				}
@@ -123,11 +122,11 @@ namespace NStore.Mongo
 
 		public async Task InitAsync()
 		{
-			_events = _db.GetCollection<MongoCommit>("events");
-			_id = _db.GetCollection<MongoId>("ids");
+			_chunks = _db.GetCollection<Chunk>("streams");
+			_counters = _db.GetCollection<Counter>("ids");
 
-			await _events.Indexes.CreateOneAsync(
-				Builders<MongoCommit>.IndexKeys
+			await _chunks.Indexes.CreateOneAsync(
+				Builders<Chunk>.IndexKeys
 				 	.Ascending(x => x.StreamId)
 					.Ascending(x => x.Index),
 				new CreateIndexOptions()
@@ -137,8 +136,8 @@ namespace NStore.Mongo
 				}
 			);
 
-			await _events.Indexes.CreateOneAsync(
-				Builders<MongoCommit>.IndexKeys
+			await _chunks.Indexes.CreateOneAsync(
+				Builders<Chunk>.IndexKeys
 					.Ascending(x => x.StreamId)
 					.Ascending(x => x.OpId),
 				new CreateIndexOptions()
@@ -152,15 +151,15 @@ namespace NStore.Mongo
 		private async Task<long> GetNextId()
 		{
 
-			var filter = Builders<MongoId>.Filter.Eq(x => x.Id, "id");
-			var update = Builders<MongoId>.Update.Inc(x => x.LastValue, 1);
-			var options = new FindOneAndUpdateOptions<MongoId>()
+			var filter = Builders<Counter>.Filter.Eq(x => x.Id, "id");
+			var update = Builders<Counter>.Update.Inc(x => x.LastValue, 1);
+			var options = new FindOneAndUpdateOptions<Counter>()
 			{
 				IsUpsert = true,
 				ReturnDocument = ReturnDocument.After
 			};
 
-			var updateResult = await _id.FindOneAndUpdateAsync(
+			var updateResult = await _counters.FindOneAndUpdateAsync(
 				filter, update, options
 			);
 

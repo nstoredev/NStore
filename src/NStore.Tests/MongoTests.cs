@@ -151,7 +151,7 @@ namespace NStore.Tests
 
 			sw.Stop();
 
-			Console.WriteLine($"Written {max} commits in {sw.ElapsedMilliseconds}ms using {dop} workers");
+			Console.WriteLine($"Written {max} chunks in {sw.ElapsedMilliseconds}ms using {dop} workers");
 		}
 	}
 
