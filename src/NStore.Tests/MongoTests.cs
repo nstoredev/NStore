@@ -67,7 +67,9 @@ namespace NStore.Tests
 	{
 		public ScanTest(MongoFixture fixture) : base(fixture)
 		{
-			Store.PersistAsync("Stream_1", 1, "data").Wait();
+			Store.PersistAsync("Stream_1", 1, "a").Wait();
+			Store.PersistAsync("Stream_1", 2, "b").Wait();
+			Store.PersistAsync("Stream_1", 3, "c").Wait();
 		}
 
 		[Fact]
@@ -80,7 +82,7 @@ namespace NStore.Tests
 				(idx, pl) => { payload = pl; return ScanCallbackResult.Stop; }
 			);
 
-			Assert.Equal("data", payload);
+			Assert.Equal("a", payload);
 		}
 
 		[Fact]
@@ -93,7 +95,39 @@ namespace NStore.Tests
 				(idx, pl) => { payload = pl; return ScanCallbackResult.Stop; }
 			);
 
-			Assert.Equal("data", payload);
+			Assert.Equal("c", payload);
+		}
+
+		[Fact]
+		public async Task should_read_only_first_two_chunks()
+		{
+			var buffer = new Accumulator();
+
+			await Store.ScanAsync(
+				"Stream_1", 0, ScanDirection.Forward,
+				buffer.Consume,
+				2
+			);
+
+			Assert.Equal(2, buffer.Length);
+			Assert.Equal("a", buffer[0]);
+			Assert.Equal("b", buffer[1]);
+		}
+
+		[Fact]
+		public async Task should_read_only_last_two_chunks()
+		{
+			var buffer = new Accumulator();
+
+			await Store.ScanAsync(
+				"Stream_1", long.MaxValue, ScanDirection.Backward,
+				buffer.Consume,
+				2
+			);
+
+			Assert.Equal(2, buffer.Length);
+			Assert.Equal("c", buffer[0]);
+			Assert.Equal("b", buffer[1]);
 		}
 	}
 

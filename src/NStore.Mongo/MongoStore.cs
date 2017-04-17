@@ -24,13 +24,20 @@ namespace NStore.Mongo
 		private IMongoDatabase _db;
 		private IMongoCollection<Chunk> _chunks;
 		private IMongoCollection<Counter> _counters;
+		private string _streamsCollectionName;
 
-		public MongoStore(IMongoDatabase db)
+		public MongoStore(IMongoDatabase db, string streamsCollectionName = "streams")
 		{
 			_db = db;
+			_streamsCollectionName = streamsCollectionName;
 		}
 
-		public async Task ScanAsync(string streamId, long indexStart, ScanDirection direction, Func<long, object, ScanCallbackResult> callback)
+		public async Task ScanAsync(
+			string streamId,
+			long indexStart,
+			ScanDirection direction,
+			Func<long, object, ScanCallbackResult> callback,
+			int limit = int.MaxValue)
 		{
 			SortDefinition<Chunk> sort;
 			FilterDefinition<Chunk> filter;
@@ -53,6 +60,11 @@ namespace NStore.Mongo
 			}
 
 			var options = new FindOptions<Chunk>() { Sort = sort };
+
+			if (limit != int.MaxValue)
+			{
+				options.Limit = limit;
+			}
 
 			using (var cursor = await _chunks.FindAsync(filter, options))
 			{
@@ -122,7 +134,7 @@ namespace NStore.Mongo
 
 		public async Task InitAsync()
 		{
-			_chunks = _db.GetCollection<Chunk>("streams");
+			_chunks = _db.GetCollection<Chunk>(_streamsCollectionName);
 			_counters = _db.GetCollection<Counter>("ids");
 
 			await _chunks.Indexes.CreateOneAsync(

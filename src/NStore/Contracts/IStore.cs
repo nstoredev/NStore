@@ -19,7 +19,19 @@ namespace NStore
 	public interface IStore
 	{
 		Task InitAsync();
-		Task ScanAsync(string streamId, long indexStart, ScanDirection direction, Func<long, object, ScanCallbackResult> callback);
-		Task PersistAsync(string streamId, long index, object payload, string operationId = null);
+		Task ScanAsync(
+			string streamId, 
+			long indexStart, 
+			ScanDirection direction, 
+			Func<long, object, ScanCallbackResult> callback,
+			int limit = int.MaxValue
+		);
+
+		Task PersistAsync(
+			string streamId, 
+			long index, 
+			object payload, 
+			string operationId = null
+		);
 	}
 }
