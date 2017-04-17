@@ -32,7 +32,7 @@ namespace NStore
 			throw new NotImplementedException();
 		}
 
-		public Task PersistAsync(string streamId, long index, object payload)
+		public Task PersistAsync(string streamId, long index, object payload, string operationId)
 		{
 			throw new NotImplementedException();
 		}

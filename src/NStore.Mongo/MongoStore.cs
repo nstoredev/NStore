@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace NStore.Mongo
@@ -10,6 +11,7 @@ namespace NStore.Mongo
 		public string StreamId { get; set; }
 		public long Index { get; set; }
 		public object Payload { get; set; }
+		public string OpId { get; set; }
 	}
 
 	internal class MongoId
@@ -29,12 +31,30 @@ namespace NStore.Mongo
 			_db = db;
 		}
 
-		public Task GetAsync(string streamId, long indexStart, Action<long, object> callback)
+		public async Task GetAsync(string streamId, long indexStart, Action<long, object> callback)
 		{
-			throw new NotImplementedException();
+			var filter = Builders<MongoCommit>.Filter.And(
+				Builders<MongoCommit>.Filter.Eq(x => x.StreamId, streamId),
+				Builders<MongoCommit>.Filter.Gte(x => x.Index, indexStart)
+			);
+
+			var sort = Builders<MongoCommit>.Sort.Ascending(x => x.Index);
+			var options = new FindOptions<MongoCommit>() { Sort = sort };
+
+			using (var cursor = await _events.FindAsync(filter, options))
+			{
+				while (await cursor.MoveNextAsync())
+				{
+					var batch = cursor.Current;
+					foreach (var b in batch)
+					{
+						callback(b.Index, b.Payload);
+					}
+				}
+			}
 		}
 
-		public async Task PersistAsync(string streamId, long index, object payload)
+		public async Task PersistAsync(string streamId, long index, object payload, string operationId)
 		{
 			long id = await GetNextId();
 			var doc = new MongoCommit()
@@ -42,10 +62,46 @@ namespace NStore.Mongo
 				Id = id,
 				StreamId = streamId,
 				Index = index,
-				Payload = payload
+				Payload = payload,
+				OpId = operationId ?? Guid.NewGuid().ToString()
 			};
 
-			await _events.InsertOneAsync(doc);
+			await InternalPersistAsync(doc);
+		}
+
+		private async Task PersistEmptyAsync(long id)
+		{
+			var commit = new MongoCommit()
+			{
+				Id = id,
+				StreamId = "_empty",
+				Index = id,
+				Payload = null,
+				OpId = "_" + id
+			};
+
+			await InternalPersistAsync(commit);
+		}
+
+		private async Task InternalPersistAsync(MongoCommit commit)
+		{
+			try
+			{
+				await _events.InsertOneAsync(commit);
+			}
+			catch (MongoWriteException ex)
+			{
+				if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+				{
+					if (ex.Message.Contains("stream_operation"))
+					{
+						await PersistEmptyAsync(commit.Id);
+					}
+					return;
+				}
+
+				throw;
+			}
 		}
 
 		public async Task InitAsync()
@@ -56,14 +112,28 @@ namespace NStore.Mongo
 			await _events.Indexes.CreateOneAsync(
 				Builders<MongoCommit>.IndexKeys
 				 	.Ascending(x => x.StreamId)
-					.Ascending(x => x.Index), 
-				new CreateIndexOptions(){
-					Unique = true
+					.Ascending(x => x.Index),
+				new CreateIndexOptions()
+				{
+					Unique = true,
+					Name = "stream_sequence"
+				}
+			);
+
+			await _events.Indexes.CreateOneAsync(
+				Builders<MongoCommit>.IndexKeys
+					.Ascending(x => x.StreamId)
+					.Ascending(x => x.OpId),
+				new CreateIndexOptions()
+				{
+					Unique = true,
+					Name = "stream_operation"
 				}
 			);
 		}
 
-		private async Task<long> GetNextId(){
+		private async Task<long> GetNextId()
+		{
 
 			var filter = Builders<MongoId>.Filter.Eq(x => x.Id, "id");
 			var update = Builders<MongoId>.Update.Inc(x => x.LastValue, 1);
@@ -74,7 +144,7 @@ namespace NStore.Mongo
 			};
 
 			var updateResult = await _id.FindOneAndUpdateAsync(
-				filter,update, options
+				filter, update, options
 			);
 
 			return updateResult.LastValue;

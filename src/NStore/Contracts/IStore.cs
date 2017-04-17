@@ -7,6 +7,6 @@ namespace NStore
 	{
 		Task InitAsync();
 		Task GetAsync(string streamId, long indexStart, Action<long,object> callback);
-		Task PersistAsync(string streamId, long index, object payload);
+		Task PersistAsync(string streamId, long index, object payload, string operationId = null);
 	}
 }
