@@ -33,12 +33,26 @@ namespace NStore.Mongo
 
 		public async Task ScanAsync(string streamId, long indexStart, ScanDirection direction, Func<long, object, ScanCallbackResult> callback)
 		{
-			var filter = Builders<MongoCommit>.Filter.And(
-				Builders<MongoCommit>.Filter.Eq(x => x.StreamId, streamId),
-				Builders<MongoCommit>.Filter.Gte(x => x.Index, indexStart)
-			);
+			SortDefinition<MongoCommit> sort;
+			FilterDefinition<MongoCommit> filter;
 
-			var sort = Builders<MongoCommit>.Sort.Ascending(x => x.Index);
+			if (direction == ScanDirection.Forward)
+			{
+				sort = Builders<MongoCommit>.Sort.Ascending(x => x.Index);
+				filter = Builders<MongoCommit>.Filter.And(
+					Builders<MongoCommit>.Filter.Eq(x => x.StreamId, streamId),
+					Builders<MongoCommit>.Filter.Gte(x => x.Index, indexStart)
+				);
+			}
+			else
+			{
+				sort = Builders<MongoCommit>.Sort.Descending(x => x.Index);
+				filter = Builders<MongoCommit>.Filter.And(
+					Builders<MongoCommit>.Filter.Eq(x => x.StreamId, streamId),
+					Builders<MongoCommit>.Filter.Lte(x => x.Index, indexStart)
+				);
+			}
+
 			var options = new FindOptions<MongoCommit>() { Sort = sort };
 
 			using (var cursor = await _events.FindAsync(filter, options))

@@ -63,6 +63,40 @@ namespace NStore.Tests
 		}
 	}
 
+	public class ScanTest : AbstractMongoTest
+	{
+		public ScanTest(MongoFixture fixture) : base(fixture)
+		{
+			Store.PersistAsync("Stream_1", 1, "data").Wait();
+		}
+
+		[Fact]
+		public async Task ReadFirst()
+		{
+			object payload = null;
+
+			await Store.ScanAsync(
+				"Stream_1", 0, ScanDirection.Forward,
+				(idx, pl) => { payload = pl; return ScanCallbackResult.Stop; }
+			);
+
+			Assert.Equal("data", payload);
+		}
+
+		[Fact]
+		public async Task ReadLast()
+		{
+			object payload = null;
+
+			await Store.ScanAsync(
+				"Stream_1", long.MaxValue, ScanDirection.Backward,
+				(idx, pl) => { payload = pl; return ScanCallbackResult.Stop; }
+			);
+
+			Assert.Equal("data", payload);
+		}
+	}
+
 	public class MongoWriteTests : AbstractMongoTest
 	{
 		public MongoWriteTests(MongoFixture fixture) : base(fixture)
@@ -82,6 +116,8 @@ namespace NStore.Tests
 			Clear();
 			await Store.PersistAsync("Stream_1", long.MaxValue, new { data = "this is a test" });
 		}
+
+
 
 		[Fact(Skip = "long running")]
 		public async Task InsertMany()
