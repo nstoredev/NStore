@@ -2,9 +2,9 @@
 
 namespace NStore.Tests
 {
-	class Accumulator
+	internal class Accumulator
 	{
-		private IList<object> _data = new List<object>();
+		private readonly IList<object> _data = new List<object>();
 		public IEnumerable<object> Data => _data;
 		public int Length => _data.Count;
 
@@ -14,12 +14,6 @@ namespace NStore.Tests
 			return ScanCallbackResult.Continue;
 		}
 
-		public object this[int index]
-		{
-			get
-			{
-				return _data[index];
-			}
-		}
+		public object this[int index] => _data[index];
 	}
 }
