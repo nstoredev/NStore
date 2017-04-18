@@ -124,13 +124,20 @@ namespace NStore.Mongo
 			}
 			catch (MongoWriteException ex)
 			{
+				//Console.WriteLine($"Error {ex.Message} - {ex.GetType().FullName}");
+
 				if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
 				{
+					if (ex.Message.Contains("stream_sequence"))
+					{
+						throw new DuplicateStreamIndexException(chunk.StreamId, chunk.Index);
+					}
+
 					if (ex.Message.Contains("stream_operation"))
 					{
 						await PersistEmptyAsync(chunk.Id);
+						return;
 					}
-					return;
 				}
 
 				throw;

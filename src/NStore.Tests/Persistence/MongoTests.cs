@@ -67,6 +67,7 @@ namespace NStore.Tests.Persistence
 	{
 		public ScanTest(MongoFixture fixture) : base(fixture)
 		{
+			Clear();
 			Store.PersistAsync("Stream_1", 1, "a").Wait();
 			Store.PersistAsync("Stream_1", 2, "b").Wait();
 			Store.PersistAsync("Stream_1", 3, "c").Wait();
@@ -163,23 +164,37 @@ namespace NStore.Tests.Persistence
 		}
 
 		[Fact]
-		public async Task InsertOne()
+		public async Task can_insert_at_first_index()
 		{
 			Clear();
 			await Store.PersistAsync("Stream_1", 1, new { data = "this is a test" });
 		}
 
 		[Fact]
-		public async Task InsertLast()
+		public async Task can_insert_at_last_index()
 		{
 			Clear();
 			await Store.PersistAsync("Stream_1", long.MaxValue, new { data = "this is a test" });
 		}
 
-
-
-//		[Fact(Skip = "long running")]
 		[Fact]
+		public async Task insert_duplicate_chunk_index_should_throw()
+		{
+			Clear();
+			await Store.PersistAsync("dup", 1, new { data = "first attempt" });
+			await Store.PersistAsync("dup", 2, new { data = "should not work" });
+
+			var ex = await Assert.ThrowsAnyAsync<DuplicateStreamIndexException>(() =>
+				 Store.PersistAsync("dup", 1, new { data = "this is a test" })
+			);
+
+			Assert.Equal("Duplicated index 1 on stream dup", ex.Message);
+			Assert.Equal("dup", ex.StreamId);
+			Assert.Equal(1, ex.Index);
+		}
+
+		[Fact(Skip = "long running")]
+		//[Fact]
 		public async Task InsertMany()
 		{
 			await Worker(1, 10000);
