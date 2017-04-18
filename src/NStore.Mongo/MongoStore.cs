@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Driver;
 
@@ -21,10 +22,14 @@ namespace NStore.Mongo
 
 	public class MongoStore : IStore
 	{
-		private IMongoDatabase _db;
+		private readonly IMongoDatabase _db;
+	    private readonly string _streamsCollectionName;
+
 		private IMongoCollection<Chunk> _chunks;
 		private IMongoCollection<Counter> _counters;
-		private string _streamsCollectionName;
+
+        //@@TODO Optimistic cache
+        private long _id = 0;
 
 		public MongoStore(IMongoDatabase db, string streamsCollectionName = "streams")
 		{
@@ -160,10 +165,12 @@ namespace NStore.Mongo
 			);
 		}
 
-		private async Task<long> GetNextId()
-		{
+	    private async Task<long> GetNextId()
+	    {
+            //@@TODO optimistic cache
+//	        return Interlocked.Increment(ref _id);
 
-			var filter = Builders<Counter>.Filter.Eq(x => x.Id, "id");
+            var filter = Builders<Counter>.Filter.Eq(x => x.Id, "id");
 			var update = Builders<Counter>.Update.Inc(x => x.LastValue, 1);
 			var options = new FindOneAndUpdateOptions<Counter>()
 			{

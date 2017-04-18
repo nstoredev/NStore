@@ -12,9 +12,9 @@ namespace NStore.Tests
 	public class MongoFixture : IDisposable
 	{
 		public IStore Store { get; }
-		private IMongoDatabase _db;
-		private MongoClient _client;
-		private MongoUrl _url;
+		private readonly IMongoDatabase _db;
+		private readonly MongoClient _client;
+		private readonly MongoUrl _url;
 
 		public MongoFixture()
 		{
@@ -48,11 +48,11 @@ namespace NStore.Tests
 	[Collection("Mongo collection")]
 	public abstract class AbstractMongoTest
 	{
-		private MongoFixture _fixture;
+		private readonly MongoFixture _fixture;
 
 		protected IStore Store => _fixture.Store;
 
-		public AbstractMongoTest(MongoFixture fixture)
+	    protected AbstractMongoTest(MongoFixture fixture)
 		{
 			this._fixture = fixture;
 		}
@@ -153,7 +153,8 @@ namespace NStore.Tests
 
 
 
-		[Fact(Skip = "long running")]
+//		[Fact(Skip = "long running")]
+		[Fact]
 		public async Task InsertMany()
 		{
 			await Worker(1, 10000);
