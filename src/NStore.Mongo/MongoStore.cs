@@ -25,6 +25,7 @@ namespace NStore.Mongo
 		public string StreamCollectionName { get; set; } = "streams";
 		public string SequenceCollectionName { get; set; } = "seq";
 		public string SequenceId { get; set; } = "streams";
+		public bool UseLocalSequence { get; set; } = false;
 	}
 
 	public class MongoStore : IStore
@@ -36,13 +37,11 @@ namespace NStore.Mongo
 
 		private readonly MongoStoreOptions _options;
 
-        //@@TODO Optimistic cache
-        private long _id = 0;
+		private long _sequence = 0;
 
 		public MongoStore(IMongoDatabase db, MongoStoreOptions options = null)
 		{
 			_options = options ?? new MongoStoreOptions();
-
 			_db = db;
 		}
 
@@ -183,10 +182,11 @@ namespace NStore.Mongo
 
 	    private async Task<long> GetNextId()
 	    {
-            //@@TODO optimistic cache
-//	        return Interlocked.Increment(ref _id);
+			if(_options.UseLocalSequence)
+		        return Interlocked.Increment(ref _sequence);
 
-            var filter = Builders<Counter>.Filter.Eq(x => x.Id, _options.SequenceId);
+			// server side sequence
+			var filter = Builders<Counter>.Filter.Eq(x => x.Id, _options.SequenceId);
 			var update = Builders<Counter>.Update.Inc(x => x.LastValue, 1);
 			var options = new FindOneAndUpdateOptions<Counter>()
 			{

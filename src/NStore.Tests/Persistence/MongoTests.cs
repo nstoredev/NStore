@@ -22,14 +22,16 @@ namespace NStore.Tests.Persistence
 			this._client = new MongoClient(_url);
 
 			this._db = _client.GetDatabase(_url.DatabaseName);
-			Store = new MongoStore(this._db);
+			var options = new MongoStoreOptions
+			{
+				UseLocalSequence = true
+			};
+			Store = new MongoStore(this._db, options);
 			Clear();
-			Console.WriteLine("Start");
 		}
 
 		public void Dispose()
 		{
-			Console.WriteLine("Stop");
 		}
 
 		public void Clear()
@@ -52,7 +54,7 @@ namespace NStore.Tests.Persistence
 
 		protected IStore Store => _fixture.Store;
 
-	    protected AbstractMongoTest(MongoFixture fixture)
+		protected AbstractMongoTest(MongoFixture fixture)
 		{
 			this._fixture = fixture;
 		}
@@ -132,32 +134,32 @@ namespace NStore.Tests.Persistence
 		}
 	}
 
-    public class MongoByteArrayTests: AbstractMongoTest
-    {
-        public MongoByteArrayTests(MongoFixture fixture) : base(fixture)
-        {
-        }
+	public class MongoByteArrayTests : AbstractMongoTest
+	{
+		public MongoByteArrayTests(MongoFixture fixture) : base(fixture)
+		{
+		}
 
-        [Fact]
-        public async Task InsertByteArray()
-        {
-            Clear();
-            await Store.PersistAsync("BA", 0, System.Text.Encoding.UTF8.GetBytes("this is a test"));
+		[Fact]
+		public async Task InsertByteArray()
+		{
+			Clear();
+			await Store.PersistAsync("BA", 0, System.Text.Encoding.UTF8.GetBytes("this is a test"));
 
-            byte[] payload = null;
-            await Store.ScanAsync("BA", 0, ScanDirection.Forward, (i, p) =>
-            {
-                payload = (byte[])p;
-                return ScanCallbackResult.Continue;
-            });
+			byte[] payload = null;
+			await Store.ScanAsync("BA", 0, ScanDirection.Forward, (i, p) =>
+			{
+				payload = (byte[])p;
+				return ScanCallbackResult.Continue;
+			});
 
-            var text = System.Text.Encoding.UTF8.GetString(payload);
-            Assert.Equal("this is a test", text);
-        }
-    }
+			var text = System.Text.Encoding.UTF8.GetString(payload);
+			Assert.Equal("this is a test", text);
+		}
+	}
 
 
-    public class MongoWriteTests : AbstractMongoTest
+	public class MongoWriteTests : AbstractMongoTest
 	{
 		public MongoWriteTests(MongoFixture fixture) : base(fixture)
 		{
