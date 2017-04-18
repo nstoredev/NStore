@@ -20,21 +20,30 @@ namespace NStore.Mongo
 		public long LastValue { get; set; }
 	}
 
+	public class MongoStoreOptions
+	{
+		public string StreamCollectionName { get; set; } = "streams";
+		public string SequenceCollectionName { get; set; } = "seq";
+		public string SequenceId { get; set; } = "streams";
+	}
+
 	public class MongoStore : IStore
 	{
 		private readonly IMongoDatabase _db;
-	    private readonly string _streamsCollectionName;
 
 		private IMongoCollection<Chunk> _chunks;
 		private IMongoCollection<Counter> _counters;
 
+		private readonly MongoStoreOptions _options;
+
         //@@TODO Optimistic cache
         private long _id = 0;
 
-		public MongoStore(IMongoDatabase db, string streamsCollectionName = "streams")
+		public MongoStore(IMongoDatabase db, MongoStoreOptions options = null)
 		{
+			_options = options ?? new MongoStoreOptions();
+
 			_db = db;
-			_streamsCollectionName = streamsCollectionName;
 		}
 
 		public async Task ScanAsync(
@@ -146,8 +155,8 @@ namespace NStore.Mongo
 
 		public async Task InitAsync()
 		{
-			_chunks = _db.GetCollection<Chunk>(_streamsCollectionName);
-			_counters = _db.GetCollection<Counter>("ids");
+			_chunks = _db.GetCollection<Chunk>(_options.StreamCollectionName);
+			_counters = _db.GetCollection<Counter>(_options.SequenceCollectionName);
 
 			await _chunks.Indexes.CreateOneAsync(
 				Builders<Chunk>.IndexKeys
@@ -177,7 +186,7 @@ namespace NStore.Mongo
             //@@TODO optimistic cache
 //	        return Interlocked.Increment(ref _id);
 
-            var filter = Builders<Counter>.Filter.Eq(x => x.Id, "id");
+            var filter = Builders<Counter>.Filter.Eq(x => x.Id, _options.SequenceId);
 			var update = Builders<Counter>.Update.Inc(x => x.LastValue, 1);
 			var options = new FindOneAndUpdateOptions<Counter>()
 			{
