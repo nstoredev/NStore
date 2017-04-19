@@ -169,6 +169,15 @@ namespace NStore.Mongo
 						await PersistEmptyAsync(chunk.Id);
 						return;
 					}
+
+					if (ex.Message.Contains("_id_"))
+					{
+						Console.WriteLine($"Error writing chunk #{chunk.Id} => {ex.Message} - {ex.GetType().FullName} ");
+						await ReloadSequence();
+						chunk.Id = await GetNextId();
+						await InternalPersistAsync(chunk);
+						return;
+					}
 				}
 
 				throw;
@@ -212,9 +221,15 @@ namespace NStore.Mongo
 
 		private async Task ReloadSequence()
 		{
-			var filter = Builders<Counter>.Filter.Eq(x => x.Id, _options.SequenceId);
-			var sequence = await _counters.Find(filter).SingleOrDefaultAsync();
-			this._sequence = sequence?.LastValue ?? 0;
+			var filter = Builders<Chunk>.Filter.Empty;
+			var lastSequenceNumber = await _chunks
+				.Find(filter)
+				.SortByDescending(x=>x.Id)
+			    .Project(x=>x.Id)
+				.Limit(1)
+				.FirstOrDefaultAsync();
+
+			this._sequence = lastSequenceNumber;
 		}
 
 	    private async Task<long> GetNextId()

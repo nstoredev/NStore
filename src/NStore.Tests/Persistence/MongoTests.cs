@@ -11,14 +11,16 @@ namespace NStore.Tests.Persistence
 {
 	public class MongoFixture : IDisposable
 	{
+		public const string MONGO = "mongodb://localhost/nstore";
+
 		public IStore Store { get; }
 
 		public MongoFixture()
 		{
 			var options = new MongoStoreOptions
 			{
-				StreamConnectionString = "mongodb://localhost/nstore",
-				UseLocalSequence = false
+				StreamConnectionString = MONGO,
+				UseLocalSequence = true
 			};
 			Store = new MongoStore(options);
 			Clear().Wait();
@@ -267,6 +269,46 @@ namespace NStore.Tests.Persistence
 			await Store.ScanAsync("Id_2", 0, ScanDirection.Forward, (i, p) => { list.Add(p); return ScanCallbackResult.Continue; });
 
 			Assert.Equal(2, list.Count());
+		}
+	}
+
+	[Collection("Mongo collection")]
+	public class LocalSequenceTest
+	{
+		IStore _store1;
+		IStore _store2;
+
+		public LocalSequenceTest()
+		{
+			var options = new MongoStoreOptions()
+			{
+				StreamConnectionString = "mongodb://localhost/localseq",
+				UseLocalSequence = true
+			};
+
+			_store1 = new MongoStore(options);
+			_store2 = new MongoStore(options);
+
+			Task.WaitAll(
+				_store1.DestroyStoreAsync()
+			);
+
+			Task.WaitAll(
+				_store1.InitAsync(),
+				_store2.InitAsync()
+			);
+		}
+
+		[Fact]
+		public async void collision_reload_sequence()
+		{
+			await _store1.PersistAsync("one", 1, null, "op1");
+			await _store2.PersistAsync("one", 2, null, "op2");
+
+			var accumulator = new Accumulator();
+
+			await _store1.ScanAsync("one", 0, ScanDirection.Forward, accumulator.Consume);
+			Assert.Equal(2, accumulator.Length);
 		}
 	}
 }
