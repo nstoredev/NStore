@@ -22,27 +22,50 @@ namespace NStore.Mongo
 
 	public class MongoStoreOptions
 	{
+		public string StreamConnectionString { get; set; }
 		public string StreamCollectionName { get; set; } = "streams";
+
+		public string SequenceConnectionString { get; set; }
 		public string SequenceCollectionName { get; set; } = "seq";
 		public string SequenceId { get; set; } = "streams";
 		public bool UseLocalSequence { get; set; } = false;
+
+		public bool IsValid()
+		{
+			return !String.IsNullOrWhiteSpace(StreamConnectionString);
+		}
 	}
 
 	public class MongoStore : IStore
 	{
-		private readonly IMongoDatabase _db;
+		private IMongoDatabase _streamsDb;
 
 		private IMongoCollection<Chunk> _chunks;
 		private IMongoCollection<Counter> _counters;
 
 		private readonly MongoStoreOptions _options;
+		private readonly MongoUrl _streamsUrl;
 
 		private long _sequence = 0;
 
-		public MongoStore(IMongoDatabase db, MongoStoreOptions options = null)
+		private const string StreamSequenceIdx = "stream_sequence";
+		private const string StreamOperationIdx = "stream_operation"; 
+
+		public MongoStore(MongoStoreOptions options)
 		{
-			_options = options ?? new MongoStoreOptions();
-			_db = db;
+			if (options == null || !options.IsValid())
+				throw new Exception("Invalid options");
+
+			_options = options;
+
+			this._streamsUrl = new MongoUrl(options.StreamConnectionString);
+			Connect();
+		}
+
+		private void Connect()
+		{
+			var client = new MongoClient(_streamsUrl);
+			this._streamsDb = client.GetDatabase(_streamsUrl.DatabaseName);
 		}
 
 		public async Task ScanAsync(
@@ -136,12 +159,12 @@ namespace NStore.Mongo
 
 				if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
 				{
-					if (ex.Message.Contains("stream_sequence"))
+					if (ex.Message.Contains(StreamSequenceIdx))
 					{
 						throw new DuplicateStreamIndexException(chunk.StreamId, chunk.Index);
 					}
 
-					if (ex.Message.Contains("stream_operation"))
+					if (ex.Message.Contains(StreamOperationIdx))
 					{
 						await PersistEmptyAsync(chunk.Id);
 						return;
@@ -154,8 +177,11 @@ namespace NStore.Mongo
 
 		public async Task InitAsync()
 		{
-			_chunks = _db.GetCollection<Chunk>(_options.StreamCollectionName);
-			_counters = _db.GetCollection<Counter>(_options.SequenceCollectionName);
+			if (_streamsDb == null)
+				Connect();
+
+			_chunks = _streamsDb.GetCollection<Chunk>(_options.StreamCollectionName);
+			_counters = _streamsDb.GetCollection<Counter>(_options.SequenceCollectionName);
 
 			await _chunks.Indexes.CreateOneAsync(
 				Builders<Chunk>.IndexKeys
@@ -164,7 +190,7 @@ namespace NStore.Mongo
 				new CreateIndexOptions()
 				{
 					Unique = true,
-					Name = "stream_sequence"
+					Name = StreamSequenceIdx
 				}
 			);
 
@@ -175,9 +201,20 @@ namespace NStore.Mongo
 				new CreateIndexOptions()
 				{
 					Unique = true,
-					Name = "stream_operation"
+					Name = StreamOperationIdx
 				}
 			);
+
+			if(_options.UseLocalSequence){
+				await ReloadSequence();
+			}
+		}
+
+		private async Task ReloadSequence()
+		{
+			var filter = Builders<Counter>.Filter.Eq(x => x.Id, _options.SequenceId);
+			var sequence = await _counters.Find(filter).SingleOrDefaultAsync();
+			this._sequence = sequence?.LastValue ?? 0;
 		}
 
 	    private async Task<long> GetNextId()
@@ -199,6 +236,18 @@ namespace NStore.Mongo
 			);
 
 			return updateResult.LastValue;
+		}
+
+		public async Task DestroyStoreAsync()
+		{
+			if(this._streamsDb != null)
+			{
+				await this._streamsDb.Client.DropDatabaseAsync(this._streamsDb.DatabaseNamespace.DatabaseName);
+			}
+			_sequence = 0;
+			_streamsDb = null;
+			_counters = null;
+			_chunks = null;
 		}
 	}
 }

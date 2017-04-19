@@ -12,32 +12,33 @@ namespace NStore.Tests.Persistence
 	public class MongoFixture : IDisposable
 	{
 		public IStore Store { get; }
-		private readonly IMongoDatabase _db;
-		private readonly MongoClient _client;
-		private readonly MongoUrl _url;
 
 		public MongoFixture()
 		{
-			_url = new MongoUrl("mongodb://localhost/nstore");
-			this._client = new MongoClient(_url);
-
-			this._db = _client.GetDatabase(_url.DatabaseName);
 			var options = new MongoStoreOptions
 			{
-				UseLocalSequence = true
+				StreamConnectionString = "mongodb://localhost/nstore",
+				UseLocalSequence = false
 			};
-			Store = new MongoStore(this._db, options);
-			Clear();
+			Store = new MongoStore(options);
+			Clear().Wait();
 		}
 
 		public void Dispose()
 		{
 		}
 
-		public void Clear()
+		public async Task Clear()
 		{
-			_client.DropDatabase(_url.DatabaseName);
-			Store.InitAsync().Wait();
+			try
+			{
+				await Store.DestroyStoreAsync();
+				await Store.InitAsync();
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"ERROR: {ex.Message}");
+			}
 		}
 	}
 
@@ -61,7 +62,7 @@ namespace NStore.Tests.Persistence
 
 		protected void Clear()
 		{
-			this._fixture.Clear();
+			this._fixture.Clear().Wait();
 		}
 	}
 
