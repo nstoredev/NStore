@@ -32,6 +32,8 @@ namespace NStore
 	public interface IStore
 	{
 		Task InitAsync();
+		Task DestroyStoreAsync();
+
 		Task ScanAsync(
 			string streamId, 
 			long indexStart, 

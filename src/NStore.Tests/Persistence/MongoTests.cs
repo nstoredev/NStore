@@ -11,31 +11,36 @@ namespace NStore.Tests.Persistence
 {
 	public class MongoFixture : IDisposable
 	{
+		public const string MONGO = "mongodb://localhost/nstore";
+
 		public IStore Store { get; }
-		private readonly IMongoDatabase _db;
-		private readonly MongoClient _client;
-		private readonly MongoUrl _url;
 
 		public MongoFixture()
 		{
-			_url = new MongoUrl("mongodb://localhost/nstore");
-			this._client = new MongoClient(_url);
-
-			this._db = _client.GetDatabase(_url.DatabaseName);
-			Store = new MongoStore(this._db);
-			Clear();
-			Console.WriteLine("Start");
+			var options = new MongoStoreOptions
+			{
+				StreamConnectionString = MONGO,
+				UseLocalSequence = true
+			};
+			Store = new MongoStore(options);
+			Clear().Wait();
 		}
 
 		public void Dispose()
 		{
-			Console.WriteLine("Stop");
 		}
 
-		public void Clear()
+		public async Task Clear()
 		{
-			_client.DropDatabase(_url.DatabaseName);
-			Store.InitAsync().Wait();
+			try
+			{
+				await Store.DestroyStoreAsync();
+				await Store.InitAsync();
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"ERROR: {ex.Message}");
+			}
 		}
 	}
 
@@ -52,14 +57,14 @@ namespace NStore.Tests.Persistence
 
 		protected IStore Store => _fixture.Store;
 
-	    protected AbstractMongoTest(MongoFixture fixture)
+		protected AbstractMongoTest(MongoFixture fixture)
 		{
 			this._fixture = fixture;
 		}
 
 		protected void Clear()
 		{
-			this._fixture.Clear();
+			this._fixture.Clear().Wait();
 		}
 	}
 
@@ -132,32 +137,32 @@ namespace NStore.Tests.Persistence
 		}
 	}
 
-    public class MongoByteArrayTests: AbstractMongoTest
-    {
-        public MongoByteArrayTests(MongoFixture fixture) : base(fixture)
-        {
-        }
+	public class MongoByteArrayTests : AbstractMongoTest
+	{
+		public MongoByteArrayTests(MongoFixture fixture) : base(fixture)
+		{
+		}
 
-        [Fact]
-        public async Task InsertByteArray()
-        {
-            Clear();
-            await Store.PersistAsync("BA", 0, System.Text.Encoding.UTF8.GetBytes("this is a test"));
+		[Fact]
+		public async Task InsertByteArray()
+		{
+			Clear();
+			await Store.PersistAsync("BA", 0, System.Text.Encoding.UTF8.GetBytes("this is a test"));
 
-            byte[] payload = null;
-            await Store.ScanAsync("BA", 0, ScanDirection.Forward, (i, p) =>
-            {
-                payload = (byte[])p;
-                return ScanCallbackResult.Continue;
-            });
+			byte[] payload = null;
+			await Store.ScanAsync("BA", 0, ScanDirection.Forward, (i, p) =>
+			{
+				payload = (byte[])p;
+				return ScanCallbackResult.Continue;
+			});
 
-            var text = System.Text.Encoding.UTF8.GetString(payload);
-            Assert.Equal("this is a test", text);
-        }
-    }
+			var text = System.Text.Encoding.UTF8.GetString(payload);
+			Assert.Equal("this is a test", text);
+		}
+	}
 
 
-    public class MongoWriteTests : AbstractMongoTest
+	public class MongoWriteTests : AbstractMongoTest
 	{
 		public MongoWriteTests(MongoFixture fixture) : base(fixture)
 		{
@@ -264,6 +269,46 @@ namespace NStore.Tests.Persistence
 			await Store.ScanAsync("Id_2", 0, ScanDirection.Forward, (i, p) => { list.Add(p); return ScanCallbackResult.Continue; });
 
 			Assert.Equal(2, list.Count());
+		}
+	}
+
+	[Collection("Mongo collection")]
+	public class LocalSequenceTest
+	{
+		IStore _store1;
+		IStore _store2;
+
+		public LocalSequenceTest()
+		{
+			var options = new MongoStoreOptions()
+			{
+				StreamConnectionString = "mongodb://localhost/localseq",
+				UseLocalSequence = true
+			};
+
+			_store1 = new MongoStore(options);
+			_store2 = new MongoStore(options);
+
+			Task.WaitAll(
+				_store1.DestroyStoreAsync()
+			);
+
+			Task.WaitAll(
+				_store1.InitAsync(),
+				_store2.InitAsync()
+			);
+		}
+
+		[Fact]
+		public async void collision_reload_sequence()
+		{
+			await _store1.PersistAsync("one", 1, null, "op1");
+			await _store2.PersistAsync("one", 2, null, "op2");
+
+			var accumulator = new Accumulator();
+
+			await _store1.ScanAsync("one", 0, ScanDirection.Forward, accumulator.Consume);
+			Assert.Equal(2, accumulator.Length);
 		}
 	}
 }
