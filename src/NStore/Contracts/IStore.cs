@@ -1,37 +1,13 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace NStore
+namespace NStore.Contracts
 {
-
-	public enum ScanDirection
-	{
-		Forward,
-		Backward
-	}
-
-	public enum ScanCallbackResult
-	{
-		Stop,
-		Continue
-	}
-
-	public class DuplicateStreamIndexException : Exception
-	{
-		public long Index { get; }
-		public string StreamId { get; }
-
-		public DuplicateStreamIndexException(string streamId, long index) : 
-			base($"Duplicated index {index} on stream {streamId}")
-		{
-			this.Index = index;
-			this.StreamId = streamId;
-		}
-	}
-
 	public interface IStore
 	{
+		//@@TODO move outside
 		Task InitAsync();
+		//@@TODO move outside
 		Task DestroyStoreAsync();
 
 		Task ScanAsync(

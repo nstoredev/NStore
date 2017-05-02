@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Driver;
+using NStore.Contracts;
 using NStore.Mongo;
 using Xunit;
 

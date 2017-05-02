@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using NStore.Contracts;
 
 namespace NStore.Tests
 {
