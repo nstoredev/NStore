@@ -134,9 +134,25 @@ namespace NStore.Mongo
             await InternalPersistAsync(doc);
         }
 
-        public async Task DeleteAsync(string streamId)
+        public async Task DeleteAsync(string streamId, long fromIndex = 0, long toIndex = long.MaxValue)
         {
             var filterById = Builders<Chunk>.Filter.Eq(x => x.StreamId, streamId);
+            if (fromIndex > 0)
+            {
+                filterById = Builders<Chunk>.Filter.And(
+                    filterById,
+                    Builders<Chunk>.Filter.Gte(x=>x.Index, fromIndex)
+                );
+            }
+
+            if (toIndex < long.MaxValue)
+            {
+                filterById = Builders<Chunk>.Filter.And(
+                    filterById,
+                    Builders<Chunk>.Filter.Lte(x=>x.Index, toIndex)
+                );
+            }
+
             var result = await _chunks.DeleteManyAsync(filterById);
             if (!result.IsAcknowledged || result.DeletedCount == 0)
                 throw new StreamDeleteException(streamId);
