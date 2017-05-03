@@ -4,9 +4,6 @@
     <TargetFramework>netcoreapp1.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Folder Include="Contracts\" />
-  </ItemGroup>
-  <ItemGroup>
     <Compile Remove="Program.cs" />
   </ItemGroup>
 </Project>

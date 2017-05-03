@@ -14,7 +14,7 @@ namespace NStore.Tests.Persistence
 	{
 		public const string MONGO = "mongodb://localhost/nstore";
 
-		public IStore Store { get; }
+		public IRawStore Store { get; }
 
 		public MongoFixture()
 		{
@@ -56,7 +56,7 @@ namespace NStore.Tests.Persistence
 	{
 		private readonly MongoFixture _fixture;
 
-		protected IStore Store => _fixture.Store;
+		protected IRawStore Store => _fixture.Store;
 
 		protected AbstractMongoTest(MongoFixture fixture)
 		{
@@ -276,8 +276,8 @@ namespace NStore.Tests.Persistence
 	[Collection("Mongo collection")]
 	public class LocalSequenceTest
 	{
-		IStore _store1;
-		IStore _store2;
+		IRawStore _store1;
+		IRawStore _store2;
 
 		public LocalSequenceTest()
 		{
@@ -312,4 +312,38 @@ namespace NStore.Tests.Persistence
 			Assert.Equal(2, accumulator.Length);
 		}
 	}
+
+    [Collection("Mongo collection")]
+    public class DeleteStreamTest : AbstractMongoTest
+    {
+        public DeleteStreamTest(MongoFixture fixture) : base(fixture)
+        {
+            Store.PersistAsync("a", 1, null).Wait();
+        }
+
+
+        [Fact]
+        public async void delete_stream()
+        {
+            await Store.DeleteAsync("a");
+            bool almostOneChunk = false;
+            await Store.ScanAsync("a", 0, ScanDirection.Forward, (l, o) =>
+            {
+                almostOneChunk = true;
+                return ScanCallbackResult.Stop;
+            });
+
+            Assert.False(almostOneChunk, "Should not contains chunks");
+        }
+
+        [Fact] 
+        public async void delete_invalid_stream_should_throw_exception()
+        {
+            var ex = await Assert.ThrowsAnyAsync<StreamDeleteException>(() =>
+                Store.DeleteAsync("b")
+            );
+
+            Assert.Equal("b", ex.StreamId);
+        }
+    }
 }
