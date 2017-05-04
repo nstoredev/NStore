@@ -153,8 +153,6 @@ namespace NStore.Tests.Persistence
             var buffer = new Accumulator();
             await Store.ScanStoreAsync(0, ScanDirection.Forward, buffer.Consume);
 
-            buffer.Dump();
-
             Assert.Equal(5, buffer.Length);
             Assert.Equal("a", buffer[0]);
             Assert.Equal("b", buffer[1]);
@@ -164,12 +162,32 @@ namespace NStore.Tests.Persistence
         }
 
         [Fact]
+        public async Task read_all_forward_from_middle()
+        {
+            var buffer = new Accumulator();
+            await Store.ScanStoreAsync(3, ScanDirection.Forward, buffer.Consume);
+
+            Assert.Equal(3, buffer.Length);
+            Assert.Equal("c", buffer[0]);
+            Assert.Equal("d", buffer[1]);
+            Assert.Equal("e", buffer[2]);
+        }
+
+        [Fact]
+        public async Task read_all_forward_from_middle_limit_one()
+        {
+            var buffer = new Accumulator();
+            await Store.ScanStoreAsync(3, ScanDirection.Forward, buffer.Consume,1);
+
+            Assert.Equal(1, buffer.Length);
+            Assert.Equal("c", buffer[0]);
+        }
+
+        [Fact]
         public async Task read_all_backward()
         {
             var buffer = new Accumulator();
             await Store.ScanStoreAsync(long.MaxValue, ScanDirection.Backward, buffer.Consume);
-
-            buffer.Dump();
 
             Assert.Equal(5, buffer.Length);
             Assert.Equal("e", buffer[0]);
@@ -177,6 +195,28 @@ namespace NStore.Tests.Persistence
             Assert.Equal("c", buffer[2]);
             Assert.Equal("b", buffer[3]);
             Assert.Equal("a", buffer[4]);
+        }
+
+        [Fact]
+        public async Task read_all_backward_from_middle()
+        {
+            var buffer = new Accumulator();
+            await Store.ScanStoreAsync(3, ScanDirection.Backward, buffer.Consume);
+
+            Assert.Equal(3, buffer.Length);
+            Assert.Equal("c", buffer[0]);
+            Assert.Equal("b", buffer[1]);
+            Assert.Equal("a", buffer[2]);
+        }
+
+        [Fact]
+        public async Task read_all_backward_from_middle_limit_one()
+        {
+            var buffer = new Accumulator();
+            await Store.ScanStoreAsync(3, ScanDirection.Backward, buffer.Consume,1);
+
+            Assert.Equal(1, buffer.Length);
+            Assert.Equal("c", buffer[0]);
         }
     }
 
