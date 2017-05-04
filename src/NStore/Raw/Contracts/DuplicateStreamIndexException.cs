@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NStore.Contracts
+namespace NStore.Raw.Contracts
 {
     public class DuplicateStreamIndexException : Exception
     {

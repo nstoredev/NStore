@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace NStore.Contracts
+namespace NStore.Raw.Contracts
 {
 	public interface IRawStore
 	{

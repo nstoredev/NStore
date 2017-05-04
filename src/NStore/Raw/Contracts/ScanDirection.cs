@@ -1,4 +1,4 @@
-﻿namespace NStore.Contracts
+﻿namespace NStore.Raw.Contracts
 {
     public enum ScanDirection
     {
