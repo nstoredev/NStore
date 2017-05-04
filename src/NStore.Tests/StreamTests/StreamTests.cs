@@ -33,6 +33,7 @@ namespace NStore.Tests.StreamTests
     public class StreamTests
     {
         private readonly IStoreFactory _factory;
+
         public StreamTests()
         {
             _factory = new StoreFactory();
@@ -41,9 +42,15 @@ namespace NStore.Tests.StreamTests
         [Fact]
         public async void create_stream()
         {
-            IStream stream = new Stream("stream_1",await _factory.Build());
+            var rawStore = await _factory.Build();
+            IStream stream = new Stream("stream_1", rawStore);
             await stream.Append("payload");
-            //@@TODO check
+
+            var acc = new Accumulator();
+            await rawStore.ScanAsync("stream_1", 0, ScanDirection.Forward, acc.Consume);
+
+            Assert.Equal(1, acc.Length);
+            Assert.Equal("payload", acc[0]);
         }
     }
 }
