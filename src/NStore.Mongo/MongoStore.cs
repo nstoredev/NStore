@@ -126,7 +126,7 @@ namespace NStore.Mongo
             {
                 Id = id,
                 StreamId = streamId,
-                Index = index,
+                Index = index < 0 ? id : index,
                 Payload = payload,
                 OpId = operationId ?? Guid.NewGuid().ToString()
             };

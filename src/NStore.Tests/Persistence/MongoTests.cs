@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using MongoDB.Driver;
 using NStore.Mongo;
 using NStore.Raw.Contracts;
 using Xunit;
@@ -181,6 +180,17 @@ namespace NStore.Tests.Persistence
         {
             Clear();
             await Store.PersistAsync("Stream_1", 1, new {data = "this is a test"});
+        }
+
+        [Fact]
+        public async Task negative_index_should_persist_with_chunk_id()
+        {
+            Clear();
+            await Store.PersistAsync("Stream_Neg", -1, "payload");
+
+            var acc = new Accumulator();
+            await Store.ScanAsync("Stream_Neg", 0, ScanDirection.Forward, acc.Consume);
+            Assert.Equal("payload", acc.ByIndex(1));
         }
 
         [Fact]
