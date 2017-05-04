@@ -22,7 +22,7 @@ namespace NStore.Tests.Persistence
                 StreamConnectionString = MONGO,
                 UseLocalSequence = true
             };
-            Store = new MongoStore(options);
+            Store = new MongoRawStore(options);
             Clear().Wait();
         }
 
@@ -316,8 +316,8 @@ namespace NStore.Tests.Persistence
                 UseLocalSequence = true
             };
 
-            _store1 = new MongoStore(options);
-            _store2 = new MongoStore(options);
+            _store1 = new MongoRawStore(options);
+            _store2 = new MongoRawStore(options);
 
             Task.WaitAll(
                 _store1.DestroyStoreAsync()

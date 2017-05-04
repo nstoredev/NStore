@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using NStore.Mongo;
 using NStore.Raw.Contracts;
 using NStore.Streams;
@@ -22,32 +23,35 @@ namespace NStore.Tests.StreamTests
                 StreamConnectionString = MONGO,
                 UseLocalSequence = true
             };
-            var store = new MongoStore(options);
-            await store.DestroyStoreAsync();
-            await store.InitAsync();
-            return store;
+            var raw = new MongoRawStore(options);
+            await raw.DestroyStoreAsync();
+            await raw.InitAsync();
+
+            return raw;
         }
     }
 
 
     public class StreamTests
     {
-        private readonly IStoreFactory _factory;
+        private readonly IRawStore _rawStore;
+        private readonly IStreamStore _streams;
 
         public StreamTests()
         {
-            _factory = new StoreFactory();
+            var factory = new StoreFactory();
+            _rawStore = factory.Build().Result;
+            _streams = new StreamStore(_rawStore);
         }
 
         [Fact]
         public async void create_stream()
         {
-            var rawStore = await _factory.Build();
-            IStream stream = new Stream("stream_1", rawStore);
+            var stream = _streams.Open("stream_1");
             await stream.Append("payload");
 
             var acc = new Accumulator();
-            await rawStore.ScanAsync("stream_1", 0, ScanDirection.Forward, acc.Consume);
+            await _rawStore.ScanAsync("stream_1", 0, ScanDirection.Forward, acc.Consume);
 
             Assert.Equal(1, acc.Length);
             Assert.Equal("payload", acc[0]);
