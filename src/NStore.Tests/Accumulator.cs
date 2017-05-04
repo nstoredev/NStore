@@ -19,5 +19,6 @@ namespace NStore.Tests
 
         public object this[int index] => _data[index];
         public object ByIndex(int index) => _map[index];
+        public bool IsEmpty => _data.Count == 0;
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using NStore.Raw.Contracts;
 
 namespace NStore.Streams
@@ -18,6 +19,16 @@ namespace NStore.Streams
         public Task Append(string payload, string operationId)
         {
             return _raw.PersistAsync(this.Id, -1, payload, operationId);
+        }
+
+        public Task Read(int index, Func<long, object, ScanCallbackResult> consumer)
+        {
+            return _raw.ScanAsync(this.Id, index, ScanDirection.Forward, consumer);
+        }
+
+        public Task Delete()
+        {
+            return _raw.DeleteAsync(this.Id);
         }
     }
 }

@@ -56,5 +56,31 @@ namespace NStore.Tests.StreamTests
             Assert.Equal(1, acc.Length);
             Assert.Equal("payload", acc[0]);
         }
+
+        [Fact]
+        public async void read_stream()
+        {
+            await _rawStore.PersistAsync("stream_2", 1, "payload");
+
+            var stream = _streams.Open("stream_2");
+            var acc = new Accumulator();
+            await stream.Read(0, acc.Consume);
+
+            Assert.Equal(1, acc.Length);
+            Assert.Equal("payload", acc[0]);
+        }
+
+        [Fact]
+        public async void delete_stream()
+        {
+            await _rawStore.PersistAsync("stream_3", 1, "payload");
+            var stream = _streams.Open("stream_3");
+            await stream.Delete();
+
+            var acc = new Accumulator();
+            await stream.Read(0, acc.Consume);
+
+            Assert.True(acc.IsEmpty);
+        }
     }
 }
