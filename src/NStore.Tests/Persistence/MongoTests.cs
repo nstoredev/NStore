@@ -19,7 +19,7 @@ namespace NStore.Tests.Persistence
         {
             var options = new MongoStoreOptions
             {
-                StreamConnectionString = MONGO,
+                PartitionsConnectionString = MONGO,
                 UseLocalSequence = true
             };
             Store = new MongoRawStore(options);
@@ -72,9 +72,13 @@ namespace NStore.Tests.Persistence
         public ScanTest(MongoFixture fixture) : base(fixture)
         {
             Clear();
+
             Store.PersistAsync("Stream_1", 1, "a").Wait();
             Store.PersistAsync("Stream_1", 2, "b").Wait();
             Store.PersistAsync("Stream_1", 3, "c").Wait();
+
+            Store.PersistAsync("Stream_2", 1, "a").Wait();
+            Store.PersistAsync("Stream_2", 2, "b").Wait();
         }
 
         [Fact]
@@ -142,6 +146,11 @@ namespace NStore.Tests.Persistence
             Assert.Equal("c", buffer[0]);
             Assert.Equal("b", buffer[1]);
         }
+
+//        public async Task read_all_forward()
+//        {
+//            var buffer = new Accumulator();
+//        }
     }
 
     public class MongoByteArrayTests : AbstractMongoTest
@@ -312,7 +321,7 @@ namespace NStore.Tests.Persistence
         {
             var options = new MongoStoreOptions()
             {
-                StreamConnectionString = "mongodb://localhost/localseq",
+                PartitionsConnectionString = "mongodb://localhost/localseq",
                 UseLocalSequence = true
             };
 

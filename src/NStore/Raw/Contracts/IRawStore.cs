@@ -11,7 +11,7 @@ namespace NStore.Raw.Contracts
 		Task DestroyStoreAsync();
 
 		Task ScanAsync(
-			string streamId, 
+			string partitionId,
 			long indexStart, 
 			ScanDirection direction, 
 			Func<long, object, ScanCallbackResult> callback,
@@ -19,7 +19,7 @@ namespace NStore.Raw.Contracts
 		);
 
 		Task PersistAsync(
-			string streamId, 
+			string partitionId,
 			long index, 
 			object payload, 
 			string operationId = null
@@ -28,11 +28,11 @@ namespace NStore.Raw.Contracts
 		/// <summary>
 		/// Delete a stream by id
 		/// </summary>
-		/// <param name="streamId">Stream id</param>
+		/// <param name="partitionId">Stream id</param>
 		/// <param name="fromIndex">From index</param>
 		/// <param name="toIndex">to Index</param>
 		/// <returns>Task</returns>
 		/// @@TODO delete invalid stream should throw or not?
-		Task DeleteAsync(string streamId, long fromIndex = 0, long toIndex = long.MaxValue);
+		Task DeleteAsync(string partitionId, long fromIndex = 0, long toIndex = long.MaxValue);
 	}
 }

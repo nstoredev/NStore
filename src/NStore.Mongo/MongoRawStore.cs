@@ -9,7 +9,7 @@ namespace NStore.Mongo
     internal class Chunk
     {
         public long Id { get; set; }
-        public string StreamId { get; set; }
+        public string PartitionId { get; set; }
         public long Index { get; set; }
         public object Payload { get; set; }
         public string OpId { get; set; }
@@ -23,8 +23,8 @@ namespace NStore.Mongo
 
     public class MongoStoreOptions
     {
-        public string StreamConnectionString { get; set; }
-        public string StreamCollectionName { get; set; } = "streams";
+        public string PartitionsConnectionString { get; set; }
+        public string PartitionsCollectionName { get; set; } = "chunks";
 
         public string SequenceConnectionString { get; set; }
         public string SequenceCollectionName { get; set; } = "seq";
@@ -33,7 +33,7 @@ namespace NStore.Mongo
 
         public bool IsValid()
         {
-            return !String.IsNullOrWhiteSpace(StreamConnectionString);
+            return !String.IsNullOrWhiteSpace(PartitionsConnectionString);
         }
     }
 
@@ -49,8 +49,8 @@ namespace NStore.Mongo
 
         private long _sequence = 0;
 
-        private const string StreamSequenceIdx = "stream_sequence";
-        private const string StreamOperationIdx = "stream_operation";
+        private const string SequenceIdx = "partition_sequence";
+        private const string OperationIdx = "partition_operation";
 
         public MongoRawStore(MongoStoreOptions options)
         {
@@ -59,7 +59,7 @@ namespace NStore.Mongo
 
             _options = options;
 
-            this._streamsUrl = new MongoUrl(options.StreamConnectionString);
+            this._streamsUrl = new MongoUrl(options.PartitionsConnectionString);
             Connect();
         }
 
@@ -70,7 +70,7 @@ namespace NStore.Mongo
         }
 
         public async Task ScanAsync(
-            string streamId,
+            string partitionId,
             long indexStart,
             ScanDirection direction,
             Func<long, object, ScanCallbackResult> callback,
@@ -83,7 +83,7 @@ namespace NStore.Mongo
             {
                 sort = Builders<Chunk>.Sort.Ascending(x => x.Index);
                 filter = Builders<Chunk>.Filter.And(
-                    Builders<Chunk>.Filter.Eq(x => x.StreamId, streamId),
+                    Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId),
                     Builders<Chunk>.Filter.Gte(x => x.Index, indexStart)
                 );
             }
@@ -91,7 +91,7 @@ namespace NStore.Mongo
             {
                 sort = Builders<Chunk>.Sort.Descending(x => x.Index);
                 filter = Builders<Chunk>.Filter.And(
-                    Builders<Chunk>.Filter.Eq(x => x.StreamId, streamId),
+                    Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId),
                     Builders<Chunk>.Filter.Lte(x => x.Index, indexStart)
                 );
             }
@@ -119,13 +119,13 @@ namespace NStore.Mongo
             }
         }
 
-        public async Task PersistAsync(string streamId, long index, object payload, string operationId)
+        public async Task PersistAsync(string partitionId, long index, object payload, string operationId)
         {
             long id = await GetNextId();
             var doc = new Chunk()
             {
                 Id = id,
-                StreamId = streamId,
+                PartitionId = partitionId,
                 Index = index < 0 ? id : index,
                 Payload = payload,
                 OpId = operationId ?? Guid.NewGuid().ToString()
@@ -134,9 +134,9 @@ namespace NStore.Mongo
             await InternalPersistAsync(doc);
         }
 
-        public async Task DeleteAsync(string streamId, long fromIndex = 0, long toIndex = long.MaxValue)
+        public async Task DeleteAsync(string partitionId, long fromIndex = 0, long toIndex = long.MaxValue)
         {
-            var filterById = Builders<Chunk>.Filter.Eq(x => x.StreamId, streamId);
+            var filterById = Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId);
             if (fromIndex > 0)
             {
                 filterById = Builders<Chunk>.Filter.And(
@@ -155,7 +155,7 @@ namespace NStore.Mongo
 
             var result = await _chunks.DeleteManyAsync(filterById);
             if (!result.IsAcknowledged || result.DeletedCount == 0)
-                throw new StreamDeleteException(streamId);
+                throw new StreamDeleteException(partitionId);
         }
 
 
@@ -164,7 +164,7 @@ namespace NStore.Mongo
             var empty = new Chunk()
             {
                 Id = id,
-                StreamId = "_empty",
+                PartitionId = "_empty",
                 Index = id,
                 Payload = null,
                 OpId = "_" + id
@@ -185,12 +185,12 @@ namespace NStore.Mongo
 
                 if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
                 {
-                    if (ex.Message.Contains(StreamSequenceIdx))
+                    if (ex.Message.Contains(SequenceIdx))
                     {
-                        throw new DuplicateStreamIndexException(chunk.StreamId, chunk.Index);
+                        throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
                     }
 
-                    if (ex.Message.Contains(StreamOperationIdx))
+                    if (ex.Message.Contains(OperationIdx))
                     {
                         await PersistEmptyAsync(chunk.Id);
                         return;
@@ -215,28 +215,28 @@ namespace NStore.Mongo
             if (_streamsDb == null)
                 Connect();
 
-            _chunks = _streamsDb.GetCollection<Chunk>(_options.StreamCollectionName);
+            _chunks = _streamsDb.GetCollection<Chunk>(_options.PartitionsCollectionName);
             _counters = _streamsDb.GetCollection<Counter>(_options.SequenceCollectionName);
 
             await _chunks.Indexes.CreateOneAsync(
                 Builders<Chunk>.IndexKeys
-                     .Ascending(x => x.StreamId)
+                     .Ascending(x => x.PartitionId)
                     .Ascending(x => x.Index),
                 new CreateIndexOptions()
                 {
                     Unique = true,
-                    Name = StreamSequenceIdx
+                    Name = SequenceIdx
                 }
             );
 
             await _chunks.Indexes.CreateOneAsync(
                 Builders<Chunk>.IndexKeys
-                    .Ascending(x => x.StreamId)
+                    .Ascending(x => x.PartitionId)
                     .Ascending(x => x.OpId),
                 new CreateIndexOptions()
                 {
                     Unique = true,
-                    Name = StreamOperationIdx
+                    Name = OperationIdx
                 }
             );
 

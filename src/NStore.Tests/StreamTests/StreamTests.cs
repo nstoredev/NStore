@@ -20,7 +20,7 @@ namespace NStore.Tests.StreamTests
         {
             var options = new MongoStoreOptions
             {
-                StreamConnectionString = MONGO,
+                PartitionsConnectionString = MONGO,
                 UseLocalSequence = true
             };
             var raw = new MongoRawStore(options);
