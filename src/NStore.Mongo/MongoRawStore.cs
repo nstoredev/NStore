@@ -73,7 +73,7 @@ namespace NStore.Mongo
             string partitionId,
             long indexStart,
             ScanDirection direction,
-            Func<long, object, ScanCallbackResult> callback,
+            Func<long, object, ScanCallbackResult> consume,
             int limit = int.MaxValue)
         {
             SortDefinition<Chunk> sort;
@@ -110,7 +110,46 @@ namespace NStore.Mongo
                     var batch = cursor.Current;
                     foreach (var b in batch)
                     {
-                        if (ScanCallbackResult.Stop == callback(b.Index, b.Payload))
+                        if (ScanCallbackResult.Stop == consume(b.Index, b.Payload))
+                        {
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        public async Task ScanStoreAsync(long sequenceStart, ScanDirection direction, Func<long, object, ScanCallbackResult> consume, int limit = Int32.MaxValue)
+        {
+            SortDefinition<Chunk> sort;
+            FilterDefinition<Chunk> filter;
+
+            if (direction == ScanDirection.Forward)
+            {
+                sort = Builders<Chunk>.Sort.Ascending(x => x.Id);
+                filter = Builders<Chunk>.Filter.Gte(x => x.Id, sequenceStart);
+            }
+            else
+            {
+                sort = Builders<Chunk>.Sort.Descending(x => x.Id);
+                filter = Builders<Chunk>.Filter.Lte(x => x.Id, sequenceStart);
+            }
+
+            var options = new FindOptions<Chunk>() { Sort = sort };
+
+            if (limit != int.MaxValue)
+            {
+                options.Limit = limit;
+            }
+
+            using (var cursor = await _chunks.FindAsync(filter, options))
+            {
+                while (await cursor.MoveNextAsync())
+                {
+                    var batch = cursor.Current;
+                    foreach (var b in batch)
+                    {
+                        if (ScanCallbackResult.Stop == consume(b.Index, b.Payload))
                         {
                             return;
                         }

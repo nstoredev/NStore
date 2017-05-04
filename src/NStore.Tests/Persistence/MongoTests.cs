@@ -77,8 +77,8 @@ namespace NStore.Tests.Persistence
             Store.PersistAsync("Stream_1", 2, "b").Wait();
             Store.PersistAsync("Stream_1", 3, "c").Wait();
 
-            Store.PersistAsync("Stream_2", 1, "a").Wait();
-            Store.PersistAsync("Stream_2", 2, "b").Wait();
+            Store.PersistAsync("Stream_2", 1, "d").Wait();
+            Store.PersistAsync("Stream_2", 2, "e").Wait();
         }
 
         [Fact]
@@ -147,10 +147,37 @@ namespace NStore.Tests.Persistence
             Assert.Equal("b", buffer[1]);
         }
 
-//        public async Task read_all_forward()
-//        {
-//            var buffer = new Accumulator();
-//        }
+        [Fact]
+        public async Task read_all_forward()
+        {
+            var buffer = new Accumulator();
+            await Store.ScanStoreAsync(0, ScanDirection.Forward, buffer.Consume);
+
+            buffer.Dump();
+
+            Assert.Equal(5, buffer.Length);
+            Assert.Equal("a", buffer[0]);
+            Assert.Equal("b", buffer[1]);
+            Assert.Equal("c", buffer[2]);
+            Assert.Equal("d", buffer[3]);
+            Assert.Equal("e", buffer[4]);
+        }
+
+        [Fact]
+        public async Task read_all_backward()
+        {
+            var buffer = new Accumulator();
+            await Store.ScanStoreAsync(long.MaxValue, ScanDirection.Backward, buffer.Consume);
+
+            buffer.Dump();
+
+            Assert.Equal(5, buffer.Length);
+            Assert.Equal("e", buffer[0]);
+            Assert.Equal("d", buffer[1]);
+            Assert.Equal("c", buffer[2]);
+            Assert.Equal("b", buffer[3]);
+            Assert.Equal("a", buffer[4]);
+        }
     }
 
     public class MongoByteArrayTests : AbstractMongoTest

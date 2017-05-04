@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using NStore.Raw.Contracts;
 
 namespace NStore.Tests
@@ -20,5 +21,16 @@ namespace NStore.Tests
         public object this[int index] => _data[index];
         public object ByIndex(int index) => _map[index];
         public bool IsEmpty => _data.Count == 0;
+
+        public void Dump()
+        {
+            int counter = 0;
+            Console.WriteLine("Dumping accumulator");
+            foreach (object d in _data)
+            {
+                Console.WriteLine($"    {counter++:0000} => {d}");
+            }
+            Console.WriteLine("done.");
+        }
     }
 }

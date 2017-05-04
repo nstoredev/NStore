@@ -10,14 +10,46 @@ namespace NStore.Raw.Contracts
 		//@@TODO move outside
 		Task DestroyStoreAsync();
 
+		/// <summary>
+		/// Scan partition
+		/// </summary>
+		/// <param name="partitionId"></param>
+		/// <param name="indexStart"></param>
+		/// <param name="direction"></param>
+		/// <param name="consume"></param>
+		/// <param name="limit"></param>
+		/// <returns></returns>
 		Task ScanAsync(
 			string partitionId,
 			long indexStart, 
 			ScanDirection direction, 
-			Func<long, object, ScanCallbackResult> callback,
+			Func<long, object, ScanCallbackResult> consume,
 			int limit = int.MaxValue
 		);
 
+		/// <summary>
+		/// Scan full store
+		/// </summary>
+		/// <param name="sequenceStart">starting id (included) </param>
+		/// <param name="direction">Scan direction</param>
+		/// <param name="consume">Consumer </param>
+		/// <param name="limit">Max items</param>
+		/// <returns></returns>
+		Task ScanStoreAsync(
+			long sequenceStart,
+			ScanDirection direction,
+			Func<long, object, ScanCallbackResult> consume,
+			int limit = int.MaxValue
+		);
+
+		/// <summary>
+		/// Persist a chunk in partition
+		/// </summary>
+		/// <param name="partitionId"></param>
+		/// <param name="index"></param>
+		/// <param name="payload"></param>
+		/// <param name="operationId"></param>
+		/// <returns></returns>
 		Task PersistAsync(
 			string partitionId,
 			long index, 
@@ -26,7 +58,7 @@ namespace NStore.Raw.Contracts
 		);
 
 		/// <summary>
-		/// Delete a stream by id
+		/// Delete a partition by id
 		/// </summary>
 		/// <param name="partitionId">Stream id</param>
 		/// <param name="fromIndex">From index</param>
