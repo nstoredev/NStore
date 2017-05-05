@@ -1,6 +1,6 @@
-﻿using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using NStore.Mongo;
+using NStore.Raw;
 using NStore.Raw.Contracts;
 using NStore.Streams;
 using Xunit;
@@ -50,8 +50,8 @@ namespace NStore.Tests.StreamTests
             var stream = _streams.Open("stream_1");
             await stream.Append("payload");
 
-            var acc = new Accumulator();
-            await _rawStore.ScanAsync("stream_1", 0, ScanDirection.Forward, acc.Consume);
+            var acc = new Tape();
+            await _rawStore.ScanAsync("stream_1", 0, ScanDirection.Forward, acc.Record);
 
             Assert.Equal(1, acc.Length);
             Assert.Equal("payload", acc[0]);
@@ -63,8 +63,8 @@ namespace NStore.Tests.StreamTests
             await _rawStore.PersistAsync("stream_2", 1, "payload");
 
             var stream = _streams.Open("stream_2");
-            var acc = new Accumulator();
-            await stream.Read(0, acc.Consume);
+            var acc = new Tape();
+            await stream.Read(0, acc.Record);
 
             Assert.Equal(1, acc.Length);
             Assert.Equal("payload", acc[0]);
@@ -77,8 +77,8 @@ namespace NStore.Tests.StreamTests
             var stream = _streams.Open("stream_3");
             await stream.Delete();
 
-            var acc = new Accumulator();
-            await stream.Read(0, acc.Consume);
+            var acc = new Tape();
+            await stream.Read(0, acc.Record);
 
             Assert.True(acc.IsEmpty);
         }

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using NStore.Mongo;
+using NStore.Raw;
 using NStore.Raw.Contracts;
 using Xunit;
 
@@ -118,11 +119,11 @@ namespace NStore.Tests.Persistence
         [Fact]
         public async Task should_read_only_first_two_chunks()
         {
-            var buffer = new Accumulator();
+            var buffer = new Tape();
 
             await Store.ScanAsync(
                 "Stream_1", 0, ScanDirection.Forward,
-                buffer.Consume,
+                buffer.Record,
                 2
             );
 
@@ -134,11 +135,11 @@ namespace NStore.Tests.Persistence
         [Fact]
         public async Task should_read_only_last_two_chunks()
         {
-            var buffer = new Accumulator();
+            var buffer = new Tape();
 
             await Store.ScanAsync(
                 "Stream_1", long.MaxValue, ScanDirection.Backward,
-                buffer.Consume,
+                buffer.Record,
                 2
             );
 
@@ -150,8 +151,8 @@ namespace NStore.Tests.Persistence
         [Fact]
         public async Task read_all_forward()
         {
-            var buffer = new Accumulator();
-            await Store.ScanStoreAsync(0, ScanDirection.Forward, buffer.Consume);
+            var buffer = new Tape();
+            await Store.ScanStoreAsync(0, ScanDirection.Forward, buffer.Record);
 
             Assert.Equal(5, buffer.Length);
             Assert.Equal("a", buffer[0]);
@@ -164,8 +165,8 @@ namespace NStore.Tests.Persistence
         [Fact]
         public async Task read_all_forward_from_middle()
         {
-            var buffer = new Accumulator();
-            await Store.ScanStoreAsync(3, ScanDirection.Forward, buffer.Consume);
+            var buffer = new Tape();
+            await Store.ScanStoreAsync(3, ScanDirection.Forward, buffer.Record);
 
             Assert.Equal(3, buffer.Length);
             Assert.Equal("c", buffer[0]);
@@ -176,8 +177,8 @@ namespace NStore.Tests.Persistence
         [Fact]
         public async Task read_all_forward_from_middle_limit_one()
         {
-            var buffer = new Accumulator();
-            await Store.ScanStoreAsync(3, ScanDirection.Forward, buffer.Consume,1);
+            var buffer = new Tape();
+            await Store.ScanStoreAsync(3, ScanDirection.Forward, buffer.Record,1);
 
             Assert.Equal(1, buffer.Length);
             Assert.Equal("c", buffer[0]);
@@ -186,8 +187,8 @@ namespace NStore.Tests.Persistence
         [Fact]
         public async Task read_all_backward()
         {
-            var buffer = new Accumulator();
-            await Store.ScanStoreAsync(long.MaxValue, ScanDirection.Backward, buffer.Consume);
+            var buffer = new Tape();
+            await Store.ScanStoreAsync(long.MaxValue, ScanDirection.Backward, buffer.Record);
 
             Assert.Equal(5, buffer.Length);
             Assert.Equal("e", buffer[0]);
@@ -200,8 +201,8 @@ namespace NStore.Tests.Persistence
         [Fact]
         public async Task read_all_backward_from_middle()
         {
-            var buffer = new Accumulator();
-            await Store.ScanStoreAsync(3, ScanDirection.Backward, buffer.Consume);
+            var buffer = new Tape();
+            await Store.ScanStoreAsync(3, ScanDirection.Backward, buffer.Record);
 
             Assert.Equal(3, buffer.Length);
             Assert.Equal("c", buffer[0]);
@@ -212,8 +213,8 @@ namespace NStore.Tests.Persistence
         [Fact]
         public async Task read_all_backward_from_middle_limit_one()
         {
-            var buffer = new Accumulator();
-            await Store.ScanStoreAsync(3, ScanDirection.Backward, buffer.Consume,1);
+            var buffer = new Tape();
+            await Store.ScanStoreAsync(3, ScanDirection.Backward, buffer.Record,1);
 
             Assert.Equal(1, buffer.Length);
             Assert.Equal("c", buffer[0]);
@@ -264,8 +265,8 @@ namespace NStore.Tests.Persistence
             Clear();
             await Store.PersistAsync("Stream_Neg", -1, "payload");
 
-            var acc = new Accumulator();
-            await Store.ScanAsync("Stream_Neg", 0, ScanDirection.Forward, acc.Consume);
+            var acc = new Tape();
+            await Store.ScanAsync("Stream_Neg", 0, ScanDirection.Forward, acc.Record);
             Assert.Equal("payload", acc.ByIndex(1));
         }
 
@@ -411,9 +412,9 @@ namespace NStore.Tests.Persistence
             await _store1.PersistAsync("one", 1, null, "op1");
             await _store2.PersistAsync("one", 2, null, "op2");
 
-            var accumulator = new Accumulator();
+            var accumulator = new Tape();
 
-            await _store1.ScanAsync("one", 0, ScanDirection.Forward, accumulator.Consume);
+            await _store1.ScanAsync("one", 0, ScanDirection.Forward, accumulator.Record);
             Assert.Equal(2, accumulator.Length);
         }
     }
@@ -467,8 +468,8 @@ namespace NStore.Tests.Persistence
         public async void should_delete_first()
         {
             await Store.DeleteAsync("delete_3", 1, 1);
-            var acc = new Accumulator();
-            await Store.ScanAsync("delete_3", 0, ScanDirection.Forward, acc.Consume);
+            var acc = new Tape();
+            await Store.ScanAsync("delete_3", 0, ScanDirection.Forward, acc.Record);
 
             Assert.Equal(2, acc.Length);
             Assert.True((string) acc[0] == "2");
@@ -479,8 +480,8 @@ namespace NStore.Tests.Persistence
         public async void should_delete_last()
         {
             await Store.DeleteAsync("delete_4", 3);
-            var acc = new Accumulator();
-            await Store.ScanAsync("delete_4", 0, ScanDirection.Forward, acc.Consume);
+            var acc = new Tape();
+            await Store.ScanAsync("delete_4", 0, ScanDirection.Forward, acc.Record);
 
             Assert.Equal(2, acc.Length);
             Assert.True((string) acc[0] == "1");
@@ -491,8 +492,8 @@ namespace NStore.Tests.Persistence
         public async void should_delete_middle()
         {
             await Store.DeleteAsync("delete_5", 2,2);
-            var acc = new Accumulator();
-            await Store.ScanAsync("delete_5", 0, ScanDirection.Forward, acc.Consume);
+            var acc = new Tape();
+            await Store.ScanAsync("delete_5", 0, ScanDirection.Forward, acc.Record);
 
             Assert.Equal(2, acc.Length);
             Assert.True((string) acc[0] == "1");
