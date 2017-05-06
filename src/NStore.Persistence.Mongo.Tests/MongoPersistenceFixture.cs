@@ -20,7 +20,7 @@ namespace NStore.Persistence.Tests
             _options = new MongoStoreOptions
             {
                 PartitionsConnectionString = Mongo,
-                UseLocalSequence = false,
+                UseLocalSequence = true,
                 PartitionsCollectionName = "partitions_" + _id,
                 SequenceCollectionName = "seq_" + _id,
                 DropOnInit = true

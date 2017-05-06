@@ -51,8 +51,13 @@ namespace NStore.Persistence.Mongo
 
         public async Task Drop()
         {
-            await this._partitionsDb.DropCollectionAsync(_options.PartitionsCollectionName).ConfigureAwait(false);
-            await this._countersDb.DropCollectionAsync(_options.SequenceCollectionName).ConfigureAwait(false);
+            await this._partitionsDb
+                .DropCollectionAsync(_options.PartitionsCollectionName)
+                .ConfigureAwait(false);
+
+            await this._countersDb
+                .DropCollectionAsync(_options.SequenceCollectionName)
+                .ConfigureAwait(false);
         }
 
         public async Task ScanAsync(
