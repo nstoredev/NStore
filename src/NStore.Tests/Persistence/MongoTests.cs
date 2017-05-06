@@ -9,48 +9,6 @@ using Xunit;
 
 namespace NStore.Tests.Persistence
 {
-    public class MongoFixture : IDisposable
-    {
-        public const string MONGO = "mongodb://localhost/nstore";
-
-        public IRawStore Store => _mongoRawStore;
-
-        private readonly MongoRawStore _mongoRawStore;
-        public MongoFixture()
-
-        {
-            var options = new MongoStoreOptions
-            {
-                PartitionsConnectionString = MONGO,
-                UseLocalSequence = true
-            };
-            _mongoRawStore = new MongoRawStore(options);
-            Clear().Wait();
-        }
-
-        public void Dispose()
-        {
-        }
-
-        public async Task Clear()
-        {
-            try
-            {
-                await _mongoRawStore.DestroyStoreAsync();
-                await _mongoRawStore.InitAsync();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"ERROR: {ex.Message}");
-            }
-        }
-    }
-
-    [CollectionDefinition("Mongo collection")]
-    public class MongoCollection : ICollectionFixture<MongoFixture>
-    {
-    }
-
     [Collection("Mongo collection")]
     public abstract class AbstractMongoTest
     {

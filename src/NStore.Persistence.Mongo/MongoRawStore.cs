@@ -8,13 +8,13 @@ namespace NStore.Persistence.Mongo
 {
     public class MongoRawStore : IRawStore
     {
-        private IMongoDatabase _streamsDb;
+        private IMongoDatabase _partitionsDb;
+        private IMongoDatabase _countersDb;
 
         private IMongoCollection<Chunk> _chunks;
         private IMongoCollection<Counter> _counters;
 
         private readonly MongoStoreOptions _options;
-        private readonly MongoUrl _streamsUrl;
 
         private long _sequence = 0;
 
@@ -28,14 +28,31 @@ namespace NStore.Persistence.Mongo
 
             _options = options;
 
-            this._streamsUrl = new MongoUrl(options.PartitionsConnectionString);
             Connect();
         }
 
         private void Connect()
         {
-            var client = new MongoClient(_streamsUrl);
-            this._streamsDb = client.GetDatabase(_streamsUrl.DatabaseName);
+            var partitionsUrl = new MongoUrl(_options.PartitionsConnectionString);
+            var partitionsClient = new MongoClient(partitionsUrl);
+            this._partitionsDb = partitionsClient.GetDatabase(partitionsUrl.DatabaseName);
+
+            if (_options.SequenceConnectionString == null)
+            {
+                this._countersDb = _partitionsDb;
+            }
+            else
+            {
+                var countersUrl = new MongoUrl(_options.SequenceConnectionString);
+                var countersClient = new MongoClient(countersUrl);
+                this._countersDb = countersClient.GetDatabase(countersUrl.DatabaseName);
+            }
+        }
+
+        public async Task Drop()
+        {
+            await this._partitionsDb.DropCollectionAsync(_options.PartitionsCollectionName).ConfigureAwait(false);
+            await this._countersDb.DropCollectionAsync(_options.SequenceCollectionName).ConfigureAwait(false);
         }
 
         public async Task ScanAsync(
@@ -65,7 +82,7 @@ namespace NStore.Persistence.Mongo
                 );
             }
 
-            var options = new FindOptions<Chunk>() { Sort = sort };
+            var options = new FindOptions<Chunk>() {Sort = sort};
 
             if (limit != int.MaxValue)
             {
@@ -88,7 +105,8 @@ namespace NStore.Persistence.Mongo
             }
         }
 
-        public async Task ScanStoreAsync(long sequenceStart, ScanDirection direction, Func<long, object, ScanCallbackResult> consume, int limit = Int32.MaxValue)
+        public async Task ScanStoreAsync(long sequenceStart, ScanDirection direction,
+            Func<long, object, ScanCallbackResult> consume, int limit = Int32.MaxValue)
         {
             SortDefinition<Chunk> sort;
             FilterDefinition<Chunk> filter;
@@ -104,7 +122,7 @@ namespace NStore.Persistence.Mongo
                 filter = Builders<Chunk>.Filter.Lte(x => x.Id, sequenceStart);
             }
 
-            var options = new FindOptions<Chunk>() { Sort = sort };
+            var options = new FindOptions<Chunk>() {Sort = sort};
 
             if (limit != int.MaxValue)
             {
@@ -149,7 +167,7 @@ namespace NStore.Persistence.Mongo
             {
                 filterById = Builders<Chunk>.Filter.And(
                     filterById,
-                    Builders<Chunk>.Filter.Gte(x=>x.Index, fromIndex)
+                    Builders<Chunk>.Filter.Gte(x => x.Index, fromIndex)
                 );
             }
 
@@ -157,11 +175,11 @@ namespace NStore.Persistence.Mongo
             {
                 filterById = Builders<Chunk>.Filter.And(
                     filterById,
-                    Builders<Chunk>.Filter.Lte(x=>x.Index, toIndex)
+                    Builders<Chunk>.Filter.Lte(x => x.Index, toIndex)
                 );
             }
 
-            var result = await _chunks.DeleteManyAsync(filterById);
+            var result = await _chunks.DeleteManyAsync(filterById).ConfigureAwait(false);
             if (!result.IsAcknowledged || result.DeletedCount == 0)
                 throw new StreamDeleteException(partitionId);
         }
@@ -178,14 +196,14 @@ namespace NStore.Persistence.Mongo
                 OpId = "_" + id
             };
 
-            await InternalPersistAsync(empty);
+            await InternalPersistAsync(empty).ConfigureAwait(false);
         }
 
         private async Task InternalPersistAsync(Chunk chunk)
         {
             try
             {
-                await _chunks.InsertOneAsync(chunk);
+                await _chunks.InsertOneAsync(chunk).ConfigureAwait(false);
             }
             catch (MongoWriteException ex)
             {
@@ -200,15 +218,17 @@ namespace NStore.Persistence.Mongo
 
                     if (ex.Message.Contains(OperationIdx))
                     {
-                        await PersistEmptyAsync(chunk.Id);
+                        await PersistEmptyAsync(chunk.Id).ConfigureAwait(false);
                         return;
                     }
 
                     if (ex.Message.Contains("_id_"))
                     {
-                        Console.WriteLine($"Error writing chunk #{chunk.Id} => {ex.Message} - {ex.GetType().FullName} ");
+                        Console.WriteLine(
+                            $"Error writing chunk #{chunk.Id} => {ex.Message} - {ex.GetType().FullName} ");
                         await ReloadSequence();
                         chunk.Id = await GetNextId();
+                        //@@TODO move to while loop to avoid stack call
                         await InternalPersistAsync(chunk);
                         return;
                     }
@@ -220,22 +240,25 @@ namespace NStore.Persistence.Mongo
 
         public async Task InitAsync()
         {
-            if (_streamsDb == null)
+            if (_partitionsDb == null)
                 Connect();
 
-            _chunks = _streamsDb.GetCollection<Chunk>(_options.PartitionsCollectionName);
-            _counters = _streamsDb.GetCollection<Counter>(_options.SequenceCollectionName);
+            if (_options.DropOnInit)
+                Drop().Wait();
+
+            _chunks = _partitionsDb.GetCollection<Chunk>(_options.PartitionsCollectionName);
+            _counters = _countersDb.GetCollection<Counter>(_options.SequenceCollectionName);
 
             await _chunks.Indexes.CreateOneAsync(
                 Builders<Chunk>.IndexKeys
-                     .Ascending(x => x.PartitionId)
+                    .Ascending(x => x.PartitionId)
                     .Ascending(x => x.Index),
                 new CreateIndexOptions()
                 {
                     Unique = true,
                     Name = SequenceIdx
                 }
-            );
+            ).ConfigureAwait(false);
 
             await _chunks.Indexes.CreateOneAsync(
                 Builders<Chunk>.IndexKeys
@@ -246,11 +269,11 @@ namespace NStore.Persistence.Mongo
                     Unique = true,
                     Name = OperationIdx
                 }
-            );
+            ).ConfigureAwait(false);
 
             if (_options.UseLocalSequence)
             {
-                await ReloadSequence();
+                await ReloadSequence().ConfigureAwait(false);
             }
         }
 
@@ -262,7 +285,8 @@ namespace NStore.Persistence.Mongo
                 .SortByDescending(x => x.Id)
                 .Project(x => x.Id)
                 .Limit(1)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync()
+                .ConfigureAwait(false);
 
             this._sequence = lastSequenceNumber;
         }
@@ -283,19 +307,21 @@ namespace NStore.Persistence.Mongo
 
             var updateResult = await _counters.FindOneAndUpdateAsync(
                 filter, update, options
-            );
+            ).ConfigureAwait(false);
 
             return updateResult.LastValue;
         }
 
+        //@@TODO remove
         public async Task DestroyStoreAsync()
         {
-            if (this._streamsDb != null)
+            if (this._partitionsDb != null)
             {
-                await this._streamsDb.Client.DropDatabaseAsync(this._streamsDb.DatabaseNamespace.DatabaseName);
+                await this._partitionsDb.Client.DropDatabaseAsync(this._partitionsDb.DatabaseNamespace.DatabaseName).ConfigureAwait(false);
             }
+
             _sequence = 0;
-            _streamsDb = null;
+            _partitionsDb = null;
             _counters = null;
             _chunks = null;
         }

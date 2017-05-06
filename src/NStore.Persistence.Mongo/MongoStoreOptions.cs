@@ -11,6 +11,7 @@ namespace NStore.Persistence.Mongo
         public string SequenceCollectionName { get; set; } = "seq";
         public string SequenceId { get; set; } = "streams";
         public bool UseLocalSequence { get; set; } = false;
+        public bool DropOnInit { get; set; } = false;
 
         public bool IsValid()
         {
