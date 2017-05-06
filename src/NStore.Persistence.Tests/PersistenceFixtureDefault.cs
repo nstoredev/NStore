@@ -1,4 +1,5 @@
-﻿using NStore.Raw;
+﻿using NStore.InMemory;
+using NStore.Raw;
 
 namespace NStore.Persistence.Tests
 {
@@ -6,7 +7,8 @@ namespace NStore.Persistence.Tests
     {
         public IRawStore Create()
         {
-            return null;
+            var store = new InMemoryRawStore();
+            return store;
         }
 
         public void Clear()
