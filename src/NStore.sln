@@ -1,11 +1,15 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore", "NStore\NStore.csproj", "{0AAD1793-0A61-42E6-9EBC-6729058EBE70}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Mongo", "NStore.Mongo\NStore.Mongo.csproj", "{EC2BB408-8089-4B56-A977-CF95EDD5C786}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Tests", "NStore.Tests\NStore.Tests.csproj", "{378A1E2D-A319-48E2-B5B1-7C9A2F8E5DE4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Persistence.Tests", "NStore.Persistence.Tests\NStore.Persistence.Tests.csproj", "{97D57D73-D908-4ECC-88A8-440C29C92CE6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Persistence.Mongo.Tests", "NStore.Persistence.Mongo.Tests\NStore.Persistence.Mongo.Tests.csproj", "{A93B56DD-FAF1-42A4-A414-E5DF6F97811A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Persistence.Mongo", "NStore.Persistence.Mongo\NStore.Persistence.Mongo.csproj", "{A5CFF506-C6FA-4AD1-86A3-559DBCFA8B2A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,13 +21,21 @@ Global
 		{0AAD1793-0A61-42E6-9EBC-6729058EBE70}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0AAD1793-0A61-42E6-9EBC-6729058EBE70}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0AAD1793-0A61-42E6-9EBC-6729058EBE70}.Release|Any CPU.Build.0 = Release|Any CPU
-		{EC2BB408-8089-4B56-A977-CF95EDD5C786}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EC2BB408-8089-4B56-A977-CF95EDD5C786}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EC2BB408-8089-4B56-A977-CF95EDD5C786}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EC2BB408-8089-4B56-A977-CF95EDD5C786}.Release|Any CPU.Build.0 = Release|Any CPU
 		{378A1E2D-A319-48E2-B5B1-7C9A2F8E5DE4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{378A1E2D-A319-48E2-B5B1-7C9A2F8E5DE4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{378A1E2D-A319-48E2-B5B1-7C9A2F8E5DE4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{378A1E2D-A319-48E2-B5B1-7C9A2F8E5DE4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{97D57D73-D908-4ECC-88A8-440C29C92CE6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{97D57D73-D908-4ECC-88A8-440C29C92CE6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{97D57D73-D908-4ECC-88A8-440C29C92CE6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{97D57D73-D908-4ECC-88A8-440C29C92CE6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A93B56DD-FAF1-42A4-A414-E5DF6F97811A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A93B56DD-FAF1-42A4-A414-E5DF6F97811A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A93B56DD-FAF1-42A4-A414-E5DF6F97811A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A93B56DD-FAF1-42A4-A414-E5DF6F97811A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A5CFF506-C6FA-4AD1-86A3-559DBCFA8B2A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5CFF506-C6FA-4AD1-86A3-559DBCFA8B2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A5CFF506-C6FA-4AD1-86A3-559DBCFA8B2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A5CFF506-C6FA-4AD1-86A3-559DBCFA8B2A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

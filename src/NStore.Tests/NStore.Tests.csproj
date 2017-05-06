@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netcoreapp1.1</TargetFramework>
+    <TargetFramework>netstandard1.6</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
@@ -9,6 +9,10 @@
     <PackageReference Include="MongoDB.Driver" Version="2.4.3" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\NStore.Persistence.Mongo\NStore.Persistence.Mongo.csproj">
+      <Project>{a5cff506-c6fa-4ad1-86a3-559dbcfa8b2a}</Project>
+      <Name>NStore.Persistence.Mongo</Name>
+    </ProjectReference>
     <ProjectReference Include="..\NStore\NStore.csproj" />
     <ProjectReference Include="..\NStore.Mongo\NStore.Mongo.csproj" />
   </ItemGroup>

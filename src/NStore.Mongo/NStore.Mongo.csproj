@@ -1,8 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Library</OutputType>
-    <TargetFramework>netcoreapp1.1</TargetFramework>
+    <TargetFramework>netstandard1.6</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,7 +10,4 @@
   <ItemGroup>
     <ProjectReference Include="..\NStore\NStore.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Remove="Program.cs" />
-  </ItemGroup>
-</Project>
+ </Project>
