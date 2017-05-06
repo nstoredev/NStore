@@ -1,7 +1,6 @@
 ﻿using System.Threading.Tasks;
 using NStore.Mongo;
 using NStore.Raw;
-using NStore.Raw.Contracts;
 using NStore.Streams;
 using Xunit;
 

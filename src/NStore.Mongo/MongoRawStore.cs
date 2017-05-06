@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Driver;
-using NStore.Raw.Contracts;
+using NStore.Raw;
 
 namespace NStore.Mongo
 {

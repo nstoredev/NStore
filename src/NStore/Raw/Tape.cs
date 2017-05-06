@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using NStore.Raw.Contracts;
 
 namespace NStore.Raw
 {

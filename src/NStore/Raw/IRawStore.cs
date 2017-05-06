@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace NStore.Raw.Contracts
+namespace NStore.Raw
 {
+	public interface IRawStoreLifecycle
+	{
+		Task InitAsync();
+		Task DestroyStoreAsync();
+	}
+
 	public interface IRawStore
 	{
-		//@@TODO move outside
-		Task InitAsync();
-		//@@TODO move outside
-		Task DestroyStoreAsync();
-
 		/// <summary>
 		/// Scan partition
 		/// </summary>

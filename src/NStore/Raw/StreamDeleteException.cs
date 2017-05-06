@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NStore.Raw.Contracts
+namespace NStore.Raw
 {
     public class StreamDeleteException : Exception
     {

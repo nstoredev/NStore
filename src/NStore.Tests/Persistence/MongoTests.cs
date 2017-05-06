@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using NStore.Mongo;
 using NStore.Raw;
-using NStore.Raw.Contracts;
 using Xunit;
 
 namespace NStore.Tests.Persistence
@@ -14,16 +13,18 @@ namespace NStore.Tests.Persistence
     {
         public const string MONGO = "mongodb://localhost/nstore";
 
-        public IRawStore Store { get; }
+        public IRawStore Store => _mongoRawStore;
 
+        private readonly MongoRawStore _mongoRawStore;
         public MongoFixture()
+
         {
             var options = new MongoStoreOptions
             {
                 PartitionsConnectionString = MONGO,
                 UseLocalSequence = true
             };
-            Store = new MongoRawStore(options);
+            _mongoRawStore = new MongoRawStore(options);
             Clear().Wait();
         }
 
@@ -35,8 +36,8 @@ namespace NStore.Tests.Persistence
         {
             try
             {
-                await Store.DestroyStoreAsync();
-                await Store.InitAsync();
+                await _mongoRawStore.DestroyStoreAsync();
+                await _mongoRawStore.InitAsync();
             }
             catch (Exception ex)
             {
@@ -382,8 +383,8 @@ namespace NStore.Tests.Persistence
     [Collection("Mongo collection")]
     public class LocalSequenceTest
     {
-        readonly IRawStore _store1;
-        readonly IRawStore _store2;
+        readonly MongoRawStore _store1;
+        readonly MongoRawStore _store2;
 
         public LocalSequenceTest()
         {

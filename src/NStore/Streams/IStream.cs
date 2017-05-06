@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using NStore.Raw.Contracts;
+using NStore.Raw;
 
 namespace NStore.Streams
 {
