@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NStore.Raw
@@ -19,13 +20,15 @@ namespace NStore.Raw
 		/// <param name="direction"></param>
 		/// <param name="consume"></param>
 		/// <param name="limit"></param>
+		/// <param name="cancellationToken"></param>
 		/// <returns></returns>
 		Task ScanAsync(
 			string partitionId,
 			long indexStart, 
 			ScanDirection direction, 
 			Func<long, object, ScanCallbackResult> consume,
-			int limit = int.MaxValue
+			int limit = int.MaxValue,
+            CancellationToken cancellationToken = default(CancellationToken)
 		);
 
 		/// <summary>
@@ -35,12 +38,14 @@ namespace NStore.Raw
 		/// <param name="direction">Scan direction</param>
 		/// <param name="consume">Consumer </param>
 		/// <param name="limit">Max items</param>
+		/// <param name="cancellationToken"></param>
 		/// <returns></returns>
 		Task ScanStoreAsync(
 			long sequenceStart,
 			ScanDirection direction,
 			Func<long, object, ScanCallbackResult> consume,
-			int limit = int.MaxValue
+			int limit = int.MaxValue,
+			CancellationToken cancellationToken = default(CancellationToken)
 		);
 
 		/// <summary>
@@ -50,12 +55,14 @@ namespace NStore.Raw
 		/// <param name="index"></param>
 		/// <param name="payload"></param>
 		/// <param name="operationId"></param>
+		/// <param name="cancellationToken"></param>
 		/// <returns></returns>
 		Task PersistAsync(
 			string partitionId,
 			long index, 
 			object payload, 
-			string operationId = null
+			string operationId = null,
+			CancellationToken cancellationToken = default(CancellationToken)
 		);
 
 		/// <summary>
@@ -64,8 +71,14 @@ namespace NStore.Raw
 		/// <param name="partitionId">Stream id</param>
 		/// <param name="fromIndex">From index</param>
 		/// <param name="toIndex">to Index</param>
+		/// <param name="cancellationToken"></param>
 		/// <returns>Task</returns>
 		/// @@TODO delete invalid stream should throw or not?
-		Task DeleteAsync(string partitionId, long fromIndex = 0, long toIndex = long.MaxValue);
+		Task DeleteAsync(
+			string partitionId,
+			long fromIndex = 0,
+			long toIndex = long.MaxValue,
+			CancellationToken cancellationToken = default(CancellationToken)
+		);
 	}
 }

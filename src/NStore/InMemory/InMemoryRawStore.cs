@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using NStore.Raw;
 
@@ -66,7 +67,9 @@ namespace NStore.InMemory
             long sequenceStart,
             ScanDirection direction,
             Func<long, object, ScanCallbackResult> consume,
-            int limit = Int32.MaxValue)
+            int limit = Int32.MaxValue,
+            CancellationToken cancellationToken = default(CancellationToken)
+            )
         {
             lock (_lock)
             {
@@ -92,6 +95,8 @@ namespace NStore.InMemory
 
                 foreach (var chunk in list)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
+
                     if (consume(chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
                     {
                         break;
@@ -106,7 +111,8 @@ namespace NStore.InMemory
             long sequenceStart,
             ScanDirection direction,
             Func<long, object, ScanCallbackResult> consume,
-            int limit = Int32.MaxValue
+            int limit = Int32.MaxValue,
+            CancellationToken cancellationToken = default(CancellationToken)
         )
         {
             lock (_lock)
@@ -127,6 +133,7 @@ namespace NStore.InMemory
 
                 foreach (var chunk in list)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     //     Console.WriteLine($"ScanStore {chunk.Id}");
                     if (consume(chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
                     {
@@ -138,7 +145,13 @@ namespace NStore.InMemory
             return Task.FromResult(0);
         }
 
-        public Task PersistAsync(string partitionId, long index, object payload, string operationId = null)
+        public Task PersistAsync(
+            string partitionId,
+            long index,
+            object payload,
+            string operationId = null,
+            CancellationToken cancellationToken = default(CancellationToken)
+            )
         {
             lock (_lock)
             {
@@ -167,7 +180,12 @@ namespace NStore.InMemory
             return Task.FromResult(0);
         }
 
-        public Task DeleteAsync(string partitionId, long fromIndex = 0, long toIndex = Int64.MaxValue)
+        public Task DeleteAsync(
+            string partitionId,
+            long fromIndex = 0,
+            long toIndex = Int64.MaxValue,
+            CancellationToken cancellationToken = default(CancellationToken)
+        )
         {
             lock (_lock)
             {

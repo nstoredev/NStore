@@ -49,14 +49,15 @@ namespace NStore.Persistence.Mongo
             }
         }
 
-        public async Task Drop()
+        public async Task Drop(CancellationToken cancellationToken = default(CancellationToken)
+        )
         {
             await this._partitionsDb
-                .DropCollectionAsync(_options.PartitionsCollectionName)
+                .DropCollectionAsync(_options.PartitionsCollectionName, cancellationToken)
                 .ConfigureAwait(false);
 
             await this._countersDb
-                .DropCollectionAsync(_options.SequenceCollectionName)
+                .DropCollectionAsync(_options.SequenceCollectionName, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -65,7 +66,9 @@ namespace NStore.Persistence.Mongo
             long indexStart,
             ScanDirection direction,
             Func<long, object, ScanCallbackResult> consume,
-            int limit = int.MaxValue)
+            int limit = int.MaxValue,
+            CancellationToken cancellationToken = default(CancellationToken)
+        )
         {
             SortDefinition<Chunk> sort;
             FilterDefinition<Chunk> filter;
@@ -94,9 +97,9 @@ namespace NStore.Persistence.Mongo
                 options.Limit = limit;
             }
 
-            using (var cursor = await _chunks.FindAsync(filter, options))
+            using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken))
             {
-                while (await cursor.MoveNextAsync())
+                while (await cursor.MoveNextAsync(cancellationToken))
                 {
                     var batch = cursor.Current;
                     foreach (var b in batch)
@@ -110,8 +113,13 @@ namespace NStore.Persistence.Mongo
             }
         }
 
-        public async Task ScanStoreAsync(long sequenceStart, ScanDirection direction,
-            Func<long, object, ScanCallbackResult> consume, int limit = Int32.MaxValue)
+        public async Task ScanStoreAsync(
+            long sequenceStart,
+            ScanDirection direction,
+            Func<long, object, ScanCallbackResult> consume,
+            int limit = Int32.MaxValue,
+            CancellationToken cancellationToken = default(CancellationToken)
+        )
         {
             SortDefinition<Chunk> sort;
             FilterDefinition<Chunk> filter;
@@ -134,9 +142,9 @@ namespace NStore.Persistence.Mongo
                 options.Limit = limit;
             }
 
-            using (var cursor = await _chunks.FindAsync(filter, options))
+            using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken))
             {
-                while (await cursor.MoveNextAsync())
+                while (await cursor.MoveNextAsync(cancellationToken))
                 {
                     var batch = cursor.Current;
                     foreach (var b in batch)
@@ -150,7 +158,13 @@ namespace NStore.Persistence.Mongo
             }
         }
 
-        public async Task PersistAsync(string partitionId, long index, object payload, string operationId)
+        public async Task PersistAsync(
+            string partitionId,
+            long index,
+            object payload,
+            string operationId,
+            CancellationToken cancellationToken = default(CancellationToken)
+        )
         {
             long id = await GetNextId();
             var doc = new Chunk()
@@ -162,10 +176,15 @@ namespace NStore.Persistence.Mongo
                 OpId = operationId ?? Guid.NewGuid().ToString()
             };
 
-            await InternalPersistAsync(doc);
+            await InternalPersistAsync(doc, cancellationToken);
         }
 
-        public async Task DeleteAsync(string partitionId, long fromIndex = 0, long toIndex = long.MaxValue)
+        public async Task DeleteAsync(
+            string partitionId,
+            long fromIndex = 0,
+            long toIndex = long.MaxValue,
+            CancellationToken cancellationToken = default(CancellationToken)
+        )
         {
             var filterById = Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId);
             if (fromIndex > 0)
@@ -184,13 +203,14 @@ namespace NStore.Persistence.Mongo
                 );
             }
 
-            var result = await _chunks.DeleteManyAsync(filterById).ConfigureAwait(false);
+            var result = await _chunks.DeleteManyAsync(filterById, cancellationToken).ConfigureAwait(false);
             if (!result.IsAcknowledged || result.DeletedCount == 0)
                 throw new StreamDeleteException(partitionId);
         }
 
 
-        private async Task PersistEmptyAsync(long id)
+        private async Task PersistEmptyAsync(long id, CancellationToken cancellationToken = default(CancellationToken)
+        )
         {
             var empty = new Chunk()
             {
@@ -201,14 +221,17 @@ namespace NStore.Persistence.Mongo
                 OpId = "_" + id
             };
 
-            await InternalPersistAsync(empty).ConfigureAwait(false);
+            await InternalPersistAsync(empty, cancellationToken).ConfigureAwait(false);
         }
 
-        private async Task InternalPersistAsync(Chunk chunk)
+        private async Task InternalPersistAsync(
+            Chunk chunk,
+            CancellationToken cancellationToken = default(CancellationToken)
+        )
         {
             try
             {
-                await _chunks.InsertOneAsync(chunk).ConfigureAwait(false);
+                await _chunks.InsertOneAsync(chunk, cancellationToken: cancellationToken).ConfigureAwait(false);
             }
             catch (MongoWriteException ex)
             {
@@ -224,7 +247,7 @@ namespace NStore.Persistence.Mongo
                     if (ex.Message.Contains(OperationIdx))
                     {
                         //@@TODO skip instead of empty?
-                        await PersistEmptyAsync(chunk.Id).ConfigureAwait(false);
+                        await PersistEmptyAsync(chunk.Id, cancellationToken).ConfigureAwait(false);
                         return;
                     }
 
@@ -235,7 +258,7 @@ namespace NStore.Persistence.Mongo
                         await ReloadSequence();
                         chunk.Id = await GetNextId();
                         //@@TODO move to while loop to avoid stack call
-                        await InternalPersistAsync(chunk);
+                        await InternalPersistAsync(chunk, cancellationToken);
                         return;
                     }
                 }
@@ -244,46 +267,48 @@ namespace NStore.Persistence.Mongo
             }
         }
 
-        public async Task InitAsync()
+        public async Task InitAsync(CancellationToken cancellationToken = default(CancellationToken)
+        )
         {
             if (_partitionsDb == null)
                 Connect();
 
             if (_options.DropOnInit)
-                Drop().Wait();
+                Drop(cancellationToken).Wait(cancellationToken);
 
             _chunks = _partitionsDb.GetCollection<Chunk>(_options.PartitionsCollectionName);
             _counters = _countersDb.GetCollection<Counter>(_options.SequenceCollectionName);
 
             await _chunks.Indexes.CreateOneAsync(
-                Builders<Chunk>.IndexKeys
-                    .Ascending(x => x.PartitionId)
-                    .Ascending(x => x.Index),
-                new CreateIndexOptions()
-                {
-                    Unique = true,
-                    Name = SequenceIdx
-                }
-            ).ConfigureAwait(false);
+                    Builders<Chunk>.IndexKeys
+                        .Ascending(x => x.PartitionId)
+                        .Ascending(x => x.Index),
+                    new CreateIndexOptions()
+                    {
+                        Unique = true,
+                        Name = SequenceIdx
+                    }, cancellationToken)
+                .ConfigureAwait(false);
 
             await _chunks.Indexes.CreateOneAsync(
-                Builders<Chunk>.IndexKeys
-                    .Ascending(x => x.PartitionId)
-                    .Ascending(x => x.OpId),
-                new CreateIndexOptions()
-                {
-                    Unique = true,
-                    Name = OperationIdx
-                }
-            ).ConfigureAwait(false);
+                    Builders<Chunk>.IndexKeys
+                        .Ascending(x => x.PartitionId)
+                        .Ascending(x => x.OpId),
+                    new CreateIndexOptions()
+                    {
+                        Unique = true,
+                        Name = OperationIdx
+                    }, cancellationToken)
+                .ConfigureAwait(false);
 
             if (_options.UseLocalSequence)
             {
-                await ReloadSequence().ConfigureAwait(false);
+                await ReloadSequence(cancellationToken).ConfigureAwait(false);
             }
         }
 
-        private async Task ReloadSequence()
+        private async Task ReloadSequence(CancellationToken cancellationToken = default(CancellationToken)
+        )
         {
             var filter = Builders<Chunk>.Filter.Empty;
             var lastSequenceNumber = await _chunks
@@ -291,13 +316,14 @@ namespace NStore.Persistence.Mongo
                 .SortByDescending(x => x.Id)
                 .Project(x => x.Id)
                 .Limit(1)
-                .FirstOrDefaultAsync()
+                .FirstOrDefaultAsync(cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
 
             this._sequence = lastSequenceNumber;
         }
 
-        private async Task<long> GetNextId()
+        private async Task<long> GetNextId(CancellationToken cancellationToken = default(CancellationToken)
+        )
         {
             if (_options.UseLocalSequence)
                 return Interlocked.Increment(ref _sequence);
@@ -312,18 +338,21 @@ namespace NStore.Persistence.Mongo
             };
 
             var updateResult = await _counters.FindOneAndUpdateAsync(
-                filter, update, options
-            ).ConfigureAwait(false);
+                    filter, update, options, cancellationToken)
+                .ConfigureAwait(false);
 
             return updateResult.LastValue;
         }
 
         //@@TODO remove
-        public async Task DestroyStoreAsync()
+        public async Task DestroyStoreAsync(CancellationToken cancellationToken = default(CancellationToken)
+        )
         {
             if (this._partitionsDb != null)
             {
-                await this._partitionsDb.Client.DropDatabaseAsync(this._partitionsDb.DatabaseNamespace.DatabaseName).ConfigureAwait(false);
+                await this._partitionsDb.Client
+                    .DropDatabaseAsync(this._partitionsDb.DatabaseNamespace.DatabaseName, cancellationToken)
+                    .ConfigureAwait(false);
             }
 
             _sequence = 0;
