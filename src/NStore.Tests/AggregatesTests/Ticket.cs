@@ -14,5 +14,10 @@ namespace NStore.Tests.AggregatesTests
 
     public class Ticket : Aggregate
     {
+        public void Sale()
+        {
+            Raise(new TicketSold());
+        }
+
     }
 }

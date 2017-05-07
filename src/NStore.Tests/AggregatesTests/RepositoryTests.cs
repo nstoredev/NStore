@@ -31,7 +31,7 @@ namespace NStore.Tests.AggregatesTests
             var ticket = await Repository.GetById<Ticket>("Ticket_1");
 
             Assert.NotNull(ticket);
-            Assert.False(ticket.Initialized);
+            Assert.False(ticket.IsInitialized);
         }
     }
 
@@ -47,7 +47,7 @@ namespace NStore.Tests.AggregatesTests
         public async void can_load_ticket_at_version_1()
         {
             var ticket = await Repository.GetById<Ticket>("Ticket_1",1);
-            Assert.True(ticket.Initialized);
+            Assert.True(ticket.IsInitialized);
             Assert.Equal(1, ticket.Version);
         }
 
@@ -55,7 +55,7 @@ namespace NStore.Tests.AggregatesTests
         public async void can_load_ticket_at_latest_version()
         {
             var ticket = await Repository.GetById<Ticket>("Ticket_1");
-            Assert.True(ticket.Initialized);
+            Assert.True(ticket.IsInitialized);
             Assert.Equal(2, ticket.Version);
         }
     }

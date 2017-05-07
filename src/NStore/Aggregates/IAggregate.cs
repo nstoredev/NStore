@@ -4,7 +4,7 @@
     {
         int Version { get; }
 
-        bool Initialized { get; }
+        bool IsInitialized { get; }
         void Append(object @event);
     }
 }
