@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using NStore.Raw;
 
@@ -14,10 +17,41 @@ namespace NStore.InMemory
         public string OpId { get; set; }
     }
 
+    internal class Partition
+    {
+        public Partition(string partitionId)
+        {
+            this.Id = partitionId;
+        }
+
+        public string Id { get; set; }
+        public IEnumerable<Chunk> Chunks => _byIndex.Values.OrderBy(x => x.Index);
+        private readonly IDictionary<long, Chunk> _byIndex = new Dictionary<long, Chunk>();
+
+        public void Write(Chunk chunk)
+        {
+            _byIndex.Add(chunk.Index, chunk);
+        }
+
+        public Chunk[] Delete(long fromIndex, long toIndex)
+        {
+            var toDelete = Chunks.Where(x => x.Index >= fromIndex && x.Index <= toIndex).ToArray();
+
+            foreach (var chunk in toDelete)
+            {
+                this._byIndex.Remove(chunk.Index);
+            }
+
+            return toDelete;
+        }
+    }
+
+    //@@TODO make concurrency friendly
     public class InMemoryRawStore : IRawStore
     {
         private readonly object _lock = new object();
         private readonly List<Chunk> _chunks = new List<Chunk>();
+        private readonly Dictionary<string, Partition> _partitions = new Dictionary<string, Partition>();
         private int _sequence = 0;
 
         public Task ScanAsync(
@@ -29,38 +63,31 @@ namespace NStore.InMemory
         {
             lock (_lock)
             {
+                Partition partition;
+                if (_partitions.TryGetValue(partitionId, out partition) == false)
+                    return Task.FromResult(0);
+
+                IEnumerable<Chunk> list = null;
+
                 if (direction == ScanDirection.Forward)
                 {
-                    var max = limit == Int32.MaxValue ? _chunks.Count : sequenceStart + limit;
-                    for (var index = (int) sequenceStart; index < max; index++)
-                    {
-                        var chunk = _chunks[index];
-                        if (chunk.PartitionId == partitionId)
-                        {
-                            if (consume(chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
-                            {
-                                break;
-                            }
-                        }
-                    }
+                    list = partition.Chunks
+                        .Where(x => x.Index >= sequenceStart)
+                        .Take(limit);
                 }
                 else
                 {
-                    if (sequenceStart == Int64.MaxValue)
-                        sequenceStart = _chunks.Count - 1;
+                    list = partition.Chunks
+                        .Reverse()
+                        .Where(x => x.Index <= sequenceStart)
+                        .Take(limit);
+                }
 
-                    var max = Math.Max(0, limit == Int32.MaxValue ? 0 : sequenceStart - limit);
-
-                    for (var index = (int) sequenceStart; index >= max; index--)
+                foreach (var chunk in list)
+                {
+                    if (consume(chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
                     {
-                        var chunk = _chunks[index];
-                        if (chunk.PartitionId == partitionId)
-                        {
-                            if (consume(chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
-                            {
-                                break;
-                            }
-                        }
+                        break;
                     }
                 }
             }
@@ -114,14 +141,26 @@ namespace NStore.InMemory
         {
             lock (_lock)
             {
-                _chunks.Add(new Chunk()
+                var id = ++_sequence;
+                var chunk = new Chunk()
                 {
-                    Id = ++_sequence,
-                    Index = index,
+                    Id = id,
+                    Index = index >= 0 ? index : id,
                     OpId = operationId,
                     PartitionId = partitionId,
                     Payload = payload
-                });
+                };
+
+                Partition partion;
+                if (!_partitions.TryGetValue(partitionId, out partion))
+                {
+                    partion = new Partition(partitionId);
+                    _partitions[partitionId] = partion;
+                }
+
+                partion.Write(chunk);
+
+                _chunks.Add(chunk);
             }
 
             return Task.FromResult(0);
@@ -131,15 +170,21 @@ namespace NStore.InMemory
         {
             lock (_lock)
             {
-                for (var i = _chunks.Count; i >= 0; i--)
+                Partition partion;
+                if (!_partitions.TryGetValue(partitionId, out partion))
                 {
-                    if (_chunks[i].PartitionId == partitionId &&
-                        _chunks[i].Index >= fromIndex &&
-                        _chunks[i].Index <= toIndex
-                    )
-                    {
-                        _chunks.RemoveAt(i);
-                    }
+                    throw new StreamDeleteException(partitionId);
+                }
+
+                Chunk[] deleted = partion.Delete(fromIndex, toIndex);
+                if (deleted.Length == 0)
+                {
+                    throw new StreamDeleteException(partitionId);
+                }
+
+                foreach (var d in deleted)
+                {
+                    _chunks.Remove(d);
                 }
             }
 
