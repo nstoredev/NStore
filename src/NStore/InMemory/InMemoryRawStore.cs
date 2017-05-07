@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using NStore.Raw;
 
@@ -30,6 +29,14 @@ namespace NStore.InMemory
 
         public void Write(Chunk chunk)
         {
+            if (_byIndex.Values.Any(x => x.OpId == chunk.OpId))
+            {
+                return;
+            }
+
+            if (_byIndex.ContainsKey(chunk.Index))
+                throw new DuplicateStreamIndexException(this.Id, chunk.Index);
+
             _byIndex.Add(chunk.Index, chunk);
         }
 
@@ -104,32 +111,26 @@ namespace NStore.InMemory
         {
             lock (_lock)
             {
+                IEnumerable<Chunk> list;
                 if (direction == ScanDirection.Forward)
                 {
-                    var max = Math.Min(_chunks.Count, limit == Int32.MaxValue ? _chunks.Count : sequenceStart + limit);
-                    for (var index = (int) sequenceStart; index < max; index++)
-                    {
-                        var chunk = _chunks[index];
-                        if (consume(chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
-                        {
-                            break;
-                        }
-                    }
+                    list = _chunks.Where(x => x.Id >= sequenceStart)
+                        .Take(limit);
                 }
                 else
                 {
-                    if (sequenceStart == Int64.MaxValue)
-                        sequenceStart = _chunks.Count - 1;
+                    list = _chunks.ToArray()
+                        .Reverse()
+                        .Where(x => x.Id <= sequenceStart)
+                        .Take(limit);
+                }
 
-                    var max = Math.Max(0, limit == Int32.MaxValue ? 0 : sequenceStart - limit);
-
-                    for (var index = (int) sequenceStart; index >= max; index--)
+                foreach (var chunk in list)
+                {
+                    //     Console.WriteLine($"ScanStore {chunk.Id}");
+                    if (consume(chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
                     {
-                        var chunk = _chunks[index];
-                        if (consume(chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
-                        {
-                            break;
-                        }
+                        break;
                     }
                 }
             }
@@ -146,7 +147,7 @@ namespace NStore.InMemory
                 {
                     Id = id,
                     Index = index >= 0 ? index : id,
-                    OpId = operationId,
+                    OpId = operationId ?? Guid.NewGuid().ToString(),
                     PartitionId = partitionId,
                     Payload = payload
                 };

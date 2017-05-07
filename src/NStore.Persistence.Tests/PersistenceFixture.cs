@@ -283,7 +283,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class MongoByteArrayTests : BasePersistenceTest
+    public class ByteArrayPersistenceTest : BasePersistenceTest
     {
         [Fact]
         public async Task InsertByteArray()

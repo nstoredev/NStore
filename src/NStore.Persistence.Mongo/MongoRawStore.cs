@@ -223,6 +223,7 @@ namespace NStore.Persistence.Mongo
 
                     if (ex.Message.Contains(OperationIdx))
                     {
+                        //@@TODO skip instead of empty?
                         await PersistEmptyAsync(chunk.Id).ConfigureAwait(false);
                         return;
                     }
