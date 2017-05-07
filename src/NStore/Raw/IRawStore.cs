@@ -16,18 +16,18 @@ namespace NStore.Raw
 		/// Scan partition
 		/// </summary>
 		/// <param name="partitionId"></param>
-		/// <param name="indexStart"></param>
+		/// <param name="fromIndexInclusive"></param>
 		/// <param name="direction"></param>
 		/// <param name="consume"></param>
-		/// <param name="limit"></param>
+		/// <param name="toIndexInclusive"></param>
 		/// <param name="cancellationToken"></param>
 		/// <returns></returns>
-		Task ScanAsync(
+		Task ScanPartitionAsync(
 			string partitionId,
-			long indexStart, 
+			long fromIndexInclusive,
 			ScanDirection direction, 
 			Func<long, object, ScanCallbackResult> consume,
-			int limit = int.MaxValue,
+			long toIndexInclusive = Int64.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
 		);
 

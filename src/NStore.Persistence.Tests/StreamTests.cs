@@ -1,4 +1,5 @@
-﻿using NStore.Raw;
+﻿using System;
+using NStore.Raw;
 using NStore.Streams;
 using Xunit;
 
@@ -20,7 +21,7 @@ namespace NStore.Persistence.Tests
             await stream.Append("payload");
 
             var acc = new Tape();
-            await Store.ScanAsync("stream_1", 0, ScanDirection.Forward, acc.Record);
+            await Store.ScanPartitionAsync("stream_1", 0, ScanDirection.Forward, acc.Record);
 
             Assert.Equal(1, acc.Length);
             Assert.Equal("payload", acc[0]);
@@ -33,7 +34,7 @@ namespace NStore.Persistence.Tests
 
             var stream = _streams.Open("stream_2");
             var acc = new Tape();
-            await stream.Read(0, acc.Record);
+            await stream.Read(0, Int32.MaxValue, acc.Record);
 
             Assert.Equal(1, acc.Length);
             Assert.Equal("payload", acc[0]);
@@ -47,7 +48,7 @@ namespace NStore.Persistence.Tests
             await stream.Delete();
 
             var acc = new Tape();
-            await stream.Read(0, acc.Record);
+            await stream.Read(0, Int32.MaxValue, acc.Record);
 
             Assert.True(acc.IsEmpty);
         }

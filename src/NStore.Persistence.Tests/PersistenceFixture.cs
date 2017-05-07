@@ -43,7 +43,7 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("Stream_Neg", -1, "payload");
 
             var acc = new Tape();
-            await Store.ScanAsync("Stream_Neg", 0, ScanDirection.Forward, acc.Record);
+            await Store.ScanPartitionAsync("Stream_Neg", 0, ScanDirection.Forward, acc.Record);
             Assert.Equal("payload", acc.ByIndex(1));
         }
     }
@@ -149,7 +149,7 @@ namespace NStore.Persistence.Tests
         {
             object payload = null;
 
-            await Store.ScanAsync(
+            await Store.ScanPartitionAsync(
                 "Stream_1", 0, ScanDirection.Forward,
                 (idx, pl) =>
                 {
@@ -166,7 +166,7 @@ namespace NStore.Persistence.Tests
         {
             object payload = null;
 
-            await Store.ScanAsync(
+            await Store.ScanPartitionAsync(
                 "Stream_1", long.MaxValue, ScanDirection.Backward,
                 (idx, pl) =>
                 {
@@ -183,7 +183,7 @@ namespace NStore.Persistence.Tests
         {
             var buffer = new Tape();
 
-            await Store.ScanAsync(
+            await Store.ScanPartitionAsync(
                 "Stream_1", 0, ScanDirection.Forward,
                 buffer.Record,
                 2
@@ -199,7 +199,7 @@ namespace NStore.Persistence.Tests
         {
             var buffer = new Tape();
 
-            await Store.ScanAsync(
+            await Store.ScanPartitionAsync(
                 "Stream_1", long.MaxValue, ScanDirection.Backward,
                 buffer.Record,
                 2
@@ -291,7 +291,7 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("BA", 0, System.Text.Encoding.UTF8.GetBytes("this is a test"));
 
             byte[] payload = null;
-            await Store.ScanAsync("BA", 0, ScanDirection.Forward, (i, p) =>
+            await Store.ScanPartitionAsync("BA", 0, ScanDirection.Forward, (i, p) =>
             {
                 payload = (byte[]) p;
                 return ScanCallbackResult.Continue;
@@ -312,7 +312,7 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("Id_1", 1, new {data = "this is a test"}, opId);
 
             var list = new List<object>();
-            await Store.ScanAsync("Id_1", 0, ScanDirection.Forward, (i, p) =>
+            await Store.ScanPartitionAsync("Id_1", 0, ScanDirection.Forward, (i, p) =>
             {
                 list.Add(p);
                 return ScanCallbackResult.Continue;
@@ -329,12 +329,12 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("Id_2", 1, "b", opId);
 
             var list = new List<object>();
-            await Store.ScanAsync("Id_1", 0, ScanDirection.Forward, (i, p) =>
+            await Store.ScanPartitionAsync("Id_1", 0, ScanDirection.Forward, (i, p) =>
             {
                 list.Add(p);
                 return ScanCallbackResult.Continue;
             });
-            await Store.ScanAsync("Id_2", 0, ScanDirection.Forward, (i, p) =>
+            await Store.ScanPartitionAsync("Id_2", 0, ScanDirection.Forward, (i, p) =>
             {
                 list.Add(p);
                 return ScanCallbackResult.Continue;
@@ -369,7 +369,7 @@ namespace NStore.Persistence.Tests
         {
             await Store.DeleteAsync("delete");
             bool almostOneChunk = false;
-            await Store.ScanAsync("delete", 0, ScanDirection.Forward, (l, o) =>
+            await Store.ScanPartitionAsync("delete", 0, ScanDirection.Forward, (l, o) =>
             {
                 almostOneChunk = true;
                 return ScanCallbackResult.Stop;
@@ -393,7 +393,7 @@ namespace NStore.Persistence.Tests
         {
             await Store.DeleteAsync("delete_3", 1, 1);
             var acc = new Tape();
-            await Store.ScanAsync("delete_3", 0, ScanDirection.Forward, acc.Record);
+            await Store.ScanPartitionAsync("delete_3", 0, ScanDirection.Forward, acc.Record);
 
             Assert.Equal(2, acc.Length);
             Assert.True((string) acc[0] == "2");
@@ -405,7 +405,7 @@ namespace NStore.Persistence.Tests
         {
             await Store.DeleteAsync("delete_4", 3);
             var acc = new Tape();
-            await Store.ScanAsync("delete_4", 0, ScanDirection.Forward, acc.Record);
+            await Store.ScanPartitionAsync("delete_4", 0, ScanDirection.Forward, acc.Record);
 
             Assert.Equal(2, acc.Length);
             Assert.True((string) acc[0] == "1");
@@ -417,7 +417,7 @@ namespace NStore.Persistence.Tests
         {
             await Store.DeleteAsync("delete_5", 2, 2);
             var acc = new Tape();
-            await Store.ScanAsync("delete_5", 0, ScanDirection.Forward, acc.Record);
+            await Store.ScanPartitionAsync("delete_5", 0, ScanDirection.Forward, acc.Record);
 
             Assert.Equal(2, acc.Length);
             Assert.True((string) acc[0] == "1");

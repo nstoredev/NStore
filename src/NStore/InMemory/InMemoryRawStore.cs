@@ -62,14 +62,14 @@ namespace NStore.InMemory
         private readonly Dictionary<string, Partition> _partitions = new Dictionary<string, Partition>();
         private int _sequence = 0;
 
-        public Task ScanAsync(
+        public Task ScanPartitionAsync(
             string partitionId,
-            long sequenceStart,
+            long fromIndexInclusive,
             ScanDirection direction,
             Func<long, object, ScanCallbackResult> consume,
-            int limit = Int32.MaxValue,
+            long toIndexInclusive = Int64.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
-            )
+        )
         {
             lock (_lock)
             {
@@ -77,21 +77,15 @@ namespace NStore.InMemory
                 if (_partitions.TryGetValue(partitionId, out partition) == false)
                     return Task.FromResult(0);
 
-                IEnumerable<Chunk> list = null;
+                IEnumerable<Chunk> list = partition.Chunks.AsEnumerable();
 
-                if (direction == ScanDirection.Forward)
+                if (direction == ScanDirection.Backward)
                 {
-                    list = partition.Chunks
-                        .Where(x => x.Index >= sequenceStart)
-                        .Take(limit);
+                    list = list.Reverse();
                 }
-                else
-                {
-                    list = partition.Chunks
-                        .Reverse()
-                        .Where(x => x.Index <= sequenceStart)
-                        .Take(limit);
-                }
+
+                list = list.Where(x => x.Index >= fromIndexInclusive && x.Index <= toIndexInclusive);
+
 
                 foreach (var chunk in list)
                 {
@@ -151,7 +145,7 @@ namespace NStore.InMemory
             object payload,
             string operationId = null,
             CancellationToken cancellationToken = default(CancellationToken)
-            )
+        )
         {
             lock (_lock)
             {

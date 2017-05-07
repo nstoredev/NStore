@@ -15,10 +15,10 @@ namespace NStore.Tests.AggregatesTests
         [Fact]
         public void can_create_aggregate_with_default_ctor()
         {
-            var aggregate = Factory.Create<TicketAggregate>();
+            var aggregate = Factory.Create<Ticket>();
 
             Assert.NotNull(aggregate);
-            Assert.IsType<TicketAggregate>(aggregate);
+            Assert.IsType<Ticket>(aggregate);
         }
     }
 }

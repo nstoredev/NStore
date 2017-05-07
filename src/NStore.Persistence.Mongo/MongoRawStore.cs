@@ -61,41 +61,29 @@ namespace NStore.Persistence.Mongo
                 .ConfigureAwait(false);
         }
 
-        public async Task ScanAsync(
+        public async Task ScanPartitionAsync(
             string partitionId,
-            long indexStart,
+            long fromIndexInclusive,
             ScanDirection direction,
             Func<long, object, ScanCallbackResult> consume,
-            int limit = int.MaxValue,
+            long toIndexInclusive = Int64.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         )
         {
             SortDefinition<Chunk> sort;
             FilterDefinition<Chunk> filter;
 
-            if (direction == ScanDirection.Forward)
-            {
-                sort = Builders<Chunk>.Sort.Ascending(x => x.Index);
-                filter = Builders<Chunk>.Filter.And(
-                    Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId),
-                    Builders<Chunk>.Filter.Gte(x => x.Index, indexStart)
-                );
-            }
-            else
-            {
-                sort = Builders<Chunk>.Sort.Descending(x => x.Index);
-                filter = Builders<Chunk>.Filter.And(
-                    Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId),
-                    Builders<Chunk>.Filter.Lte(x => x.Index, indexStart)
-                );
-            }
+            filter = Builders<Chunk>.Filter.And(
+                Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId),
+                Builders<Chunk>.Filter.Gte(x => x.Index, fromIndexInclusive),
+                Builders<Chunk>.Filter.Lte(x => x.Index, toIndexInclusive)
+            );
+
+            sort = direction == ScanDirection.Forward
+                ? Builders<Chunk>.Sort.Ascending(x => x.Index)
+                : Builders<Chunk>.Sort.Descending(x => x.Index);
 
             var options = new FindOptions<Chunk>() {Sort = sort};
-
-            if (limit != int.MaxValue)
-            {
-                options.Limit = limit;
-            }
 
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken))
             {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using NStore.Raw;
 
@@ -21,9 +22,20 @@ namespace NStore.Streams
             return _raw.PersistAsync(this.Id, -1, payload, operationId);
         }
 
-        public Task Read(int index, Func<long, object, ScanCallbackResult> consumer)
+        public Task Read(
+            int fromIndexInclusive,
+            int toIndexInclusive,
+            Func<long, object, ScanCallbackResult> consumer,
+            CancellationToken cancellationToken = default(CancellationToken)
+        )
         {
-            return _raw.ScanAsync(this.Id, index, ScanDirection.Forward, consumer);
+            return _raw.ScanPartitionAsync(
+                this.Id,
+                fromIndexInclusive,
+                ScanDirection.Forward,
+                consumer,
+                cancellationToken: cancellationToken
+            );
         }
 
         public Task Delete()
