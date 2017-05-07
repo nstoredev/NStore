@@ -162,12 +162,14 @@ namespace NStore.Persistence.Tests
         }
 
         [Fact]
-        public async Task ReadLast()
+        public async Task should_read_last_of_partition()
         {
             object payload = null;
 
             await Store.ScanPartitionAsync(
-                "Stream_1", long.MaxValue, ScanDirection.Backward,
+                "Stream_1",
+                0,
+                ScanDirection.Backward,
                 (idx, pl) =>
                 {
                     payload = pl;
@@ -197,60 +199,75 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_read_only_last_two_chunks()
         {
-            var buffer = new Tape();
+            var tape = new Tape();
 
             await Store.ScanPartitionAsync(
-                "Stream_1", long.MaxValue, ScanDirection.Backward,
-                buffer.Record,
-                2
+                "Stream_1",
+                2,
+                ScanDirection.Backward,
+                tape.Record,
+                3
             );
 
-            Assert.Equal(2, buffer.Length);
-            Assert.Equal("c", buffer[0]);
-            Assert.Equal("b", buffer[1]);
+            Assert.Equal(2, tape.Length);
+            Assert.Equal("c", tape[0]);
+            Assert.Equal("b", tape[1]);
         }
 
         [Fact]
         public async Task read_all_forward()
         {
-            var buffer = new Tape();
-            await Store.ScanStoreAsync(0, ScanDirection.Forward, buffer.Record);
+            var tape = new Tape();
+            await Store.ScanStoreAsync(0, ScanDirection.Forward, tape.Record);
 
-            Assert.Equal(5, buffer.Length);
-            Assert.Equal("a", buffer[0]);
-            Assert.Equal("b", buffer[1]);
-            Assert.Equal("c", buffer[2]);
-            Assert.Equal("d", buffer[3]);
-            Assert.Equal("e", buffer[4]);
+            Assert.Equal(5, tape.Length);
+            Assert.Equal("a", tape[0]);
+            Assert.Equal("b", tape[1]);
+            Assert.Equal("c", tape[2]);
+            Assert.Equal("d", tape[3]);
+            Assert.Equal("e", tape[4]);
         }
 
         [Fact]
         public async Task read_all_forward_from_middle()
         {
-            var buffer = new Tape();
-            await Store.ScanStoreAsync(3, ScanDirection.Forward, buffer.Record);
+            var tape = new Tape();
+            await Store.ScanStoreAsync(
+                3,
+                ScanDirection.Forward,
+                tape.Record
+            );
 
-            Assert.Equal(3, buffer.Length);
-            Assert.Equal("c", buffer[0]);
-            Assert.Equal("d", buffer[1]);
-            Assert.Equal("e", buffer[2]);
+            Assert.Equal(3, tape.Length);
+            Assert.Equal("c", tape[0]);
+            Assert.Equal("d", tape[1]);
+            Assert.Equal("e", tape[2]);
         }
 
         [Fact]
         public async Task read_all_forward_from_middle_limit_one()
         {
-            var buffer = new Tape();
-            await Store.ScanStoreAsync(3, ScanDirection.Forward, buffer.Record, 1);
+            var tape = new Tape();
+            await Store.ScanStoreAsync(
+                3,
+                ScanDirection.Forward,
+                tape.Record,
+                1
+               );
 
-            Assert.Equal(1, buffer.Length);
-            Assert.Equal("c", buffer[0]);
+            Assert.Equal(1, tape.Length);
+            Assert.Equal("c", tape[0]);
         }
 
         [Fact]
         public async Task read_all_backward()
         {
             var buffer = new Tape();
-            await Store.ScanStoreAsync(long.MaxValue, ScanDirection.Backward, buffer.Record);
+            await Store.ScanStoreAsync(
+                long.MaxValue,
+                ScanDirection.Backward,
+                buffer.Record
+            );
 
             Assert.Equal(5, buffer.Length);
             Assert.Equal("e", buffer[0]);
@@ -264,7 +281,11 @@ namespace NStore.Persistence.Tests
         public async Task read_all_backward_from_middle()
         {
             var buffer = new Tape();
-            await Store.ScanStoreAsync(3, ScanDirection.Backward, buffer.Record);
+            await Store.ScanStoreAsync(
+                3,
+                ScanDirection.Backward,
+                buffer.Record
+            );
 
             Assert.Equal(3, buffer.Length);
             Assert.Equal("c", buffer[0]);
