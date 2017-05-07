@@ -32,10 +32,11 @@ namespace NStore.Aggregates
             var type = target.GetType();
 
             //@@TODO: access private methods
-            var mi = type.GetTypeInfo().GetMethod(
-                "On",
-                new Type[] {@event.GetType()}
-            );
+            var mi = type.GetTypeInfo()
+                .GetMethod(
+                    "On",
+                    new Type[] {@event.GetType()}
+                );
 
             return mi;
         }
@@ -60,6 +61,8 @@ namespace NStore.Aggregates
         {
             this.Dispatcher = dispatcher ?? new DefaultEventDispatcher<TState>(() => this.State);
         }
+
+        void IAggregate.Init(object state) => Init((TState) state);
 
         public void Init(TState state = null)
         {

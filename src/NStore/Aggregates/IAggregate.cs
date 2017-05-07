@@ -6,5 +6,6 @@
 
         bool IsInitialized { get; }
         void Append(object @event);
+        void Init(object @state = null);
     }
 }
