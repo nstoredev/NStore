@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp1.1</TargetFramework>
- </PropertyGroup>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\NStore.Persistence.Mongo\NStore.Persistence.Mongo.csproj">
       <Project>{a5cff506-c6fa-4ad1-86a3-559dbcfa8b2a}</Project>
@@ -15,6 +15,9 @@
   <ItemGroup>
     <Compile Include="..\NStore.Persistence.Tests\PersistenceFixture.cs">
       <Link>PersistenceFixture.cs</Link>
+    </Compile>
+    <Compile Include="..\NStore.Persistence.Tests\StreamTests.cs">
+      <Link>StreamTests.cs</Link>
     </Compile>
   </ItemGroup>
   <ItemGroup>
