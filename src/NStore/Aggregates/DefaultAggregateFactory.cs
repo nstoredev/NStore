@@ -7,7 +7,6 @@ namespace NStore.Aggregates
         public T Create<T>() where T : IAggregate
         {
             var aggregate = Activator.CreateInstance<T>();
-            aggregate.Init();
             return aggregate;
         }
     }

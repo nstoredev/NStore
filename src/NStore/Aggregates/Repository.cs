@@ -24,6 +24,7 @@ namespace NStore.Aggregates
         ) where T : IAggregate
         {
             var aggregate = _factory.Create<T>();
+            aggregate.Init();
             var stream = OpenStream(id);
 
             await stream.Read(
