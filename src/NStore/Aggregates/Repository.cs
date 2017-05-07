@@ -26,11 +26,17 @@ namespace NStore.Aggregates
             var aggregate = _factory.Create<T>();
             var stream = OpenStream(id);
 
-            await stream.Read(0, Int32.MaxValue, (l, payload) =>
-            {
-                aggregate.Append(payload);
-                return ScanCallbackResult.Continue;
-            }, cancellationToken).ConfigureAwait(false);
+            await stream.Read(
+                    0,
+                    version,
+                    (l, payload) =>
+                    {
+                        aggregate.Append(payload);
+                        return ScanCallbackResult.Continue;
+                    },
+                    cancellationToken
+                )
+                .ConfigureAwait(false);
 
             return aggregate;
         }

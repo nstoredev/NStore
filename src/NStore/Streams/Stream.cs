@@ -8,7 +8,7 @@ namespace NStore.Streams
     public class Stream : IStream
     {
         private readonly IRawStore _raw;
-        public string Id { get;  }
+        public string Id { get; }
 
         public Stream(string streamId, IRawStore raw)
         {
@@ -34,7 +34,8 @@ namespace NStore.Streams
                 fromIndexInclusive,
                 ScanDirection.Forward,
                 consumer,
-                cancellationToken: cancellationToken
+                toIndexInclusive,
+                cancellationToken
             );
         }
 

@@ -70,16 +70,13 @@ namespace NStore.Persistence.Mongo
             CancellationToken cancellationToken = default(CancellationToken)
         )
         {
-            SortDefinition<Chunk> sort;
-            FilterDefinition<Chunk> filter;
-
-            filter = Builders<Chunk>.Filter.And(
+            var filter = Builders<Chunk>.Filter.And(
                 Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId),
                 Builders<Chunk>.Filter.Gte(x => x.Index, fromIndexInclusive),
                 Builders<Chunk>.Filter.Lte(x => x.Index, toIndexInclusive)
             );
 
-            sort = direction == ScanDirection.Forward
+            var sort = direction == ScanDirection.Forward
                 ? Builders<Chunk>.Sort.Ascending(x => x.Index)
                 : Builders<Chunk>.Sort.Descending(x => x.Index);
 
