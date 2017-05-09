@@ -1,13 +1,20 @@
-﻿namespace NStore.Aggregates
+﻿using System.Threading.Tasks;
+using NStore.Streams;
+
+namespace NStore.Aggregates
 {
     public interface IAggregate
     {
         string Id { get; }
-        int Version { get; }
+        long Version { get; }
 
         bool IsInitialized { get; }
-        void Append(object @event);
-        void Init(string id, int version = 0, object @state = null);
+        void Init(string id, long version = 0, object @state = null);
+    }
+
+    public interface IAggregatePersister
+    {
+        void Append(long version, object[] @event);
     }
 
     public static class AggregateExtensions

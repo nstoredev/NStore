@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using NStore.Aggregates;
+using Xunit;
 
 namespace NStore.Tests.AggregatesTests
 {
@@ -42,8 +43,9 @@ namespace NStore.Tests.AggregatesTests
         public void append_should_increase_version()
         {
             Ticket ticket = TicketFactory.ForTest();
+            var persister = (IAggregatePersister) ticket;
 
-            ticket.Append(new TicketSold());
+            persister.Append(1, new object[] {new TicketSold()});
 
             Assert.True(ticket.IsInitialized);
             Assert.Equal(1, ticket.Version);
@@ -51,12 +53,13 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public void raising_event_should_increate_version()
+        public void raising_event_should_not_increase_version()
         {
             Ticket ticket = TicketFactory.ForTest();
 
             ticket.Sale();
-            Assert.Equal(1, ticket.Version);
+            Assert.Equal(0, ticket.Version);
+
             Assert.Equal(1, ticket.UncommittedEvents.Count);
             Assert.IsType<TicketSold>(ticket.UncommittedEvents[0]);
             Assert.True(ticket.ExposedStateForTest.HasBeenSold);

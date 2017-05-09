@@ -3,10 +3,13 @@ using System.Xml.Linq;
 
 namespace NStore.Aggregates
 {
-    public abstract class Aggregate<TState> : IAggregate where TState : AggregateState, new()
+    public abstract class Aggregate<TState> :
+        IAggregatePersister, 
+        IAggregate 
+        where TState : AggregateState, new()
     {
         public string Id { get; private set; }
-        public int Version { get; private set; }
+        public long Version { get; private set; }
         public bool IsInitialized { get; private set; }
 
         public IList<object> UncommittedEvents { get; private set; } = new List<object>();
@@ -18,10 +21,10 @@ namespace NStore.Aggregates
             this.Dispatcher = dispatcher ?? new DefaultEventDispatcher<TState>(() => this.State);
         }
 
-        void IAggregate.Init(string id, int version, object state) => 
+        void IAggregate.Init(string id, long version, object state) => 
             Init(id, version, (TState) state);
 
-        public void Init(string id, int version = 0, TState state = null)
+        public void Init(string id, long version = 0, TState state = null)
         {
             this.Id = id;
             this.State = state ?? new TState();
@@ -30,16 +33,24 @@ namespace NStore.Aggregates
             this.Version = version;
         }
 
-        public void Append(object @event)
+        void IAggregatePersister.Append(long version, object[] events)
         {
-            this.Version++;
+            this.Version = version;
+            foreach (var @event in events)
+            {
+                this.Dispatch(@event);
+            }
+        }
+
+        protected void Dispatch(object @event)
+        {
             this.Dispatcher.Dispatch(@event);
         }
 
         protected void Raise(object @event)
         {
             this.UncommittedEvents.Add(@event);
-            Append(@event);
+            this.Dispatch(@event);
         }
     }
 }

@@ -50,14 +50,14 @@ namespace NStore.Tests.AggregatesTests
     {
         public with_populated_stream()
         {
-            Raw.PersistAsync("Ticket_1", 1, new TicketSold()).GetAwaiter().GetResult();
-            Raw.PersistAsync("Ticket_1", 2, new TicketRefunded()).GetAwaiter().GetResult();
+            Raw.PersistAsync("Ticket_1", 1, new object[] { new TicketSold() }).GetAwaiter().GetResult();
+            Raw.PersistAsync("Ticket_1", 2, new object[] { new TicketRefunded() }).GetAwaiter().GetResult();
         }
 
         [Fact]
         public async void can_load_ticket_at_version_1()
         {
-            var ticket = await Repository.GetById<Ticket>("Ticket_1",1);
+            var ticket = await Repository.GetById<Ticket>("Ticket_1", 1);
             Assert.True(ticket.IsInitialized);
             Assert.Equal(1, ticket.Version);
         }

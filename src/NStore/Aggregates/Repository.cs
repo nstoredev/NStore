@@ -26,13 +26,14 @@ namespace NStore.Aggregates
             var aggregate = _factory.Create<T>();
             aggregate.Init(id);
             var stream = OpenStream(id);
+            var persister = (IAggregatePersister)aggregate;
 
             await stream.Read(
                     0,
                     version,
                     (l, payload) =>
                     {
-                        aggregate.Append(payload);
+                        persister.Append(l, (object[])payload);
                         return ScanCallbackResult.Continue;
                     },
                     cancellationToken
