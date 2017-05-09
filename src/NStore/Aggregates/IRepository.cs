@@ -12,7 +12,10 @@ namespace NStore.Aggregates
             CancellationToken cancellationToken = default(CancellationToken)
         ) where T : IAggregate;
 
-
-        void Save<T>(T aggregate) where T : IAggregate;
+        Task Save<T>(
+            T aggregate, 
+            string operationId,
+            CancellationToken cancellationToken = default(CancellationToken)
+        ) where T : IAggregate;
     }
 }

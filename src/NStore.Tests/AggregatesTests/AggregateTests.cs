@@ -4,12 +4,12 @@ namespace NStore.Tests.AggregatesTests
 {
     public static class TicketFactory
     {
-        public static Ticket ForTest(bool init = true)
+        public static Ticket ForTest(string id = "Ticket_1", bool init = true)
         {
             var ticket = new Ticket();
 
             if (init)
-                ticket.Init();
+                ticket.Init(id);
 
             return ticket;
         }
@@ -32,9 +32,10 @@ namespace NStore.Tests.AggregatesTests
         public void init_without_params_should_create_default_state()
         {
             var ticket = new Ticket();
-            ticket.Init();
+            ticket.Init("new_ticket");
 
             Assert.NotNull(ticket.ExposedStateForTest);
+            Assert.Equal("new_ticket", ticket.Id);
         }
 
         [Fact]

@@ -5,6 +5,7 @@ namespace NStore.Aggregates
 {
     public abstract class Aggregate<TState> : IAggregate where TState : AggregateState, new()
     {
+        public string Id { get; private set; }
         public int Version { get; private set; }
         public bool IsInitialized { get; private set; }
 
@@ -17,11 +18,12 @@ namespace NStore.Aggregates
             this.Dispatcher = dispatcher ?? new DefaultEventDispatcher<TState>(() => this.State);
         }
 
-        void IAggregate.Init(int version, object state) => 
-            Init(version, (TState) state);
+        void IAggregate.Init(string id, int version, object state) => 
+            Init(id, version, (TState) state);
 
-        public void Init(int version = 0, TState state = null)
+        public void Init(string id, int version = 0, TState state = null)
         {
+            this.Id = id;
             this.State = state ?? new TState();
             this.IsInitialized = true;
             this.UncommittedEvents.Clear();

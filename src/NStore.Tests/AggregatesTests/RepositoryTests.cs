@@ -1,4 +1,5 @@
-﻿using NStore.Aggregates;
+﻿using System;
+using NStore.Aggregates;
 using NStore.InMemory;
 using NStore.Streams;
 using Xunit;
@@ -23,15 +24,25 @@ namespace NStore.Tests.AggregatesTests
         }
     }
 
-    public class with_empty_stream : BaseRepositoryTest
+    public class with_empty_store : BaseRepositoryTest
     {
         [Fact]
-        public async void can_create_new_aggregate()
+        public async void loading_an_aggregate_from_an_empty_stream_should_return_a_new_aggregate()
         {
             var ticket = await Repository.GetById<Ticket>("Ticket_1");
 
             Assert.NotNull(ticket);
             Assert.True(ticket.IsNew());
+        }
+
+        [Fact]
+        public async void saving_an_aggregate_shold_persist_stream()
+        {
+            var ticket = await Repository.GetById<Ticket>("Ticket_1");
+
+            ticket.Sale();
+
+            await Repository.Save(ticket, "op_1");
         }
     }
 

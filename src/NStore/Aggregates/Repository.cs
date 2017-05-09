@@ -24,7 +24,7 @@ namespace NStore.Aggregates
         ) where T : IAggregate
         {
             var aggregate = _factory.Create<T>();
-            aggregate.Init();
+            aggregate.Init(id);
             var stream = OpenStream(id);
 
             await stream.Read(
@@ -42,8 +42,15 @@ namespace NStore.Aggregates
             return aggregate;
         }
 
-        public void Save<T>(T aggregate) where T : IAggregate
+        public Task Save<T>(
+            T aggregate,
+            string operationId,
+            CancellationToken cancellationToken = default(CancellationToken)
+        ) where T : IAggregate
         {
+            var stream = OpenStream(aggregate.Id);
+
+            return Task.FromResult(0);
         }
 
         private IStream OpenStream(string id)

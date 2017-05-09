@@ -2,11 +2,12 @@
 {
     public interface IAggregate
     {
+        string Id { get; }
         int Version { get; }
 
         bool IsInitialized { get; }
         void Append(object @event);
-        void Init(int version = 0, object @state = null);
+        void Init(string id, int version = 0, object @state = null);
     }
 
     public static class AggregateExtensions
