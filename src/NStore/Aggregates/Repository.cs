@@ -6,6 +6,24 @@ using NStore.Streams;
 
 namespace NStore.Aggregates
 {
+    public sealed class Commit
+    {
+        public Object[] Events { get; private set; }
+        public long Version { get; private set; }
+        public bool IsEmpty => Events.Length == 0;
+
+        private Commit()
+        {
+
+        }
+
+        public Commit(long version, params object[] events)
+        {
+            this.Version = version;
+            this.Events = events;
+        }
+    }
+
     public class Repository : IRepository
     {
         private readonly IAggregateFactory _factory;
@@ -33,7 +51,9 @@ namespace NStore.Aggregates
                     version,
                     (l, payload) =>
                     {
-                        persister.Append(l, (object[])payload);
+                        var commit = (Commit) payload;
+
+                        persister.Append(commit);
                         return ScanCallbackResult.Continue;
                     },
                     cancellationToken
@@ -43,15 +63,18 @@ namespace NStore.Aggregates
             return aggregate;
         }
 
-        public Task Save<T>(
+        public async Task Save<T>(
             T aggregate,
             string operationId,
             CancellationToken cancellationToken = default(CancellationToken)
         ) where T : IAggregate
         {
             var stream = OpenStream(aggregate.Id);
+            var persister = (IAggregatePersister)aggregate;
 
-            return Task.FromResult(0);
+            var commit = persister.BuildCommit();
+
+            await stream.Append(commit, operationId);
         }
 
         private IStream OpenStream(string id)

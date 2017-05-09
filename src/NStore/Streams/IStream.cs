@@ -7,7 +7,7 @@ namespace NStore.Streams
 {
     public interface IStream
     {
-        Task Append(string payload, string operationId = null);
+        Task Append(object payload, string operationId = null);
         Task Read(
             int fromIndexInclusive,
             int toIndexInclusive,

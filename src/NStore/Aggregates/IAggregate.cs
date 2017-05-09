@@ -14,7 +14,8 @@ namespace NStore.Aggregates
 
     public interface IAggregatePersister
     {
-        void Append(long version, object[] @event);
+        void Append(Commit commit);
+        Commit BuildCommit();
     }
 
     public static class AggregateExtensions

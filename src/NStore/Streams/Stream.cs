@@ -17,7 +17,7 @@ namespace NStore.Streams
         }
 
 
-        public Task Append(string payload, string operationId)
+        public Task Append(object payload, string operationId)
         {
             return _raw.PersistAsync(this.Id, -1, payload, operationId);
         }

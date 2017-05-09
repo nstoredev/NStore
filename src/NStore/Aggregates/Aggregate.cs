@@ -1,11 +1,12 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Xml.Linq;
 
 namespace NStore.Aggregates
 {
     public abstract class Aggregate<TState> :
-        IAggregatePersister, 
-        IAggregate 
+        IAggregatePersister,
+        IAggregate
         where TState : AggregateState, new()
     {
         public string Id { get; private set; }
@@ -21,8 +22,8 @@ namespace NStore.Aggregates
             this.Dispatcher = dispatcher ?? new DefaultEventDispatcher<TState>(() => this.State);
         }
 
-        void IAggregate.Init(string id, long version, object state) => 
-            Init(id, version, (TState) state);
+        void IAggregate.Init(string id, long version, object state) =>
+            Init(id, version, (TState)state);
 
         public void Init(string id, long version = 0, TState state = null)
         {
@@ -33,13 +34,22 @@ namespace NStore.Aggregates
             this.Version = version;
         }
 
-        void IAggregatePersister.Append(long version, object[] events)
+        void IAggregatePersister.Append(Commit commit)
         {
-            this.Version = version;
-            foreach (var @event in events)
+            this.Version = commit.Version;
+            foreach (var @event in commit.Events)
             {
                 this.Dispatch(@event);
             }
+        }
+
+        Commit IAggregatePersister.BuildCommit()
+        {
+            var commit = new Commit(
+                this.Version + 1,
+                this.UncommittedEvents.ToArray()
+            );
+            return commit;
         }
 
         protected void Dispatch(object @event)

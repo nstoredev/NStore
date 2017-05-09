@@ -1,6 +1,7 @@
 ﻿using System;
 using NStore.Aggregates;
 using NStore.InMemory;
+using NStore.Raw;
 using NStore.Streams;
 using Xunit;
 
@@ -10,16 +11,18 @@ namespace NStore.Tests.AggregatesTests
 {
     public abstract class BaseRepositoryTest
     {
-        protected InMemoryRawStore Raw { get; }
+        protected IStreamStore Streams { get; }
+        protected IRawStore Raw { get; }
         protected IRepository Repository { get; }
 
         protected BaseRepositoryTest()
         {
             Raw = new InMemoryRawStore();
 
+            Streams = new StreamStore(Raw);
             Repository = new Repository(
                 new DefaultAggregateFactory(),
-                new StreamStore(Raw)
+                Streams
             );
         }
     }
@@ -43,6 +46,14 @@ namespace NStore.Tests.AggregatesTests
             ticket.Sale();
 
             await Repository.Save(ticket, "op_1");
+
+            // load stream
+            var stream = Streams.Open("Ticket_1");
+            var tape = new Tape();
+            await stream.Read(0, int.MaxValue, tape.Record);
+
+            Assert.Equal(1, tape.Length);
+            Assert.IsType<Commit>(tape[0]);
         }
     }
 
@@ -50,8 +61,8 @@ namespace NStore.Tests.AggregatesTests
     {
         public with_populated_stream()
         {
-            Raw.PersistAsync("Ticket_1", 1, new object[] { new TicketSold() }).GetAwaiter().GetResult();
-            Raw.PersistAsync("Ticket_1", 2, new object[] { new TicketRefunded() }).GetAwaiter().GetResult();
+            Raw.PersistAsync("Ticket_1", 1, new Commit(1, new TicketSold())).GetAwaiter().GetResult();
+            Raw.PersistAsync("Ticket_1", 2, new Commit(2, new TicketRefunded())).GetAwaiter().GetResult();
         }
 
         [Fact]
