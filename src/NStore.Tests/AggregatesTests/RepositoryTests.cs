@@ -61,8 +61,8 @@ namespace NStore.Tests.AggregatesTests
     {
         public with_populated_stream()
         {
-            Raw.PersistAsync("Ticket_1", 1, new Commit(1, new TicketSold())).GetAwaiter().GetResult();
-            Raw.PersistAsync("Ticket_1", 2, new Commit(2, new TicketRefunded())).GetAwaiter().GetResult();
+            Raw.PersistAsync("Ticket_1", 1, new Commit(1, new TicketSold())).Wait();
+            Raw.PersistAsync("Ticket_1", 2, new Commit(2, new TicketRefunded())).Wait();
         }
 
         [Fact]

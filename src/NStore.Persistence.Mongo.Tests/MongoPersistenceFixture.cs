@@ -13,7 +13,7 @@ namespace NStore.Persistence.Tests
         private static int StaticId = 1;
         private int _id;
 
-        public IRawStore Create()
+        private IRawStore Create()
         {
             _id = Interlocked.Increment(ref StaticId);
 
@@ -29,15 +29,12 @@ namespace NStore.Persistence.Tests
 
             Console.WriteLine($"Setup {_id} {GetType().Name}");
 
-            _mongoRawStore.InitAsync()
-                .ConfigureAwait(false)
-                .GetAwaiter()
-                .GetResult();
+            _mongoRawStore.InitAsync().Wait();
 
             return _mongoRawStore;
         }
 
-        public void Clear()
+        private void Clear()
         {
             Console.WriteLine($"Cleanup {_id} {GetType().Name}");
             try

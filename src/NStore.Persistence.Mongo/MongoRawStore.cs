@@ -87,9 +87,9 @@ namespace NStore.Persistence.Mongo
                 options.Limit = limit;
             }
 
-            using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken))
+            using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
             {
-                while (await cursor.MoveNextAsync(cancellationToken))
+                while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
                 {
                     var batch = cursor.Current;
                     foreach (var b in batch)
@@ -132,9 +132,9 @@ namespace NStore.Persistence.Mongo
                 options.Limit = limit;
             }
 
-            using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken))
+            using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
             {
-                while (await cursor.MoveNextAsync(cancellationToken))
+                while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
                 {
                     var batch = cursor.Current;
                     foreach (var b in batch)
@@ -156,7 +156,7 @@ namespace NStore.Persistence.Mongo
             CancellationToken cancellationToken = default(CancellationToken)
         )
         {
-            long id = await GetNextId();
+            long id = await GetNextId(cancellationToken).ConfigureAwait(false);
             var doc = new Chunk()
             {
                 Id = id,
@@ -166,7 +166,7 @@ namespace NStore.Persistence.Mongo
                 OpId = operationId ?? Guid.NewGuid().ToString()
             };
 
-            await InternalPersistAsync(doc, cancellationToken);
+            await InternalPersistAsync(doc, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task DeleteAsync(
@@ -245,10 +245,10 @@ namespace NStore.Persistence.Mongo
                     {
                         Console.WriteLine(
                             $"Error writing chunk #{chunk.Id} => {ex.Message} - {ex.GetType().FullName} ");
-                        await ReloadSequence(cancellationToken);
-                        chunk.Id = await GetNextId(cancellationToken);
+                        await ReloadSequence(cancellationToken).ConfigureAwait(false);
+                        chunk.Id = await GetNextId(cancellationToken).ConfigureAwait(false);
                         //@@TODO move to while loop to avoid stack call
-                        await InternalPersistAsync(chunk, cancellationToken);
+                        await InternalPersistAsync(chunk, cancellationToken).ConfigureAwait(false);
                         return;
                     }
                 }
@@ -297,8 +297,7 @@ namespace NStore.Persistence.Mongo
             }
         }
 
-        private async Task ReloadSequence(CancellationToken cancellationToken = default(CancellationToken)
-        )
+        private async Task ReloadSequence(CancellationToken cancellationToken = default(CancellationToken))
         {
             var filter = Builders<Chunk>.Filter.Empty;
             var lastSequenceNumber = await _chunks
@@ -312,8 +311,7 @@ namespace NStore.Persistence.Mongo
             this._sequence = lastSequenceNumber;
         }
 
-        private async Task<long> GetNextId(CancellationToken cancellationToken = default(CancellationToken)
-        )
+        private async Task<long> GetNextId(CancellationToken cancellationToken = default(CancellationToken))
         {
             if (_options.UseLocalSequence)
                 return Interlocked.Increment(ref _sequence);
@@ -328,15 +326,17 @@ namespace NStore.Persistence.Mongo
             };
 
             var updateResult = await _counters.FindOneAndUpdateAsync(
-                    filter, update, options, cancellationToken)
-                .ConfigureAwait(false);
+                    filter, 
+                    update, 
+                    options, 
+                    cancellationToken
+            ).ConfigureAwait(false);
 
             return updateResult.LastValue;
         }
 
         //@@TODO remove
-        public async Task DestroyStoreAsync(CancellationToken cancellationToken = default(CancellationToken)
-        )
+        public async Task DestroyStoreAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             if (this._partitionsDb != null)
             {
