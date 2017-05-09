@@ -5,6 +5,7 @@ namespace NStore.Streams
     public interface IStreamStore
     {
         IStream Open(string streamId);
+        IOptimisticConcurrencyStream OpenOptimisticConcurrency(string streamId);
     }
 
     public class StreamStore : IStreamStore
@@ -19,6 +20,11 @@ namespace NStore.Streams
         public IStream Open(string streamId)
         {
             return new Stream(streamId, _raw);
+        }
+
+        public IOptimisticConcurrencyStream OpenOptimisticConcurrency(string streamId)
+        {
+            return new OptimisticConcurrencyStream(streamId, _raw);
         }
     }
 }

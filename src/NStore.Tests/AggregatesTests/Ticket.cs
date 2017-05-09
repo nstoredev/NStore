@@ -35,5 +35,15 @@ namespace NStore.Tests.AggregatesTests
 
             Raise(new TicketSold());
         }
+
+        public void Refund()
+        {
+            if(!State.HasBeenSold)
+            {
+                throw new Exception($"Cannot refund an unsold ticket");
+            }
+
+            Raise(new TicketRefunded());
+        }
     }
 }

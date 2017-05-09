@@ -5,21 +5,15 @@ using NStore.Raw;
 
 namespace NStore.Streams
 {
-    public class Stream : IStream
+    public abstract class StreamBase
     {
-        private readonly IRawStore _raw;
+        protected IRawStore Raw { get; }
         public string Id { get; }
 
-        public Stream(string streamId, IRawStore raw)
+        protected StreamBase(string streamId, IRawStore raw)
         {
             this.Id = streamId;
-            _raw = raw;
-        }
-
-
-        public Task Append(object payload, string operationId)
-        {
-            return _raw.PersistAsync(this.Id, -1, payload, operationId);
+            this.Raw = raw;
         }
 
         public Task Read(
@@ -29,7 +23,7 @@ namespace NStore.Streams
             CancellationToken cancellationToken = default(CancellationToken)
         )
         {
-            return _raw.ScanPartitionAsync(
+            return Raw.ScanPartitionAsync(
                 this.Id,
                 fromIndexInclusive,
                 ScanDirection.Forward,
@@ -38,10 +32,40 @@ namespace NStore.Streams
                 cancellationToken
             );
         }
+    }
+
+    public class Stream : StreamBase, IStream
+    {
+        public Stream(string streamId, IRawStore raw) : base(streamId, raw)
+        {
+        }
+
+        public Task Append(object payload, string operationId)
+        {
+            return Raw.PersistAsync(this.Id, -1, payload, operationId);
+        }
 
         public Task Delete()
         {
-            return _raw.DeleteAsync(this.Id);
+            return Raw.DeleteAsync(this.Id);
         }
     }
+
+    public class OptimisticConcurrencyStream: StreamBase, IOptimisticConcurrencyStream
+    {
+        public OptimisticConcurrencyStream(string streamId, IRawStore raw) : base(streamId, raw)
+        {
+        }
+
+        public Task Append(long version, object payload, string operationId)
+        {
+            return Raw.PersistAsync(this.Id, version, payload, operationId);
+        }
+
+        public Task Delete()
+        {
+            return Raw.DeleteAsync(this.Id);
+        }
+    }
+
 }

@@ -240,8 +240,8 @@ namespace NStore.Persistence.Mongo
                     {
                         Console.WriteLine(
                             $"Error writing chunk #{chunk.Id} => {ex.Message} - {ex.GetType().FullName} ");
-                        await ReloadSequence();
-                        chunk.Id = await GetNextId();
+                        await ReloadSequence(cancellationToken);
+                        chunk.Id = await GetNextId(cancellationToken);
                         //@@TODO move to while loop to avoid stack call
                         await InternalPersistAsync(chunk, cancellationToken);
                         return;

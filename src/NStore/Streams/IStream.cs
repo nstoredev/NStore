@@ -5,15 +5,25 @@ using NStore.Raw;
 
 namespace NStore.Streams
 {
-    public interface IStream
+    public interface IReadOnlyStream
     {
-        Task Append(object payload, string operationId = null);
         Task Read(
             int fromIndexInclusive,
             int toIndexInclusive,
             Func<long, object, ScanCallbackResult> consumer,
             CancellationToken cancellationToken = default(CancellationToken)
         );
+    }
+
+    public interface IStream : IReadOnlyStream
+    {
+        Task Append(object payload, string operationId = null);
+        Task Delete();
+    }
+
+    public interface IOptimisticConcurrencyStream : IReadOnlyStream
+    {
+        Task Append(long version, object payload, string operationId = null);
         Task Delete();
     }
 }

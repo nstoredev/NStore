@@ -53,7 +53,7 @@ namespace NStore.Aggregates
                     {
                         var commit = (Commit) payload;
 
-                        persister.Append(commit);
+                        persister.AppendCommit(commit);
                         return ScanCallbackResult.Continue;
                     },
                     cancellationToken

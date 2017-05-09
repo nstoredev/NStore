@@ -14,7 +14,7 @@ namespace NStore.Aggregates
 
     public interface IAggregatePersister
     {
-        void Append(Commit commit);
+        void AppendCommit(Commit commit);
         Commit BuildCommit();
     }
 

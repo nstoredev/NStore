@@ -34,7 +34,7 @@ namespace NStore.Aggregates
             this.Version = version;
         }
 
-        void IAggregatePersister.Append(Commit commit)
+        void IAggregatePersister.AppendCommit(Commit commit)
         {
             this.Version = commit.Version;
             foreach (var @event in commit.Events)

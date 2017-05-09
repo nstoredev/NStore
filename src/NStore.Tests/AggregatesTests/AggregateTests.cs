@@ -52,7 +52,7 @@ namespace NStore.Tests.AggregatesTests
             Ticket ticket = TicketFactory.ForTest();
             var persister = (IAggregatePersister) ticket;
             var commit = new Commit(1, new TicketSold());
-            persister.Append(commit);
+            persister.AppendCommit(commit);
 
             Assert.True(ticket.IsInitialized);
             Assert.Equal(1, ticket.Version);
@@ -94,5 +94,27 @@ namespace NStore.Tests.AggregatesTests
             Assert.False(commit.IsEmpty);
             Assert.Equal(1, commit.Version);
         }
+
+        [Fact]
+        public void persister_should_create_commit_only_with_uncommitted_events()
+        {
+            var ticket = TicketFactory.ForTest();
+            var persister = (IAggregatePersister)ticket;
+
+            var commit = new Commit(1, new TicketSold());
+            persister.AppendCommit(commit);
+
+            ticket.Refund();
+
+            commit = persister.BuildCommit();
+
+            Assert.NotNull(commit);
+            Assert.False(commit.IsEmpty);
+            Assert.Equal(2, commit.Version);
+            Assert.Equal(1, commit.Events.Length);
+            Assert.IsType<TicketRefunded>(commit.Events[0]);
+        }
+
+
     }
 }
