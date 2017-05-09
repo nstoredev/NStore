@@ -129,7 +129,7 @@ namespace NStore.InMemory
                 foreach (var chunk in list)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    //     Console.WriteLine($"ScanStore {chunk.Id}");
+                    //     Console.WriteLine($"ScanStore {chunk.AggregateId}");
                     if (consumer.Consume(chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
                     {
                         break;

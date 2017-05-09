@@ -1,4 +1,5 @@
-﻿using NStore.Aggregates;
+﻿using System;
+using NStore.Aggregates;
 using Xunit;
 
 namespace NStore.Tests.AggregatesTests
@@ -34,6 +35,26 @@ namespace NStore.Tests.AggregatesTests
             Assert.Equal(0, ticket.Version);
             Assert.Empty(ticket.UncommittedEvents);
             Assert.Null(ticket.ExposedStateForTest);
+        }
+
+        [Fact]
+        public void calling_init_more_than_once_should_throw_()
+        {
+            var ticket = new Ticket();
+            ticket.Init("abc");
+
+            var ex = Assert.Throws<AggregateAlreadyInitializedException>(() => ticket.Init("bce"));
+            Assert.Equal("abc", ex.AggregateId);
+            Assert.Equal(typeof(Ticket), ex.AggregateType);
+        }
+
+        [Theory()]
+        [InlineData(null)]
+        [InlineData("")]
+        public void cannot_init_with_invalid_id(string id)
+        {
+            var ticket = new Ticket();
+            Assert.Throws<ArgumentNullException>(() => ticket.Init(id));
         }
 
         [Fact]

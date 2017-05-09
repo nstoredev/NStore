@@ -30,15 +30,16 @@ namespace NStore.Aggregates
             var stream = OpenStream(aggregate);
             var persister = (IAggregatePersister)aggregate;
 
-            await stream.Read(new LambdaConsumer((l, payload) =>
-                    {
-                        var commit = (Commit)payload;
+            var consumer = new LambdaConsumer((l, payload) =>
+            {
+                var commit = (Commit)payload;
 
-                        persister.AppendCommit(commit);
-                        return ScanCallbackResult.Continue;
-                    }),
-                    0, version, cancellationToken)
-                .ConfigureAwait(false);
+                persister.AppendCommit(commit);
+                return ScanCallbackResult.Continue;
+            });
+
+            await stream.Read(consumer,0, version, cancellationToken)
+                        .ConfigureAwait(false);
 
             return aggregate;
         }

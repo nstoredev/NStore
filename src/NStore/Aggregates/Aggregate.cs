@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Xml.Linq;
 
 namespace NStore.Aggregates
 {
@@ -27,6 +27,12 @@ namespace NStore.Aggregates
 
         public void Init(string id, long version = 0, TState state = null)
         {
+            if (String.IsNullOrEmpty(id))
+                throw new ArgumentNullException(nameof(id));
+
+            if (this.Id != null)
+                throw new AggregateAlreadyInitializedException(GetType(), this.Id);
+
             this.Id = id;
             this.State = state ?? new TState();
             this.IsInitialized = true;
