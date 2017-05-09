@@ -4,46 +4,6 @@ using System.Threading.Tasks;
 
 namespace NStore.Raw
 {
-    public interface IConsumer
-    {
-        ScanCallbackResult Consume(long partitionIndex, object payload);
-    }
-
-    public class NullConsumer : IConsumer
-    {
-        public static readonly NullConsumer Instance = new NullConsumer();
-
-        private NullConsumer()
-        {
-        }
-
-        public ScanCallbackResult Consume(long partitionIndex, object payload)
-        {
-            return ScanCallbackResult.Continue;
-        }
-    }
-
-    public class LambdaConsumer : IConsumer
-    {
-        private readonly Func<long, object, ScanCallbackResult> _fn;
-
-        public LambdaConsumer(Func<long, object, ScanCallbackResult> fn)
-        {
-            _fn = fn;
-        }
-
-        public ScanCallbackResult Consume(long partitionIndex, object payload)
-        {
-            return this._fn(partitionIndex, payload);
-        }
-    }
-
-    public interface IRawStoreLifecycle
-    {
-        Task InitAsync();
-        Task DestroyStoreAsync();
-    }
-
     public interface IRawStore
     {
         /// <summary>

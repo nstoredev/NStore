@@ -33,7 +33,7 @@ namespace NStore.Raw
         {
             for (var i = startAt; i < _data.Count; i++)
             {
-                action(_data[i]);
+                action(_data[i].Payload);
             }
         }
 

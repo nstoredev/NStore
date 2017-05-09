@@ -105,6 +105,7 @@ If you don't need to read use {typeof(Stream).Name} instead of {GetType().Name}.
             return Raw.DeleteAsync(this.Id, cancellationToken: cancellation);
         }
 
+        //@@TODO Refator => delete?
         protected async Task<long> LoadActualVersion(CancellationToken cancellation = default(CancellationToken))
         {
             var tape = new Tape();

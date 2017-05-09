@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using NStore.Raw;
@@ -28,6 +29,7 @@ namespace NStore.Aggregates
     {
         private readonly IAggregateFactory _factory;
         private readonly IStreamStore _streams;
+        private readonly IDictionary<IAggregate, IStream> _openedStreams = new Dictionary<IAggregate, IStream>();
 
         public Repository(IAggregateFactory factory, IStreamStore streams)
         {
@@ -43,7 +45,7 @@ namespace NStore.Aggregates
         {
             var aggregate = _factory.Create<T>();
             aggregate.Init(id);
-            var stream = OpenStream(id);
+            var stream = OpenStream(aggregate);
             var persister = (IAggregatePersister)aggregate;
 
             await stream.Read(new LambdaConsumer((l, payload) =>
@@ -65,7 +67,7 @@ namespace NStore.Aggregates
             CancellationToken cancellationToken = default(CancellationToken)
         ) where T : IAggregate
         {
-            var stream = OpenStream(aggregate.Id);
+            var stream = GetStream(aggregate);
             var persister = (IAggregatePersister)aggregate;
 
             var commit = persister.BuildCommit();
@@ -73,9 +75,16 @@ namespace NStore.Aggregates
             await stream.Append(commit, operationId, cancellationToken);
         }
 
-        private IStream OpenStream(string id)
+        private IStream OpenStream(IAggregate aggregate)
         {
-            return _streams.OpenOptimisticConcurrency(id);
+            var s = _streams.OpenOptimisticConcurrency(aggregate.Id);
+            _openedStreams.Add(aggregate, s);
+            return s;
+        }
+
+        private IStream GetStream(IAggregate aggregate)
+        {
+            return _openedStreams[aggregate];
         }
     }
 }
