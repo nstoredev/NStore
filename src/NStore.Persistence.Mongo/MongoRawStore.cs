@@ -67,6 +67,7 @@ namespace NStore.Persistence.Mongo
             ScanDirection direction,
             Func<long, object, ScanCallbackResult> consume,
             long toIndexInclusive = Int64.MaxValue,
+            int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         )
         {
@@ -81,6 +82,10 @@ namespace NStore.Persistence.Mongo
                 : Builders<Chunk>.Sort.Descending(x => x.Index);
 
             var options = new FindOptions<Chunk>() {Sort = sort};
+            if (limit != int.MaxValue)
+            {
+                options.Limit = limit;
+            }
 
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken))
             {

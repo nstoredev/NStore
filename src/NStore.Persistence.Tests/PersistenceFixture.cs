@@ -42,9 +42,9 @@ namespace NStore.Persistence.Tests
         {
             await Store.PersistAsync("Stream_Neg", -1, "payload");
 
-            var acc = new Tape();
-            await Store.ScanPartitionAsync("Stream_Neg", 0, ScanDirection.Forward, acc.Record);
-            Assert.Equal("payload", acc.ByIndex(1));
+            var tape = new Tape();
+            await Store.ScanPartitionAsync("Stream_Neg", 0, ScanDirection.Forward, tape);
+            Assert.Equal("payload", tape.ByIndex(1));
         }
     }
 
@@ -151,11 +151,11 @@ namespace NStore.Persistence.Tests
 
             await Store.ScanPartitionAsync(
                 "Stream_1", 0, ScanDirection.Forward,
-                (idx, pl) =>
+                new LambdaConsumer((idx, pl) =>
                 {
                     payload = pl;
                     return ScanCallbackResult.Stop;
-                }
+                })
             );
 
             Assert.Equal("a", payload);
@@ -170,11 +170,11 @@ namespace NStore.Persistence.Tests
                 "Stream_1",
                 0,
                 ScanDirection.Backward,
-                (idx, pl) =>
+                new LambdaConsumer((idx, pl) =>
                 {
                     payload = pl;
                     return ScanCallbackResult.Stop;
-                }
+                })
             );
 
             Assert.Equal("c", payload);
@@ -183,17 +183,17 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_read_only_first_two_chunks()
         {
-            var buffer = new Tape();
+            var tape = new Tape();
 
             await Store.ScanPartitionAsync(
                 "Stream_1", 0, ScanDirection.Forward,
-                buffer.Record,
+                tape,
                 2
             );
 
-            Assert.Equal(2, buffer.Length);
-            Assert.Equal("a", buffer[0]);
-            Assert.Equal("b", buffer[1]);
+            Assert.Equal(2, tape.Length);
+            Assert.Equal("a", tape[0]);
+            Assert.Equal("b", tape[1]);
         }
 
         [Fact]
@@ -205,7 +205,7 @@ namespace NStore.Persistence.Tests
                 "Stream_1",
                 2,
                 ScanDirection.Backward,
-                tape.Record,
+                tape,
                 3
             );
 
@@ -218,7 +218,7 @@ namespace NStore.Persistence.Tests
         public async Task read_all_forward()
         {
             var tape = new Tape();
-            await Store.ScanStoreAsync(0, ScanDirection.Forward, tape.Record);
+            await Store.ScanStoreAsync(0, ScanDirection.Forward, tape);
 
             Assert.Equal(5, tape.Length);
             Assert.Equal("a", tape[0]);
@@ -235,7 +235,7 @@ namespace NStore.Persistence.Tests
             await Store.ScanStoreAsync(
                 3,
                 ScanDirection.Forward,
-                tape.Record
+                tape
             );
 
             Assert.Equal(3, tape.Length);
@@ -251,7 +251,7 @@ namespace NStore.Persistence.Tests
             await Store.ScanStoreAsync(
                 3,
                 ScanDirection.Forward,
-                tape.Record,
+                tape,
                 1
                );
 
@@ -266,7 +266,7 @@ namespace NStore.Persistence.Tests
             await Store.ScanStoreAsync(
                 long.MaxValue,
                 ScanDirection.Backward,
-                buffer.Record
+                buffer
             );
 
             Assert.Equal(5, buffer.Length);
@@ -284,7 +284,7 @@ namespace NStore.Persistence.Tests
             await Store.ScanStoreAsync(
                 3,
                 ScanDirection.Backward,
-                buffer.Record
+                buffer
             );
 
             Assert.Equal(3, buffer.Length);
@@ -297,7 +297,7 @@ namespace NStore.Persistence.Tests
         public async Task read_all_backward_from_middle_limit_one()
         {
             var buffer = new Tape();
-            await Store.ScanStoreAsync(3, ScanDirection.Backward, buffer.Record, 1);
+            await Store.ScanStoreAsync(3, ScanDirection.Backward, buffer, 1);
 
             Assert.Equal(1, buffer.Length);
             Assert.Equal("c", buffer[0]);
@@ -312,11 +312,11 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("BA", 0, System.Text.Encoding.UTF8.GetBytes("this is a test"));
 
             byte[] payload = null;
-            await Store.ScanPartitionAsync("BA", 0, ScanDirection.Forward, (i, p) =>
+            await Store.ScanPartitionAsync("BA", 0, ScanDirection.Forward, new LambdaConsumer((i, p) =>
             {
                 payload = (byte[]) p;
                 return ScanCallbackResult.Continue;
-            });
+            }));
 
             var text = System.Text.Encoding.UTF8.GetString(payload);
             Assert.Equal("this is a test", text);
@@ -333,11 +333,11 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("Id_1", 1, new {data = "this is a test"}, opId);
 
             var list = new List<object>();
-            await Store.ScanPartitionAsync("Id_1", 0, ScanDirection.Forward, (i, p) =>
+            await Store.ScanPartitionAsync("Id_1", 0, ScanDirection.Forward, new LambdaConsumer((i, p) =>
             {
                 list.Add(p);
                 return ScanCallbackResult.Continue;
-            });
+            }));
 
             Assert.Equal(1, list.Count());
         }
@@ -350,16 +350,16 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("Id_2", 1, "b", opId);
 
             var list = new List<object>();
-            await Store.ScanPartitionAsync("Id_1", 0, ScanDirection.Forward, (i, p) =>
+            await Store.ScanPartitionAsync("Id_1", 0, ScanDirection.Forward, new LambdaConsumer((i, p) =>
             {
                 list.Add(p);
                 return ScanCallbackResult.Continue;
-            });
-            await Store.ScanPartitionAsync("Id_2", 0, ScanDirection.Forward, (i, p) =>
+            }));
+            await Store.ScanPartitionAsync("Id_2", 0, ScanDirection.Forward, new LambdaConsumer((i, p) =>
             {
                 list.Add(p);
                 return ScanCallbackResult.Continue;
-            });
+            }));
 
             Assert.Equal(2, list.Count());
         }
@@ -390,11 +390,11 @@ namespace NStore.Persistence.Tests
         {
             await Store.DeleteAsync("delete");
             bool almostOneChunk = false;
-            await Store.ScanPartitionAsync("delete", 0, ScanDirection.Forward, (l, o) =>
+            await Store.ScanPartitionAsync("delete", 0, ScanDirection.Forward, new LambdaConsumer((l, o) =>
             {
                 almostOneChunk = true;
                 return ScanCallbackResult.Stop;
-            });
+            }));
 
             Assert.False(almostOneChunk, "Should not contains chunks");
         }
@@ -414,7 +414,7 @@ namespace NStore.Persistence.Tests
         {
             await Store.DeleteAsync("delete_3", 1, 1);
             var acc = new Tape();
-            await Store.ScanPartitionAsync("delete_3", 0, ScanDirection.Forward, acc.Record);
+            await Store.ScanPartitionAsync("delete_3", 0, ScanDirection.Forward, acc);
 
             Assert.Equal(2, acc.Length);
             Assert.True((string) acc[0] == "2");
@@ -426,7 +426,7 @@ namespace NStore.Persistence.Tests
         {
             await Store.DeleteAsync("delete_4", 3);
             var acc = new Tape();
-            await Store.ScanPartitionAsync("delete_4", 0, ScanDirection.Forward, acc.Record);
+            await Store.ScanPartitionAsync("delete_4", 0, ScanDirection.Forward, acc);
 
             Assert.Equal(2, acc.Length);
             Assert.True((string) acc[0] == "1");
@@ -438,7 +438,7 @@ namespace NStore.Persistence.Tests
         {
             await Store.DeleteAsync("delete_5", 2, 2);
             var acc = new Tape();
-            await Store.ScanPartitionAsync("delete_5", 0, ScanDirection.Forward, acc.Record);
+            await Store.ScanPartitionAsync("delete_5", 0, ScanDirection.Forward, acc);
 
             Assert.Equal(2, acc.Length);
             Assert.True((string) acc[0] == "1");

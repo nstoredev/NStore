@@ -66,8 +66,9 @@ namespace NStore.InMemory
             string partitionId,
             long fromIndexInclusive,
             ScanDirection direction,
-            Func<long, object, ScanCallbackResult> consume,
+            IConsumer consumer,
             long toIndexInclusive = Int64.MaxValue,
+            int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         )
         {
@@ -84,14 +85,14 @@ namespace NStore.InMemory
                     list = list.Reverse();
                 }
 
-                list = list.Where(x => x.Index >= fromIndexInclusive && x.Index <= toIndexInclusive);
-
+                list = list.Where(x => x.Index >= fromIndexInclusive && x.Index <= toIndexInclusive)
+                    .Take(limit);
 
                 foreach (var chunk in list)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    if (consume(chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
+                    if (consumer.Consume(chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
                     {
                         break;
                     }
@@ -104,7 +105,7 @@ namespace NStore.InMemory
         public Task ScanStoreAsync(
             long sequenceStart,
             ScanDirection direction,
-            Func<long, object, ScanCallbackResult> consume,
+            IConsumer consumer,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         )
@@ -129,7 +130,7 @@ namespace NStore.InMemory
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     //     Console.WriteLine($"ScanStore {chunk.Id}");
-                    if (consume(chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
+                    if (consumer.Consume(chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
                     {
                         break;
                     }

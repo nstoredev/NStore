@@ -50,7 +50,7 @@ namespace NStore.Tests.AggregatesTests
             // load stream
             var stream = Streams.Open("Ticket_1");
             var tape = new Tape();
-            await stream.Read(0, int.MaxValue, tape.Record);
+            await stream.Read(tape);
 
             Assert.Equal(1, tape.Length);
             Assert.IsType<Commit>(tape[0]);

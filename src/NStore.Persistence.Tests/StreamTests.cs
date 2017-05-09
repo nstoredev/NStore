@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using NStore.Raw;
 using NStore.Streams;
 using Xunit;
@@ -21,7 +22,7 @@ namespace NStore.Persistence.Tests
             await stream.Append("payload");
 
             var acc = new Tape();
-            await Store.ScanPartitionAsync("stream_1", 0, ScanDirection.Forward, acc.Record);
+            await Store.ScanPartitionAsync("stream_1", 0, ScanDirection.Forward, acc);
 
             Assert.Equal(1, acc.Length);
             Assert.Equal("payload", acc[0]);
@@ -34,7 +35,7 @@ namespace NStore.Persistence.Tests
 
             var stream = _streams.Open("stream_2");
             var acc = new Tape();
-            await stream.Read(0, Int32.MaxValue, acc.Record);
+            await stream.Read(acc);
 
             Assert.Equal(1, acc.Length);
             Assert.Equal("payload", acc[0]);
@@ -48,7 +49,7 @@ namespace NStore.Persistence.Tests
             await stream.Delete();
 
             var acc = new Tape();
-            await stream.Read(0, Int32.MaxValue, acc.Record);
+            await stream.Read(acc);
 
             Assert.True(acc.IsEmpty);
         }
@@ -63,13 +64,21 @@ namespace NStore.Persistence.Tests
             _streams = new StreamStore(Store);
         }
 
+        protected async Task<IStream> Open(string id)
+        {
+            var stream = _streams.OpenOptimisticConcurrency(id);
+            await stream.Read(NullConsumer.Instance);
+            return stream;
+        }
+
         [Fact]
         public async void appending_first_chunk()
         {
-            var stream = _streams.OpenOptimisticConcurrency("stream_1");
-            await stream.Append(1, "payload");
+            var stream = await Open("stream_1");
+
+            await stream.Append("payload");
             var tape = new Tape();
-            await Store.ScanPartitionAsync("stream_1", 0, ScanDirection.Forward, tape.Record);
+            await Store.ScanPartitionAsync("stream_1", 0, ScanDirection.Forward, tape);
 
             Assert.Equal(1, tape.Length);
             Assert.Equal("payload", tape[0]);
@@ -79,12 +88,12 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async void appending_two_chunks_sequentially()
         {
-            var stream = _streams.OpenOptimisticConcurrency("stream_1");
-            await stream.Append(1, "a");
-            await stream.Append(2, "b");
+            var stream = await Open("stream_1");
+            await stream.Append("a");
+            await stream.Append("b");
 
             var tape = new Tape();
-            await Store.ScanPartitionAsync("stream_1", 0, ScanDirection.Forward, tape.Record);
+            await Store.ScanPartitionAsync("stream_1", 0, ScanDirection.Forward, tape);
 
             Assert.Equal(2, tape.Length);
             Assert.Equal("a", tape[0]);
@@ -96,11 +105,12 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async void appending_two_chunks_at_same_version_should_throw_concurrency_exception()
         {
-            var stream = _streams.OpenOptimisticConcurrency("stream_1");
-            await stream.Append(1, "a");
+            var streama = await Open("stream_1");
+            var streamb = await Open("stream_1");
+            await streama.Append("a");
 
             var ex = await Assert.ThrowsAnyAsync<DuplicateStreamIndexException>(() =>
-                stream.Append(1, "b")
+                streamb.Append("b")
             );
 
             Assert.Equal(1, ex.Index);

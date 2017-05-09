@@ -8,22 +8,16 @@ namespace NStore.Streams
     public interface IReadOnlyStream
     {
         Task Read(
-            int fromIndexInclusive,
-            int toIndexInclusive,
-            Func<long, object, ScanCallbackResult> consumer,
+            IConsumer consumer, 
+            int fromIndexInclusive = 0, 
+            int toIndexInclusive = Int32.MaxValue, 
             CancellationToken cancellationToken = default(CancellationToken)
         );
     }
 
     public interface IStream : IReadOnlyStream
     {
-        Task Append(object payload, string operationId = null);
-        Task Delete();
-    }
-
-    public interface IOptimisticConcurrencyStream : IReadOnlyStream
-    {
-        Task Append(long version, object payload, string operationId = null);
-        Task Delete();
+        Task Append(object payload, string operationId = null, CancellationToken cancellation = default(CancellationToken));
+        Task Delete(CancellationToken cancellation = default(CancellationToken));
     }
 }

@@ -46,18 +46,14 @@ namespace NStore.Aggregates
             var stream = OpenStream(id);
             var persister = (IAggregatePersister)aggregate;
 
-            await stream.Read(
-                    0,
-                    version,
-                    (l, payload) =>
+            await stream.Read(new LambdaConsumer((l, payload) =>
                     {
-                        var commit = (Commit) payload;
+                        var commit = (Commit)payload;
 
                         persister.AppendCommit(commit);
                         return ScanCallbackResult.Continue;
-                    },
-                    cancellationToken
-                )
+                    }),
+                    0, version, cancellationToken)
                 .ConfigureAwait(false);
 
             return aggregate;
@@ -74,12 +70,12 @@ namespace NStore.Aggregates
 
             var commit = persister.BuildCommit();
 
-            await stream.Append(commit, operationId);
+            await stream.Append(commit, operationId, cancellationToken);
         }
 
         private IStream OpenStream(string id)
         {
-            return _streams.Open(id);
+            return _streams.OpenOptimisticConcurrency(id);
         }
     }
 }

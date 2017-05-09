@@ -3,16 +3,28 @@ using System.Collections.Generic;
 
 namespace NStore.Raw
 {
-    public class Tape
+    public class Tape : IConsumer
     {
-        private readonly IList<object> _data = new List<object>();
+        private sealed class Element
+        {
+            public Element(long index, object payload)
+            {
+                Index = index;
+                Payload = payload;
+            }
+
+            public long Index { get; }
+            public object Payload { get; }
+        }
+
+        private readonly IList<Element> _data = new List<Element>();
         private readonly IDictionary<long, object> _map = new Dictionary<long, object>();
         public IEnumerable<object> Data => _data;
         public int Length => _data.Count;
 
-        public ScanCallbackResult Record(long idx, object payload)
+        public ScanCallbackResult Consume(long idx, object payload)
         {
-            _data.Add(payload);
+            _data.Add(new Element(idx, payload));
             _map[idx] = payload;
             return ScanCallbackResult.Continue;
         }
@@ -25,16 +37,18 @@ namespace NStore.Raw
             }
         }
 
-        public object this[int index] => _data[index];
-        public object ByIndex(int index) => _map[index];
         public bool IsEmpty => _data.Count == 0;
+        public object this[int position] => _data[position].Payload;
+
+        public long GetIndex(int position) => _data[position].Index;
+        public object ByIndex(int index) => _map[index];
 
         //@@TODO refactor with dumper on Replay
         public void Dump()
         {
             int counter = 0;
             Console.WriteLine("Dumping accumulator");
-            foreach (object d in _data)
+            foreach (Element d in _data)
             {
                 Console.WriteLine($"    {counter++:0000} => {d}");
             }
