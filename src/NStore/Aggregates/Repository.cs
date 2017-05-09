@@ -47,6 +47,7 @@ namespace NStore.Aggregates
         public async Task Save<T>(
             T aggregate,
             string operationId,
+            Action<IHeadersAccessor> headers = null,
             CancellationToken cancellationToken = default(CancellationToken)
         ) where T : IAggregate
         {
@@ -54,6 +55,8 @@ namespace NStore.Aggregates
             var persister = (IAggregatePersister)aggregate;
 
             var commit = persister.BuildCommit();
+
+            headers?.Invoke(commit);
 
             await stream.Append(commit, operationId, cancellationToken).ConfigureAwait(false);
         }

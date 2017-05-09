@@ -55,6 +55,23 @@ namespace NStore.Tests.AggregatesTests
             Assert.Equal(1, tape.Length);
             Assert.IsType<Commit>(tape[0]);
         }
+
+        [Fact]
+        public async void save_can_add_custom_info_in_headers()
+        {
+            var ticket = await Repository.GetById<Ticket>("Ticket_1");
+            ticket.Sale();
+            await Repository.Save(ticket, "op_1", h => h.Add("a", "b"));
+
+            // load stream
+            var stream = Streams.Open("Ticket_1");
+            var tape = new Tape();
+            await stream.Read(tape);
+
+            var commit = (Commit) tape[0];
+            Assert.True(commit.Headers.ContainsKey("a"));
+            Assert.Equal("b", commit.Headers["a"]);
+        }
     }
 
     public class with_populated_stream : BaseRepositoryTest
