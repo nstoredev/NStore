@@ -3,11 +3,11 @@ using System.Reflection;
 
 namespace NStore.Aggregates
 {
-    public class DefaultEventDispatcher<TState> : IEventDispatcher where TState : AggregateState
+    public class DefaultEventDispatcher<TState> : IEventDispatcher where TState : IProjector
     {
-        private readonly Func<object> _getState;
+        private readonly Func<TState> _getState;
 
-        public DefaultEventDispatcher(Func<object> getState)
+        public DefaultEventDispatcher(Func<TState> getState)
         {
             _getState = getState;
         }
@@ -15,23 +15,7 @@ namespace NStore.Aggregates
         public void Dispatch(object @event)
         {
             var state = _getState();
-            var mi = GetMethod(state, @event);
-            mi?.Invoke(state, new object[] {@event});
-        }
-
-        private MethodInfo GetMethod(object target, object @event)
-        {
-            //@@TODO: cache
-            var type = target.GetType();
-
-            //@@TODO: access private methods
-            var mi = type.GetTypeInfo()
-                .GetMethod(
-                    "On",
-                    new Type[] {@event.GetType()}
-                );
-
-            return mi;
+            state.Project(@event);
         }
     }
 }

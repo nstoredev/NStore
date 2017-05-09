@@ -14,7 +14,7 @@ namespace NStore.Aggregates
         public bool IsInitialized { get; private set; }
 
         public IList<object> UncommittedEvents { get; private set; } = new List<object>();
-        protected IEventDispatcher Dispatcher;
+        protected readonly IEventDispatcher Dispatcher;
         protected TState State { get; private set; }
 
         protected Aggregate(IEventDispatcher dispatcher = null)
