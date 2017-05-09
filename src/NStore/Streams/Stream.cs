@@ -41,11 +41,11 @@ namespace NStore.Streams
         }
     }
 
-    public class OptimisticConcurrencyException : Exception
+    public class AppendFailedException : Exception
     {
         public string StreamId { get; private set; }
 
-        public OptimisticConcurrencyException(string streamId, string message) : base(message)
+        public AppendFailedException(string streamId, string message) : base(message)
         {
             StreamId = streamId;
         }
@@ -90,7 +90,7 @@ namespace NStore.Streams
         public async Task Append(object payload, string operationId, CancellationToken cancellation = default(CancellationToken))
         {
             if (Version == -1)
-                throw new OptimisticConcurrencyException(this.Id,
+                throw new AppendFailedException(this.Id,
 $@"Cannot append on stream {this.Id}
 Append can be called only after a Read operation.
 If you don't need to read use {typeof(Stream).Name} instead of {GetType().Name}.")

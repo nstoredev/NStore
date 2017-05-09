@@ -65,7 +65,7 @@ namespace NStore.Persistence.Mongo
             string partitionId,
             long fromIndexInclusive,
             ScanDirection direction,
-            Func<long, object, ScanCallbackResult> consume,
+            IConsumer consumer,
             long toIndexInclusive = Int64.MaxValue,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
@@ -94,7 +94,7 @@ namespace NStore.Persistence.Mongo
                     var batch = cursor.Current;
                     foreach (var b in batch)
                     {
-                        if (ScanCallbackResult.Stop == consume(b.Index, b.Payload))
+                        if (ScanCallbackResult.Stop == consumer.Consume(b.Index, b.Payload))
                         {
                             return;
                         }
@@ -106,7 +106,7 @@ namespace NStore.Persistence.Mongo
         public async Task ScanStoreAsync(
             long sequenceStart,
             ScanDirection direction,
-            Func<long, object, ScanCallbackResult> consume,
+            IConsumer consumer,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         )
@@ -139,7 +139,7 @@ namespace NStore.Persistence.Mongo
                     var batch = cursor.Current;
                     foreach (var b in batch)
                     {
-                        if (ScanCallbackResult.Stop == consume(b.Index, b.Payload))
+                        if (ScanCallbackResult.Stop == consumer.Consume(b.Index, b.Payload))
                         {
                             return;
                         }

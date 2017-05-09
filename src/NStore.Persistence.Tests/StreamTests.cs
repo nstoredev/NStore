@@ -64,10 +64,13 @@ namespace NStore.Persistence.Tests
             _streams = new StreamStore(Store);
         }
 
-        protected async Task<IStream> Open(string id)
+        private async Task<IStream> Open(string id, bool readToEnd = true)
         {
             var stream = _streams.OpenOptimisticConcurrency(id);
-            await stream.Read(NullConsumer.Instance);
+            if (readToEnd)
+            {
+                await stream.Read(NullConsumer.Instance);
+            }
             return stream;
         }
 
@@ -114,6 +117,15 @@ namespace NStore.Persistence.Tests
             );
 
             Assert.Equal(1, ex.Index);
+        }
+
+        [Fact]
+        public async void appending_on_a_stream_without_reading_to_end_should_throw()
+        {
+            var stream = await Open("stream_1",false);
+            var ex = await Assert.ThrowsAnyAsync<AppendFailedException>(() =>
+                stream.Append("b")
+            );
         }
     }
 }
