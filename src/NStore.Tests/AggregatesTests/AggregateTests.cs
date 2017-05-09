@@ -4,26 +4,6 @@ using Xunit;
 
 namespace NStore.Tests.AggregatesTests
 {
-    public static class TicketFactory
-    {
-        public static Ticket ForTest(string id = "Ticket_1", bool init = true)
-        {
-            var ticket = new Ticket();
-
-            if (init)
-                ticket.Init(id);
-
-            return ticket;
-        }
-
-        public static Ticket Sold(string id = "Ticket_1")
-        {
-            var ticket = ForTest(id);
-            ticket.Sale();
-            return ticket;
-        }
-    }
-
     public class AggregateTests
     {
         [Fact]
@@ -70,7 +50,7 @@ namespace NStore.Tests.AggregatesTests
         [Fact]
         public void append_should_increase_version()
         {
-            Ticket ticket = TicketFactory.ForTest();
+            Ticket ticket = TicketTestFactory.ForTest();
             var persister = (IAggregatePersister) ticket;
             var commit = new Commit(1, new TicketSold());
             persister.AppendCommit(commit);
@@ -83,7 +63,7 @@ namespace NStore.Tests.AggregatesTests
         [Fact]
         public void raising_event_should_not_increase_version()
         {
-            Ticket ticket = TicketFactory.ForTest();
+            Ticket ticket = TicketTestFactory.ForTest();
 
             ticket.Sale();
             Assert.Equal(0, ticket.Version);
@@ -96,7 +76,7 @@ namespace NStore.Tests.AggregatesTests
         [Fact]
         public void aggregate_without_uncommitted_events_should_build_an_empty_commit()
         {
-            var ticket = TicketFactory.ForTest();
+            var ticket = TicketTestFactory.ForTest();
             var persister = (IAggregatePersister)ticket;
             var commit = persister.BuildCommit();
 
@@ -107,7 +87,7 @@ namespace NStore.Tests.AggregatesTests
         [Fact]
         public void persister_should_create_commit_with_uncommitted_events()
         {
-            var ticket = TicketFactory.Sold();
+            var ticket = TicketTestFactory.Sold();
             var persister = (IAggregatePersister)ticket;
             var commit = persister.BuildCommit();
 
@@ -119,7 +99,7 @@ namespace NStore.Tests.AggregatesTests
         [Fact]
         public void persister_should_create_commit_only_with_uncommitted_events()
         {
-            var ticket = TicketFactory.ForTest();
+            var ticket = TicketTestFactory.ForTest();
             var persister = (IAggregatePersister)ticket;
 
             var commit = new Commit(1, new TicketSold());

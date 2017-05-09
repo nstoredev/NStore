@@ -20,5 +20,13 @@ namespace NStore.Tests.AggregatesTests
             Assert.NotNull(aggregate);
             Assert.IsType<Ticket>(aggregate);
         }
+
+        [Fact]
+        public void aggregate_must_not_be_initialized()
+        {
+            var aggregate = Factory.Create<Ticket>();
+
+            Assert.False(aggregate.IsInitialized);
+        }
     }
 }
