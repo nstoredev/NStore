@@ -31,7 +31,7 @@ namespace NStore.Tests.AggregatesTests
             var ticket = await Repository.GetById<Ticket>("Ticket_1");
 
             Assert.NotNull(ticket);
-            Assert.False(ticket.IsInitialized);
+            Assert.True(ticket.IsNew());
         }
     }
 

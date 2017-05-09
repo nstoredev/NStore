@@ -4,10 +4,12 @@ namespace NStore.Tests.AggregatesTests
 {
     public static class TicketFactory
     {
-        public static Ticket ForTest()
+        public static Ticket ForTest(bool init = true)
         {
             var ticket = new Ticket();
-            ticket.Init();
+
+            if (init)
+                ticket.Init();
 
             return ticket;
         }
@@ -15,35 +17,48 @@ namespace NStore.Tests.AggregatesTests
 
     public class AggregateTests
     {
-        private readonly Ticket _ticket = TicketFactory.ForTest();
-
         [Fact]
         public void new_aggregate_should_not_be_itialized()
         {
-            Assert.False(_ticket.IsInitialized);
-            Assert.Equal(0, _ticket.Version);
-            Assert.Empty(_ticket.UncommittedEvents);
-            Assert.NotNull(_ticket.ExposedStateForTest);
+            var ticket = new Ticket();
+
+            Assert.False(ticket.IsInitialized);
+            Assert.Equal(0, ticket.Version);
+            Assert.Empty(ticket.UncommittedEvents);
+            Assert.Null(ticket.ExposedStateForTest);
+        }
+
+        [Fact]
+        public void init_without_params_should_create_default_state()
+        {
+            var ticket = new Ticket();
+            ticket.Init();
+
+            Assert.NotNull(ticket.ExposedStateForTest);
         }
 
         [Fact]
         public void append_should_increase_version()
         {
-            _ticket.Append(new TicketSold());
+            Ticket ticket = TicketFactory.ForTest();
 
-            Assert.True(_ticket.IsInitialized);
-            Assert.Equal(1, _ticket.Version);
-            Assert.Empty(_ticket.UncommittedEvents);
+            ticket.Append(new TicketSold());
+
+            Assert.True(ticket.IsInitialized);
+            Assert.Equal(1, ticket.Version);
+            Assert.Empty(ticket.UncommittedEvents);
         }
 
         [Fact]
         public void raising_event_should_increate_version()
         {
-            _ticket.Sale();
-            Assert.Equal(1, _ticket.Version);
-            Assert.Equal(1, _ticket.UncommittedEvents.Count);
-            Assert.IsType<TicketSold>(_ticket.UncommittedEvents[0]);
-            Assert.True(_ticket.ExposedStateForTest.HasBeenSold);
+            Ticket ticket = TicketFactory.ForTest();
+
+            ticket.Sale();
+            Assert.Equal(1, ticket.Version);
+            Assert.Equal(1, ticket.UncommittedEvents.Count);
+            Assert.IsType<TicketSold>(ticket.UncommittedEvents[0]);
+            Assert.True(ticket.ExposedStateForTest.HasBeenSold);
         }
     }
 }
