@@ -127,5 +127,15 @@ namespace NStore.Persistence.Tests
                 stream.Append("b")
             );
         }
+
+        [Fact]
+        public async void appending_on_a_partially_loaded_stream_should_throw()
+        {
+            var stream = await Open("stream_1", false);
+            await stream.Read(NullConsumer.Instance, 0, 10);
+            var ex = await Assert.ThrowsAnyAsync<AppendFailedException>(() =>
+                stream.Append("b")
+            );
+        }
     }
 }

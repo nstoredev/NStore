@@ -9,7 +9,7 @@ using Xunit;
 
 namespace NStore.Tests.AggregatesTests
 {
-    public abstract class BaseRepositoryTest
+    public abstract class BaseRepositoryTest 
     {
         protected IStreamStore Streams { get; }
         protected IRawStore Raw { get; }
@@ -39,7 +39,7 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async void saving_an_aggregate_shold_persist_stream()
+        public async void saving_an_aggregate_should_persist_stream()
         {
             var ticket = await Repository.GetById<Ticket>("Ticket_1");
 
