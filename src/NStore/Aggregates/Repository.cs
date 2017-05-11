@@ -27,13 +27,14 @@ namespace NStore.Aggregates
             CancellationToken cancellationToken = default(CancellationToken)
         ) where T : IAggregate
         {
-            if (_identityMap.ContainsKey(id))
+            string mapid = id + "@" + version;
+            if (_identityMap.ContainsKey(mapid))
             {
-                return (T) _identityMap[id];
+                return (T) _identityMap[mapid];
             }
 
             var aggregate = _factory.Create<T>();
-            _identityMap.Add(id, aggregate);
+            _identityMap.Add(mapid, aggregate);
 
             aggregate.Init(id);
             var stream = OpenStream(aggregate);
