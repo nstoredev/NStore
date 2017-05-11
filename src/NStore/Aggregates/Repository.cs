@@ -8,10 +8,6 @@ using NStore.Streams;
 
 namespace NStore.Aggregates
 {
-    public class AggregateReadOnlyException : Exception
-    {
-    }
-
     public class Repository : IRepository
     {
         private readonly IAggregateFactory _factory;

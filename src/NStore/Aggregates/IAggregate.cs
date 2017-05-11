@@ -11,16 +11,4 @@ namespace NStore.Aggregates
         bool IsInitialized { get; }
         void Init(string id, long version = 0, object @state = null);
     }
-
-    public interface IAggregatePersister
-    {
-        void AppendCommit(Commit commit);
-        Commit BuildCommit();
-    }
-
-    public static class AggregateExtensions
-    {
-        public static bool IsNew(this IAggregate aggregate) =>
-            aggregate.IsInitialized && aggregate.Version == 0;
-    }
 }
