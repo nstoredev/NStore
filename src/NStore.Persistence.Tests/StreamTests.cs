@@ -75,6 +75,19 @@ namespace NStore.Persistence.Tests
         }
 
         [Fact]
+        public async void read_stream()
+        {
+            await Store.PersistAsync("stream_2", 1, "payload");
+
+            var stream = await Open("stream_2");
+            var acc = new Tape();
+            await stream.Read(acc);
+
+            Assert.Equal(1, acc.Length);
+            Assert.Equal("payload", acc[0]);
+        }
+
+        [Fact]
         public async void appending_first_chunk()
         {
             var stream = await Open("stream_1");
@@ -122,7 +135,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async void appending_on_a_stream_without_reading_to_end_should_throw()
         {
-            var stream = await Open("stream_1",false);
+            var stream = await Open("stream_1", false);
             var ex = await Assert.ThrowsAnyAsync<AppendFailedException>(() =>
                 stream.Append("b")
             );
@@ -135,6 +148,47 @@ namespace NStore.Persistence.Tests
             await stream.Read(NullConsumer.Instance, 0, 10);
             var ex = await Assert.ThrowsAnyAsync<AppendFailedException>(() =>
                 stream.Append("b")
+            );
+        }
+    }
+
+    public class ReadOnlyStreamTests : BasePersistenceTest
+    {
+        private readonly IStreamStore _streams;
+
+        public ReadOnlyStreamTests()
+        {
+            _streams = new StreamStore(Store);
+        }
+
+        [Fact]
+        public async void read_stream()
+        {
+            await Store.PersistAsync("stream_2", 1, "payload");
+
+            var stream = _streams.OpenReadOnly("stream_2");
+            var acc = new Tape();
+            await stream.Read(acc);
+
+            Assert.Equal(1, acc.Length);
+            Assert.Equal("payload", acc[0]);
+        }
+
+        [Fact]
+        public async void delete_should_throw_exception()
+        {
+            var stream = _streams.OpenReadOnly("stream_2");
+            var ex = await Assert.ThrowsAsync<StreamReadOnlyException>(() =>
+                stream.Delete()
+            );
+        }
+
+        [Fact]
+        public async void append_should_throw_exception()
+        {
+            var stream = _streams.OpenReadOnly("stream_2");
+            var ex = await Assert.ThrowsAsync<StreamReadOnlyException>(() =>
+                stream.Append("a")
             );
         }
     }
