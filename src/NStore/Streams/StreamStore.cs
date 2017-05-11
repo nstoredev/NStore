@@ -6,6 +6,7 @@ namespace NStore.Streams
     {
         IStream Open(string streamId);
         IStream OpenOptimisticConcurrency(string streamId);
+        IStream OpenReadOnly(string streamId);
     }
 
     public class StreamStore : IStreamStore
@@ -25,6 +26,11 @@ namespace NStore.Streams
         public IStream OpenOptimisticConcurrency(string streamId)
         {
             return new OptimisticConcurrencyStream(streamId, _raw);
+        }
+
+        public IStream OpenReadOnly(string streamId)
+        {
+            return new ReadOnlyStream(streamId, _raw);
         }
     }
 }

@@ -133,5 +133,15 @@ namespace NStore.Tests.AggregatesTests
 
             Assert.NotSame(ticket1, ticket2);
         }
+
+        [Fact]
+        public async void cannot_save_a_partially_loaded_aggregate()
+        {
+            var ticket = await Repository.GetById<Ticket>("Ticket_1",1);
+
+            var ex = await Assert.ThrowsAsync<AggregateReadOnlyException>(() =>
+                Repository.Save(ticket, Guid.NewGuid().ToString())
+            );
+        }
     }
 }

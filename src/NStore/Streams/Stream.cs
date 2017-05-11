@@ -29,15 +29,31 @@ namespace NStore.Streams
             );
         }
 
-
-        public Task Append(object payload, string operationId, CancellationToken cancellation = default(CancellationToken))
+        public virtual Task Append(object payload, string operationId, CancellationToken cancellation = default(CancellationToken))
         {
             return Raw.PersistAsync(this.Id, -1, payload, operationId, cancellation);
         }
 
-        public Task Delete(CancellationToken cancellation = default(CancellationToken))
+        public virtual Task Delete(CancellationToken cancellation = default(CancellationToken))
         {
             return Raw.DeleteAsync(this.Id, cancellationToken: cancellation);
+        }
+    }
+
+    public class ReadOnlyStream : Stream
+    {
+        public ReadOnlyStream(string streamId, IRawStore raw) : base(streamId, raw)
+        {
+        }
+
+        public override Task Append(object payload, string operationId, CancellationToken cancellation = new CancellationToken())
+        {
+            throw new StreamReadOnlyException();
+        }
+
+        public override Task Delete(CancellationToken cancellation = new CancellationToken())
+        {
+            throw new StreamReadOnlyException();
         }
     }
 
@@ -49,6 +65,10 @@ namespace NStore.Streams
         {
             StreamId = streamId;
         }
+    }
+
+    public class StreamReadOnlyException : Exception
+    {
     }
 
     public class OptimisticConcurrencyStream : IStream

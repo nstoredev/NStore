@@ -8,6 +8,10 @@ using NStore.Streams;
 
 namespace NStore.Aggregates
 {
+    public class AggregateReadOnlyException : Exception
+    {
+    }
+
     public class Repository : IRepository
     {
         private readonly IAggregateFactory _factory;
@@ -37,7 +41,7 @@ namespace NStore.Aggregates
             _identityMap.Add(mapid, aggregate);
 
             aggregate.Init(id);
-            var stream = OpenStream(aggregate);
+            var stream = OpenStream(aggregate, version != Int32.MaxValue);
             var persister = (IAggregatePersister) aggregate;
 
             var consumer = new LambdaConsumer((l, payload) =>
@@ -62,6 +66,11 @@ namespace NStore.Aggregates
         ) where T : IAggregate
         {
             var stream = GetStream(aggregate);
+            if (stream is ReadOnlyStream)
+            {
+                throw new AggregateReadOnlyException();
+            }
+
             var persister = (IAggregatePersister) aggregate;
 
             var commit = persister.BuildCommit();
@@ -71,11 +80,14 @@ namespace NStore.Aggregates
             await stream.Append(commit, operationId, cancellationToken).ConfigureAwait(false);
         }
 
-        private IStream OpenStream(IAggregate aggregate)
+        private IStream OpenStream(IAggregate aggregate, bool isPartialLoad)
         {
-            var s = _streams.OpenOptimisticConcurrency(aggregate.Id);
-            _openedStreams.Add(aggregate, s);
-            return s;
+            var stream = isPartialLoad
+                ? _streams.OpenReadOnly(aggregate.Id)
+                : _streams.OpenOptimisticConcurrency(aggregate.Id);
+
+            _openedStreams.Add(aggregate, stream);
+            return stream;
         }
 
         private IStream GetStream(IAggregate aggregate)
