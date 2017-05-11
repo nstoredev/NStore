@@ -25,4 +25,8 @@ namespace NStore.Aggregates
             CancellationToken cancellationToken = default(CancellationToken)
         ) where T : IAggregate;
     }
+
+    public class RepositoryMismatchException : Exception
+    {
+    }
 }

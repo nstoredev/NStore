@@ -9,19 +9,26 @@ using Xunit;
 
 namespace NStore.Tests.AggregatesTests
 {
-    public abstract class BaseRepositoryTest 
+    public abstract class BaseRepositoryTest
     {
         protected IStreamStore Streams { get; }
         protected IRawStore Raw { get; }
         protected IRepository Repository { get; }
+        private IAggregateFactory AggregateFactory { get; }
 
         protected BaseRepositoryTest()
         {
             Raw = new InMemoryRawStore();
 
             Streams = new StreamStore(Raw);
-            Repository = new Repository(
-                new DefaultAggregateFactory(),
+            AggregateFactory = new DefaultAggregateFactory();
+            Repository = CreateRepository();
+        }
+
+        protected IRepository CreateRepository()
+        {
+            return new Repository(
+                AggregateFactory,
                 Streams
             );
         }
@@ -96,6 +103,26 @@ namespace NStore.Tests.AggregatesTests
             var ticket = await Repository.GetById<Ticket>("Ticket_1");
             Assert.True(ticket.IsInitialized);
             Assert.Equal(2, ticket.Version);
+        }
+
+        [Fact]
+        public async void cannot_save_aggregate_loaded_by_another_repository()
+        {
+            var ticket = await Repository.GetById<Ticket>("Ticket_1");
+            var repo2 = CreateRepository();
+
+            var ex = await Assert.ThrowsAsync<RepositoryMismatchException>(() =>
+                repo2.Save(ticket, Guid.NewGuid().ToString())
+            );
+        }
+
+        [Fact]
+        public async void loading_aggregate_twice_from_repository_should_return_same_istance()
+        {
+            var ticket1 = await Repository.GetById<Ticket>("Ticket_1");
+            var ticket2 = await Repository.GetById<Ticket>("Ticket_1");
+
+            Assert.Same(ticket1, ticket2);
         }
     }
 }

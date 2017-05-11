@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ namespace NStore.Aggregates
         private readonly IAggregateFactory _factory;
         private readonly IStreamStore _streams;
         private readonly IDictionary<IAggregate, IStream> _openedStreams = new Dictionary<IAggregate, IStream>();
+        private readonly IDictionary<string, IAggregate> _identityMap = new Dictionary<string, IAggregate>();
 
         public Repository(IAggregateFactory factory, IStreamStore streams)
         {
@@ -25,21 +27,28 @@ namespace NStore.Aggregates
             CancellationToken cancellationToken = default(CancellationToken)
         ) where T : IAggregate
         {
+            if (_identityMap.ContainsKey(id))
+            {
+                return (T) _identityMap[id];
+            }
+
             var aggregate = _factory.Create<T>();
+            _identityMap.Add(id, aggregate);
+
             aggregate.Init(id);
             var stream = OpenStream(aggregate);
-            var persister = (IAggregatePersister)aggregate;
+            var persister = (IAggregatePersister) aggregate;
 
             var consumer = new LambdaConsumer((l, payload) =>
             {
-                var commit = (Commit)payload;
+                var commit = (Commit) payload;
 
                 persister.AppendCommit(commit);
                 return ScanCallbackResult.Continue;
             });
 
-            await stream.Read(consumer,0, version, cancellationToken)
-                        .ConfigureAwait(false);
+            await stream.Read(consumer, 0, version, cancellationToken)
+                .ConfigureAwait(false);
 
             return aggregate;
         }
@@ -52,7 +61,7 @@ namespace NStore.Aggregates
         ) where T : IAggregate
         {
             var stream = GetStream(aggregate);
-            var persister = (IAggregatePersister)aggregate;
+            var persister = (IAggregatePersister) aggregate;
 
             var commit = persister.BuildCommit();
 
@@ -70,7 +79,14 @@ namespace NStore.Aggregates
 
         private IStream GetStream(IAggregate aggregate)
         {
-            return _openedStreams[aggregate];
+            try
+            {
+                return _openedStreams[aggregate];
+            }
+            catch (KeyNotFoundException e)
+            {
+                throw new RepositoryMismatchException();
+            }
         }
     }
 }
