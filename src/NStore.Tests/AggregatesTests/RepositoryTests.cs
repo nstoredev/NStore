@@ -60,7 +60,7 @@ namespace NStore.Tests.AggregatesTests
             await stream.Read(tape);
 
             Assert.Equal(1, tape.Length);
-            Assert.IsType<Commit>(tape[0]);
+            Assert.IsType<Changeset>(tape[0]);
         }
 
         [Fact]
@@ -75,9 +75,9 @@ namespace NStore.Tests.AggregatesTests
             var tape = new Tape();
             await stream.Read(tape);
 
-            var commit = (Commit) tape[0];
-            Assert.True(commit.Headers.ContainsKey("a"));
-            Assert.Equal("b", commit.Headers["a"]);
+            var changeSet = (Changeset) tape[0];
+            Assert.True(changeSet.Headers.ContainsKey("a"));
+            Assert.Equal("b", changeSet.Headers["a"]);
         }
 
         [Fact]
@@ -100,8 +100,8 @@ namespace NStore.Tests.AggregatesTests
     {
         public with_populated_stream()
         {
-            Raw.PersistAsync("Ticket_1", 1, new Commit(1, new TicketSold())).Wait();
-            Raw.PersistAsync("Ticket_1", 2, new Commit(2, new TicketRefunded())).Wait();
+            Raw.PersistAsync("Ticket_1", 1, new Changeset(1, new TicketSold())).Wait();
+            Raw.PersistAsync("Ticket_1", 2, new Changeset(2, new TicketRefunded())).Wait();
         }
 
         [Fact]

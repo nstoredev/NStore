@@ -42,9 +42,9 @@ namespace NStore.Aggregates
 
             var consumer = new LambdaConsumer((l, payload) =>
             {
-                var commit = (Commit) payload;
+                var changes = (Changeset) payload;
 
-                persister.AppendCommit(commit);
+                persister.ApplyChanges(changes);
                 return ScanCallbackResult.Continue;
             });
 
@@ -62,8 +62,8 @@ namespace NStore.Aggregates
         ) where T : IAggregate
         {
             var persister = (IAggregatePersister)aggregate;
-            var commit = persister.BuildCommit();
-            if (commit.IsEmpty)
+            var changeSet = persister.GetChangeSet();
+            if (changeSet.IsEmpty)
                 return;
 
             var stream = GetStream(aggregate);
@@ -72,10 +72,10 @@ namespace NStore.Aggregates
                 throw new AggregateReadOnlyException();
             }
 
-            headers?.Invoke(commit);
+            headers?.Invoke(changeSet);
 
-            await stream.Append(commit, operationId, cancellationToken).ConfigureAwait(false);
-            persister.CommitPersisted(commit);
+            await stream.Append(changeSet, operationId, cancellationToken).ConfigureAwait(false);
+            persister.ChangesPersisted(changeSet);
         }
 
         private IStream OpenStream(IAggregate aggregate, bool isPartialLoad)

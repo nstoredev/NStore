@@ -47,9 +47,9 @@ namespace NStore.Tests.AggregatesTests
             Raise(new TicketRefunded());
         }
 
-        public Commit ExposePendingChanges()
+        public Changeset ExposePendingChanges()
         {
-            return ((IAggregatePersister) this).BuildCommit();
+            return ((IAggregatePersister) this).GetChangeSet();
         }
     }
 }

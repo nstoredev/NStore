@@ -2,8 +2,8 @@
 {
     public interface IAggregatePersister
     {
-        void AppendCommit(Commit commit);
-        Commit BuildCommit();
-        void CommitPersisted(Commit commit);
+        void ApplyChanges(Changeset changeset);
+        Changeset GetChangeSet();
+        void ChangesPersisted(Changeset changeset);
     }
 }

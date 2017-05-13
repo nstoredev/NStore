@@ -52,8 +52,8 @@ namespace NStore.Tests.AggregatesTests
         {
             Ticket ticket = TicketTestFactory.ForTest();
             var persister = (IAggregatePersister) ticket;
-            var commit = new Commit(1, new TicketSold());
-            persister.AppendCommit(commit);
+            var changeSet = new Changeset(1, new TicketSold());
+            persister.ApplyChanges(changeSet);
 
             Assert.True(ticket.IsInitialized);
             Assert.Equal(1, ticket.Version);
@@ -76,48 +76,46 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public void aggregate_without_uncommitted_events_should_build_an_empty_commit()
+        public void aggregate_without_changes_should_build_an_empty_changeset()
         {
             var ticket = TicketTestFactory.ForTest();
             var persister = (IAggregatePersister)ticket;
-            var commit = persister.BuildCommit();
+            var changeSet = persister.GetChangeSet();
 
-            Assert.NotNull(commit);
-            Assert.True(commit.IsEmpty);
+            Assert.NotNull(changeSet);
+            Assert.True(changeSet.IsEmpty);
         }
 
         [Fact]
-        public void persister_should_create_commit_with_uncommitted_events()
+        public void persister_should_create_changeset_with_new_events()
         {
             var ticket = TicketTestFactory.Sold();
             var persister = (IAggregatePersister)ticket;
-            var commit = persister.BuildCommit();
+            var changeSet = persister.GetChangeSet();
 
-            Assert.NotNull(commit);
-            Assert.False(commit.IsEmpty);
-            Assert.Equal(1, commit.Version);
+            Assert.NotNull(changeSet);
+            Assert.False(changeSet.IsEmpty);
+            Assert.Equal(1, changeSet.Version);
         }
 
         [Fact]
-        public void persister_should_create_commit_only_with_uncommitted_events()
+        public void persister_should_create_changeset_only_with_new_events()
         {
             var ticket = TicketTestFactory.ForTest();
             var persister = (IAggregatePersister)ticket;
 
-            var commit = new Commit(1, new TicketSold());
-            persister.AppendCommit(commit);
+            var changeSet = new Changeset(1, new TicketSold());
+            persister.ApplyChanges(changeSet);
 
             ticket.Refund();
 
-            commit = persister.BuildCommit();
+            changeSet = persister.GetChangeSet();
 
-            Assert.NotNull(commit);
-            Assert.False(commit.IsEmpty);
-            Assert.Equal(2, commit.Version);
-            Assert.Equal(1, commit.Events.Length);
-            Assert.IsType<TicketRefunded>(commit.Events[0]);
+            Assert.NotNull(changeSet);
+            Assert.False(changeSet.IsEmpty);
+            Assert.Equal(2, changeSet.Version);
+            Assert.Equal(1, changeSet.Events.Length);
+            Assert.IsType<TicketRefunded>(changeSet.Events[0]);
         }
-
-
     }
 }

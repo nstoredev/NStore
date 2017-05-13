@@ -3,19 +3,19 @@ using System.Collections.Generic;
 
 namespace NStore.Aggregates
 {
-    public sealed class Commit : IHeadersAccessor
+    public sealed class Changeset : IHeadersAccessor
     {
         public Object[] Events { get; private set; }
         public long Version { get; private set; }
-        public bool IsEmpty => Events.Length == 0;
         public IDictionary<string, object> Headers { get; private set; }
+        public bool IsEmpty => Events.Length == 0;
 
-        private Commit()
+        private Changeset()
         {
             Headers = new Dictionary<string, object>();
         }
 
-        public Commit(long version, params object[] events) : this()
+        public Changeset(long version, params object[] events) : this()
         {
             this.Version = version;
             this.Events = events;

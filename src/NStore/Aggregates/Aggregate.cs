@@ -41,28 +41,27 @@ namespace NStore.Aggregates
             this.Version = version;
         }
 
-        void IAggregatePersister.CommitPersisted(Commit commit)
+        void IAggregatePersister.ChangesPersisted(Changeset changeset)
         {
-            this.Version = commit.Version;
+            this.Version = changeset.Version;
             this.PendingChanges.Clear();
         }
 
-        void IAggregatePersister.AppendCommit(Commit commit)
+        void IAggregatePersister.ApplyChanges(Changeset changeset)
         {
-            this.Version = commit.Version;
-            foreach (var @event in commit.Events)
+            this.Version = changeset.Version;
+            foreach (var @event in changeset.Events)
             {
                 this.Dispatch(@event);
             }
         }
 
-        Commit IAggregatePersister.BuildCommit()
+        Changeset IAggregatePersister.GetChangeSet()
         {
-            var commit = new Commit(
+            return new Changeset(
                 this.Version + 1,
                 this.PendingChanges.ToArray()
             );
-            return commit;
         }
 
         protected void Dispatch(object @event)
