@@ -61,19 +61,21 @@ namespace NStore.Aggregates
             CancellationToken cancellationToken = default(CancellationToken)
         ) where T : IAggregate
         {
+            var persister = (IAggregatePersister)aggregate;
+            var commit = persister.BuildCommit();
+            if (commit.IsEmpty)
+                return;
+
             var stream = GetStream(aggregate);
             if (stream is ReadOnlyStream)
             {
                 throw new AggregateReadOnlyException();
             }
 
-            var persister = (IAggregatePersister) aggregate;
-
-            var commit = persister.BuildCommit();
-
             headers?.Invoke(commit);
 
             await stream.Append(commit, operationId, cancellationToken).ConfigureAwait(false);
+            persister.CommitPersisted(commit);
         }
 
         private IStream OpenStream(IAggregate aggregate, bool isPartialLoad)

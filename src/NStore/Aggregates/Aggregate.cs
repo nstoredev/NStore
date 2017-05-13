@@ -13,9 +13,10 @@ namespace NStore.Aggregates
         public long Version { get; private set; }
         public bool IsInitialized { get; private set; }
 
-        public IList<object> UncommittedEvents { get; private set; } = new List<object>();
+        private IList<object> PendingChanges { get; } = new List<object>();
         protected readonly IEventDispatcher Dispatcher;
         protected TState State { get; private set; }
+        public bool IsDirty => this.PendingChanges.Any();
 
         protected Aggregate(IEventDispatcher dispatcher = null)
         {
@@ -36,8 +37,14 @@ namespace NStore.Aggregates
             this.Id = id;
             this.State = state ?? new TState();
             this.IsInitialized = true;
-            this.UncommittedEvents.Clear();
+            this.PendingChanges.Clear();
             this.Version = version;
+        }
+
+        void IAggregatePersister.CommitPersisted(Commit commit)
+        {
+            this.Version = commit.Version;
+            this.PendingChanges.Clear();
         }
 
         void IAggregatePersister.AppendCommit(Commit commit)
@@ -53,7 +60,7 @@ namespace NStore.Aggregates
         {
             var commit = new Commit(
                 this.Version + 1,
-                this.UncommittedEvents.ToArray()
+                this.PendingChanges.ToArray()
             );
             return commit;
         }
@@ -65,7 +72,7 @@ namespace NStore.Aggregates
 
         protected void Raise(object @event)
         {
-            this.UncommittedEvents.Add(@event);
+            this.PendingChanges.Add(@event);
             this.Dispatch(@event);
         }
     }

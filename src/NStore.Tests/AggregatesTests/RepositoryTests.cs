@@ -79,6 +79,21 @@ namespace NStore.Tests.AggregatesTests
             Assert.True(commit.Headers.ContainsKey("a"));
             Assert.Equal("b", commit.Headers["a"]);
         }
+
+        [Fact]
+        public async void saving_twice_an_aggregate_should_persist_events_only_once()
+        {
+            var ticket = await Repository.GetById<Ticket>("Ticket_1");
+            ticket.Sale();
+            await Repository.Save(ticket, "op_1");
+            await Repository.Save(ticket, "op_2");
+
+            // load stream
+            var stream = Streams.Open("Ticket_1");
+            var tape = new Tape();
+            await stream.Read(tape);
+            Assert.Equal(1, tape.Length);
+        }
     }
 
     public class with_populated_stream : BaseRepositoryTest
@@ -109,6 +124,8 @@ namespace NStore.Tests.AggregatesTests
         public async void cannot_save_aggregate_loaded_by_another_repository()
         {
             var ticket = await Repository.GetById<Ticket>("Ticket_1");
+            ticket.Refund();
+
             var repo2 = CreateRepository();
 
             var ex = await Assert.ThrowsAsync<RepositoryMismatchException>(() =>
@@ -138,7 +155,7 @@ namespace NStore.Tests.AggregatesTests
         public async void cannot_save_a_partially_loaded_aggregate()
         {
             var ticket = await Repository.GetById<Ticket>("Ticket_1",1);
-
+            ticket.Refund();
             var ex = await Assert.ThrowsAsync<AggregateReadOnlyException>(() =>
                 Repository.Save(ticket, Guid.NewGuid().ToString())
             );

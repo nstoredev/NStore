@@ -4,5 +4,6 @@
     {
         void AppendCommit(Commit commit);
         Commit BuildCommit();
+        void CommitPersisted(Commit commit);
     }
 }

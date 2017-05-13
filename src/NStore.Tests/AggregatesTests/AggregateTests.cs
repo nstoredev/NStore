@@ -13,7 +13,7 @@ namespace NStore.Tests.AggregatesTests
 
             Assert.False(ticket.IsInitialized);
             Assert.Equal(0, ticket.Version);
-            Assert.Empty(ticket.UncommittedEvents);
+            Assert.False(ticket.IsDirty);
             Assert.Null(ticket.ExposedStateForTest);
         }
 
@@ -57,7 +57,7 @@ namespace NStore.Tests.AggregatesTests
 
             Assert.True(ticket.IsInitialized);
             Assert.Equal(1, ticket.Version);
-            Assert.Empty(ticket.UncommittedEvents);
+            Assert.False(ticket.IsDirty);
         }
 
         [Fact]
@@ -66,10 +66,12 @@ namespace NStore.Tests.AggregatesTests
             Ticket ticket = TicketTestFactory.ForTest();
 
             ticket.Sale();
-            Assert.Equal(0, ticket.Version);
 
-            Assert.Equal(1, ticket.UncommittedEvents.Count);
-            Assert.IsType<TicketSold>(ticket.UncommittedEvents[0]);
+            var changes = ticket.ExposePendingChanges();
+
+            Assert.Equal(0, ticket.Version);
+            Assert.True(ticket.IsDirty);
+            Assert.IsType<TicketSold>(changes.Events[0]);
             Assert.True(ticket.ExposedStateForTest.HasBeenSold);
         }
 

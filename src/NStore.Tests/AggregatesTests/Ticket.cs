@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using NStore.Aggregates;
 using Xunit;
 
@@ -44,6 +45,11 @@ namespace NStore.Tests.AggregatesTests
             }
 
             Raise(new TicketRefunded());
+        }
+
+        public Commit ExposePendingChanges()
+        {
+            return ((IAggregatePersister) this).BuildCommit();
         }
     }
 }
