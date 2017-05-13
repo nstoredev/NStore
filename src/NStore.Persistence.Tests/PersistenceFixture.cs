@@ -75,43 +75,6 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class long_running_test : BasePersistenceTest
-    {
-        [Fact(Skip = "long running")]
-        //[Fact]
-        public async Task InsertMany()
-        {
-            await Worker(1, 10000);
-            await Worker(2, 10000);
-            await Worker(3, 10000);
-            await Worker(4, 10000);
-            await Worker(5, 10000);
-            await Worker(6, 10000);
-            await Worker(7, 10000);
-            await Worker(8, 10000);
-            await Worker(9, 10000);
-            await Worker(10, 10000);
-            await Worker(20, 10000);
-        }
-
-        private async Task Worker(int dop, int number)
-        {
-            int max = number;
-            var range = Enumerable.Range(0, max);
-            var sw = new Stopwatch();
-
-            sw.Start();
-
-            await range.ForEachAsync(dop, i =>
-                Store.PersistAsync("Stream_2", i, new {data = "this is a test"})
-            );
-
-            sw.Stop();
-
-            Console.WriteLine($"Written {max} chunks in {sw.ElapsedMilliseconds}ms using {dop} workers");
-        }
-    }
-
     internal static class AsyncExtensions
     {
         public static Task ForEachAsync<T>(
