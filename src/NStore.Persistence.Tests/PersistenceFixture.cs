@@ -112,7 +112,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public static class AsyncExtensions
+    internal static class AsyncExtensions
     {
         public static Task ForEachAsync<T>(
             this IEnumerable<T> source, int dop, Func<T, Task> body)

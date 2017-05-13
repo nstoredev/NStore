@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp1.1</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet">
+      <Version>0.10.6</Version>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NStore.Persistence.Mongo\NStore.Persistence.Mongo.csproj">
+      <Project>{a5cff506-c6fa-4ad1-86a3-559dbcfa8b2a}</Project>
+      <Name>NStore.Persistence.Mongo</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\NStore\NStore.csproj">
+      <Project>{0aad1793-0a61-42e6-9ebc-6729058ebe70}</Project>
+      <Name>NStore</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="BenchmarkDotNet.Artifacts" />
+  </ItemGroup>
+</Project>

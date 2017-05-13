@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Persistence.Mongo.Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Persistence.Mongo", "NStore.Persistence.Mongo\NStore.Persistence.Mongo.csproj", "{A5CFF506-C6FA-4AD1-86A3-559DBCFA8B2A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Benchmarks", "NStore.Benchmarks\NStore.Benchmarks.csproj", "{B6D8D313-5A21-49C3-9FDF-CF3A23FF54C8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -37,5 +39,9 @@ Global
 		{A5CFF506-C6FA-4AD1-86A3-559DBCFA8B2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A5CFF506-C6FA-4AD1-86A3-559DBCFA8B2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A5CFF506-C6FA-4AD1-86A3-559DBCFA8B2A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6D8D313-5A21-49C3-9FDF-CF3A23FF54C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6D8D313-5A21-49C3-9FDF-CF3A23FF54C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6D8D313-5A21-49C3-9FDF-CF3A23FF54C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6D8D313-5A21-49C3-9FDF-CF3A23FF54C8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
