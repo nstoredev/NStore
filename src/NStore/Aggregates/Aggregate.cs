@@ -17,6 +17,7 @@ namespace NStore.Aggregates
         protected readonly IEventDispatcher Dispatcher;
         protected TState State { get; private set; }
         public bool IsDirty => this.PendingChanges.Any();
+        public bool IsNew => this.Version == 0;
 
         protected Aggregate(IEventDispatcher dispatcher = null)
         {
