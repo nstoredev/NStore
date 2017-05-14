@@ -10,13 +10,13 @@ namespace NStore.Streams
         /// <summary>
         /// Read from stream
         /// </summary>
-        /// <param name="consumer"></param>
+        /// <param name="partitionObserver"></param>
         /// <param name="fromIndexInclusive"></param>
         /// <param name="toIndexInclusive"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         Task Read(
-            IConsumer consumer, 
+            IPartitionObserver partitionObserver, 
             int fromIndexInclusive = 0, 
             int toIndexInclusive = Int32.MaxValue, 
             CancellationToken cancellationToken = default(CancellationToken)

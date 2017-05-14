@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using NStore.Raw;
@@ -114,7 +113,7 @@ namespace NStore.Persistence.Tests
 
             await Store.ScanPartitionAsync(
                 "Stream_1", 0, ScanDirection.Forward,
-                new LambdaConsumer((idx, pl) =>
+                new LambdaPartitionObserver((idx, pl) =>
                 {
                     payload = pl;
                     return ScanCallbackResult.Stop;
@@ -133,7 +132,7 @@ namespace NStore.Persistence.Tests
                 "Stream_1",
                 0,
                 ScanDirection.Backward,
-                new LambdaConsumer((idx, pl) =>
+                new LambdaPartitionObserver((idx, pl) =>
                 {
                     payload = pl;
                     return ScanCallbackResult.Stop;
@@ -180,7 +179,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_all_forward()
         {
-            var tape = new Tape();
+            var tape = new SuperTape();
             await Store.ScanStoreAsync(0, ScanDirection.Forward, tape);
 
             Assert.Equal(5, tape.Length);
@@ -194,7 +193,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_all_forward_from_middle()
         {
-            var tape = new Tape();
+            var tape = new SuperTape();
             await Store.ScanStoreAsync(
                 3,
                 ScanDirection.Forward,
@@ -210,7 +209,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_all_forward_from_middle_limit_one()
         {
-            var tape = new Tape();
+            var tape = new SuperTape();
             await Store.ScanStoreAsync(
                 3,
                 ScanDirection.Forward,
@@ -225,7 +224,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_all_backward()
         {
-            var buffer = new Tape();
+            var buffer = new SuperTape();
             await Store.ScanStoreAsync(
                 long.MaxValue,
                 ScanDirection.Backward,
@@ -243,7 +242,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_all_backward_from_middle()
         {
-            var buffer = new Tape();
+            var buffer = new SuperTape();
             await Store.ScanStoreAsync(
                 3,
                 ScanDirection.Backward,
@@ -259,7 +258,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_all_backward_from_middle_limit_one()
         {
-            var buffer = new Tape();
+            var buffer = new SuperTape();
             await Store.ScanStoreAsync(3, ScanDirection.Backward, buffer, 1);
 
             Assert.Equal(1, buffer.Length);
@@ -275,7 +274,7 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("BA", 0, System.Text.Encoding.UTF8.GetBytes("this is a test"));
 
             byte[] payload = null;
-            await Store.ScanPartitionAsync("BA", 0, ScanDirection.Forward, new LambdaConsumer((i, p) =>
+            await Store.ScanPartitionAsync("BA", 0, ScanDirection.Forward, new LambdaPartitionObserver((i, p) =>
             {
                 payload = (byte[]) p;
                 return ScanCallbackResult.Continue;
@@ -296,7 +295,7 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("Id_1", 1, new {data = "this is a test"}, opId);
 
             var list = new List<object>();
-            await Store.ScanPartitionAsync("Id_1", 0, ScanDirection.Forward, new LambdaConsumer((i, p) =>
+            await Store.ScanPartitionAsync("Id_1", 0, ScanDirection.Forward, new LambdaPartitionObserver((i, p) =>
             {
                 list.Add(p);
                 return ScanCallbackResult.Continue;
@@ -313,12 +312,12 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("Id_2", 1, "b", opId);
 
             var list = new List<object>();
-            await Store.ScanPartitionAsync("Id_1", 0, ScanDirection.Forward, new LambdaConsumer((i, p) =>
+            await Store.ScanPartitionAsync("Id_1", 0, ScanDirection.Forward, new LambdaPartitionObserver((i, p) =>
             {
                 list.Add(p);
                 return ScanCallbackResult.Continue;
             }));
-            await Store.ScanPartitionAsync("Id_2", 0, ScanDirection.Forward, new LambdaConsumer((i, p) =>
+            await Store.ScanPartitionAsync("Id_2", 0, ScanDirection.Forward, new LambdaPartitionObserver((i, p) =>
             {
                 list.Add(p);
                 return ScanCallbackResult.Continue;
@@ -353,7 +352,7 @@ namespace NStore.Persistence.Tests
         {
             await Store.DeleteAsync("delete");
             bool almostOneChunk = false;
-            await Store.ScanPartitionAsync("delete", 0, ScanDirection.Forward, new LambdaConsumer((l, o) =>
+            await Store.ScanPartitionAsync("delete", 0, ScanDirection.Forward, new LambdaPartitionObserver((l, o) =>
             {
                 almostOneChunk = true;
                 return ScanCallbackResult.Stop;

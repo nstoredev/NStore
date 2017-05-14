@@ -65,7 +65,7 @@ namespace NStore.Persistence.Mongo
             string partitionId,
             long fromIndexInclusive,
             ScanDirection direction,
-            IConsumer consumer,
+            IPartitionObserver partitionObserver,
             long toIndexInclusive = Int64.MaxValue,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
@@ -94,7 +94,7 @@ namespace NStore.Persistence.Mongo
                     var batch = cursor.Current;
                     foreach (var b in batch)
                     {
-                        if (ScanCallbackResult.Stop == consumer.Consume(b.Index, b.Payload))
+                        if (ScanCallbackResult.Stop == partitionObserver.Observe(b.Index, b.Payload))
                         {
                             return;
                         }
@@ -106,7 +106,7 @@ namespace NStore.Persistence.Mongo
         public async Task ScanStoreAsync(
             long sequenceStart,
             ScanDirection direction,
-            IConsumer consumer,
+            IStoreObserver observer,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         )
@@ -139,7 +139,7 @@ namespace NStore.Persistence.Mongo
                     var batch = cursor.Current;
                     foreach (var b in batch)
                     {
-                        if (ScanCallbackResult.Stop == consumer.Consume(b.Index, b.Payload))
+                        if (ScanCallbackResult.Stop == observer.Observe(b.Id, b.PartitionId, b.Index, b.Payload))
                         {
                             return;
                         }
@@ -326,11 +326,12 @@ namespace NStore.Persistence.Mongo
             };
 
             var updateResult = await _counters.FindOneAndUpdateAsync(
-                    filter, 
-                    update, 
-                    options, 
+                    filter,
+                    update,
+                    options,
                     cancellationToken
-            ).ConfigureAwait(false);
+                )
+                .ConfigureAwait(false);
 
             return updateResult.LastValue;
         }

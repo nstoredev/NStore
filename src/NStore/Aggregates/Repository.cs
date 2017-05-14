@@ -40,7 +40,7 @@ namespace NStore.Aggregates
             var stream = OpenStream(aggregate, version != Int32.MaxValue);
             var persister = (IAggregatePersister) aggregate;
 
-            var consumer = new LambdaConsumer((l, payload) =>
+            var consumer = new LambdaPartitionObserver((l, payload) =>
             {
                 var changes = (Changeset) payload;
 

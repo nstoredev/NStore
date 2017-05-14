@@ -20,7 +20,7 @@ namespace NStore.InMemory
             string partitionId,
             long fromIndexInclusive,
             ScanDirection direction,
-            IConsumer consumer,
+            IPartitionObserver partitionObserver,
             long toIndexInclusive = Int64.MaxValue,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
@@ -46,7 +46,7 @@ namespace NStore.InMemory
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    if (consumer.Consume(chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
+                    if (partitionObserver.Observe(chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
                     {
                         break;
                     }
@@ -59,7 +59,7 @@ namespace NStore.InMemory
         public Task ScanStoreAsync(
             long sequenceStart,
             ScanDirection direction,
-            IConsumer consumer,
+            IStoreObserver observer,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         )
@@ -83,8 +83,7 @@ namespace NStore.InMemory
                 foreach (var chunk in list)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    //     Console.WriteLine($"ScanStore {chunk.AggregateId}");
-                    if (consumer.Consume(chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
+                    if (observer.Observe(chunk.Id, chunk.PartitionId, chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
                     {
                         break;
                     }

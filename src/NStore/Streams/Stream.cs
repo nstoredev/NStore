@@ -16,13 +16,13 @@ namespace NStore.Streams
             this.Raw = raw;
         }
 
-        public Task Read(IConsumer consumer, int fromIndexInclusive, int toIndexInclusive, CancellationToken cancellationToken = default(CancellationToken))
+        public Task Read(IPartitionObserver partitionObserver, int fromIndexInclusive, int toIndexInclusive, CancellationToken cancellationToken = default(CancellationToken))
         {
             return Raw.ScanPartitionAsync(
                 Id,
                 fromIndexInclusive,
                 ScanDirection.Forward,
-                consumer,
+                partitionObserver,
                 toIndexInclusive,
                 cancellationToken: cancellationToken
             );
