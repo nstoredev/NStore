@@ -5,8 +5,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\NStore\NStore.csproj">
-      <Project>{0aad1793-0a61-42e6-9ebc-6729058ebe70}</Project>
-      <Name>NStore</Name>
     </ProjectReference>
   </ItemGroup>
 </Project>
