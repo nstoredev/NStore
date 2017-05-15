@@ -22,16 +22,22 @@ namespace NStore.Sample
             long partitionIndex,
             object payload)
         {
+            if (storeIndex != Position + 1)
+            {
+                Console.WriteLine($"Projection out of sequence {storeIndex} => wait next poll");
+                return ScanCallbackResult.Stop;
+            }
+
             Position = storeIndex;
             Console.WriteLine($"Projection: {storeIndex}");
 
             Changeset changes = (Changeset)payload;
 
-            foreach(var p in _projections)
+            foreach (var p in _projections)
             {
-                foreach(var e in changes.Events)
+                foreach (var e in changes.Events)
                 {
-                    p.Project(e);                    
+                    p.Project(e);
                 }
             }
 
@@ -46,18 +52,18 @@ namespace NStore.Sample
 
     public class RoomsOnSaleProjection : AbstractProjector
     {
-		public class RoomsOnSale
-		{
-			public string Id { get; set; }
-			public string RoonNumber { get; set; }
-		}
-		private IDictionary<string, RoomsOnSale> _all = new Dictionary<string, RoomsOnSale>();
+        public class RoomsOnSale
+        {
+            public string Id { get; set; }
+            public string RoonNumber { get; set; }
+        }
+        private IDictionary<string, RoomsOnSale> _all = new Dictionary<string, RoomsOnSale>();
 
         public IEnumerable<RoomsOnSale> List => _all.Values;
 
         public void On(RoomMadeAvailable e)
         {
-            _all.Add(e.Id, new RoomsOnSale{Id = e.Id});
+            _all.Add(e.Id, new RoomsOnSale { Id = e.Id });
         }
     }
 }

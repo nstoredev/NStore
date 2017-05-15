@@ -94,7 +94,7 @@ namespace NStore.Aggregates
             {
                 return _openedStreams[aggregate];
             }
-            catch (KeyNotFoundException e)
+            catch (KeyNotFoundException)
             {
                 throw new RepositoryMismatchException();
             }

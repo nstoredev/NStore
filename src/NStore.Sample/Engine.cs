@@ -10,7 +10,7 @@ using NStore.Streams;
 
 namespace NStore.Sample
 {
-    public class Engine : IDisposable
+    public class SampleApp : IDisposable
     {
         private readonly IRawStore _raw;
 
@@ -19,9 +19,9 @@ namespace NStore.Sample
         private CancellationTokenSource _source;
         private Projections _projections = new Projections();
 
-		public Engine()
+		public SampleApp()
         {
-            _raw = new InMemoryRawStore();
+            _raw = new InMemoryRawStore(new LatencySimulator(200));
             _streams = new StreamStore(_raw);
             _aggregateFactory = new DefaultAggregateFactory();
             Subscribe();
@@ -32,17 +32,19 @@ namespace NStore.Sample
             return new Repository(_aggregateFactory, _streams);
         }
 
-        public async Task CreateRooms()
+        public void CreateRooms()
         {
-            var repository = GetRepository();
-            foreach (var i in Enumerable.Range(1, 5))
+            var batch = Enumerable.Range(1, 10).Select( async i =>
             {
+                var repository = GetRepository(); // repository is not thread safe!
                 var id = "Room_" + i;
                 var room = await repository.GetById<Room>(id);
                 room.MakeAvailable();
-                await repository.Save(room, id + "_create");
+                await repository.Save(room, id + "_create").ConfigureAwait(false);
                 Console.WriteLine($"Listed Room {id}");
-            }
+            }).ToArray();
+
+            Task.WaitAll(batch);
         }
 
         private void Subscribe()
@@ -60,9 +62,8 @@ namespace NStore.Sample
                         _projections,
                         cancellationToken: token
                     );
-
-                    await Task.Delay(100);
                 }
+                await Task.Delay(50);
             });
         }
 

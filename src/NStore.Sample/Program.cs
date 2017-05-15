@@ -6,14 +6,14 @@ namespace NStore.Sample
     {
         static void Main(string[] args)
         {
-            var engine = new Engine();
-            engine.CreateRooms().Wait();
+            using (var app = new SampleApp())
+            {
+                app.CreateRooms();
+                Console.ReadLine();
 
-
-            Console.WriteLine("Press any key to exit");
-            Console.ReadKey();
-
-            engine.ShowRooms();
+                app.ShowRooms();
+                Console.ReadLine();
+            }
         }
     }
 }
