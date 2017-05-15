@@ -6,9 +6,9 @@ namespace NStore.Aggregates
     public interface IAggregate
     {
         string Id { get; }
-        long Version { get; }
+        int Version { get; }
 
         bool IsInitialized { get; }
-        void Init(string id, long version = 0, object @state = null);
+        void Init(string id, int version = 0, object @state = null);
     }
 }

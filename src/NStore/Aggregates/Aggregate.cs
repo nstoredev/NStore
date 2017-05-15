@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using NStore.SnapshotStore;
 
 namespace NStore.Aggregates
 {
@@ -10,7 +11,7 @@ namespace NStore.Aggregates
         where TState : AggregateState, new()
     {
         public string Id { get; private set; }
-        public long Version { get; private set; }
+        public int Version { get; private set; }
         public bool IsInitialized { get; private set; }
 
         private IList<object> PendingChanges { get; } = new List<object>();
@@ -24,10 +25,10 @@ namespace NStore.Aggregates
             this.Dispatcher = dispatcher ?? new DefaultEventDispatcher<TState>(() => this.State);
         }
 
-        void IAggregate.Init(string id, long version, object state) =>
+        void IAggregate.Init(string id, int version, object state) =>
             Init(id, version, (TState)state);
 
-        public void Init(string id, long version = 0, TState state = null)
+        public void Init(string id, int version = 0, TState state = null)
         {
             if (String.IsNullOrEmpty(id))
                 throw new ArgumentNullException(nameof(id));
@@ -40,6 +41,11 @@ namespace NStore.Aggregates
             this.IsInitialized = true;
             this.PendingChanges.Clear();
             this.Version = version;
+        }
+
+        SnapshotInfo IAggregatePersister.GetSnapshot()
+        {
+            return new SnapshotInfo(this.Version, this.State);
         }
 
         void IAggregatePersister.ChangesPersisted(Changeset changeset)
