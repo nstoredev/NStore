@@ -18,17 +18,17 @@ namespace NStore.Sample
 
         private readonly IStreamStore _streams;
         private readonly IAggregateFactory _aggregateFactory;
-        private readonly IReporter _reporter = new ColoredConsoleReporter();
+        private readonly IReporter _reporter = new ColoredConsoleReporter(ConsoleColor.DarkGray);
 
         private CancellationTokenSource _source;
-        private AppProjections _appProjections;
+        private readonly AppProjections _appProjections;
 
 		public SampleApp()
         {
             _raw = new InMemoryRawStore(new LatencySimulator(200));
             _streams = new StreamStore(_raw);
             _aggregateFactory = new DefaultAggregateFactory();
-            _appProjections = new AppProjections(_reporter);
+            _appProjections = new AppProjections();
 
             Subscribe();
         }
@@ -51,7 +51,7 @@ namespace NStore.Sample
 
                 await repository.Save(room, id + "_create").ConfigureAwait(false);
 
-                _reporter.Report("engine", $"Listed Room {id}");
+                _reporter.Report($"Listed Room {id}");
             }).ToArray();
 
             Task.WaitAll(batch);
@@ -84,10 +84,10 @@ namespace NStore.Sample
 
 		public void ShowRooms()
 		{
-            _reporter.Report("engine", "Rooms:");
+            _reporter.Report("Rooms:");
             foreach(var r in _appProjections.Rooms.List)
             {
-                _reporter.Report("engine", $"  room => {r.Id}");
+                _reporter.Report($"  room => {r.Id}");
             }
         }
 	}

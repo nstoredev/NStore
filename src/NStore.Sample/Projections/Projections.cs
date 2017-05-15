@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using NStore.Aggregates;
+using NStore.InMemory;
 using NStore.Raw;
 using NStore.Sample.Support;
 
@@ -10,23 +12,19 @@ namespace NStore.Sample.Projections
 {
     public class AppProjections : IStoreObserver
     {
-        private readonly IReporter _reporter;
         public long Position { get; set; } = 0;
         public RoomsOnSaleProjection Rooms { get; }
         public ConfirmedBookingsProjection Bookings { get; }
 
-        private IList<IAsyncProjector> _projections = new List<IAsyncProjector>();
-        public AppProjections(IReporter reporter)
-        {
-            _reporter = reporter;
-            Rooms = new RoomsOnSaleProjection(reporter);
-            Bookings = new ConfirmedBookingsProjection(reporter);
-            Setup();
-        }
+        private readonly IList<IAsyncProjector> _projections = new List<IAsyncProjector>();
+        private readonly IReporter _reporter = new ColoredConsoleReporter(ConsoleColor.Yellow);
 
-        private void Report(string message)
+        public AppProjections()
         {
-            _reporter.Report("prjengine", message);
+            var delayer = new LatencySimulator(200);
+            Rooms = new RoomsOnSaleProjection(new ColoredConsoleReporter(ConsoleColor.DarkRed),delayer);
+            Bookings = new ConfirmedBookingsProjection(new ColoredConsoleReporter(ConsoleColor.DarkCyan),delayer);
+            Setup();
         }
 
         public ScanCallbackResult Observe(
@@ -37,14 +35,16 @@ namespace NStore.Sample.Projections
         {
             if (storeIndex != Position + 1)
             {
-                Report($"Projection out of sequence {storeIndex} => wait next poll");
+                _reporter.Report($"Projection out of sequence {storeIndex} => wait next poll");
                 return ScanCallbackResult.Stop;
             }
 
             Position = storeIndex;
-            Report($"Projection: {storeIndex}");
 
             Changeset changes = (Changeset)payload;
+
+            var sw = new Stopwatch();
+            sw.Start();
             foreach (var e in changes.Events)
             {
                 Task.WaitAll
@@ -53,6 +53,7 @@ namespace NStore.Sample.Projections
                 );
             }
 
+            _reporter.Report($"Projection: {storeIndex} took {sw.ElapsedMilliseconds}ms");
             return ScanCallbackResult.Continue;
         }
 

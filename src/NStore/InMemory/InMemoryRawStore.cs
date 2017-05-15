@@ -10,7 +10,7 @@ namespace NStore.InMemory
 {
     public interface IDelayer
     {
-        Task Wait();
+        Task<long> Wait();
     }
 
     public class LatencySimulator : IDelayer
@@ -23,17 +23,19 @@ namespace NStore.InMemory
             _maxDelayMs = maxDelayMs;
         }
 
-        public Task Wait()
+        public async Task<long> Wait()
         {
-            return Task.Delay(_random.Next(_maxDelayMs));
+            var ms = _random.Next(_maxDelayMs);
+            await Task.Delay(ms);
+            return ms;
         }
     }
 
     public class NullDelayer : IDelayer
     {
-        public Task Wait()
+        public Task<long> Wait()
         {
-            return Task.FromResult(0);
+            return Task.FromResult(0L);
         }
     }
 

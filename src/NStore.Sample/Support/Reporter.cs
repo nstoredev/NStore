@@ -6,36 +6,28 @@ namespace NStore.Sample.Support
 {
     public interface IReporter
     {
-        void Report(string kind, string message);
+        void Report(string message);
     }
 
     public class ColoredConsoleReporter : IReporter
     {
         private static readonly object Lock = new object();
+        private readonly ConsoleColor _color;
 
-        public void Report(string kind, string message)
+        public ColoredConsoleReporter(ConsoleColor color)
         {
-            var newcolor = GetColor(kind);
+            _color = color;
+        }
+
+        public void Report(string message)
+        {
             lock (Lock)
             {
                 var color = Console.ForegroundColor;
-                Console.ForegroundColor = newcolor;
+                Console.ForegroundColor = _color;
                 Console.WriteLine(message);
                 Console.ForegroundColor = color;
             }
-        }
-
-        private ConsoleColor GetColor(string kind)
-        {
-            switch (kind)
-            {
-                case "engine": return ConsoleColor.Green;
-                case "prjengine": return ConsoleColor.Yellow;
-                case "RoomsOnSaleProjection": return ConsoleColor.DarkGray;
-                case "ConfirmedBookingsProjection": return ConsoleColor.DarkCyan;
-            }
-
-            return ConsoleColor.White;
         }
     }
 }
