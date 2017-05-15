@@ -6,6 +6,8 @@ using NStore.Aggregates;
 using NStore.InMemory;
 using NStore.Raw;
 using NStore.Sample.Domain.Room;
+using NStore.Sample.Projections;
+using NStore.Sample.Support;
 using NStore.Streams;
 
 namespace NStore.Sample
@@ -16,14 +18,18 @@ namespace NStore.Sample
 
         private readonly IStreamStore _streams;
         private readonly IAggregateFactory _aggregateFactory;
+        private readonly IReporter _reporter = new ColoredConsoleReporter();
+
         private CancellationTokenSource _source;
-        private Projections _projections = new Projections();
+        private AppProjections _appProjections;
 
 		public SampleApp()
         {
             _raw = new InMemoryRawStore(new LatencySimulator(200));
             _streams = new StreamStore(_raw);
             _aggregateFactory = new DefaultAggregateFactory();
+            _appProjections = new AppProjections(_reporter);
+
             Subscribe();
         }
 
@@ -39,9 +45,13 @@ namespace NStore.Sample
                 var repository = GetRepository(); // repository is not thread safe!
                 var id = "Room_" + i;
                 var room = await repository.GetById<Room>(id);
+
                 room.MakeAvailable();
+                room.AddBooking(new DateRange(DateTime.Today, DateTime.Today.AddDays(5)));
+
                 await repository.Save(room, id + "_create").ConfigureAwait(false);
-                Console.WriteLine($"Listed Room {id}");
+
+                _reporter.Report("engine", $"Listed Room {id}");
             }).ToArray();
 
             Task.WaitAll(batch);
@@ -57,9 +67,9 @@ namespace NStore.Sample
                 while (!token.IsCancellationRequested)
                 {
                     await this._raw.ScanStoreAsync(
-                        _projections.Position + 1,
+                        _appProjections.Position + 1,
                         ScanDirection.Forward,
-                        _projections,
+                        _appProjections,
                         cancellationToken: token
                     );
                 }
@@ -74,10 +84,10 @@ namespace NStore.Sample
 
 		public void ShowRooms()
 		{
-            Console.WriteLine("Rooms:");
-            foreach(var r in _projections.Rooms.List)
+            _reporter.Report("engine", "Rooms:");
+            foreach(var r in _appProjections.Rooms.List)
             {
-                Console.WriteLine($"  room => {r.Id}");
+                _reporter.Report("engine", $"  room => {r.Id}");
             }
         }
 	}

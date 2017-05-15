@@ -3,11 +3,11 @@ using System.Reflection;
 
 namespace NStore.Aggregates
 {
-    public abstract class AbstractProjector : IProjector
+    public abstract class SyncProjector : IProjector
     {
         public virtual void Project(object @event)
         {
-            var mi = GetConsumerOf("On",@event);
+            var mi = GetConsumerOf("On", @event);
             mi?.Invoke(this, new object[] { @event });
         }
 

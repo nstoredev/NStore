@@ -1,6 +1,6 @@
 ﻿namespace NStore.Aggregates
 {
-    public abstract class AggregateState : AbstractProjector
+    public abstract class AggregateState : SyncProjector
     {
     }
 }
