@@ -8,48 +8,17 @@ using NStore.Raw;
 
 namespace NStore.InMemory
 {
-    public interface IDelayer
-    {
-        Task<long> Wait();
-    }
-
-    public class LatencySimulator : IDelayer
-    {
-        private readonly int _maxDelayMs;
-        private readonly Random _random = new Random(DateTime.UtcNow.Millisecond*7);
-
-        public LatencySimulator(int maxDelayMs = 100)
-        {
-            _maxDelayMs = maxDelayMs;
-        }
-
-        public async Task<long> Wait()
-        {
-            var ms = _random.Next(_maxDelayMs);
-            await Task.Delay(ms);
-            return ms;
-        }
-    }
-
-    public class NullDelayer : IDelayer
-    {
-        public Task<long> Wait()
-        {
-            return Task.FromResult(0L);
-        }
-    }
-
     public class InMemoryRawStore : IRawStore
     {
         private readonly object _lock = new object();
         private readonly List<Chunk> _chunks = new List<Chunk>();
         private readonly Dictionary<string, Partition> _partitions = new Dictionary<string, Partition>();
         private int _sequence = 0;
-        private readonly IDelayer _delayer;
+        private readonly INetworkSimulator _networkSimulator;
 
-        public InMemoryRawStore(IDelayer delayer = null)
+        public InMemoryRawStore(INetworkSimulator networkSimulator = null)
         {
-            _delayer = delayer ?? new NullDelayer();
+            _networkSimulator = networkSimulator ?? new LocalhostSimulator();
         }
 
         public async Task ScanPartitionAsync(
@@ -85,7 +54,7 @@ namespace NStore.InMemory
 
             foreach (var chunk in result)
             {
-                await _delayer.Wait().ConfigureAwait(false);
+                await _networkSimulator.WaitFast().ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
 
                 if (partitionObserver.Observe(chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
@@ -110,7 +79,7 @@ namespace NStore.InMemory
                 if (direction == ScanDirection.Forward)
                 {
                     list = _chunks.Where(x => x.Id >= sequenceStart)
-                        .OrderBy(x=>x.Id)
+                        .OrderBy(x => x.Id)
                         .Take(limit)
                         .ToArray();
                 }
@@ -118,7 +87,7 @@ namespace NStore.InMemory
                 {
                     list = _chunks.ToArray()
                         .Where(x => x.Id <= sequenceStart)
-                        .OrderByDescending(x=>x.Id)
+                        .OrderByDescending(x => x.Id)
                         .Take(limit)
                         .ToArray();
                 }
@@ -126,7 +95,7 @@ namespace NStore.InMemory
 
             foreach (var chunk in list)
             {
-                await _delayer.Wait().ConfigureAwait(false);
+                await _networkSimulator.Wait().ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
                 if (observer.Observe(chunk.Id, chunk.PartitionId, chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
                 {
@@ -153,7 +122,7 @@ namespace NStore.InMemory
                 Payload = payload
             };
 
-            await _delayer.Wait().ConfigureAwait(false);
+            await _networkSimulator.Wait().ConfigureAwait(false);
 
             lock (_lock)
             {
@@ -167,7 +136,7 @@ namespace NStore.InMemory
                 partion.Write(chunk);
                 _chunks.Add(chunk);
             }
-            await _delayer.Wait().ConfigureAwait(false);
+            await _networkSimulator.Wait().ConfigureAwait(false);
         }
 
         public async Task DeleteAsync(
@@ -177,7 +146,7 @@ namespace NStore.InMemory
             CancellationToken cancellationToken = default(CancellationToken)
         )
         {
-            await _delayer.Wait().ConfigureAwait(false);
+            await _networkSimulator.Wait().ConfigureAwait(false);
             lock (_lock)
             {
                 Partition partition;

@@ -12,10 +12,12 @@ namespace NStore.Sample.Support
     public class ColoredConsoleReporter : IReporter
     {
         private static readonly object Lock = new object();
+        private readonly string _name;
         private readonly ConsoleColor _color;
 
-        public ColoredConsoleReporter(ConsoleColor color)
+        public ColoredConsoleReporter(string name, ConsoleColor color)
         {
+            _name = name;
             _color = color;
         }
 
@@ -25,7 +27,7 @@ namespace NStore.Sample.Support
             {
                 var color = Console.ForegroundColor;
                 Console.ForegroundColor = _color;
-                Console.WriteLine(message);
+                Console.WriteLine($"{_name.PadRight(20)}: {message}");
                 Console.ForegroundColor = color;
             }
         }

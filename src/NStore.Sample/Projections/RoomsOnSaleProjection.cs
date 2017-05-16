@@ -11,7 +11,7 @@ namespace NStore.Sample.Projections
     public class RoomsOnSaleProjection : AsyncProjector
     {
         private readonly IReporter _reporter;
-        private readonly IDelayer _delayer;
+        private readonly INetworkSimulator _networkSimulator;
 
         public class RoomsOnSale
         {
@@ -20,10 +20,10 @@ namespace NStore.Sample.Projections
         }
         private readonly IDictionary<string, RoomsOnSale> _all = new Dictionary<string, RoomsOnSale>();
 
-        public RoomsOnSaleProjection(IReporter reporter, IDelayer delayer)
+        public RoomsOnSaleProjection(IReporter reporter, INetworkSimulator networkSimulator)
         {
             _reporter = reporter;
-            _delayer = delayer;
+            _networkSimulator = networkSimulator;
         }
 
         public IEnumerable<RoomsOnSale> List => _all.Values;
@@ -31,7 +31,7 @@ namespace NStore.Sample.Projections
         public async Task On(RoomMadeAvailable e)
         {
             _all.Add(e.Id, new RoomsOnSale { Id = e.Id });
-            var elapsed = await _delayer.Wait().ConfigureAwait(false);
+            var elapsed = await _networkSimulator.WaitFast().ConfigureAwait(false);
             this._reporter.Report($"Room available {e.Id} took {elapsed}ms");
         }
     }

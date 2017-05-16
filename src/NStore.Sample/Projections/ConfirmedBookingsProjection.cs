@@ -11,23 +11,23 @@ namespace NStore.Sample.Projections
     public class ConfirmedBookingsProjection : AsyncProjector
     {
         private readonly IReporter _reporter;
-        private readonly IDelayer _delayer;
+        private readonly INetworkSimulator _networkSimulator;
 
-        public ConfirmedBookingsProjection(IReporter reporter, IDelayer delayer)
+        public ConfirmedBookingsProjection(IReporter reporter, INetworkSimulator networkSimulator)
         {
             this._reporter = reporter;
-            _delayer = delayer;
+            _networkSimulator = networkSimulator;
         }
 
         public async Task On(RoomMadeAvailable e)
         {
-            var elapsed = await _delayer.Wait().ConfigureAwait(false);
+            var elapsed = await _networkSimulator.WaitFast().ConfigureAwait(false);
             this._reporter.Report($"Room available {e.Id} took {elapsed}ms");
         }
 
         public async Task On(RoomBooked e)
         {
-            var elapsed = await _delayer.Wait().ConfigureAwait(false);
+            var elapsed = await _networkSimulator.WaitFast().ConfigureAwait(false);
             this._reporter.Report($"Confirmed booking on {e.Id} took {elapsed}ms");
         }
     }

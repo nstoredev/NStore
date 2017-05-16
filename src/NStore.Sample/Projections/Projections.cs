@@ -17,13 +17,12 @@ namespace NStore.Sample.Projections
         public ConfirmedBookingsProjection Bookings { get; }
 
         private readonly IList<IAsyncProjector> _projections = new List<IAsyncProjector>();
-        private readonly IReporter _reporter = new ColoredConsoleReporter(ConsoleColor.Yellow);
+        private readonly IReporter _reporter = new ColoredConsoleReporter("projections", ConsoleColor.Yellow);
 
-        public AppProjections()
+        public AppProjections(INetworkSimulator network)
         {
-            var delayer = new LatencySimulator(200);
-            Rooms = new RoomsOnSaleProjection(new ColoredConsoleReporter(ConsoleColor.DarkRed),delayer);
-            Bookings = new ConfirmedBookingsProjection(new ColoredConsoleReporter(ConsoleColor.DarkCyan),delayer);
+            Rooms = new RoomsOnSaleProjection(new ColoredConsoleReporter("rooms on sale", ConsoleColor.Red), network);
+            Bookings = new ConfirmedBookingsProjection(new ColoredConsoleReporter("confirmed bookings", ConsoleColor.Cyan), network);
             Setup();
         }
 
@@ -35,7 +34,7 @@ namespace NStore.Sample.Projections
         {
             if (storeIndex != Position + 1)
             {
-                _reporter.Report($"Projection out of sequence {storeIndex} => wait next poll");
+                _reporter.Report($"!!!!!!!!!!!!!!!! Projection out of sequence {storeIndex} => wait next poll !!!!!!!!!!!!!!!!");
                 return ScanCallbackResult.Stop;
             }
 
@@ -53,7 +52,7 @@ namespace NStore.Sample.Projections
                 );
             }
 
-            _reporter.Report($"Projection: {storeIndex} took {sw.ElapsedMilliseconds}ms");
+            _reporter.Report($"dispatched changeset #{storeIndex} took {sw.ElapsedMilliseconds}ms");
             return ScanCallbackResult.Continue;
         }
 

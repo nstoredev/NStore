@@ -18,17 +18,18 @@ namespace NStore.Sample
 
         private readonly IStreamStore _streams;
         private readonly IAggregateFactory _aggregateFactory;
-        private readonly IReporter _reporter = new ColoredConsoleReporter(ConsoleColor.DarkGray);
+        private readonly IReporter _reporter = new ColoredConsoleReporter("app", ConsoleColor.Gray);
 
         private CancellationTokenSource _source;
         private readonly AppProjections _appProjections;
 
 		public SampleApp()
         {
-            _raw = new InMemoryRawStore(new LatencySimulator(200));
+            var network = new LocalAreaNetworkSimulator(50);
+            _raw = new InMemoryRawStore(network);
             _streams = new StreamStore(_raw);
             _aggregateFactory = new DefaultAggregateFactory();
-            _appProjections = new AppProjections();
+            _appProjections = new AppProjections(network);
 
             Subscribe();
         }
@@ -73,8 +74,8 @@ namespace NStore.Sample
                         cancellationToken: token
                     );
                 }
-                await Task.Delay(50);
-            });
+                await Task.Delay(50, token);
+            }, token);
         }
 
         public void Dispose()
