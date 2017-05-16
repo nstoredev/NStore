@@ -37,11 +37,15 @@ namespace NStore.Aggregates
             }
 
             var aggregate = _factory.Create<T>();
+            //@@TODO https://github.com/ProximoSrl/NStore/issues/28
             _identityMap.Add(mapid, aggregate);
 
-            var snapshot = _snapshots.Get(id, version);
+            var snapshot = await _snapshots.Get(id, version);
+
+            //@@TODO https://github.com/ProximoSrl/NStore/issues/29
             aggregate.Init(id, snapshot.Version, snapshot.Data);
 
+            //@@TODO https://github.com/ProximoSrl/NStore/issues/27
             var stream = OpenStream(aggregate, version != Int32.MaxValue);
             var persister = (IAggregatePersister) aggregate;
 
@@ -53,6 +57,8 @@ namespace NStore.Aggregates
                 return ScanCallbackResult.Continue;
             });
 
+            //@@TODO https://github.com/ProximoSrl/NStore/issues/29
+            // snapshot.Version => Aggregate.Version
             await stream.Read(consumer, snapshot.Version, version, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -72,7 +78,8 @@ namespace NStore.Aggregates
                 return;
 
             var stream = GetStream(aggregate);
-            //@@TODO refactor => !stream.IsWritable
+            //@@TODO https://github.com/ProximoSrl/NStore/issues/31
+            //@@refactor => !stream.IsWritable
             if (stream is ReadOnlyStream)
             {
                 throw new AggregateReadOnlyException();
@@ -82,11 +89,8 @@ namespace NStore.Aggregates
 
             await stream.Append(changeSet, operationId, cancellationToken).ConfigureAwait(false);
 
-            if (_snapshots.Updatable)
-            {
-                var snapshot = persister.GetSnapshot();
-                await _snapshots.Add(aggregate.Id, snapshot).ConfigureAwait(false);
-            }
+            //@@TODO await or not?
+            await _snapshots.Add(aggregate.Id, persister.GetSnapshot());
 
             persister.ChangesPersisted(changeSet);
         }
@@ -97,6 +101,8 @@ namespace NStore.Aggregates
                 ? _streams.OpenReadOnly(aggregate.Id)
                 : _streams.OpenOptimisticConcurrency(aggregate.Id);
 
+            //@@TODO https://github.com/ProximoSrl/NStore/issues/27
+            // store only for full load
             _openedStreams.Add(aggregate, stream);
             return stream;
         }

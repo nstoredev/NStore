@@ -28,6 +28,7 @@ namespace NStore.Streams
             );
         }
 
+        //@@TODO https://github.com/ProximoSrl/NStore/issues/32
         public virtual Task Append(object payload, string operationId, CancellationToken cancellation = default(CancellationToken))
         {
             return Raw.PersistAsync(this.Id, -1, payload, operationId, cancellation);

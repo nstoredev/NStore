@@ -25,7 +25,7 @@ namespace NStore.Sample
 
 		public SampleApp()
         {
-            var network = new LocalAreaNetworkSimulator(50);
+            var network = new LocalAreaNetworkSimulator();
             _raw = new InMemoryRawStore(network);
             _streams = new StreamStore(_raw);
             _aggregateFactory = new DefaultAggregateFactory();

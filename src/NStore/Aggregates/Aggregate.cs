@@ -56,6 +56,7 @@ namespace NStore.Aggregates
 
         void IAggregatePersister.ApplyChanges(Changeset changeset)
         {
+            //@@TODO https://github.com/ProximoSrl/NStore/issues/30
             this.Version = changeset.Version;
             foreach (var @event in changeset.Events)
             {

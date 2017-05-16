@@ -23,6 +23,11 @@ namespace NStore.Sample.Domain.Room
             this.From = from;
             this.To = to;
         }
+
+        public bool Overlaps(DateRange range)
+        {
+            return this.From < range.To && this.To > range.From;
+        }
     }
 
     public class Room : Aggregate<RoomState>

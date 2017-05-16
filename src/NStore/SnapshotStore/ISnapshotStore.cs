@@ -16,22 +16,22 @@ namespace NStore.SnapshotStore
 
     public interface ISnapshotStore
     {
-        SnapshotInfo Get(string id, int version);
-        bool Updatable { get; }
+        Task<SnapshotInfo> Get(string id, int version);
         Task Add(string aggregateId, SnapshotInfo snapshot);
     }
 
     public class NullSnapshots : ISnapshotStore
     {
-        public SnapshotInfo Get(string id, int version)
+        private readonly SnapshotInfo _nullSnapshot = new SnapshotInfo(0, null);
+
+        public Task<SnapshotInfo> Get(string id, int version)
         {
-            return new SnapshotInfo(0, null);
+            return Task.FromResult(_nullSnapshot);
         }
 
-        public bool Updatable => false;
         public Task Add(string aggregateId, SnapshotInfo snapshot)
         {
-            throw new System.NotImplementedException();
+            return Task.FromResult(0);
         }
     }
 }
