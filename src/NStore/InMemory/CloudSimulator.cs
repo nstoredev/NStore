@@ -5,11 +5,8 @@ namespace NStore.InMemory
 {
     public class CloudSimulator : LocalAreaNetworkSimulator
     {
-        private readonly int _maxDelayMs;
-        private readonly Random _random = new Random(DateTime.UtcNow.Millisecond * 7);
-        public CloudSimulator(int maxDelayMs = 1000)
+        public CloudSimulator(int maxDelayMs = 100) : base(maxDelayMs)
         {
-            _maxDelayMs = maxDelayMs;
         }
 
         protected override async Task<long> Simulate(int maxDelay)
