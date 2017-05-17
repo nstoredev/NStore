@@ -47,7 +47,7 @@ namespace NStore.Sample
                 var id = "Room_" + i;
                 var room = await repository.GetById<Room>(id);
 
-                room.MakeAvailable();
+                room.EnableBookings();
                 room.AddBooking(new DateRange(DateTime.Today, DateTime.Today.AddDays(5)));
 
                 await repository.Save(room, id + "_create").ConfigureAwait(false);

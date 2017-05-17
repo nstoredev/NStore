@@ -1,45 +1,34 @@
-﻿using System;
+﻿using System.Resources;
 using NStore.Aggregates;
 
 namespace NStore.Sample.Domain.Room
 {
-    public class RoomMadeAvailable
+    public class BookingsEnabled
     {
         public string Id { get; private set; }
 
-        public RoomMadeAvailable(string id)
+        public BookingsEnabled(string id)
         {
             this.Id = id;
         }
     }
 
-    public class DateRange
+    public class Room : Aggregate<RoomState>, IInvariantsChecker
     {
-        public DateTime From { get; private set; }
-        public DateTime To { get; private set; }
-
-        public DateRange(DateTime from, DateTime to)
+        public void EnableBookings()
         {
-            this.From = from;
-            this.To = to;
-        }
-
-        public bool Overlaps(DateRange range)
-        {
-            return this.From < range.To && this.To > range.From;
-        }
-    }
-
-    public class Room : Aggregate<RoomState>
-    {
-        public void MakeAvailable()
-        {
-            Raise(new RoomMadeAvailable(this.Id));
+            if(!this.State.BookingsEnabled)
+                Raise(new BookingsEnabled(this.Id));
         }
 
         public void AddBooking(DateRange dates)
         {
             Raise(new RoomBooked(this.Id, dates));
+        }
+
+        public bool CheckInvariants()
+        {
+            return State.CheckInvariants();
         }
     }
 

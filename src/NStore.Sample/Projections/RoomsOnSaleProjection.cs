@@ -28,7 +28,7 @@ namespace NStore.Sample.Projections
 
         public IEnumerable<RoomsOnSale> List => _all.Values;
 
-        public async Task On(RoomMadeAvailable e)
+        public async Task On(BookingsEnabled e)
         {
             _all.Add(e.Id, new RoomsOnSale { Id = e.Id });
             var elapsed = await _networkSimulator.WaitFast().ConfigureAwait(false);

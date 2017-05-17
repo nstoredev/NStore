@@ -19,7 +19,7 @@ namespace NStore.Sample.Projections
             _networkSimulator = networkSimulator;
         }
 
-        public async Task On(RoomMadeAvailable e)
+        public async Task On(BookingsEnabled e)
         {
             var elapsed = await _networkSimulator.WaitFast().ConfigureAwait(false);
             this._reporter.Report($"Room available {e.Id} took {elapsed}ms");
