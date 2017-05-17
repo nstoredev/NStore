@@ -37,9 +37,6 @@ namespace NStore.Aggregates
             }
 
             var aggregate = _factory.Create<T>();
-            //@@TODO https://github.com/ProximoSrl/NStore/issues/28
-            _identityMap.Add(mapid, aggregate);
-
             var persister = (IAggregatePersister)aggregate;
             var snapshot = await _snapshots.Get(id, version, cancellationToken);
 
@@ -54,7 +51,6 @@ namespace NStore.Aggregates
                 aggregate.Init(id);
             }
 
-            //@@TODO https://github.com/ProximoSrl/NStore/issues/27
             var stream = OpenStream(aggregate, version != Int32.MaxValue);
 
             var consumer = new LambdaPartitionObserver((l, payload) =>
@@ -65,10 +61,11 @@ namespace NStore.Aggregates
                 return ScanCallbackResult.Continue;
             });
 
-            //@@TODO https://github.com/ProximoSrl/NStore/issues/29
-            // snapshot.Version => Aggregate.Version
+            // we use aggregate.Version because snapshot could be rejected
             await stream.Read(consumer, aggregate.Version, version, cancellationToken)
                 .ConfigureAwait(false);
+
+            _identityMap.Add(mapid, aggregate);
 
             return aggregate;
         }
@@ -107,8 +104,6 @@ namespace NStore.Aggregates
                 ? _streams.OpenReadOnly(aggregate.Id)
                 : _streams.OpenOptimisticConcurrency(aggregate.Id);
 
-            //@@TODO https://github.com/ProximoSrl/NStore/issues/27
-            // store only for full load
             _openedStreams.Add(aggregate, stream);
             return stream;
         }

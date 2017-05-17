@@ -143,12 +143,22 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async void loading_aggregate_twice_at_different_versione_from_repository_should_return_different_istances()
+        public async void loading_aggregate_twice_at_different_version_from_repository_should_return_different_istances()
         {
             var ticket1 = await Repository.GetById<Ticket>("Ticket_1",1);
             var ticket2 = await Repository.GetById<Ticket>("Ticket_1",2);
 
             Assert.NotSame(ticket1, ticket2);
+        }
+
+        [Fact]
+        public async void loading_an_old_version_should_return_different_instance()
+        {
+            var ticket_at_v2 = await Repository.GetById<Ticket>("Ticket_1", 2);
+            var ticket_latest = await Repository.GetById<Ticket>("Ticket_1");
+
+            Assert.NotSame(ticket_at_v2, ticket_latest);
+            Assert.Equal(ticket_at_v2.Version, ticket_latest.Version);
         }
 
         [Fact]
