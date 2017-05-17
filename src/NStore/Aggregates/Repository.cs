@@ -33,25 +33,33 @@ namespace NStore.Aggregates
             string mapid = id + "@" + version;
             if (_identityMap.ContainsKey(mapid))
             {
-                return (T) _identityMap[mapid];
+                return (T)_identityMap[mapid];
             }
 
             var aggregate = _factory.Create<T>();
             //@@TODO https://github.com/ProximoSrl/NStore/issues/28
             _identityMap.Add(mapid, aggregate);
 
+            var persister = (IAggregatePersister)aggregate;
             var snapshot = await _snapshots.Get(id, version, cancellationToken);
 
-            //@@TODO https://github.com/ProximoSrl/NStore/issues/29
-            aggregate.Init(id, snapshot.Version, snapshot.Data);
+            if (snapshot != null)
+            {
+                //@@REVIEW: invalidate snapshot on false?
+                persister.TryRestore(snapshot);
+            }
+
+            if(!aggregate.IsInitialized)
+            {
+                aggregate.Init(id);
+            }
 
             //@@TODO https://github.com/ProximoSrl/NStore/issues/27
             var stream = OpenStream(aggregate, version != Int32.MaxValue);
-            var persister = (IAggregatePersister) aggregate;
 
             var consumer = new LambdaPartitionObserver((l, payload) =>
             {
-                var changes = (Changeset) payload;
+                var changes = (Changeset)payload;
 
                 persister.ApplyChanges(changes);
                 return ScanCallbackResult.Continue;
@@ -59,7 +67,7 @@ namespace NStore.Aggregates
 
             //@@TODO https://github.com/ProximoSrl/NStore/issues/29
             // snapshot.Version => Aggregate.Version
-            await stream.Read(consumer, snapshot.Version, version, cancellationToken)
+            await stream.Read(consumer, aggregate.Version, version, cancellationToken)
                 .ConfigureAwait(false);
 
             return aggregate;
@@ -72,7 +80,7 @@ namespace NStore.Aggregates
             CancellationToken cancellationToken = default(CancellationToken)
         ) where T : IAggregate
         {
-            var persister = (IAggregatePersister) aggregate;
+            var persister = (IAggregatePersister)aggregate;
             var changeSet = persister.GetChangeSet();
             if (changeSet.IsEmpty)
                 return;

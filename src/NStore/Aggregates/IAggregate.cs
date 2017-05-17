@@ -9,6 +9,8 @@ namespace NStore.Aggregates
         int Version { get; }
 
         bool IsInitialized { get; }
-        void Init(string id, int version = 0, object @state = null);
+        bool IsDirty { get; }
+        bool IsNew { get; }
+        void Init(string id);
     }
 }

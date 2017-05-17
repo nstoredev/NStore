@@ -15,51 +15,83 @@ namespace NStore.Aggregates
         public bool IsInitialized { get; private set; }
 
         private IList<object> PendingChanges { get; } = new List<object>();
-        protected readonly IEventDispatcher Dispatcher;
+        private readonly IEventDispatcher _dispatcher;
         protected TState State { get; private set; }
         public bool IsDirty => this.PendingChanges.Any();
         public bool IsNew => this.Version == 0;
 
         protected Aggregate(IEventDispatcher dispatcher = null)
         {
-            this.Dispatcher = dispatcher ?? new DefaultEventDispatcher<TState>(() => this.State);
+            this._dispatcher = dispatcher ?? new DefaultEventDispatcher<TState>(() => this.State);
         }
 
-        void IAggregate.Init(string id, int version, object state) =>
-            Init(id, version, (TState)state);
+        public void Init(string aggregateId) => InternalInit(aggregateId, 0, null);
 
-        public void Init(string id, int version = 0, TState state = null)
+        private void InternalInit(string aggregateId, int aggregateVersion, TState state)
         {
-            if (String.IsNullOrEmpty(id))
-                throw new ArgumentNullException(nameof(id));
+            if (String.IsNullOrEmpty(aggregateId))
+                throw new ArgumentNullException(nameof(aggregateId));
 
             if (this.Id != null)
                 throw new AggregateAlreadyInitializedException(GetType(), this.Id);
 
-            this.Id = id;
+            this.Id = aggregateId;
             this.State = state ?? new TState();
             this.IsInitialized = true;
             this.PendingChanges.Clear();
-            this.Version = version;
+            this.Version = aggregateVersion;
+        }
+
+        bool IAggregatePersister.TryRestore(SnapshotInfo snapshotInfo)
+        {
+            if (snapshotInfo == null) throw new ArgumentNullException(nameof(snapshotInfo));
+
+            var processed = PreprocessSnapshot(snapshotInfo);
+
+            if (processed == null || processed.IsEmpty)
+                return false;
+
+            this.InternalInit(
+                processed.AggregateId,
+                processed.AggregateVersion,
+                (TState)processed.Data
+            );
+
+            return true;
+        }
+
+        /// <summary>
+        /// Give chance to upcast state or just drop snapshot with empty default state
+        /// </summary>
+        /// <param name="snapshotInfo"></param>
+        /// <returns></returns>
+        protected virtual SnapshotInfo PreprocessSnapshot(SnapshotInfo snapshotInfo)
+        {
+            return snapshotInfo;
         }
 
         SnapshotInfo IAggregatePersister.GetSnapshot()
         {
-            return new SnapshotInfo(this.Version, this.State);
+            return new SnapshotInfo(
+                this.Id,
+                this.Version,
+                this.State,
+                this.State.GetStateVersion()
+            );
         }
 
         void IAggregatePersister.ChangesPersisted(Changeset changeset)
         {
-            this.Version = changeset.Version;
+            this.Version = changeset.AggregateVersion;
             this.PendingChanges.Clear();
         }
 
         void IAggregatePersister.ApplyChanges(Changeset changeset)
         {
-            if (changeset.Version != this.Version + 1)
-                throw new AggregateRestoreException(this.Version + 1, changeset.Version);
+            if (changeset.AggregateVersion != this.Version + 1)
+                throw new AggregateRestoreException(this.Version + 1, changeset.AggregateVersion);
 
-            this.Version = changeset.Version;
+            this.Version = changeset.AggregateVersion;
             foreach (var @event in changeset.Events)
             {
                 this.Dispatch(@event);
@@ -74,9 +106,9 @@ namespace NStore.Aggregates
             );
         }
 
-        protected void Dispatch(object @event)
+        private void Dispatch(object @event)
         {
-            this.Dispatcher.Dispatch(@event);
+            this._dispatcher.Dispatch(@event);
         }
 
         protected void Raise(object @event)

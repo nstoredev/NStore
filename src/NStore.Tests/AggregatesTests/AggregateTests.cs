@@ -1,5 +1,6 @@
 ﻿using System;
 using NStore.Aggregates;
+using NStore.SnapshotStore;
 using Xunit;
 
 namespace NStore.Tests.AggregatesTests
@@ -51,7 +52,7 @@ namespace NStore.Tests.AggregatesTests
         public void append_should_increase_version()
         {
             Ticket ticket = TicketTestFactory.ForTest();
-            var persister = (IAggregatePersister) ticket;
+            var persister = (IAggregatePersister)ticket;
             var changeSet = new Changeset(1, new TicketSold());
             persister.ApplyChanges(changeSet);
 
@@ -95,7 +96,7 @@ namespace NStore.Tests.AggregatesTests
 
             Assert.NotNull(changeSet);
             Assert.False(changeSet.IsEmpty);
-            Assert.Equal(1, changeSet.Version);
+            Assert.Equal(1, changeSet.AggregateVersion);
         }
 
         [Fact]
@@ -113,7 +114,7 @@ namespace NStore.Tests.AggregatesTests
 
             Assert.NotNull(changeSet);
             Assert.False(changeSet.IsEmpty);
-            Assert.Equal(2, changeSet.Version);
+            Assert.Equal(2, changeSet.AggregateVersion);
             Assert.Equal(1, changeSet.Events.Length);
             Assert.IsType<TicketRefunded>(changeSet.Events[0]);
         }
@@ -136,6 +137,40 @@ namespace NStore.Tests.AggregatesTests
 
             Assert.Equal(2, ex.ExpectedVersion);
             Assert.Equal(3, ex.RestoreVersion);
+        }
+
+        [Fact]
+        public void restoring_null_snapshot_should_throw()
+        {
+            var ticket = TicketTestFactory.ForTest();
+            var persister = (IAggregatePersister)ticket;
+
+            Assert.Throws<ArgumentNullException>(() =>
+            {
+                persister.TryRestore(null);
+            });
+        }
+
+        [Fact]
+        public void restoring_empty_snapshot_should_return_false()
+        {
+            var ticket = TicketTestFactory.ForTest();
+            var persister = (IAggregatePersister)ticket;
+            var snapshot = new SnapshotInfo(null, 0, null, 0);
+            var restored = persister.TryRestore(snapshot);
+
+            Assert.False(restored);
+        }
+
+        [Fact]
+        public void restoring_incompatible_snapshot_should_return_false()
+        {
+            var ticket = TicketTestFactory.ForTest();
+            var persister = (IAggregatePersister)ticket;
+            var snapshot = new SnapshotInfo(ticket.Id, 2, null, 0);
+            var restored = persister.TryRestore(snapshot);
+
+            Assert.False(restored);
         }
     }
 }

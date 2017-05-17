@@ -18,7 +18,7 @@ namespace NStore.SnapshotStore
 
         public async Task<SnapshotInfo> Get(string id, int version, CancellationToken cancellationToken = default(CancellationToken))
         {
-            SnapshotInfo snapshotInfo = SnapshotInfo.Empty;
+            SnapshotInfo snapshotInfo = null;
 
             await _store.ScanPartitionAsync(
                 id,
@@ -39,16 +39,16 @@ namespace NStore.SnapshotStore
 
         public async Task Add(string aggregateId, SnapshotInfo snapshot, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (snapshot == SnapshotInfo.Empty)
+            if (snapshot == null || snapshot.IsEmpty)
                 return;
 
             try
             {
-                await _store.PersistAsync(aggregateId, snapshot.Version, snapshot, cancellationToken: cancellationToken);
+                await _store.PersistAsync(aggregateId, snapshot.AggregateVersion, snapshot, cancellationToken: cancellationToken);
             }
-            catch (DuplicateStreamIndexException )
+            catch (DuplicateStreamIndexException)
             {
-                // we lose concurrency race.. not big deal for snapshot
+                // already stored
             }
         }
     }

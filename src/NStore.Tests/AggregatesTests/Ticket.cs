@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using NStore.Aggregates;
+using NStore.SnapshotStore;
 using Xunit;
 
 namespace NStore.Tests.AggregatesTests
@@ -50,6 +51,14 @@ namespace NStore.Tests.AggregatesTests
         public Changeset ExposePendingChanges()
         {
             return ((IAggregatePersister) this).GetChangeSet();
+        }
+
+        protected override SnapshotInfo PreprocessSnapshot(SnapshotInfo snapshotInfo)
+        {
+            if (snapshotInfo.SnapshotVersion != 1)
+                return null;
+
+            return snapshotInfo;
         }
     }
 }

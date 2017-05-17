@@ -1,12 +1,13 @@
 ﻿using System;
 using NStore.Aggregates;
 using NStore.Sample.Domain.Room;
+using NStore.SnapshotStore;
 using Xunit;
 
 namespace NStore.Sample.Tests
 {
     public abstract class AbstractAggregateTest<TAggregate, TState>
-        where TAggregate : IAggregate where TState : new()
+        where TAggregate : IAggregate where TState : AggregateState, new()
     {
         private readonly IAggregateFactory _defaultFactory = new DefaultAggregateFactory();
         protected TState State { get; private set; }
@@ -16,7 +17,11 @@ namespace NStore.Sample.Tests
         {
             this.Aggregate = _defaultFactory.Create<TAggregate>();
             this.State = new TState();
-            this.Aggregate.Init("test",0, State);
+            var snapshot = new SnapshotInfo("test", 1, this.State, this.State.GetStateVersion());
+            ((IAggregatePersister)this.Aggregate).TryRestore(snapshot);
+
+            if(!this.Aggregate.IsInitialized)
+                throw new Exception("something went wrong");
         }
 
         protected void Setup(Action action)

@@ -3,19 +3,24 @@ using System.Threading.Tasks;
 
 namespace NStore.SnapshotStore
 {
-    //@@TODO https://github.com/ProximoSrl/NStore/issues/33
     public sealed class SnapshotInfo
     {
-        public static readonly SnapshotInfo Empty = new SnapshotInfo(0, null);
-
-        public SnapshotInfo(int version, object data)
+        public SnapshotInfo(string aggregateId, int aggregateVersion, object data, int snapshotVersion)
         {
-            Version = version;
+            AggregateVersion = aggregateVersion;
             Data = data;
+            SnapshotVersion = snapshotVersion;
+            AggregateId = aggregateId;
         }
 
-        public int Version { get; private set; }
+        public int AggregateVersion { get; private set; }
         public object Data { get; private set; }
+        public int SnapshotVersion { get; private set; }
+        public string AggregateId { get; private set; }
+
+        public bool IsEmpty => this.AggregateId == null ||
+                                this.AggregateVersion == 0 ||
+                                this.Data == null ;
     }
 
     public interface ISnapshotStore
@@ -28,7 +33,7 @@ namespace NStore.SnapshotStore
     {
         public Task<SnapshotInfo> Get(string id, int version, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return Task.FromResult(SnapshotInfo.Empty);
+            return Task.FromResult((SnapshotInfo)null);
         }
 
         public Task Add(string aggregateId, SnapshotInfo snapshot, CancellationToken cancellationToken = default(CancellationToken))
