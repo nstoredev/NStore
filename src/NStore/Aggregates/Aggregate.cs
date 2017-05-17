@@ -56,7 +56,9 @@ namespace NStore.Aggregates
 
         void IAggregatePersister.ApplyChanges(Changeset changeset)
         {
-            //@@TODO https://github.com/ProximoSrl/NStore/issues/30
+            if (changeset.Version != this.Version + 1)
+                throw new AggregateRestoreException(this.Version + 1, changeset.Version);
+
             this.Version = changeset.Version;
             foreach (var @event in changeset.Events)
             {

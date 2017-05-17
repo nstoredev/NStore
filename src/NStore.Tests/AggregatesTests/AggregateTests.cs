@@ -117,5 +117,25 @@ namespace NStore.Tests.AggregatesTests
             Assert.Equal(1, changeSet.Events.Length);
             Assert.IsType<TicketRefunded>(changeSet.Events[0]);
         }
+
+        [Fact]
+        public void changes_must_be_applied_in_strict_order()
+        {
+            var ticket = TicketTestFactory.ForTest();
+            var persister = (IAggregatePersister)ticket;
+
+            var first = new Changeset(1, new TicketSold());
+            var third = new Changeset(3, new TicketSold());
+
+            persister.ApplyChanges(first);
+
+            var ex = Assert.Throws<AggregateRestoreException>(() =>
+            {
+                persister.ApplyChanges(third);
+            });
+
+            Assert.Equal(2, ex.ExpectedVersion);
+            Assert.Equal(3, ex.RestoreVersion);
+        }
     }
 }
