@@ -6,6 +6,8 @@ namespace NStore.Streams
 {
     public class ReadOnlyStream : Stream
     {
+        public override bool IsWritable => false;
+
         public ReadOnlyStream(string streamId, IRawStore raw) : base(streamId, raw)
         {
         }

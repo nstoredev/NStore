@@ -7,6 +7,8 @@ namespace NStore.Streams
     {
         //@@TODO add New() to avoid a db rountrip?
 
+        bool IsWritable { get; }
+
         /// <summary>
         /// Append
         /// </summary>

@@ -7,9 +7,11 @@ namespace NStore.Streams
 {
     public class OptimisticConcurrencyStream : IStream
     {
+        private IRawStore Raw { get; }
+
         public long Version { get; private set; } = -1;
-        protected IRawStore Raw { get; }
         public string Id { get; }
+        public bool IsWritable => true;
 
         public OptimisticConcurrencyStream(string streamId, IRawStore raw)
         {
@@ -40,6 +42,7 @@ namespace NStore.Streams
                 cancellationToken: cancellationToken
             );
         }
+
 
         public async Task Append(object payload, string operationId, CancellationToken cancellation = default(CancellationToken))
         {

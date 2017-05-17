@@ -78,9 +78,7 @@ namespace NStore.Aggregates
                 return;
 
             var stream = GetStream(aggregate);
-            //@@TODO https://github.com/ProximoSrl/NStore/issues/31
-            //@@refactor => !stream.IsWritable
-            if (stream is ReadOnlyStream)
+            if (!stream.IsWritable)
             {
                 throw new AggregateReadOnlyException();
             }

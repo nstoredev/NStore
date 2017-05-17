@@ -7,8 +7,9 @@ namespace NStore.Streams
 {
     public class Stream : IStream
     {
-        protected IRawStore Raw { get; }
+        private IRawStore Raw { get; }
         public string Id { get; }
+        public virtual bool IsWritable => true;
 
         public Stream(string streamId, IRawStore raw)
         {
@@ -28,7 +29,7 @@ namespace NStore.Streams
             );
         }
 
-        //@@TODO https://github.com/ProximoSrl/NStore/issues/32
+
         public virtual Task Append(object payload, string operationId, CancellationToken cancellation = default(CancellationToken))
         {
             return Raw.PersistAsync(this.Id, -1, payload, operationId, cancellation);
