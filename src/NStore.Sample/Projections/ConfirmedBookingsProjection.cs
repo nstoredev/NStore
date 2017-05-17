@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using NStore.Aggregates;
 using NStore.InMemory;
 using NStore.Sample.Domain.Room;
 using NStore.Sample.Support;
 
 namespace NStore.Sample.Projections
 {
-    public class ConfirmedBookingsProjection : AsyncProjector
+    public class ConfirmedBookingsProjection : AbstractProjection
     {
         private readonly IReporter _reporter;
         private readonly INetworkSimulator _networkSimulator;

@@ -16,7 +16,7 @@ namespace NStore.Sample.Projections
         public RoomsOnSaleProjection Rooms { get; }
         public ConfirmedBookingsProjection Bookings { get; }
 
-        private readonly IList<IAsyncProjector> _projections = new List<IAsyncProjector>();
+        private readonly IList<IProjection> _projections = new List<IProjection>();
         private readonly IReporter _reporter = new ColoredConsoleReporter("projections", ConsoleColor.Yellow);
 
         public AppProjections(INetworkSimulator network)
@@ -44,13 +44,10 @@ namespace NStore.Sample.Projections
 
             var sw = new Stopwatch();
             sw.Start();
-            foreach (var e in changes.Events)
-            {
-                Task.WaitAll
-                (
-                    _projections.Select(p => p.Project(e)).ToArray()
-                );
-            }
+            Task.WaitAll
+            (
+                _projections.Select(p => p.Project(changes)).ToArray()
+            );
 
             _reporter.Report($"dispatched changeset #{storeIndex} took {sw.ElapsedMilliseconds}ms");
             return ScanCallbackResult.Continue;

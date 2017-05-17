@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace NStore.Aggregates
 {
-    public abstract class SyncProjector : IProjector
+    public abstract class EventsProjector : IEventsProjector
     {
         public virtual void Project(object @event)
         {

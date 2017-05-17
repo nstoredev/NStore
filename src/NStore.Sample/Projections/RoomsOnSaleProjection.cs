@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using NStore.Aggregates;
@@ -8,7 +7,7 @@ using NStore.Sample.Support;
 
 namespace NStore.Sample.Projections
 {
-    public class RoomsOnSaleProjection : AsyncProjector
+    public class RoomsOnSaleProjection : AbstractProjection
     {
         private readonly IReporter _reporter;
         private readonly INetworkSimulator _networkSimulator;

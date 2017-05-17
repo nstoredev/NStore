@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace NStore.Aggregates
 {
-    public class DefaultEventDispatcher<TState> : IEventDispatcher where TState : IProjector
+    public class DefaultEventDispatcher<TState> : IEventDispatcher where TState : IEventsProjector
     {
         private readonly Func<TState> _getState;
 

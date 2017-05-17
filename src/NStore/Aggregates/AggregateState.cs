@@ -5,7 +5,7 @@
         bool CheckInvariants();
     }
 
-    public abstract class AggregateState : SyncProjector
+    public abstract class AggregateState : EventsProjector
     {
 
     }

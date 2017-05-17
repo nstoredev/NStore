@@ -8,7 +8,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Projections" />
     <Folder Include="Support" />
   </ItemGroup>
 </Project>
