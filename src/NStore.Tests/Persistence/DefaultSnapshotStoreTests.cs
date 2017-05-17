@@ -1,19 +1,22 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Newtonsoft.Json;
 using NStore.InMemory;
 using NStore.Raw;
 using NStore.SnapshotStore;
 using Xunit;
 
-namespace NStore.Persistence.Tests
+namespace NStore.Tests.Persistence
 {
     public class DefaultSnapshotStoreTests
     {
         public class State
         {
+            public State()
+            {
+            }
 
+            public State(State source)
+            {
+            }
         }
 
         private readonly IRawStore _rawStore;
@@ -29,8 +32,9 @@ namespace NStore.Persistence.Tests
         {
             if (source == null)
                 return null;
-
-            return JsonConvert.DeserializeObject(JsonConvert.SerializeObject(source), source.GetType());
+            
+            var si = (SnapshotInfo) source;
+            return new SnapshotInfo(si.Version, new State((State)si.Data));
         }
 
         [Fact]
