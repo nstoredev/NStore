@@ -46,7 +46,7 @@ namespace NStore.Aggregates
                 persister.TryRestore(snapshot);
             }
 
-            if(!aggregate.IsInitialized)
+            if (!aggregate.IsInitialized)
             {
                 aggregate.Init(id);
             }
@@ -62,7 +62,7 @@ namespace NStore.Aggregates
             });
 
             // we use aggregate.Version because snapshot could be rejected
-            await stream.Read(consumer, aggregate.Version, version, cancellationToken)
+            await stream.Read(consumer, aggregate.Version + 1, version, cancellationToken)
                 .ConfigureAwait(false);
 
             _identityMap.Add(mapid, aggregate);

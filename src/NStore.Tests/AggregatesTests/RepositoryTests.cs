@@ -2,6 +2,7 @@
 using NStore.Aggregates;
 using NStore.InMemory;
 using NStore.Raw;
+using NStore.SnapshotStore;
 using NStore.Streams;
 using Xunit;
 
@@ -13,8 +14,10 @@ namespace NStore.Tests.AggregatesTests
     {
         protected IStreamStore Streams { get; }
         protected IRawStore Raw { get; }
-        protected IRepository Repository { get; }
         private IAggregateFactory AggregateFactory { get; }
+        protected ISnapshotStore Snapshots { get; set; }
+        private IRepository _repository;
+        protected IRepository Repository => _repository ?? (_repository = CreateRepository());
 
         protected BaseRepositoryTest()
         {
@@ -22,14 +25,14 @@ namespace NStore.Tests.AggregatesTests
 
             Streams = new StreamStore(Raw);
             AggregateFactory = new DefaultAggregateFactory();
-            Repository = CreateRepository();
         }
 
         protected IRepository CreateRepository()
         {
             return new Repository(
                 AggregateFactory,
-                Streams
+                Streams,
+                Snapshots
             );
         }
     }
@@ -75,7 +78,7 @@ namespace NStore.Tests.AggregatesTests
             var tape = new Tape();
             await stream.Read(tape);
 
-            var changeSet = (Changeset) tape[0];
+            var changeSet = (Changeset)tape[0];
             Assert.True(changeSet.Headers.ContainsKey("a"));
             Assert.Equal("b", changeSet.Headers["a"]);
         }
@@ -145,8 +148,8 @@ namespace NStore.Tests.AggregatesTests
         [Fact]
         public async void loading_aggregate_twice_at_different_version_from_repository_should_return_different_istances()
         {
-            var ticket1 = await Repository.GetById<Ticket>("Ticket_1",1);
-            var ticket2 = await Repository.GetById<Ticket>("Ticket_1",2);
+            var ticket1 = await Repository.GetById<Ticket>("Ticket_1", 1);
+            var ticket2 = await Repository.GetById<Ticket>("Ticket_1", 2);
 
             Assert.NotSame(ticket1, ticket2);
         }
@@ -164,11 +167,66 @@ namespace NStore.Tests.AggregatesTests
         [Fact]
         public async void cannot_save_a_partially_loaded_aggregate()
         {
-            var ticket = await Repository.GetById<Ticket>("Ticket_1",1);
+            var ticket = await Repository.GetById<Ticket>("Ticket_1", 1);
             ticket.Refund();
             var ex = await Assert.ThrowsAsync<AggregateReadOnlyException>(() =>
                 Repository.Save(ticket, Guid.NewGuid().ToString())
             );
+        }
+    }
+
+    public class with_snapshots : BaseRepositoryTest
+    {
+        public with_snapshots()
+        {
+            Snapshots = new DefaultSnapshotStore(new InMemoryRawStore());
+
+            Raw.PersistAsync("Ticket_1", 1, new Changeset(1, new TicketSold())).Wait();
+            Raw.PersistAsync("Ticket_1", 2, new Changeset(2, new TicketRefunded())).Wait();
+        }
+
+        [Fact]
+        public async void can_load_without_snapshot_present()
+        {
+            var ticket = await Repository.GetById<Ticket>("Ticket_1", 2);
+            Assert.Equal(2, ticket.Version);
+        }
+
+        [Fact]
+        public async void saving_should_create_snapshot()
+        {
+            var ticket = await Repository.GetById<Ticket>("Ticket_1");
+            ticket.Refund();
+            await Repository.Save(ticket, "save_snap");
+
+            var snapshot = await Snapshots.Get("Ticket_1", int.MaxValue);
+            Assert.NotNull(snapshot);
+            Assert.Equal(2, snapshot.AggregateVersion);
+            Assert.NotNull(snapshot.Data);
+            Assert.Equal(1, snapshot.SnapshotVersion);
+        }
+    }
+
+    public class with_snapshot_only : BaseRepositoryTest
+    {
+        public with_snapshot_only()
+        {
+            Snapshots = new DefaultSnapshotStore(new InMemoryRawStore());
+        }
+
+        //@BUG https://github.com/ProximoSrl/NStore/issues/35
+        // + snapshot mismatch on different stream 
+        [Fact]
+        public async void with_snapshot_but_without_stream_should_return_new_aggregate()
+        {
+
+            var ticketState = new TicketState();
+            var snapshot = new SnapshotInfo("Ticket_1", 2, ticketState, 1);
+            await Snapshots.Add("Ticket_1", snapshot);
+
+            var ticket = await Repository.GetById<Ticket>("Ticket_1");
+
+            Assert.True(ticket.IsNew);
         }
     }
 }
