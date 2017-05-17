@@ -40,7 +40,7 @@ namespace NStore.Aggregates
             //@@TODO https://github.com/ProximoSrl/NStore/issues/28
             _identityMap.Add(mapid, aggregate);
 
-            var snapshot = await _snapshots.Get(id, version);
+            var snapshot = await _snapshots.Get(id, version, cancellationToken);
 
             //@@TODO https://github.com/ProximoSrl/NStore/issues/29
             aggregate.Init(id, snapshot.Version, snapshot.Data);
@@ -90,7 +90,7 @@ namespace NStore.Aggregates
             await stream.Append(changeSet, operationId, cancellationToken).ConfigureAwait(false);
 
             //@@TODO await or not?
-            await _snapshots.Add(aggregate.Id, persister.GetSnapshot());
+            await _snapshots.Add(aggregate.Id, persister.GetSnapshot(), cancellationToken);
 
             persister.ChangesPersisted(changeSet);
         }

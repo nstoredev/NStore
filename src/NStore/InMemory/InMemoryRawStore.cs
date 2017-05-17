@@ -10,14 +10,16 @@ namespace NStore.InMemory
 {
     public class InMemoryRawStore : IRawStore
     {
+        private readonly Func<object, object> _cloneFunc;
         private readonly object _lock = new object();
         private readonly List<Chunk> _chunks = new List<Chunk>();
         private readonly Dictionary<string, Partition> _partitions = new Dictionary<string, Partition>();
         private int _sequence = 0;
         private readonly INetworkSimulator _networkSimulator;
 
-        public InMemoryRawStore(INetworkSimulator networkSimulator = null)
+        public InMemoryRawStore(INetworkSimulator networkSimulator = null, Func<object, object> cloneFunc = null)
         {
+            _cloneFunc = cloneFunc ?? (o => o);
             _networkSimulator = networkSimulator ?? new LocalhostSimulator();
         }
 
@@ -57,7 +59,7 @@ namespace NStore.InMemory
                 await _networkSimulator.WaitFast().ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if (partitionObserver.Observe(chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
+                if (partitionObserver.Observe(chunk.Index, _cloneFunc(chunk.Payload)) == ScanCallbackResult.Stop)
                 {
                     break;
                 }
@@ -97,7 +99,7 @@ namespace NStore.InMemory
             {
                 await _networkSimulator.Wait().ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
-                if (observer.Observe(chunk.Id, chunk.PartitionId, chunk.Index, chunk.Payload) == ScanCallbackResult.Stop)
+                if (observer.Observe(chunk.Id, chunk.PartitionId, chunk.Index, _cloneFunc(chunk.Payload)) == ScanCallbackResult.Stop)
                 {
                     break;
                 }
@@ -119,7 +121,7 @@ namespace NStore.InMemory
                 Index = index >= 0 ? index : id,
                 OpId = operationId ?? Guid.NewGuid().ToString(),
                 PartitionId = partitionId,
-                Payload = payload
+                Payload = _cloneFunc(payload)
             };
 
             await _networkSimulator.Wait().ConfigureAwait(false);
