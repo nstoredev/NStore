@@ -214,19 +214,19 @@ namespace NStore.Tests.AggregatesTests
             Snapshots = new DefaultSnapshotStore(new InMemoryRawStore());
         }
 
-        //@BUG https://github.com/ProximoSrl/NStore/issues/35
-        // + snapshot mismatch on different stream 
         [Fact]
-        public async void with_snapshot_but_without_stream_should_return_new_aggregate()
+        public async void with_snapshot_but_without_stream_should_throw_stale_aggregate_exception()
         {
-
             var ticketState = new TicketState();
             var snapshot = new SnapshotInfo("Ticket_1", 2, ticketState, 1);
             await Snapshots.Add("Ticket_1", snapshot);
 
-            var ticket = await Repository.GetById<Ticket>("Ticket_1");
+            var ex = await Assert.ThrowsAsync<StaleSnapshotException>(() =>
+                Repository.GetById<Ticket>("Ticket_1")
+            );
 
-            Assert.True(ticket.IsNew);
+            Assert.Equal("Ticket_1", ex.AggregateId);
+            Assert.Equal(2, ex.AggregateVersion);
         }
     }
 }

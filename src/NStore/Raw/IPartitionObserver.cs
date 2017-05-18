@@ -7,14 +7,4 @@
             object payload
         );
     }
-
-	public interface IStoreObserver
-	{
-		ScanCallbackResult Observe(
-			long storeIndex,
-			string streamId,
-			long partitionIndex,
-			object payload
-		);
-	}
 }

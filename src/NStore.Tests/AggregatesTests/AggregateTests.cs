@@ -49,6 +49,22 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
+        public void apply_changes_should_be_idempotent()
+        {
+            Ticket ticket = TicketTestFactory.ForTest();
+            var persister = (IAggregatePersister)ticket;
+            var changeSet = new Changeset(1, new TicketSold());
+
+            persister.ApplyChanges(changeSet);
+            persister.ApplyChanges(changeSet);
+
+            Assert.True(ticket.IsInitialized);
+            Assert.Equal(1, ticket.Version);
+            Assert.False(ticket.IsDirty);
+        }
+
+
+        [Fact]
         public void append_should_increase_version()
         {
             Ticket ticket = TicketTestFactory.ForTest();

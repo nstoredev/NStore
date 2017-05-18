@@ -1,10 +1,5 @@
 ﻿namespace NStore.Aggregates
 {
-    public interface IInvariantsChecker
-    {
-        bool CheckInvariants();
-    }
-
     public abstract class AggregateState : EventsProjector
     {
         public virtual int GetStateVersion() => 1;

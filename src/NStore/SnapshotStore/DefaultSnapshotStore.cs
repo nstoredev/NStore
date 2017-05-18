@@ -16,12 +16,12 @@ namespace NStore.SnapshotStore
             _store = store;
         }
 
-        public async Task<SnapshotInfo> Get(string id, int version, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<SnapshotInfo> Get(string aggregateId, int version, CancellationToken cancellationToken = default(CancellationToken))
         {
             SnapshotInfo snapshotInfo = null;
 
             await _store.ScanPartitionAsync(
-                id,
+                aggregateId,
                 0,
                 ScanDirection.Backward,
                 new LambdaPartitionObserver((l, o) =>
@@ -50,6 +50,15 @@ namespace NStore.SnapshotStore
             {
                 // already stored
             }
+        }
+
+        public Task Remove(
+            string aggregateId, 
+            int fromVersionInclusive = 0, 
+            int toVersionInclusive = Int32.MaxValue,
+            CancellationToken cancellationToken = new CancellationToken())
+        {
+            return _store.DeleteAsync(aggregateId, fromVersionInclusive, toVersionInclusive, cancellationToken);
         }
     }
 }

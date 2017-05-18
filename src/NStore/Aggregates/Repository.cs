@@ -53,17 +53,25 @@ namespace NStore.Aggregates
 
             var stream = OpenStream(aggregate, version != Int32.MaxValue);
 
-            var consumer = new LambdaPartitionObserver((l, payload) =>
+            int readCount = 0;
+            var consumer = new LambdaPartitionObserver((changesetIndex, changesetPayload) =>
             {
-                var changes = (Changeset)payload;
-
-                persister.ApplyChanges(changes);
+                readCount++;
+                persister.ApplyChanges((Changeset)changesetPayload);
                 return ScanCallbackResult.Continue;
             });
 
             // we use aggregate.Version because snapshot could be rejected
-            await stream.Read(consumer, aggregate.Version + 1, version, cancellationToken)
+            // Starting point is inclusive, so almost one changeset should be loaded
+            // aggregate will ignore because ApplyChanges is idempotent
+            await stream.Read(consumer, aggregate.Version, version, cancellationToken)
                 .ConfigureAwait(false);
+
+            // no data from stream, we cannot validate the aggregate
+            if (snapshot != null && readCount == 0)
+            {
+                throw new StaleSnapshotException(snapshot.AggregateId, snapshot.AggregateVersion);
+            }
 
             _identityMap.Add(mapid, aggregate);
 

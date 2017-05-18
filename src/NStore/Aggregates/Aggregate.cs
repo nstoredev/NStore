@@ -88,6 +88,10 @@ namespace NStore.Aggregates
 
         void IAggregatePersister.ApplyChanges(Changeset changeset)
         {
+            // skip if same version
+            if (changeset.AggregateVersion == this.Version)
+                return;
+
             if (changeset.AggregateVersion != this.Version + 1)
                 throw new AggregateRestoreException(this.Version + 1, changeset.AggregateVersion);
 
