@@ -21,11 +21,13 @@ namespace NStore.Sample.Projections
         private readonly IReporter _reporter = new ColoredConsoleReporter("projections", ConsoleColor.Yellow);
 
         private readonly IDictionary<Type, long> _metrics = new ConcurrentDictionary<Type, long>();
+        private bool _catchingUp = false;
 
         public AppProjections(INetworkSimulator network)
         {
             Rooms = new RoomsOnSaleProjection(new ColoredConsoleReporter("rooms on sale", ConsoleColor.Red), network);
-            Bookings = new ConfirmedBookingsProjection(new ColoredConsoleReporter("confirmed bookings", ConsoleColor.Cyan), network);
+            Bookings = new ConfirmedBookingsProjection(
+                new ColoredConsoleReporter("confirmed bookings", ConsoleColor.Cyan), network);
             Setup();
         }
 
@@ -37,13 +39,24 @@ namespace NStore.Sample.Projections
         {
             if (storeIndex != Position + 1)
             {
-                _reporter.Report($"!!!!!!!!!!!!!!!! Projection out of sequence {storeIndex} => wait next poll !!!!!!!!!!!!!!!!");
+                if (!_catchingUp)
+                {
+                    _reporter.Report(
+                        $"!!!!!!!!!!!!!!!! Projection out of sequence {storeIndex} => wait next poll !!!!!!!!!!!!!!!!");
+                    _catchingUp = true;
+                }
                 return ScanCallbackResult.Stop;
             }
 
+            _catchingUp = false;
+
             Position = storeIndex;
 
-            Changeset changes = (Changeset)payload;
+            // empty ?
+            if (payload == null)
+                return ScanCallbackResult.Continue;
+
+            Changeset changes = (Changeset) payload;
 
             StoreMetrics(changes);
 

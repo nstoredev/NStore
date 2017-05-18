@@ -4,6 +4,10 @@
     <TargetFramework>netcoreapp1.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\NStore.Persistence.Mongo\NStore.Persistence.Mongo.csproj">
+      <Project>{a5cff506-c6fa-4ad1-86a3-559dbcfa8b2a}</Project>
+      <Name>NStore.Persistence.Mongo</Name>
+    </ProjectReference>
     <ProjectReference Include="..\NStore\NStore.csproj">
     </ProjectReference>
   </ItemGroup>

@@ -13,6 +13,8 @@ namespace NStore.Persistence.Mongo
         public bool UseLocalSequence { get; set; } = false;
         public bool DropOnInit { get; set; } = false;
 
+        public ISerializer Serializer { get; set; }
+
         public bool IsValid()
         {
             return !String.IsNullOrWhiteSpace(PartitionsConnectionString);

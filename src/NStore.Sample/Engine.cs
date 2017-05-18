@@ -14,7 +14,7 @@ namespace NStore.Sample
 {
     public class SampleApp : IDisposable
     {
-        private readonly int _rooms;
+        private int _rooms;
         private readonly IRawStore _raw;
 
         private readonly IStreamStore _streams;
@@ -24,13 +24,14 @@ namespace NStore.Sample
         private CancellationTokenSource _source;
         private readonly AppProjections _appProjections;
 
-        public SampleApp(int rooms = 32)
+        public SampleApp(IRawStore store)
         {
-            _rooms = rooms;
-            var network = new LocalAreaNetworkSimulator(10, 50);
-            _raw = new InMemoryRawStore(network);
+            _rooms = 32;
+            _raw = store;
             _streams = new StreamStore(_raw);
             _aggregateFactory = new DefaultAggregateFactory();
+
+            var network = new LocalAreaNetworkSimulator(10, 50);
             _appProjections = new AppProjections(network);
 
             Subscribe();
@@ -41,8 +42,10 @@ namespace NStore.Sample
             return new Repository(_aggregateFactory, _streams);
         }
 
-        public void CreateRooms()
+        public void CreateRooms(int rooms)
         {
+            _rooms = rooms;
+            
             Enumerable.Range(1, _rooms).ForEachAsync(8, async i =>
             {
                 var repository = GetRepository(); // repository is not thread safe!
@@ -69,10 +72,18 @@ namespace NStore.Sample
 
             Task.Run(async () =>
             {
+                long lastScan = 0;
                 while (!token.IsCancellationRequested)
                 {
+                    long nextScan = _appProjections.Position + 1;
+                    if (lastScan != nextScan)
+                    {
+                        _reporter.Report($"Scanning store from #{nextScan}");
+                        lastScan = nextScan;
+                    }
+                    
                     await this._raw.ScanStoreAsync(
-                        _appProjections.Position + 1,
+                        nextScan,
                         ScanDirection.Forward,
                         _appProjections,
                         cancellationToken: token
@@ -116,7 +127,7 @@ namespace NStore.Sample
                         await repository.Save(room, Guid.NewGuid().ToString()).ConfigureAwait(false);
                         break;
                     }
-                    catch (DuplicateStreamIndexException e)
+                    catch (DuplicateStreamIndexException)
                     {
                         Console.WriteLine($"Concurrency exception on {id} => retry");
                     }

@@ -6,6 +6,25 @@ using NStore.Raw;
 
 namespace NStore.Persistence.Mongo
 {
+    public interface ISerializer
+    {
+        object Serialize(object input);
+        object Deserialize(object input);
+    }
+
+    public class TypeSystemSerializer : ISerializer
+    {
+        public object Deserialize(object input)
+        {
+            return input;
+        }
+
+        public object Serialize(object input)
+        {
+            return input;
+        }
+    }
+
     public class MongoRawStore : IRawStore
     {
         private IMongoDatabase _partitionsDb;
@@ -13,7 +32,7 @@ namespace NStore.Persistence.Mongo
 
         private IMongoCollection<Chunk> _chunks;
         private IMongoCollection<Counter> _counters;
-
+        private ISerializer _serializer;
         private readonly MongoStoreOptions _options;
 
         private long _sequence = 0;
@@ -27,7 +46,7 @@ namespace NStore.Persistence.Mongo
                 throw new Exception("Invalid options");
 
             _options = options;
-
+            _serializer = options.Serializer ?? new TypeSystemSerializer();
             Connect();
         }
 
@@ -94,7 +113,8 @@ namespace NStore.Persistence.Mongo
                     var batch = cursor.Current;
                     foreach (var b in batch)
                     {
-                        if (ScanCallbackResult.Stop == partitionObserver.Observe(b.Index, b.Payload))
+                        if (ScanCallbackResult.Stop ==
+                            partitionObserver.Observe(b.Index, _serializer.Deserialize(b.Payload)))
                         {
                             return;
                         }
@@ -137,9 +157,10 @@ namespace NStore.Persistence.Mongo
                 while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
                 {
                     var batch = cursor.Current;
-                    foreach (var b in batch)
+                    foreach (var chunk in batch)
                     {
-                        if (ScanCallbackResult.Stop == observer.Observe(b.Id, b.PartitionId, b.Index, b.Payload))
+                        if (ScanCallbackResult.Stop ==
+                            observer.Observe(chunk.Id, chunk.PartitionId, chunk.Index, _serializer.Deserialize(chunk.Payload)))
                         {
                             return;
                         }
@@ -162,7 +183,7 @@ namespace NStore.Persistence.Mongo
                 Id = id,
                 PartitionId = partitionId,
                 Index = index < 0 ? id : index,
-                Payload = payload,
+                Payload = _serializer.Serialize(payload),
                 OpId = operationId ?? Guid.NewGuid().ToString()
             };
 
@@ -198,10 +219,9 @@ namespace NStore.Persistence.Mongo
                 throw new StreamDeleteException(partitionId);
         }
 
-
-        private async Task PersistEmptyAsync(long id, CancellationToken cancellationToken = default(CancellationToken)
-        )
+        private async Task PersistEmptyAsync(long id, CancellationToken cancellationToken = default(CancellationToken))
         {
+            //@@REFACTOR : avoid allocation of a new chunk
             var empty = new Chunk()
             {
                 Id = id,
@@ -219,41 +239,43 @@ namespace NStore.Persistence.Mongo
             CancellationToken cancellationToken = default(CancellationToken)
         )
         {
-            try
+            while (true)
             {
-                await _chunks.InsertOneAsync(chunk, cancellationToken: cancellationToken).ConfigureAwait(false);
-            }
-            catch (MongoWriteException ex)
-            {
-                //Console.WriteLine($"Error {ex.Message} - {ex.GetType().FullName}");
-
-                if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+                try
                 {
-                    if (ex.Message.Contains(SequenceIdx))
-                    {
-                        throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
-                    }
-
-                    if (ex.Message.Contains(OperationIdx))
-                    {
-                        //@@TODO skip instead of empty?
-                        await PersistEmptyAsync(chunk.Id, cancellationToken).ConfigureAwait(false);
-                        return;
-                    }
-
-                    if (ex.Message.Contains("_id_"))
-                    {
-                        Console.WriteLine(
-                            $"Error writing chunk #{chunk.Id} => {ex.Message} - {ex.GetType().FullName} ");
-                        await ReloadSequence(cancellationToken).ConfigureAwait(false);
-                        chunk.Id = await GetNextId(cancellationToken).ConfigureAwait(false);
-                        //@@TODO move to while loop to avoid stack call
-                        await InternalPersistAsync(chunk, cancellationToken).ConfigureAwait(false);
-                        return;
-                    }
+                    await _chunks.InsertOneAsync(chunk, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    return;
                 }
+                catch (MongoWriteException ex)
+                {
+                    //Console.WriteLine($"Error {ex.Message} - {ex.GetType().FullName}");
 
-                throw;
+                    if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+                    {
+                        if (ex.Message.Contains(SequenceIdx))
+                        {
+                            await PersistEmptyAsync(chunk.Id, cancellationToken).ConfigureAwait(false);
+                            throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
+                        }
+
+                        if (ex.Message.Contains(OperationIdx))
+                        {
+                            await PersistEmptyAsync(chunk.Id, cancellationToken).ConfigureAwait(false);
+                            return;
+                        }
+
+                        if (ex.Message.Contains("_id_"))
+                        {
+                            Console.WriteLine(
+                                $"Error writing chunk #{chunk.Id} => {ex.Message} - {ex.GetType().FullName} ");
+                            await ReloadSequence(cancellationToken).ConfigureAwait(false);
+                            chunk.Id = await GetNextId(cancellationToken).ConfigureAwait(false);
+                            continue;
+                        }
+                    }
+
+                    throw;
+                }
             }
         }
 
