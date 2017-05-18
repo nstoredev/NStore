@@ -2,6 +2,7 @@
 using NStore.InMemory;
 using NStore.Persistence.Mongo;
 using NStore.Raw;
+using NStore.Sample.Support;
 
 namespace NStore.Sample
 {
@@ -18,8 +19,8 @@ namespace NStore.Sample
                 Console.WriteLine(
                     "Press ENTER to start and wait projections, then press ENTER again to show data & stats.");
                 Console.ReadLine();
-                app.CreateRooms(32);
-                app.AddSomeBookings();
+                app.CreateRooms(2);
+                app.AddSomeBookings(10);
 
                 Console.ReadLine();
 
@@ -51,7 +52,8 @@ namespace NStore.Sample
                         UseLocalSequence = true,
                         PartitionsCollectionName = "partitions",
                         SequenceCollectionName = "seq",
-                        DropOnInit = true
+                        DropOnInit = true,
+                        Serializer = new MongoCustomSerializer()
                     };
                     var mongo = new MongoRawStore(options);
                     mongo.InitAsync().GetAwaiter().GetResult();

@@ -11,4 +11,9 @@
     <ProjectReference Include="..\NStore\NStore.csproj">
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json">
+      <Version>10.0.2</Version>
+    </PackageReference>
+  </ItemGroup>
 </Project>

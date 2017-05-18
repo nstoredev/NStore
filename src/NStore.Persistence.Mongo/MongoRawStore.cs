@@ -6,25 +6,6 @@ using NStore.Raw;
 
 namespace NStore.Persistence.Mongo
 {
-    public interface ISerializer
-    {
-        object Serialize(object input);
-        object Deserialize(object input);
-    }
-
-    public class TypeSystemSerializer : ISerializer
-    {
-        public object Deserialize(object input)
-        {
-            return input;
-        }
-
-        public object Serialize(object input)
-        {
-            return input;
-        }
-    }
-
     public class MongoRawStore : IRawStore
     {
         private IMongoDatabase _partitionsDb;
