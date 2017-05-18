@@ -2,10 +2,12 @@
 using NStore.InMemory;
 using NStore.Raw;
 using NStore.SnapshotStore;
+using NStore.Tests.Support;
 using Xunit;
 
 namespace NStore.Tests.Persistence
 {
+    //@@REVIEW Use real implementation on all persistence providers or just a mocking fx?
     public class DefaultSnapshotStoreTests
     {
         public class State
@@ -21,10 +23,11 @@ namespace NStore.Tests.Persistence
 
         private readonly IRawStore _rawStore;
         private readonly ISnapshotStore _snapshots;
-
         public DefaultSnapshotStoreTests()
         {
-            _rawStore = new InMemoryRawStore(cloneFunc: Clone);
+            _rawStore = new RawStoreInterceptor(
+                new InMemoryRawStore(cloneFunc: Clone)
+            );
             _snapshots = new DefaultSnapshotStore(_rawStore);
         }
 
@@ -52,7 +55,7 @@ namespace NStore.Tests.Persistence
         [Fact]
         public async void empty_snapshot_is_not_persisted()
         {
-            var nullSnapshot = new SnapshotInfo("empty",0, null, 0);
+            var nullSnapshot = new SnapshotInfo("empty", 0, null, 0);
             await _snapshots.Add("empty", nullSnapshot);
 
             var tape = new Tape();
@@ -70,6 +73,20 @@ namespace NStore.Tests.Persistence
             var output = await _snapshots.Get("Aggregate_1", Int32.MaxValue);
 
             Assert.NotSame(input.Data, output.Data);
+        }
+
+        [Fact]
+        public async void snapshots_can_be_deleted()
+        {
+            var input = new SnapshotInfo("Aggregate_1", 1, new State(), 1);
+            await _snapshots.Add("Aggregate_1", input);
+
+            await _snapshots.Remove("Aggregate_1");
+
+            var tape = new Tape();
+            await _rawStore.ScanPartitionAsync("Aggregate_1", 0, ScanDirection.Forward, tape);
+
+            Assert.True(tape.IsEmpty);
         }
     }
 }
