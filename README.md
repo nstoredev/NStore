@@ -1,3 +1,8 @@
+
+
+<img src="https://ci.appveyor.com/api/projects/status/github/proximosrl/nstore?svg=true" alt="Project Badge" >
+
+
 # NStore
 ---
 Playground for experimenting some ideas about a generic append log on top of Sql / NoSql engines.
