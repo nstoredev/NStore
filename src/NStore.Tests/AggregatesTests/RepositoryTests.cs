@@ -137,10 +137,20 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async void loading_aggregate_twice_from_repository_should_return_same_istance()
+        public async void loading_aggregate_twice_from_repository_should_return_different_istance()
         {
             var ticket1 = await Repository.GetById<Ticket>("Ticket_1");
             var ticket2 = await Repository.GetById<Ticket>("Ticket_1");
+
+            Assert.NotSame(ticket1, ticket2);
+        }
+
+        [Fact]
+        public async void loading_aggregate_twice_from_identity_map_should_return_same_istance()
+        {
+            var repository = new  IdentityMapRepositoryDecorator(Repository);
+            var ticket1 = await repository.GetById<Ticket>("Ticket_1");
+            var ticket2 = await repository.GetById<Ticket>("Ticket_1");
 
             Assert.Same(ticket1, ticket2);
         }

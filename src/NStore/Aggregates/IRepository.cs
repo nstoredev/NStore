@@ -19,4 +19,9 @@ namespace NStore.Aggregates
             CancellationToken cancellationToken = default(CancellationToken)
         ) where T : IAggregate;
     }
+
+    public interface IRepositoryFactory
+    {
+        IRepository CreateRepository();
+    }
 }

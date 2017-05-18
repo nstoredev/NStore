@@ -14,7 +14,6 @@ namespace NStore.Aggregates
         private readonly IAggregateFactory _factory;
         private readonly IStreamStore _streams;
         private readonly IDictionary<IAggregate, IStream> _openedStreams = new Dictionary<IAggregate, IStream>();
-        private readonly IDictionary<string, IAggregate> _identityMap = new Dictionary<string, IAggregate>();
         private readonly ISnapshotStore _snapshots;
 
         public Repository(IAggregateFactory factory, IStreamStore streams, ISnapshotStore snapshots = null)
@@ -30,12 +29,6 @@ namespace NStore.Aggregates
             CancellationToken cancellationToken = default(CancellationToken)
         ) where T : IAggregate
         {
-            string mapid = id + "@" + version;
-            if (_identityMap.ContainsKey(mapid))
-            {
-                return (T)_identityMap[mapid];
-            }
-
             var aggregate = _factory.Create<T>();
             var persister = (IAggregatePersister)aggregate;
             var snapshot = await _snapshots.Get(id, version, cancellationToken);
@@ -72,8 +65,6 @@ namespace NStore.Aggregates
             {
                 throw new StaleSnapshotException(snapshot.AggregateId, snapshot.AggregateVersion);
             }
-
-            _identityMap.Add(mapid, aggregate);
 
             return aggregate;
         }
