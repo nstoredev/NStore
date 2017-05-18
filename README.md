@@ -1,7 +1,4 @@
-
-
-<img src="https://ci.appveyor.com/api/projects/status/github/proximosrl/nstore?svg=true" alt="Project Badge" >
-
+[Status](https://ci.appveyor.com/project/andreabalducci/nstore) <img src="https://ci.appveyor.com/api/projects/status/github/proximosrl/nstore?svg=true" alt="Project Badge" >
 
 # NStore
 ---
