@@ -1,0 +1,21 @@
+version: 1.0.{build}
+image: Visual Studio 2017
+services:
+  - mongodb
+build_script:
+- cmd: >-
+    cd src
+
+    dotnet restore
+
+    dotnet build -c release
+test_script:
+- cmd: >-
+    cd NStore.Tests
+    dotnet xunit
+    cd ..\NStore.Persistence.Tests
+    dotnet xunit
+    cd ..\NStore.Persistence.Mongo.Tests
+    dotnet xunit
+    cd ..\NStore.Sample.Tests
+    dotnet xunit    
