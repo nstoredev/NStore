@@ -1,4 +1,4 @@
-[Status](https://ci.appveyor.com/project/andreabalducci/nstore) <img src="https://ci.appveyor.com/api/projects/status/github/proximosrl/nstore?svg=true" alt="Project Badge" >
+[<img src="https://ci.appveyor.com/api/projects/status/github/proximosrl/nstore?svg=true" alt="Project Badge" >](https://ci.appveyor.com/project/andreabalducci/nstore) 
 
 # NStore
 ---
