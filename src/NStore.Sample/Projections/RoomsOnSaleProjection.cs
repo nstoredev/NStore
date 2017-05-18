@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using NStore.Aggregates;
 using NStore.InMemory;
@@ -25,7 +26,7 @@ namespace NStore.Sample.Projections
             _networkSimulator = networkSimulator;
         }
 
-        public IEnumerable<RoomsOnSale> List => _all.Values;
+        public IEnumerable<RoomsOnSale> List => _all.Values.OrderBy(x=>x.Id);
 
         public async Task On(BookingsEnabled e)
         {

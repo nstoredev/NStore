@@ -135,7 +135,19 @@ namespace NStore.InMemory
                     _partitions[partitionId] = partion;
                 }
 
-                partion.Write(chunk);
+                try
+                {
+                    partion.Write(chunk);
+                }
+                catch (DuplicateStreamIndexException)
+                {
+                    // write empty chunk
+                    chunk.PartitionId = "::system";
+                    chunk.Index = chunk.Id;
+                    chunk.OpId = chunk.Id.ToString();
+                    _chunks.Add(chunk);
+                    throw;
+                }
                 _chunks.Add(chunk);
             }
             await _networkSimulator.Wait().ConfigureAwait(false);

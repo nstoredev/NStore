@@ -23,7 +23,14 @@ namespace NStore.Sample.Domain.Room
 
         public void AddBooking(DateRange dates)
         {
-            Raise(new RoomBooked(this.Id, dates));
+            if (State.IsAvailableOn(dates))
+            {
+                Raise(new RoomBooked(this.Id, dates));
+            }
+            else
+            {
+                Raise(new RoomBookingFailed(this.Id, dates));
+            }
         }
 
         public bool CheckInvariants()
@@ -38,6 +45,18 @@ namespace NStore.Sample.Domain.Room
         public DateRange Dates { get; private set; }
 
         public RoomBooked(string id, DateRange dates)
+        {
+            Id = id;
+            Dates = dates;
+        }
+    }
+
+    public class RoomBookingFailed
+    {
+        public string Id { get; private set; }
+        public DateRange Dates { get; private set; }
+
+        public RoomBookingFailed(string id, DateRange dates)
         {
             Id = id;
             Dates = dates;

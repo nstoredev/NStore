@@ -14,6 +14,7 @@ namespace NStore.Sample
 {
     public class SampleApp : IDisposable
     {
+        private readonly int _rooms;
         private readonly IRawStore _raw;
 
         private readonly IStreamStore _streams;
@@ -23,9 +24,10 @@ namespace NStore.Sample
         private CancellationTokenSource _source;
         private readonly AppProjections _appProjections;
 
-		public SampleApp()
+        public SampleApp(int rooms = 32)
         {
-            var network = new LocalAreaNetworkSimulator();
+            _rooms = rooms;
+            var network = new LocalAreaNetworkSimulator(10, 50);
             _raw = new InMemoryRawStore(network);
             _streams = new StreamStore(_raw);
             _aggregateFactory = new DefaultAggregateFactory();
@@ -41,21 +43,23 @@ namespace NStore.Sample
 
         public void CreateRooms()
         {
-            var batch = Enumerable.Range(1, 10).Select( async i =>
+            Enumerable.Range(1, _rooms).ForEachAsync(8, async i =>
             {
                 var repository = GetRepository(); // repository is not thread safe!
-                var id = "Room_" + i;
+                var id = GetRoomId(i);
                 var room = await repository.GetById<Room>(id);
 
                 room.EnableBookings();
-                room.AddBooking(new DateRange(DateTime.Today, DateTime.Today.AddDays(5)));
 
                 await repository.Save(room, id + "_create").ConfigureAwait(false);
 
                 _reporter.Report($"Listed Room {id}");
-            }).ToArray();
+            }).GetAwaiter().GetResult();
+        }
 
-            Task.WaitAll(batch);
+        private string GetRoomId(int room)
+        {
+            return $"Room_{room:D3}";
         }
 
         private void Subscribe()
@@ -83,13 +87,50 @@ namespace NStore.Sample
             _source.Cancel();
         }
 
-		public void ShowRooms()
-		{
+        public void ShowRooms()
+        {
             _reporter.Report("Rooms:");
-            foreach(var r in _appProjections.Rooms.List)
+            foreach (var r in _appProjections.Rooms.List)
             {
                 _reporter.Report($"  room => {r.Id}");
             }
         }
-	}
+
+        public void AddSomeBookings(int bookings = 100)
+        {
+            var rnd = new Random(DateTime.Now.Millisecond);
+
+            Enumerable.Range(1, bookings).ForEachAsync(8, async i =>
+            {
+                var id = GetRoomId(rnd.Next(_rooms) + 1);
+                while (true)
+                {
+                    try
+                    {
+                        var repository = GetRepository(); // repository is not thread safe!
+                        var room = await repository.GetById<Room>(id);
+                        var fromDate = DateTime.Today.AddDays(rnd.Next(10));
+                        var toDate = fromDate.AddDays(rnd.Next(5));
+
+                        room.AddBooking(new DateRange(fromDate, toDate));
+                        await repository.Save(room, Guid.NewGuid().ToString()).ConfigureAwait(false);
+                        break;
+                    }
+                    catch (DuplicateStreamIndexException e)
+                    {
+                        Console.WriteLine($"Concurrency exception on {id} => retry");
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
+                }
+            }).GetAwaiter().GetResult();
+        }
+
+        public void DumpMetrics()
+        {
+            this._appProjections.DumpMetrics();
+        }
+    }
 }

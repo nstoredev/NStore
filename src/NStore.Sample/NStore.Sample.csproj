@@ -7,7 +7,4 @@
     <ProjectReference Include="..\NStore\NStore.csproj">
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Support" />
-  </ItemGroup>
 </Project>

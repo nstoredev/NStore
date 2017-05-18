@@ -10,6 +10,7 @@ namespace NStore.Sample.Domain.Room
     {
         private readonly IList<DateRange> _reservations = new List<DateRange>();
         public bool BookingsEnabled { get; private set; }
+        public int MissedBookings { get; private set; }
 
         public void On(BookingsEnabled e)
         {
@@ -19,6 +20,11 @@ namespace NStore.Sample.Domain.Room
         public void On(RoomBooked e)
         {
             _reservations.Add(e.Dates);
+        }
+
+        public void On(RoomBookingFailed e)
+        {
+            MissedBookings++;
         }
 
         public bool IsAvailableOn(DateRange range)

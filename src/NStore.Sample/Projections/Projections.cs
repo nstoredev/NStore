@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -18,6 +19,8 @@ namespace NStore.Sample.Projections
 
         private readonly IList<IProjection> _projections = new List<IProjection>();
         private readonly IReporter _reporter = new ColoredConsoleReporter("projections", ConsoleColor.Yellow);
+
+        private readonly IDictionary<Type, long> _metrics = new ConcurrentDictionary<Type, long>();
 
         public AppProjections(INetworkSimulator network)
         {
@@ -42,6 +45,8 @@ namespace NStore.Sample.Projections
 
             Changeset changes = (Changeset)payload;
 
+            StoreMetrics(changes);
+
             var sw = new Stopwatch();
             sw.Start();
             Task.WaitAll
@@ -53,10 +58,29 @@ namespace NStore.Sample.Projections
             return ScanCallbackResult.Continue;
         }
 
+        private void StoreMetrics(Changeset changes)
+        {
+            foreach (var e in changes.Events)
+            {
+                var k = e.GetType();
+                _metrics.TryGetValue(k, out long value);
+                _metrics[k] = value + 1;
+            }
+        }
+
         private void Setup()
         {
             _projections.Add(Rooms);
             _projections.Add(Bookings);
+        }
+
+        public void DumpMetrics()
+        {
+            _reporter.Report("Events:");
+            foreach (var k in _metrics.OrderByDescending(x => x.Value))
+            {
+                _reporter.Report($":  {k.Key.Name} => {k.Value}");
+            }
         }
     }
 }
