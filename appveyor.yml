@@ -12,10 +12,18 @@ build_script:
 test_script:
 - cmd: >-
     cd NStore.Tests
+
     dotnet xunit
+
     cd ..\NStore.Persistence.Tests
+
     dotnet xunit
+
     cd ..\NStore.Persistence.Mongo.Tests
+
     dotnet xunit
+
     cd ..\NStore.Sample.Tests
+
     dotnet xunit    
+    
