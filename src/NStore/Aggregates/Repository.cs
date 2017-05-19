@@ -91,7 +91,7 @@ namespace NStore.Aggregates
 
             await stream.Append(changeSet, operationId, cancellationToken).ConfigureAwait(false);
 
-            //@@TODO await or not?
+            //we need to await, it's responsibility of the snapshot provider to clone & store state (sync or async)
             await _snapshots.Add(aggregate.Id, persister.GetSnapshot(), cancellationToken);
 
             persister.ChangesPersisted(changeSet);

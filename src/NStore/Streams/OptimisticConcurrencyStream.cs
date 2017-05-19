@@ -5,6 +5,7 @@ using NStore.Raw;
 
 namespace NStore.Streams
 {
+    //@@REVIEW: can be refatored to a Decorator on Stream
     public class OptimisticConcurrencyStream : IStream
     {
         private IRawStore Raw { get; }
