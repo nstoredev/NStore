@@ -12,18 +12,29 @@ namespace NStore.Sample.Support
         {
             TypeNameHandling = TypeNameHandling.All
         };
-        
-        public object Serialize(object input)
+
+        public object Serialize(string partitionId, object payload)
         {
-            if (input == null) return null;
-            return JsonConvert.SerializeObject(input, _settings);
+            if (payload == null) return null;
+
+            var json = JsonConvert.SerializeObject(payload, _settings);
+            if (partitionId.EndsWith("3"))
+            {
+                return System.Text.Encoding.UTF8.GetBytes(json);
+            }
+
+            return json;
         }
 
-        public object Deserialize(object input)
+        public object Deserialize(string partitionId, object payload)
         {
-            if (input == null) return null;
+            if (payload == null) return null;
 
-            return JsonConvert.DeserializeObject((string)input,_settings);
+            if (payload is byte[] ba)
+            {
+                payload = System.Text.Encoding.UTF8.GetString(ba);
+            }
+            return JsonConvert.DeserializeObject((string)payload, _settings);
         }
     }
 }

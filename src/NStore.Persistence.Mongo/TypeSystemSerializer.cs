@@ -2,14 +2,14 @@
 {
     public class TypeSystemSerializer : ISerializer
     {
-        public object Deserialize(object input)
+        public object Deserialize(string partitionId, object payload)
         {
-            return input;
+            return payload;
         }
 
-        public object Serialize(object input)
+        public object Serialize(string partitionId, object payload)
         {
-            return input;
+            return payload;
         }
     }
 }

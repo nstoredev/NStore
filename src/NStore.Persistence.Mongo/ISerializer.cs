@@ -2,7 +2,7 @@
 {
     public interface ISerializer
     {
-        object Serialize(object input);
-        object Deserialize(object input);
+        object Serialize(string partitionId, object payload);
+        object Deserialize(string partitionId, object payload);
     }
 }

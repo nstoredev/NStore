@@ -13,7 +13,7 @@ namespace NStore.Persistence.Mongo
 
         private IMongoCollection<Chunk> _chunks;
         private IMongoCollection<Counter> _counters;
-        private ISerializer _serializer;
+        private readonly ISerializer _serializer;
         private readonly MongoStoreOptions _options;
 
         private long _sequence = 0;
@@ -81,7 +81,7 @@ namespace NStore.Persistence.Mongo
                 ? Builders<Chunk>.Sort.Ascending(x => x.Index)
                 : Builders<Chunk>.Sort.Descending(x => x.Index);
 
-            var options = new FindOptions<Chunk>() {Sort = sort};
+            var options = new FindOptions<Chunk>() { Sort = sort };
             if (limit != int.MaxValue)
             {
                 options.Limit = limit;
@@ -95,7 +95,7 @@ namespace NStore.Persistence.Mongo
                     foreach (var b in batch)
                     {
                         if (ScanCallbackResult.Stop ==
-                            partitionObserver.Observe(b.Index, _serializer.Deserialize(b.Payload)))
+                            partitionObserver.Observe(b.Index, _serializer.Deserialize(partitionId, b.Payload)))
                         {
                             return;
                         }
@@ -126,7 +126,7 @@ namespace NStore.Persistence.Mongo
                 filter = Builders<Chunk>.Filter.Lte(x => x.Id, sequenceStart);
             }
 
-            var options = new FindOptions<Chunk>() {Sort = sort};
+            var options = new FindOptions<Chunk>() { Sort = sort };
 
             if (limit != int.MaxValue)
             {
@@ -141,7 +141,7 @@ namespace NStore.Persistence.Mongo
                     foreach (var chunk in batch)
                     {
                         if (ScanCallbackResult.Stop ==
-                            observer.Observe(chunk.Id, chunk.PartitionId, chunk.Index, _serializer.Deserialize(chunk.Payload)))
+                            observer.Observe(chunk.Id, chunk.PartitionId, chunk.Index, _serializer.Deserialize(chunk.PartitionId, chunk.Payload)))
                         {
                             return;
                         }
@@ -164,7 +164,7 @@ namespace NStore.Persistence.Mongo
                 Id = id,
                 PartitionId = partitionId,
                 Index = index < 0 ? id : index,
-                Payload = _serializer.Serialize(payload),
+                Payload = _serializer.Serialize(partitionId, payload),
                 OpId = operationId ?? Guid.NewGuid().ToString()
             };
 
@@ -200,18 +200,27 @@ namespace NStore.Persistence.Mongo
                 throw new StreamDeleteException(partitionId);
         }
 
-        private async Task PersistEmptyAsync(long id, CancellationToken cancellationToken = default(CancellationToken))
+        private async Task PersistAsEmptyAsync(Chunk chunk, CancellationToken cancellationToken = default(CancellationToken))
         {
-            //@@REFACTOR : avoid allocation of a new chunk
-            var empty = new Chunk()
+            Chunk empty;
+            //@@REVIEW partial index on mongo?
+            if (chunk.PartitionId == "_empty")
             {
-                Id = id,
-                PartitionId = "_empty",
-                Index = id,
-                Payload = null,
-                OpId = "_" + id
-            };
-
+                // reuse chunk
+                empty = chunk;
+                empty.Index = empty.Id;
+            }
+            else
+            {
+                empty = new Chunk()
+                {
+                    Id = chunk.Id,
+                    PartitionId = "_empty",
+                    Index = chunk.Id,
+                    Payload = null,
+                    OpId = "_" + chunk.Id
+                };
+            }
             await InternalPersistAsync(empty, cancellationToken).ConfigureAwait(false);
         }
 
@@ -235,13 +244,13 @@ namespace NStore.Persistence.Mongo
                     {
                         if (ex.Message.Contains(SequenceIdx))
                         {
-                            await PersistEmptyAsync(chunk.Id, cancellationToken).ConfigureAwait(false);
+                            await PersistAsEmptyAsync(chunk, cancellationToken).ConfigureAwait(false);
                             throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
                         }
 
                         if (ex.Message.Contains(OperationIdx))
                         {
-                            await PersistEmptyAsync(chunk.Id, cancellationToken).ConfigureAwait(false);
+                            await PersistAsEmptyAsync(chunk, cancellationToken).ConfigureAwait(false);
                             return;
                         }
 

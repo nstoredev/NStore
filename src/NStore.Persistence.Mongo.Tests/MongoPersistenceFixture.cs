@@ -10,12 +10,12 @@ namespace NStore.Persistence.Tests
         private MongoRawStore _mongoRawStore;
         private MongoStoreOptions _options;
         private const string Mongo = "mongodb://localhost/nstore";
-        private static int StaticId = 1;
+        private static int _staticId = 1;
         private int _id;
 
         private IRawStore Create()
         {
-            _id = Interlocked.Increment(ref StaticId);
+            _id = Interlocked.Increment(ref _staticId);
 
             _options = new MongoStoreOptions
             {
