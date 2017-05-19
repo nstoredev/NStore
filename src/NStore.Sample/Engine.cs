@@ -8,7 +8,6 @@ using NStore.Raw;
 using NStore.Sample.Domain.Room;
 using NStore.Sample.Projections;
 using NStore.Sample.Support;
-using NStore.SnapshotStore;
 using NStore.Streams;
 
 namespace NStore.Sample
@@ -94,8 +93,8 @@ namespace NStore.Sample
                         _appProjections,
                         cancellationToken: token
                     );
-                }
-                await Task.Delay(50, token);
+					await Task.Delay(200, token);
+				}
             }, token);
         }
 
