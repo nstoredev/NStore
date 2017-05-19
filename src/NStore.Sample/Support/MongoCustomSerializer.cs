@@ -1,7 +1,6 @@
 using System;
 using System.Reflection;
 using Newtonsoft.Json;
-using NStore.Aggregates;
 using NStore.Persistence.Mongo;
 
 namespace NStore.Sample.Support
@@ -18,7 +17,12 @@ namespace NStore.Sample.Support
             if (payload == null) return null;
 
             var json = JsonConvert.SerializeObject(payload, _settings);
-            if (partitionId.EndsWith("3"))
+            if (partitionId.EndsWith("2"))
+            {
+                // no conversion => BSON
+                return payload;
+            }
+            else if (partitionId.EndsWith("3"))
             {
                 return System.Text.Encoding.UTF8.GetBytes(json);
             }
@@ -34,7 +38,13 @@ namespace NStore.Sample.Support
             {
                 payload = System.Text.Encoding.UTF8.GetString(ba);
             }
-            return JsonConvert.DeserializeObject((string)payload, _settings);
+
+            if (payload is string sp)
+            {
+                return JsonConvert.DeserializeObject(sp, _settings);
+            }
+
+            return payload;
         }
     }
 }

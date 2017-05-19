@@ -8,6 +8,7 @@ using NStore.Raw;
 using NStore.Sample.Domain.Room;
 using NStore.Sample.Projections;
 using NStore.Sample.Support;
+using NStore.SnapshotStore;
 using NStore.Streams;
 
 namespace NStore.Sample
@@ -39,6 +40,8 @@ namespace NStore.Sample
 
         private IRepository GetRepository()
         {
+            // return new IdentityMapRepositoryDecorator(new Repository(_aggregateFactory, _streams));
+            // return new Repository(_aggregateFactory, _streams, new DefaultSnapshotStore(new InMemoryRawStore()));
             return new Repository(_aggregateFactory, _streams);
         }
 
@@ -114,16 +117,18 @@ namespace NStore.Sample
             Enumerable.Range(1, bookings).ForEachAsync(8, async i =>
             {
                 var id = GetRoomId(rnd.Next(_rooms) + 1);
+                var fromDate = DateTime.Today.AddDays(rnd.Next(10));
+                var toDate = fromDate.AddDays(rnd.Next(5));
+
                 while (true)
                 {
                     try
                     {
                         var repository = GetRepository(); // repository is not thread safe!
                         var room = await repository.GetById<Room>(id);
-                        var fromDate = DateTime.Today.AddDays(rnd.Next(10));
-                        var toDate = fromDate.AddDays(rnd.Next(5));
 
                         room.AddBooking(new DateRange(fromDate, toDate));
+
                         await repository.Save(room, Guid.NewGuid().ToString()).ConfigureAwait(false);
                         break;
                     }
@@ -134,6 +139,7 @@ namespace NStore.Sample
                     catch (Exception e)
                     {
                         Console.WriteLine(e);
+                        break;
                     }
                 }
             }).GetAwaiter().GetResult();

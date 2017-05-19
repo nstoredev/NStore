@@ -56,6 +56,10 @@ namespace NStore.Sample.Projections
                     _catchingUp = true;
                 }
 
+                // * * * * * * * * * * * * * * * * * * * * * * * * * *
+                // * Add a timeout to stop if out of sequence (crash)*
+                // * * * * * * * * * * * * * * * * * * * * * * * * * *
+
                 return ScanCallbackResult.Stop;
             }
 
