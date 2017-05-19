@@ -24,11 +24,14 @@ namespace NStore.Sample
 
         private CancellationTokenSource _source;
         private readonly AppProjections _appProjections;
+        private StatsDecorator _storeStats;
 
         public SampleApp(IRawStore store)
         {
             _rooms = 32;
-            _raw = store;
+            _storeStats = new StatsDecorator(store);
+            _raw = _storeStats;
+
             _streams = new StreamStore(_raw);
             _aggregateFactory = new DefaultAggregateFactory();
 
@@ -148,6 +151,12 @@ namespace NStore.Sample
         public void DumpMetrics()
         {
             this._appProjections.DumpMetrics();
+
+			this._reporter.Report("Stats");
+			this._reporter.Report($"  writes          {_storeStats.TotalPersists}");
+			this._reporter.Report($"  deletes         {_storeStats.TotalDeletes}");
+			this._reporter.Report($"  store scans     {_storeStats.ScanStoreCalls}");
+            this._reporter.Report($"  partition scans {_storeStats.ScanPartitionCalls}");
         }
     }
 }
