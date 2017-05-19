@@ -21,6 +21,8 @@ namespace NStore.Sample.Projections
         private readonly IReporter _reporter = new ColoredConsoleReporter("projections", ConsoleColor.Yellow);
 
         private readonly IDictionary<Type, long> _metrics = new ConcurrentDictionary<Type, long>();
+        private long _fillersCount = 0;
+        private long _dispatchedCount = 0;
         private bool _catchingUp = false;
 
         public AppProjections(INetworkSimulator network)
@@ -39,12 +41,21 @@ namespace NStore.Sample.Projections
         {
             if (storeIndex != Position + 1)
             {
+                // * * * * * * * * * * * * * * * * * * * * * * * * *
+                // * WARNING: ˌɛsəˈtɛrɪk/ stuff can be done here   *
+                // * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+                // * * * * * * * * * * * * * * * * * * * * * * * * *
+                // * Or just sit down and watch basic stuff @ work *
+                // * * * * * * * * * * * * * * * * * * * * * * * * *
                 if (!_catchingUp)
                 {
                     _reporter.Report(
                         $"!!!!!!!!!!!!!!!! Projection out of sequence {storeIndex} => wait next poll !!!!!!!!!!!!!!!!");
                     _catchingUp = true;
                 }
+
                 return ScanCallbackResult.Stop;
             }
 
@@ -52,14 +63,16 @@ namespace NStore.Sample.Projections
 
             Position = storeIndex;
 
-            // empty ?
-            if (payload == null)
-                return ScanCallbackResult.Continue;
-
             Changeset changes = (Changeset) payload;
-
             StoreMetrics(changes);
 
+            // skip fillers
+            if (payload == null)
+            {
+                return ScanCallbackResult.Continue;
+            }
+
+            _dispatchedCount++;
             var sw = new Stopwatch();
             sw.Start();
             Task.WaitAll
@@ -73,6 +86,12 @@ namespace NStore.Sample.Projections
 
         private void StoreMetrics(Changeset changes)
         {
+            if (changes == null)
+            {
+                this._fillersCount++;
+                return;
+            }
+
             foreach (var e in changes.Events)
             {
                 var k = e.GetType();
@@ -92,8 +111,12 @@ namespace NStore.Sample.Projections
             _reporter.Report("Events:");
             foreach (var k in _metrics.OrderByDescending(x => x.Value))
             {
-                _reporter.Report($":  {k.Key.Name} => {k.Value}");
+                _reporter.Report($"  {k.Key.Name} => {k.Value}");
             }
+
+            _reporter.Report("Changesets:");
+            _reporter.Report($"  Dispatched => {_dispatchedCount}");
+            _reporter.Report($"  Fillers    => {_fillersCount}");
         }
     }
 }
