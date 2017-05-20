@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,15 +11,21 @@ namespace NStore.Raw
         private long _calls;
         private long _exceptions;
         private long _ticks;
+        private long _counter1;
+
         public string Name { get; }
 
-        public TimeSpan Elapsed => TimeSpan.FromTicks(_ticks);
+        // fond a bug on macos
+        public TimeSpan Elapsed => TimeSpan.FromMilliseconds(_ticks / TimeSpan.TicksPerMillisecond);
         public long Calls => _calls;
         public long Exceptions => _exceptions;
+        public long Counter1 => _counter1;
+        public string Counter1Name { get; }
 
-        public TaskProfilingInfo(string name)
+        public TaskProfilingInfo(string name, string counter1Name = null)
         {
             Name = name;
+            Counter1Name = counter1Name ?? "cnt1";
         }
 
         public async Task CaptureAsync(Func<Task> task)
@@ -28,7 +35,7 @@ namespace NStore.Raw
             sw.Start();
             try
             {
-                await task();
+                await Task.Delay(100);
             }
             catch (Exception)
             {
@@ -39,11 +46,32 @@ namespace NStore.Raw
                 sw.Stop();
                 Interlocked.Add(ref _ticks, sw.ElapsedTicks);
             }
+            await task().ConfigureAwait(false);
         }
 
         public override string ToString()
         {
-            return $"{Name.PadRight(20)} : {_calls} calls ({_exceptions} exceptions) in {Elapsed.TotalMilliseconds} ms";
+            var sb = new StringBuilder();
+            sb.AppendFormat("{0} {1} calls", Name.PadRight(20), _calls);
+
+            if (_exceptions > 0)
+            {
+                sb.AppendFormat(" ({0} exceptions)", _exceptions);
+            }
+
+            sb.AppendFormat(" in {0}ms.", Elapsed.Milliseconds);
+
+            if (_counter1 > 0)
+            {
+                sb.AppendFormat(" {0} = {1}", Counter1Name, _counter1);
+            }
+
+            return sb.ToString();
+        }
+
+        public void IncCounter1()
+        {
+            Interlocked.Increment(ref _counter1);
         }
     }
 
@@ -60,7 +88,7 @@ namespace NStore.Raw
         {
             _store = store;
             PersistCounter = new TaskProfilingInfo("Persist");
-            PartitionScanCounter = new TaskProfilingInfo("Partition scan");
+            PartitionScanCounter = new TaskProfilingInfo("Partition scan", "chunks read");
             DeleteCounter = new TaskProfilingInfo("Delete");
             StoreScanCounter = new TaskProfilingInfo("Store Scan");
         }
@@ -69,13 +97,27 @@ namespace NStore.Raw
             IPartitionObserver partitionObserver, long toIndexInclusive = Int64.MaxValue, int limit = Int32.MaxValue,
             CancellationToken cancellationToken = new CancellationToken())
         {
+            var counter = new LambdaPartitionObserver((l, o) =>
+            {
+                PartitionScanCounter.IncCounter1();
+                return partitionObserver.Observe(l, o);
+            });
+
             await PartitionScanCounter.CaptureAsync(() =>
-                _store.ScanPartitionAsync(partitionId, fromIndexInclusive, direction, partitionObserver,
-                    toIndexInclusive, limit, cancellationToken)
-            );
+                _store.ScanPartitionAsync(
+                    partitionId,
+                    fromIndexInclusive,
+                    direction,
+                    partitionObserver,
+                    //counter,
+                    toIndexInclusive,
+                    limit,
+                    cancellationToken
+                ));
         }
 
-        public async Task ScanStoreAsync(long sequenceStart, ScanDirection direction, IStoreObserver observer, int limit = Int32.MaxValue,
+        public async Task ScanStoreAsync(long sequenceStart, ScanDirection direction, IStoreObserver observer,
+            int limit = Int32.MaxValue,
             CancellationToken cancellationToken = new CancellationToken())
         {
             await StoreScanCounter.CaptureAsync(() =>

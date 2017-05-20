@@ -1,5 +1,4 @@
 ﻿using System;
-using NStore.InMemory;
 using NStore.Raw;
 using NStore.SnapshotStore;
 using Xunit;
