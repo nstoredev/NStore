@@ -62,25 +62,5 @@ If you don't need to read use {typeof(Stream).Name} instead of {GetType().Name}.
         {
             return Raw.DeleteAsync(this.Id, cancellationToken: cancellation);
         }
-
-        //@@TODO Refator => delete?
-        protected async Task<long> LoadActualVersion(CancellationToken cancellation = default(CancellationToken))
-        {
-            var tape = new Tape();
-            await Raw.ScanPartitionAsync(
-                this.Id,
-                0,
-                ScanDirection.Backward,
-                tape,
-                Int64.MaxValue,
-                1,
-                cancellation
-            );
-
-            if (tape.IsEmpty)
-                return 0;
-
-            return tape.GetIndex(0);
-        }
     }
 }
