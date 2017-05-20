@@ -2,6 +2,7 @@
 using System.Threading;
 using NStore.Persistence.Mongo;
 using NStore.Raw;
+
 // ReSharper disable CheckNamespace
 namespace NStore.Persistence.Tests
 {
@@ -21,13 +22,13 @@ namespace NStore.Persistence.Tests
             {
                 PartitionsConnectionString = Mongo,
                 UseLocalSequence = true,
-                PartitionsCollectionName = "partitions_" + _id,
+                PartitionsCollectionName = "partitions_" + GetType().Name + "_" + _id,
                 SequenceCollectionName = "seq_" + _id,
                 DropOnInit = true
             };
             _mongoRawStore = new MongoRawStore(_options);
 
-            Console.WriteLine($"Setup {_id} {GetType().Name}");
+            //           Console.WriteLine($"Setup {_id} {GetType().Name}");
 
             _mongoRawStore.InitAsync().Wait();
 
@@ -36,10 +37,10 @@ namespace NStore.Persistence.Tests
 
         private void Clear()
         {
-            Console.WriteLine($"Cleanup {_id} {GetType().Name}");
+            //          Console.WriteLine($"Cleanup {_id} {GetType().Name}");
             try
             {
-                _mongoRawStore.Drop().Wait();
+                //    _mongoRawStore.Drop().Wait();
             }
             catch (Exception ex)
             {

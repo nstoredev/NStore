@@ -9,6 +9,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\NStore.Persistence.Tests\DefaultSnapshotStoreTests.cs">
+      <Link>DefaultSnapshotStoreTests.cs</Link>
+    </Compile>
     <Compile Include="..\NStore.Persistence.Tests\PersistenceFixture.cs">
       <Link>PersistenceFixture.cs</Link>
     </Compile>
@@ -20,6 +23,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.0.0" />
     <PackageReference Include="xunit" Version="2.2.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
-    <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.0-beta1-build3642" />        
+    <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.0-beta1-build3642" />
+    <DotNetCliToolReference Include="Microsoft.DotNet.Watcher.Tools" Version="1.0.0" />
   </ItemGroup>
 </Project>
