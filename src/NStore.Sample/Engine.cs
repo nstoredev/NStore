@@ -14,6 +14,7 @@ namespace NStore.Sample
 {
     public class SampleApp : IDisposable
     {
+        private readonly string _name;
         private int _rooms;
         private readonly IRawStore _raw;
 
@@ -23,13 +24,14 @@ namespace NStore.Sample
 
         private CancellationTokenSource _source;
         private readonly AppProjections _appProjections;
-        private StatsDecorator _storeStats;
+        private readonly ProfileDecorator _storeProfile;
 
-        public SampleApp(IRawStore store)
+        public SampleApp(IRawStore store, string name)
         {
+            _name = name;
             _rooms = 32;
-            _storeStats = new StatsDecorator(store);
-            _raw = _storeStats;
+            _storeProfile = new ProfileDecorator(store);
+            _raw = _storeProfile;
 
             _streams = new StreamStore(_raw);
             _aggregateFactory = new DefaultAggregateFactory();
@@ -151,11 +153,11 @@ namespace NStore.Sample
         {
             this._appProjections.DumpMetrics();
 
-			this._reporter.Report("Stats");
-			this._reporter.Report($"  writes          {_storeStats.TotalPersists}");
-			this._reporter.Report($"  deletes         {_storeStats.TotalDeletes}");
-			this._reporter.Report($"  store scans     {_storeStats.ScanStoreCalls}");
-            this._reporter.Report($"  partition scans {_storeStats.ScanPartitionCalls}");
+			this._reporter.Report($"Stats - {_name} provider");
+			this._reporter.Report($"  {_storeProfile.PersistCounter}");
+			this._reporter.Report($"  {_storeProfile.PartitionScanCounter}");
+			this._reporter.Report($"  {_storeProfile.DeleteCounter}");
+			this._reporter.Report($"  {_storeProfile.StoreScanCounter}");
         }
     }
 }

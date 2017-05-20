@@ -9,12 +9,13 @@ namespace NStore.Sample
     class Program
     {
         private static string Mongo = "mongodb://localhost/NStoreSample";
-        
+
         static void Main(string[] args)
         {
-            var store = BuildStore(args.Length > 0 ? args[0] : "memory");
+            var provider = args.Length > 0 ? args[0] : "memory";
+            var store = BuildStore(provider);
 
-            using (var app = new SampleApp(store))
+            using (var app = new SampleApp(store, provider))
             {
                 Console.WriteLine(
                     "Press ENTER to start and wait projections, then press ENTER again to show data & stats.");
@@ -39,26 +40,26 @@ namespace NStore.Sample
             switch (store.ToLowerInvariant())
             {
                 case "memory":
-                {
-                    var network = new LocalAreaNetworkSimulator(10, 50);
-                    return new InMemoryRawStore(network);
-                }
+                    {
+                        var network = new LocalAreaNetworkSimulator(2, 10);
+                        return new InMemoryRawStore(network);
+                    }
 
                 case "mongo":
-                {
-                    var options = new MongoStoreOptions
                     {
-                        PartitionsConnectionString = Mongo,
-                        UseLocalSequence = true,
-                        PartitionsCollectionName = "partitions",
-                        SequenceCollectionName = "seq",
-                        DropOnInit = true,
-                        Serializer = new MongoCustomSerializer()
-                    };
-                    var mongo = new MongoRawStore(options);
-                    mongo.InitAsync().GetAwaiter().GetResult();
-                    return mongo;
-                }
+                        var options = new MongoStoreOptions
+                        {
+                            PartitionsConnectionString = Mongo,
+                            UseLocalSequence = true,
+                            PartitionsCollectionName = "partitions",
+                            SequenceCollectionName = "seq",
+                            DropOnInit = true,
+                            Serializer = new MongoCustomSerializer()
+                        };
+                        var mongo = new MongoRawStore(options);
+                        mongo.InitAsync().GetAwaiter().GetResult();
+                        return mongo;
+                    }
             }
 
             throw new Exception($"Invalid store {store}");
