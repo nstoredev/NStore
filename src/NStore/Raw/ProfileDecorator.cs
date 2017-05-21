@@ -44,7 +44,7 @@ namespace NStore.Raw
             finally
             {
                 sw.Stop();
-                Interlocked.Add(ref _ticks, sw.ElapsedTicks);
+                Interlocked.Add(ref _ticks, sw.Elapsed.Ticks);
             }
             await task().ConfigureAwait(false);
         }
