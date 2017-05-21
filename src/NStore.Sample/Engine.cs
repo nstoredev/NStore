@@ -30,8 +30,8 @@ namespace NStore.Sample
         private readonly ProfileDecorator _storeProfile;
         private readonly ProfileDecorator _snapshotProfile;
         private readonly ISnapshotStore _snapshots;
-        
-        public SampleApp(IRawStore store, string name)
+
+        public SampleApp(IRawStore store, string name, bool useSnapshots)
         {
             _name = name;
             _rooms = 32;
@@ -44,10 +44,13 @@ namespace NStore.Sample
             var network = new LocalAreaNetworkSimulator(10, 50);
             _appProjections = new AppProjections(network);
 
-            var inMemoryRawStore = new InMemoryRawStore(cloneFunc:CloneSnapshot);
-            _snapshotProfile = new ProfileDecorator(inMemoryRawStore);
-            _snapshots = new DefaultSnapshotStore(_snapshotProfile);
-            
+            if (useSnapshots)
+            {
+                var inMemoryRawStore = new InMemoryRawStore(cloneFunc: CloneSnapshot);
+                _snapshotProfile = new ProfileDecorator(inMemoryRawStore);
+                _snapshots = new DefaultSnapshotStore(_snapshotProfile);
+            }
+
             Subscribe();
         }
 
@@ -62,7 +65,6 @@ namespace NStore.Sample
         private IRepository GetRepository()
         {
             // return new IdentityMapRepositoryDecorator(new Repository(_aggregateFactory, _streams));
-            //     return new Repository(_aggregateFactory, _streams);
             return new Repository(_aggregateFactory, _streams, _snapshots);
         }
 
@@ -177,13 +179,17 @@ namespace NStore.Sample
             this._reporter.Report($"  {_storeProfile.PartitionScanCounter}");
             this._reporter.Report($"  {_storeProfile.DeleteCounter}");
             this._reporter.Report($"  {_storeProfile.StoreScanCounter}");
-            
-            this._reporter.Report(string.Empty);
-            this._reporter.Report($"Stats - Cache");
-            this._reporter.Report($"  {_snapshotProfile.PersistCounter}");
-            this._reporter.Report($"  {_snapshotProfile.PartitionScanCounter}");
-            this._reporter.Report($"  {_snapshotProfile.DeleteCounter}");
-            this._reporter.Report($"  {_snapshotProfile.StoreScanCounter}");
+
+
+            if (_snapshotProfile != null)
+            {
+                this._reporter.Report(string.Empty);
+                this._reporter.Report($"Stats - Cache");
+                this._reporter.Report($"  {_snapshotProfile.PersistCounter}");
+                this._reporter.Report($"  {_snapshotProfile.PartitionScanCounter}");
+                this._reporter.Report($"  {_snapshotProfile.DeleteCounter}");
+                this._reporter.Report($"  {_snapshotProfile.StoreScanCounter}");
+            }
         }
     }
 }

@@ -1,4 +1,6 @@
 ﻿using System;
+using Microsoft.Extensions.CommandLineUtils;
+using MongoDB.Bson.Serialization;
 using NStore.InMemory;
 using NStore.Persistence.Mongo;
 using NStore.Raw;
@@ -9,13 +11,18 @@ namespace NStore.Sample
     class Program
     {
         private static string Mongo = "mongodb://localhost/NStoreSample";
+        private static CommandLineApplication cmd = new CommandLineApplication(throwOnUnexpectedArg: false);
 
+        private static string _providerName = "memory";
+        private static bool _useSnapshots = true;
+        
         static void Main(string[] args)
         {
-            var provider = args.Length > 0 ? args[0] : "memory";
-            var store = BuildStore(provider);
+            ParseCommandLine(args);
+            
+            var store = BuildStore(_providerName);
 
-            using (var app = new SampleApp(store, provider))
+            using (var app = new SampleApp(store, _providerName, _useSnapshots))
             {
                 Console.WriteLine(
                     "Press ENTER to start and wait projections, then press ENTER again to show data & stats.");
@@ -33,6 +40,27 @@ namespace NStore.Sample
             }
         }
 
+        static void ParseCommandLine(string[] args)
+        {
+            var mongo = cmd.Option("-m|--mongo", "Use mongo as storage", CommandOptionType.NoValue);
+            var snapshots = cmd.Option("-s|--snapshots", "Use snapsthos", CommandOptionType.NoValue);
+           
+            cmd.HelpOption("-? | -h | --help");
+
+            cmd.OnExecute(() =>
+            {
+                if (mongo.HasValue())
+                {
+                    _providerName = "mongo";
+                }
+
+                _useSnapshots = snapshots.HasValue();
+                return 0;
+            });
+            
+            cmd.Execute(args);
+        }
+
         static IRawStore BuildStore(string store)
         {
             Console.WriteLine($"Selected store is {store}");
@@ -40,26 +68,26 @@ namespace NStore.Sample
             switch (store.ToLowerInvariant())
             {
                 case "memory":
-                    {
-                        var network = new LocalAreaNetworkSimulator(2, 10);
-                        return new InMemoryRawStore(network);
-                    }
+                {
+                    var network = new LocalAreaNetworkSimulator(2, 10);
+                    return new InMemoryRawStore(network);
+                }
 
                 case "mongo":
+                {
+                    var options = new MongoStoreOptions
                     {
-                        var options = new MongoStoreOptions
-                        {
-                            PartitionsConnectionString = Mongo,
-                            UseLocalSequence = true,
-                            PartitionsCollectionName = "partitions",
-                            SequenceCollectionName = "seq",
-                            DropOnInit = true,
-                            Serializer = new MongoCustomSerializer()
-                        };
-                        var mongo = new MongoRawStore(options);
-                        mongo.InitAsync().GetAwaiter().GetResult();
-                        return mongo;
-                    }
+                        PartitionsConnectionString = Mongo,
+                        UseLocalSequence = true,
+                        PartitionsCollectionName = "partitions",
+                        SequenceCollectionName = "seq",
+                        DropOnInit = true,
+                        Serializer = new MongoCustomSerializer()
+                    };
+                    var mongo = new MongoRawStore(options);
+                    mongo.InitAsync().GetAwaiter().GetResult();
+                    return mongo;
+                }
             }
 
             throw new Exception($"Invalid store {store}");
