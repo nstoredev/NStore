@@ -2,12 +2,15 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using MongoDB.Driver;
+using Newtonsoft.Json;
 using NStore.Aggregates;
 using NStore.InMemory;
 using NStore.Raw;
 using NStore.Sample.Domain.Room;
 using NStore.Sample.Projections;
 using NStore.Sample.Support;
+using NStore.SnapshotStore;
 using NStore.Streams;
 
 namespace NStore.Sample
@@ -25,7 +28,9 @@ namespace NStore.Sample
         private CancellationTokenSource _source;
         private readonly AppProjections _appProjections;
         private readonly ProfileDecorator _storeProfile;
-
+        private readonly ProfileDecorator _snapshotProfile;
+        private readonly ISnapshotStore _snapshots;
+        
         public SampleApp(IRawStore store, string name)
         {
             _name = name;
@@ -39,20 +44,32 @@ namespace NStore.Sample
             var network = new LocalAreaNetworkSimulator(10, 50);
             _appProjections = new AppProjections(network);
 
+            var inMemoryRawStore = new InMemoryRawStore(cloneFunc:CloneSnapshot);
+            _snapshotProfile = new ProfileDecorator(inMemoryRawStore);
+            _snapshots = new DefaultSnapshotStore(_snapshotProfile);
+            
             Subscribe();
+        }
+
+        private object CloneSnapshot(object arg)
+        {
+            if (arg == null)
+                return null;
+
+            return ObjectSerializer.Clone(arg);
         }
 
         private IRepository GetRepository()
         {
             // return new IdentityMapRepositoryDecorator(new Repository(_aggregateFactory, _streams));
-            // return new Repository(_aggregateFactory, _streams, new DefaultSnapshotStore(new InMemoryRawStore()));
-            return new Repository(_aggregateFactory, _streams);
+            //     return new Repository(_aggregateFactory, _streams);
+            return new Repository(_aggregateFactory, _streams, _snapshots);
         }
 
         public void CreateRooms(int rooms)
         {
             _rooms = rooms;
-            
+
             Enumerable.Range(1, _rooms).ForEachAsync(8, async i =>
             {
                 var repository = GetRepository(); // repository is not thread safe!
@@ -88,15 +105,15 @@ namespace NStore.Sample
                         _reporter.Report($"Scanning store from #{nextScan}");
                         lastScan = nextScan;
                     }
-                    
+
                     await this._raw.ScanStoreAsync(
                         nextScan,
                         ScanDirection.Forward,
                         _appProjections,
                         cancellationToken: token
                     );
-					await Task.Delay(200, token);
-				}
+                    await Task.Delay(200, token);
+                }
             }, token);
         }
 
@@ -151,13 +168,22 @@ namespace NStore.Sample
 
         public void DumpMetrics()
         {
+            this._reporter.Report(string.Empty);
             this._appProjections.DumpMetrics();
 
-			this._reporter.Report($"Stats - {_name} provider");
-			this._reporter.Report($"  {_storeProfile.PersistCounter}");
-			this._reporter.Report($"  {_storeProfile.PartitionScanCounter}");
-			this._reporter.Report($"  {_storeProfile.DeleteCounter}");
-			this._reporter.Report($"  {_storeProfile.StoreScanCounter}");
+            this._reporter.Report(string.Empty);
+            this._reporter.Report($"Stats - {_name} provider");
+            this._reporter.Report($"  {_storeProfile.PersistCounter}");
+            this._reporter.Report($"  {_storeProfile.PartitionScanCounter}");
+            this._reporter.Report($"  {_storeProfile.DeleteCounter}");
+            this._reporter.Report($"  {_storeProfile.StoreScanCounter}");
+            
+            this._reporter.Report(string.Empty);
+            this._reporter.Report($"Stats - Cache");
+            this._reporter.Report($"  {_snapshotProfile.PersistCounter}");
+            this._reporter.Report($"  {_snapshotProfile.PartitionScanCounter}");
+            this._reporter.Report($"  {_snapshotProfile.DeleteCounter}");
+            this._reporter.Report($"  {_snapshotProfile.StoreScanCounter}");
         }
     }
 }

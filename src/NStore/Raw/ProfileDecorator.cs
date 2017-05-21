@@ -108,8 +108,7 @@ namespace NStore.Raw
                     partitionId,
                     fromIndexInclusive,
                     direction,
-                    partitionObserver,
-                    //counter,
+                    counter,
                     toIndexInclusive,
                     limit,
                     cancellationToken
