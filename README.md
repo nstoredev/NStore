@@ -1,6 +1,8 @@
+<img src="logo/logo.png" alt="logo" height="120" align="right" />
+
 # NStore
 [<img src="https://ci.appveyor.com/api/projects/status/github/proximosrl/nstore?svg=true" alt="Project Badge" >](https://ci.appveyor.com/project/andreabalducci/nstore) 
----
+
 
 ## Callme YANESL 
 Yet Another .NetStandard Event Sourcing Library
