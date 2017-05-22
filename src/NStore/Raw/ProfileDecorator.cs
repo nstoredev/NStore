@@ -16,7 +16,7 @@ namespace NStore.Raw
         public string Name { get; }
 
         // fond a bug on macos
-        public TimeSpan Elapsed => TimeSpan.FromMilliseconds(_ticks / TimeSpan.TicksPerMillisecond);
+        public TimeSpan Elapsed => TimeSpan.FromMilliseconds((double) _ticks / TimeSpan.TicksPerMillisecond);
         public long Calls => _calls;
         public long Exceptions => _exceptions;
         public long Counter1 => _counter1;
