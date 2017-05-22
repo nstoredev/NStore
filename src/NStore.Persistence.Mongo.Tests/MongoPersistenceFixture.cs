@@ -10,9 +10,23 @@ namespace NStore.Persistence.Tests
     {
         private MongoRawStore _mongoRawStore;
         private MongoStoreOptions _options;
-        private const string Mongo = "mongodb://localhost/nstore";
+        private static string Mongo;
         private static int _staticId = 1;
         private int _id;
+
+        static BasePersistenceTest()
+        {
+            var baseConnectionString = Environment.GetEnvironmentVariable("TEST_MONGODB");
+            if (!String.IsNullOrEmpty(baseConnectionString))
+            {
+                var queryString = Environment.GetEnvironmentVariable("TEST_MONGODB_QUERYSTRING");
+                Mongo = $"{baseConnectionString.TrimEnd('/')}/nstore{queryString}";
+            }
+            else
+            {
+                Mongo = "mongodb://localhost/nstore";
+            }
+        }
 
         private IRawStore Create()
         {
