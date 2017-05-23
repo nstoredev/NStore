@@ -90,7 +90,7 @@ namespace NStore.Raw
             PersistCounter = new TaskProfilingInfo("Persist");
             PartitionScanCounter = new TaskProfilingInfo("Partition scan", "chunks read");
             DeleteCounter = new TaskProfilingInfo("Delete");
-            StoreScanCounter = new TaskProfilingInfo("Store Scan");
+            StoreScanCounter = new TaskProfilingInfo("Store Scan", "chunks read");
         }
 
         public async Task ScanPartitionAsync(string partitionId, long fromIndexInclusive, ScanDirection direction,
@@ -119,8 +119,14 @@ namespace NStore.Raw
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = new CancellationToken())
         {
+			var storeObserver = new LambdaStoreObserver((si,s, l, o) =>
+            {
+            	StoreScanCounter.IncCounter1();
+            	return observer.Observe(si,s,l, o);
+            });
+
             await StoreScanCounter.CaptureAsync(() =>
-                _store.ScanStoreAsync(sequenceStart, direction, observer, limit, cancellationToken)
+                _store.ScanStoreAsync(sequenceStart, direction, storeObserver, limit, cancellationToken)
             );
         }
 
