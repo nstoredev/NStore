@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Driver;
-using Newtonsoft.Json;
 using NStore.Aggregates;
 using NStore.InMemory;
 using NStore.Raw;
@@ -12,6 +11,7 @@ using NStore.Sample.Projections;
 using NStore.Sample.Support;
 using NStore.SnapshotStore;
 using NStore.Streams;
+using System.Diagnostics;
 
 namespace NStore.Sample
 {
@@ -30,9 +30,11 @@ namespace NStore.Sample
         private readonly ProfileDecorator _storeProfile;
         private readonly ProfileDecorator _snapshotProfile;
         private readonly ISnapshotStore _snapshots;
+        readonly bool _quiet;
 
-        public SampleApp(IRawStore store, string name, bool useSnapshots)
+        public SampleApp(IRawStore store, string name, bool useSnapshots, bool quiet)
         {
+            _quiet = quiet;
             _name = name;
             _rooms = 32;
             _storeProfile = new ProfileDecorator(store);
@@ -42,7 +44,7 @@ namespace NStore.Sample
             _aggregateFactory = new DefaultAggregateFactory();
 
             var network = new LocalAreaNetworkSimulator(10, 50);
-            _appProjections = new AppProjections(network);
+            _appProjections = new AppProjections(network, quiet);
 
             if (useSnapshots)
             {
@@ -72,6 +74,8 @@ namespace NStore.Sample
         {
             _rooms = rooms;
 
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
             Enumerable.Range(1, _rooms).ForEachAsync(8, async i =>
             {
                 var repository = GetRepository(); // repository is not thread safe!
@@ -82,8 +86,13 @@ namespace NStore.Sample
 
                 await repository.Save(room, id + "_create").ConfigureAwait(false);
 
-                _reporter.Report($"Listed Room {id}");
+                if (!_quiet){
+                    _reporter.Report($"Listed Room {id}");
+                }
             }).GetAwaiter().GetResult();
+            sw.Stop();
+
+            _reporter.Report($"Created {_rooms} in {sw.ElapsedMilliseconds} ms");
         }
 
         private string GetRoomId(int room)
@@ -126,10 +135,17 @@ namespace NStore.Sample
 
         public void ShowRooms()
         {
-            _reporter.Report("Rooms:");
-            foreach (var r in _appProjections.Rooms.List)
+            if(_quiet)
             {
-                _reporter.Report($"  room => {r.Id}");
+                _reporter.Report($"Rooms projection: {_appProjections.Rooms.List.Count()} rooms listed");
+			}
+            else
+            {
+                _reporter.Report("Rooms:");
+                foreach (var r in _appProjections.Rooms.List)
+                {
+                    _reporter.Report($"  room => {r.Id}");
+                }
             }
         }
 

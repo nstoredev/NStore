@@ -9,6 +9,20 @@ namespace NStore.Sample.Support
         void Report(string message);
     }
 
+    public class NullReporter : IReporter
+    {
+        public static IReporter Instance = new NullReporter();
+
+        private NullReporter()
+        {
+            
+        }
+
+        public void Report(string message)
+        {
+        }
+    }
+
     public class ColoredConsoleReporter : IReporter
     {
         private static readonly object Lock = new object();

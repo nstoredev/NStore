@@ -24,12 +24,22 @@ namespace NStore.Sample.Projections
         private long _fillersCount = 0;
         private long _dispatchedCount = 0;
         private bool _catchingUp = false;
+        readonly bool _quiet;
 
-        public AppProjections(INetworkSimulator network)
+        public AppProjections(INetworkSimulator network, bool quiet)
         {
-            Rooms = new RoomsOnSaleProjection(new ColoredConsoleReporter("rooms on sale", ConsoleColor.Red), network);
+            _quiet = quiet;
+            Rooms = new RoomsOnSaleProjection(
+                _quiet ? NullReporter.Instance : 
+                new ColoredConsoleReporter("rooms on sale", ConsoleColor.Red), 
+                network
+            );
+
             Bookings = new ConfirmedBookingsProjection(
-                new ColoredConsoleReporter("confirmed bookings", ConsoleColor.Cyan), network);
+				_quiet ? NullReporter.Instance :
+				new ColoredConsoleReporter("confirmed bookings", ConsoleColor.Cyan), 
+                network
+            );
             Setup();
         }
 
@@ -84,7 +94,10 @@ namespace NStore.Sample.Projections
                 _projections.Select(p => p.Project(changes)).ToArray()
             );
 
-            _reporter.Report($"dispatched changeset #{storeIndex} took {sw.ElapsedMilliseconds}ms");
+            if(!_quiet){
+                _reporter.Report($"dispatched changeset #{storeIndex} took {sw.ElapsedMilliseconds}ms");
+            };
+			
             return ScanCallbackResult.Continue;
         }
 

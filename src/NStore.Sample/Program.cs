@@ -15,14 +15,15 @@ namespace NStore.Sample
 
         private static string _providerName = "memory";
         private static bool _useSnapshots = true;
-        
+        private static bool _quietMode = false;
+
         static void Main(string[] args)
         {
             ParseCommandLine(args);
             
             var store = BuildStore(_providerName);
 
-            using (var app = new SampleApp(store, _providerName, _useSnapshots))
+            using (var app = new SampleApp(store, _providerName, _useSnapshots,_quietMode))
             {
                 Console.WriteLine(
                     "Press ENTER to start and wait projections, then press ENTER again to show data & stats.");
@@ -44,8 +45,9 @@ namespace NStore.Sample
         {
             var mongo = cmd.Option("-m|--mongo", "Use mongo as storage", CommandOptionType.NoValue);
             var snapshots = cmd.Option("-s|--snapshots", "Use snapsthos", CommandOptionType.NoValue);
-           
-            cmd.HelpOption("-? | -h | --help");
+			var quietmode = cmd.Option("-q|--quiet", "Quiet mode", CommandOptionType.NoValue);
+
+			cmd.HelpOption("-? | -h | --help");
 
             cmd.OnExecute(() =>
             {
@@ -55,6 +57,7 @@ namespace NStore.Sample
                 }
 
                 _useSnapshots = snapshots.HasValue();
+                _quietMode = quietmode.HasValue();
                 return 0;
             });
             
