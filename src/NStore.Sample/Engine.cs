@@ -76,6 +76,8 @@ namespace NStore.Sample
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
+            int created = 0;
+
             Enumerable.Range(1, _rooms).ForEachAsync(8, async i =>
             {
                 var repository = GetRepository(); // repository is not thread safe!
@@ -86,11 +88,17 @@ namespace NStore.Sample
 
                 await repository.Save(room, id + "_create").ConfigureAwait(false);
 
+                Interlocked.Increment(ref created);
+
                 if (!_quiet){
                     _reporter.Report($"Listed Room {id}");
                 }
             }).GetAwaiter().GetResult();
             sw.Stop();
+
+            if(created != _rooms){
+                throw new Exception("guru meditation!!!!");
+            }
 
             _reporter.Report($"Created {_rooms} in {sw.ElapsedMilliseconds} ms");
         }

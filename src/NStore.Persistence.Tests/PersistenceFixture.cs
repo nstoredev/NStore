@@ -407,4 +407,29 @@ namespace NStore.Persistence.Tests
             Assert.True((string) acc[1] == "3");
         }
     }
+
+    public class concurrency_test : BasePersistenceTest
+    {
+        [Fact]
+        public async void a()
+        {
+            var observer = new StoreRecorder();
+
+            var poller = new PollingClient(Store, observer);
+
+            poller.Start();
+
+            await Enumerable.Range(1, 200).ForEachAsync(8, async i =>
+            {
+                await Store.PersistAsync("p", -1, "demo");
+            }).ConfigureAwait(false);
+
+            await Task.Delay(500);
+
+            poller.Stop();
+            
+            Assert.Equal(200, poller.Position);
+            Assert.Equal(200, observer.Length);
+        }
+    }
 }
