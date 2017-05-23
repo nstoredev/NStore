@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace NStore.Raw
 {
-    public class SuperTape : IStoreObserver
+    public class StoreRecorder : IStoreObserver
     {
         private sealed class Element
         {

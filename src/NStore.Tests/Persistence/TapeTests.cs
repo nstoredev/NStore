@@ -10,7 +10,7 @@ namespace NStore.Tests.Persistence
         [Fact]
         public void new_tape_is_empty()
         {
-            var tape = new Tape();
+            var tape = new PartitionRecorder();
 
             Assert.True(tape.IsEmpty);
         }
@@ -18,7 +18,7 @@ namespace NStore.Tests.Persistence
         [Fact]
         public void record()
         {
-            var tape = new Tape();
+            var tape = new PartitionRecorder();
 
             tape.Observe(1, "a");
 
@@ -30,7 +30,7 @@ namespace NStore.Tests.Persistence
         [Fact]
         public void replay()
         {
-            var tape = new Tape();
+            var tape = new PartitionRecorder();
 
             tape.Observe(1, "a");
 

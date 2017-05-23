@@ -50,7 +50,7 @@ namespace NStore.Tests.AggregatesTests
 
         public Changeset ExposePendingChanges()
         {
-            return ((IAggregatePersister) this).GetChangeSet();
+            return ((IEventSourcedAggregate) this).GetChangeSet();
         }
 
         protected override SnapshotInfo PreprocessSnapshot(SnapshotInfo snapshotInfo)

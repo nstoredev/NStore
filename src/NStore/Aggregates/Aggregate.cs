@@ -6,7 +6,7 @@ using NStore.SnapshotStore;
 namespace NStore.Aggregates
 {
     public abstract class Aggregate<TState> :
-        IAggregatePersister,
+        IEventSourcedAggregate,
         IAggregate
         where TState : AggregateState, new()
     {
@@ -42,7 +42,7 @@ namespace NStore.Aggregates
             this.Version = aggregateVersion;
         }
 
-        bool IAggregatePersister.TryRestore(SnapshotInfo snapshotInfo)
+        bool IEventSourcedAggregate.TryRestore(SnapshotInfo snapshotInfo)
         {
             if (snapshotInfo == null) throw new ArgumentNullException(nameof(snapshotInfo));
 
@@ -70,7 +70,7 @@ namespace NStore.Aggregates
             return snapshotInfo;
         }
 
-        SnapshotInfo IAggregatePersister.GetSnapshot()
+        SnapshotInfo IEventSourcedAggregate.GetSnapshot()
         {
             return new SnapshotInfo(
                 this.Id,
@@ -80,13 +80,13 @@ namespace NStore.Aggregates
             );
         }
 
-        void IAggregatePersister.ChangesPersisted(Changeset changeset)
+        void IEventSourcedAggregate.ChangesPersisted(Changeset changeset)
         {
             this.Version = changeset.AggregateVersion;
             this.PendingChanges.Clear();
         }
 
-        void IAggregatePersister.ApplyChanges(Changeset changeset)
+        void IEventSourcedAggregate.ApplyChanges(Changeset changeset)
         {
             // skip if same version
             if (changeset.AggregateVersion == this.Version)
@@ -102,7 +102,7 @@ namespace NStore.Aggregates
             }
         }
 
-        Changeset IAggregatePersister.GetChangeSet()
+        Changeset IEventSourcedAggregate.GetChangeSet()
         {
             return new Changeset(
                 this.Version + 1,

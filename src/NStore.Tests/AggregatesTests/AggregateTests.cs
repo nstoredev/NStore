@@ -52,7 +52,7 @@ namespace NStore.Tests.AggregatesTests
         public void apply_changes_should_be_idempotent()
         {
             Ticket ticket = TicketTestFactory.ForTest();
-            var persister = (IAggregatePersister)ticket;
+            var persister = (IEventSourcedAggregate)ticket;
             var changeSet = new Changeset(1, new TicketSold());
 
             persister.ApplyChanges(changeSet);
@@ -68,7 +68,7 @@ namespace NStore.Tests.AggregatesTests
         public void append_should_increase_version()
         {
             Ticket ticket = TicketTestFactory.ForTest();
-            var persister = (IAggregatePersister)ticket;
+            var persister = (IEventSourcedAggregate)ticket;
             var changeSet = new Changeset(1, new TicketSold());
             persister.ApplyChanges(changeSet);
 
@@ -96,7 +96,7 @@ namespace NStore.Tests.AggregatesTests
         public void aggregate_without_changes_should_build_an_empty_changeset()
         {
             var ticket = TicketTestFactory.ForTest();
-            var persister = (IAggregatePersister)ticket;
+            var persister = (IEventSourcedAggregate)ticket;
             var changeSet = persister.GetChangeSet();
 
             Assert.NotNull(changeSet);
@@ -107,7 +107,7 @@ namespace NStore.Tests.AggregatesTests
         public void persister_should_create_changeset_with_new_events()
         {
             var ticket = TicketTestFactory.Sold();
-            var persister = (IAggregatePersister)ticket;
+            var persister = (IEventSourcedAggregate)ticket;
             var changeSet = persister.GetChangeSet();
 
             Assert.NotNull(changeSet);
@@ -119,7 +119,7 @@ namespace NStore.Tests.AggregatesTests
         public void persister_should_create_changeset_only_with_new_events()
         {
             var ticket = TicketTestFactory.ForTest();
-            var persister = (IAggregatePersister)ticket;
+            var persister = (IEventSourcedAggregate)ticket;
 
             var changeSet = new Changeset(1, new TicketSold());
             persister.ApplyChanges(changeSet);
@@ -139,7 +139,7 @@ namespace NStore.Tests.AggregatesTests
         public void changes_must_be_applied_in_strict_order()
         {
             var ticket = TicketTestFactory.ForTest();
-            var persister = (IAggregatePersister)ticket;
+            var persister = (IEventSourcedAggregate)ticket;
 
             var first = new Changeset(1, new TicketSold());
             var third = new Changeset(3, new TicketSold());
@@ -159,7 +159,7 @@ namespace NStore.Tests.AggregatesTests
         public void restoring_null_snapshot_should_throw()
         {
             var ticket = TicketTestFactory.ForTest();
-            var persister = (IAggregatePersister)ticket;
+            var persister = (IEventSourcedAggregate)ticket;
 
             Assert.Throws<ArgumentNullException>(() =>
             {
@@ -171,7 +171,7 @@ namespace NStore.Tests.AggregatesTests
         public void restoring_empty_snapshot_should_return_false()
         {
             var ticket = TicketTestFactory.ForTest();
-            var persister = (IAggregatePersister)ticket;
+            var persister = (IEventSourcedAggregate)ticket;
             var snapshot = new SnapshotInfo(null, 0, null, 0);
             var restored = persister.TryRestore(snapshot);
 
@@ -182,7 +182,7 @@ namespace NStore.Tests.AggregatesTests
         public void restoring_incompatible_snapshot_should_return_false()
         {
             var ticket = TicketTestFactory.ForTest();
-            var persister = (IAggregatePersister)ticket;
+            var persister = (IEventSourcedAggregate)ticket;
             var snapshot = new SnapshotInfo(ticket.Id, 2, null, 0);
             var restored = persister.TryRestore(snapshot);
 

@@ -47,7 +47,7 @@ namespace NStore.Tests.Persistence
 		[Fact]
 		public async void scan_store_should_be_recorded()
 		{
-            await _store.ScanStoreAsync(0, ScanDirection.Forward, new SuperTape(), 10);
+            await _store.ScanStoreAsync(0, ScanDirection.Forward, new StoreRecorder(), 10);
             Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
 			Assert.Equal(1, _profile.StoreScanCounter.Calls);
@@ -57,7 +57,7 @@ namespace NStore.Tests.Persistence
 		[Fact]
 		public async void scan_partition_should_be_recorded()
 		{
-            await _store.ScanPartitionAsync("empty",0, ScanDirection.Forward, new Tape(), 10);
+            await _store.ScanPartitionAsync("empty",0, ScanDirection.Forward, new PartitionRecorder(), 10);
 		    Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
 			Assert.Equal(0, _profile.StoreScanCounter.Calls);

@@ -30,7 +30,7 @@ namespace NStore.Aggregates
         ) where T : IAggregate
         {
             var aggregate = _factory.Create<T>();
-            var persister = (IAggregatePersister)aggregate;
+            var persister = (IEventSourcedAggregate)aggregate;
             var snapshot = await _snapshots.Get(id, version, cancellationToken);
 
             if (snapshot != null)
@@ -76,7 +76,7 @@ namespace NStore.Aggregates
             CancellationToken cancellationToken = default(CancellationToken)
         ) where T : IAggregate
         {
-            var persister = (IAggregatePersister)aggregate;
+            var persister = (IEventSourcedAggregate)aggregate;
             var changeSet = persister.GetChangeSet();
             if (changeSet.IsEmpty)
                 return;

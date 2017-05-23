@@ -59,7 +59,7 @@ namespace NStore.Tests.AggregatesTests
 
             // load stream
             var stream = Streams.Open("Ticket_1");
-            var tape = new Tape();
+            var tape = new PartitionRecorder();
             await stream.Read(tape);
 
             Assert.Equal(1, tape.Length);
@@ -75,7 +75,7 @@ namespace NStore.Tests.AggregatesTests
 
             // load stream
             var stream = Streams.Open("Ticket_1");
-            var tape = new Tape();
+            var tape = new PartitionRecorder();
             await stream.Read(tape);
 
             var changeSet = (Changeset)tape[0];
@@ -93,7 +93,7 @@ namespace NStore.Tests.AggregatesTests
 
             // load stream
             var stream = Streams.Open("Ticket_1");
-            var tape = new Tape();
+            var tape = new PartitionRecorder();
             await stream.Read(tape);
             Assert.Equal(1, tape.Length);
         }

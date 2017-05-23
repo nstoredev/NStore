@@ -41,7 +41,7 @@ namespace NStore.Persistence.Tests
         {
             await Store.PersistAsync("Stream_Neg", -1, "payload");
 
-            var tape = new Tape();
+            var tape = new PartitionRecorder();
             await Store.ScanPartitionAsync("Stream_Neg", 0, ScanDirection.Forward, tape);
             Assert.Equal("payload", tape.ByIndex(1));
         }
@@ -145,7 +145,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_read_only_first_two_chunks()
         {
-            var tape = new Tape();
+            var tape = new PartitionRecorder();
 
             await Store.ScanPartitionAsync(
                 "Stream_1", 0, ScanDirection.Forward,
@@ -161,7 +161,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_read_only_last_two_chunks()
         {
-            var tape = new Tape();
+            var tape = new PartitionRecorder();
 
             await Store.ScanPartitionAsync(
                 "Stream_1",
@@ -179,7 +179,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_all_forward()
         {
-            var tape = new SuperTape();
+            var tape = new StoreRecorder();
             await Store.ScanStoreAsync(0, ScanDirection.Forward, tape);
 
             Assert.Equal(5, tape.Length);
@@ -193,7 +193,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_all_forward_from_middle()
         {
-            var tape = new SuperTape();
+            var tape = new StoreRecorder();
             await Store.ScanStoreAsync(
                 3,
                 ScanDirection.Forward,
@@ -209,7 +209,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_all_forward_from_middle_limit_one()
         {
-            var tape = new SuperTape();
+            var tape = new StoreRecorder();
             await Store.ScanStoreAsync(
                 3,
                 ScanDirection.Forward,
@@ -224,7 +224,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_all_backward()
         {
-            var buffer = new SuperTape();
+            var buffer = new StoreRecorder();
             await Store.ScanStoreAsync(
                 long.MaxValue,
                 ScanDirection.Backward,
@@ -242,7 +242,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_all_backward_from_middle()
         {
-            var buffer = new SuperTape();
+            var buffer = new StoreRecorder();
             await Store.ScanStoreAsync(
                 3,
                 ScanDirection.Backward,
@@ -258,7 +258,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_all_backward_from_middle_limit_one()
         {
-            var buffer = new SuperTape();
+            var buffer = new StoreRecorder();
             await Store.ScanStoreAsync(3, ScanDirection.Backward, buffer, 1);
 
             Assert.Equal(1, buffer.Length);
@@ -375,7 +375,7 @@ namespace NStore.Persistence.Tests
         public async void should_delete_first()
         {
             await Store.DeleteAsync("delete_3", 1, 1);
-            var acc = new Tape();
+            var acc = new PartitionRecorder();
             await Store.ScanPartitionAsync("delete_3", 0, ScanDirection.Forward, acc);
 
             Assert.Equal(2, acc.Length);
@@ -387,7 +387,7 @@ namespace NStore.Persistence.Tests
         public async void should_delete_last()
         {
             await Store.DeleteAsync("delete_4", 3);
-            var acc = new Tape();
+            var acc = new PartitionRecorder();
             await Store.ScanPartitionAsync("delete_4", 0, ScanDirection.Forward, acc);
 
             Assert.Equal(2, acc.Length);
@@ -399,7 +399,7 @@ namespace NStore.Persistence.Tests
         public async void should_delete_middle()
         {
             await Store.DeleteAsync("delete_5", 2, 2);
-            var acc = new Tape();
+            var acc = new PartitionRecorder();
             await Store.ScanPartitionAsync("delete_5", 0, ScanDirection.Forward, acc);
 
             Assert.Equal(2, acc.Length);

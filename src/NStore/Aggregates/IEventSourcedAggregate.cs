@@ -3,7 +3,7 @@
 namespace NStore.Aggregates
 {
     //@@REVIEW: merge with IAggregate or move Init here
-    public interface IAggregatePersister
+    public interface IEventSourcedAggregate
     {
         void ApplyChanges(Changeset changeset);
         Changeset GetChangeSet();

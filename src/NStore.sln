@@ -15,7 +15,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Persistence.Mongo", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Benchmarks", "NStore.Benchmarks\NStore.Benchmarks.csproj", "{B6D8D313-5A21-49C3-9FDF-CF3A23FF54C8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Sample", "NStore.Sample\NStore.Sample.csproj", "{FD2A7B25-F3BF-4D46-9314-59E30B0D7BC8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Sample", "NStore.Sample\NStore.Sample.csproj", "{FD2A7B25-F3BF-4D46-9314-59E30B0D7BC8}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sample", "Sample", "{D3212016-BB8D-4E16-94C4-2D0990B2C14A}"
 EndProject
@@ -23,7 +23,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Library", "Library", "{F89E
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Benchmarks", "Benchmarks", "{81A65A86-5489-4358-9848-6BE40A4D13A1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Sample.Tests", "NStore.Sample.Tests\NStore.Sample.Tests.csproj", "{8258C6B1-9457-41D8-8FDB-594C670D5233}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Sample.Tests", "NStore.Sample.Tests\NStore.Sample.Tests.csproj", "{8258C6B1-9457-41D8-8FDB-594C670D5233}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E75BC5B3-4ED8-405F-B408-7CA58328C101}"
 	ProjectSection(SolutionItems) = preProject

@@ -18,7 +18,7 @@ namespace NStore.Sample.Tests
             this.Aggregate = _defaultFactory.Create<TAggregate>();
             this.State = new TState();
             var snapshot = new SnapshotInfo("test", 1, this.State, this.State.GetStateVersion());
-            ((IAggregatePersister)this.Aggregate).TryRestore(snapshot);
+            ((IEventSourcedAggregate)this.Aggregate).TryRestore(snapshot);
 
             if(!this.Aggregate.IsInitialized)
                 throw new Exception("something went wrong");
@@ -28,7 +28,7 @@ namespace NStore.Sample.Tests
         {
             action();
             // clear changes
-            var persiter = Aggregate as IAggregatePersister;
+            var persiter = Aggregate as IEventSourcedAggregate;
 
             if (persiter != null)
             {
