@@ -204,7 +204,7 @@ namespace NStore.Persistence.Mongo
         {
             Chunk empty;
             //@@REVIEW partial index on mongo?
-            if (chunk.PartitionId == "_empty")
+            if (chunk.PartitionId == "::empty")
             {
                 // reuse chunk
                 empty = chunk;
@@ -215,7 +215,7 @@ namespace NStore.Persistence.Mongo
                 empty = new Chunk()
                 {
                     Id = chunk.Id,
-                    PartitionId = "_empty",
+                    PartitionId = "::empty",
                     Index = chunk.Id,
                     Payload = null,
                     OpId = "_" + chunk.Id

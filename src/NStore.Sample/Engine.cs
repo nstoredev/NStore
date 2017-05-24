@@ -25,13 +25,13 @@ namespace NStore.Sample
         private readonly IAggregateFactory _aggregateFactory;
         private readonly IReporter _reporter = new ColoredConsoleReporter("app", ConsoleColor.Gray);
 
-        private CancellationTokenSource _source;
         private readonly AppProjections _appProjections;
         private readonly ProfileDecorator _storeProfile;
         private readonly ProfileDecorator _snapshotProfile;
         private readonly ISnapshotStore _snapshots;
         readonly bool _quiet;
-
+        private readonly PollingClient _poller;
+        
         public SampleApp(IRawStore store, string name, bool useSnapshots, bool quiet)
         {
             _quiet = quiet;
@@ -46,6 +46,8 @@ namespace NStore.Sample
             var network = new LocalAreaNetworkSimulator(10, 50);
             _appProjections = new AppProjections(network, quiet);
 
+            _poller = new PollingClient(_raw, _appProjections);
+            
             if (useSnapshots)
             {
                 var inMemoryRawStore = new InMemoryRawStore(cloneFunc: CloneSnapshot);
@@ -110,35 +112,34 @@ namespace NStore.Sample
 
         private void Subscribe()
         {
-            _source = new CancellationTokenSource();
-            var token = _source.Token;
-
-            Task.Run(async () =>
-            {
-                long lastScan = 0;
-                while (!token.IsCancellationRequested)
-                {
-                    long nextScan = _appProjections.Position + 1;
-                    if (lastScan != nextScan)
-                    {
-                        _reporter.Report($"Scanning store from #{nextScan}");
-                        lastScan = nextScan;
-                    }
-
-                    await this._raw.ScanStoreAsync(
-                        nextScan,
-                        ScanDirection.Forward,
-                        _appProjections,
-                        cancellationToken: token
-                    );
-                    await Task.Delay(200, token);
-                }
-            }, token);
+            _poller.Start();
+            
+//            Task.Run(async () =>
+//            {
+//                long lastScan = 0;
+//                while (!token.IsCancellationRequested)
+//                {
+//                    long nextScan = _appProjections.Position + 1;
+//                    if (lastScan != nextScan)
+//                    {
+//                        _reporter.Report($"Scanning store from #{nextScan}");
+//                        lastScan = nextScan;
+//                    }
+//
+//                    await this._raw.ScanStoreAsync(
+//                        nextScan,
+//                        ScanDirection.Forward,
+//                        _appProjections,
+//                        cancellationToken: token
+//                    );
+//                    await Task.Delay(200, token);
+//                }
+//            }, token);
         }
 
         public void Dispose()
         {
-            _source.Cancel();
+            _poller.Stop();
         }
 
         public void ShowRooms()

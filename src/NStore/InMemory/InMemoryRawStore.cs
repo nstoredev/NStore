@@ -16,11 +16,13 @@ namespace NStore.InMemory
         private readonly Dictionary<string, Partition> _partitions = new Dictionary<string, Partition>();
         private int _sequence = 0;
         private readonly INetworkSimulator _networkSimulator;
+        private readonly Partition Empty = new Partition("::empty");
 
         public InMemoryRawStore(INetworkSimulator networkSimulator = null, Func<object, object> cloneFunc = null)
         {
             _cloneFunc = cloneFunc ?? (o => o);
             _networkSimulator = networkSimulator ?? new LocalhostSimulator();
+            _partitions.Add(Empty.Id, Empty);
         }
 
         public async Task ScanPartitionAsync(
@@ -99,7 +101,8 @@ namespace NStore.InMemory
             {
                 await _networkSimulator.Wait().ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
-                if (consumer.Consume(chunk.Id, chunk.PartitionId, chunk.Index, _cloneFunc(chunk.Payload)) == ScanAction.Stop)
+                if (consumer.Consume(chunk.Id, chunk.PartitionId, chunk.Index, _cloneFunc(chunk.Payload)) ==
+                    ScanAction.Stop)
                 {
                     break;
                 }
@@ -142,10 +145,11 @@ namespace NStore.InMemory
                 catch (DuplicateStreamIndexException)
                 {
                     // write empty chunk
-                    chunk.Id = Interlocked.Increment(ref _sequence);
-                    chunk.PartitionId = "::system";
+                    // keep same id to avoid holes in the stream
+                    chunk.PartitionId = "::empty";
                     chunk.Index = chunk.Id;
                     chunk.OpId = chunk.Id.ToString();
+                    Empty.Write(chunk);
                     _chunks.Add(chunk);
                     throw;
                 }
