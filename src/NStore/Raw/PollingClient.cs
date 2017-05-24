@@ -35,7 +35,7 @@ namespace NStore.Raw
             {
                 // retry if out of sequence
                 if (storeIndex != _lastScan+1)
-                    return ScanAction.Stop;
+                    return Task.FromResult(ScanAction.Stop);
 
                 _lastScan = storeIndex;
                 return _consumer.Consume(storeIndex, streamId, streamIndex, payload);

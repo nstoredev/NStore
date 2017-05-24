@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using NStore.Aggregates;
 using NStore.InMemory;
@@ -30,20 +31,18 @@ namespace NStore.Sample.Projections
         {
             _quiet = quiet;
             Rooms = new RoomsOnSaleProjection(
-                _quiet ? NullReporter.Instance : 
-                new ColoredConsoleReporter("rooms on sale", ConsoleColor.Red), 
+                _quiet ? NullReporter.Instance : new ColoredConsoleReporter("rooms on sale", ConsoleColor.Red),
                 network
             );
 
             Bookings = new ConfirmedBookingsProjection(
-				_quiet ? NullReporter.Instance :
-				new ColoredConsoleReporter("confirmed bookings", ConsoleColor.Cyan), 
+                _quiet ? NullReporter.Instance : new ColoredConsoleReporter("confirmed bookings", ConsoleColor.Cyan),
                 network
             );
             Setup();
         }
 
-        public ScanAction Consume(
+        public async Task<ScanAction> Consume(
             long storeIndex,
             string streamId,
             long partitionIndex,
@@ -89,15 +88,17 @@ namespace NStore.Sample.Projections
             _dispatchedCount++;
             var sw = new Stopwatch();
             sw.Start();
-            Task.WaitAll
+            await Task.WhenAll
             (
                 _projections.Select(p => p.Project(changes)).ToArray()
             );
+            sw.Stop();
 
-            if(!_quiet){
+            if (!_quiet)
+            {
                 _reporter.Report($"dispatched changeset #{storeIndex} took {sw.ElapsedMilliseconds}ms");
-            };
-			
+            }
+
             return ScanAction.Continue;
         }
 

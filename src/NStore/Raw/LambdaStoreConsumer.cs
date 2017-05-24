@@ -1,17 +1,18 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace NStore.Raw
 {
     public class LambdaStoreConsumer : IStoreConsumer
     {
-        private readonly Func<long, string, long, object, ScanAction> _fn;
+        private readonly Func<long, string, long, object, Task<ScanAction>> _fn;
 
-        public LambdaStoreConsumer(Func<long, string, long, object, ScanAction> fn)
+        public LambdaStoreConsumer(Func<long, string, long, object, Task<ScanAction>> fn)
         {
             _fn = fn;
         }
 
-        public ScanAction Consume(
+        public Task<ScanAction> Consume(
             long storeIndex, 
             string streamId, 
             long partitionIndex, 

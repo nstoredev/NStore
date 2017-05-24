@@ -101,7 +101,7 @@ namespace NStore.InMemory
             {
                 await _networkSimulator.Wait().ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
-                if (consumer.Consume(chunk.Id, chunk.PartitionId, chunk.Index, _cloneFunc(chunk.Payload)) ==
+                if (await consumer.Consume(chunk.Id, chunk.PartitionId, chunk.Index, _cloneFunc(chunk.Payload)) ==
                     ScanAction.Stop)
                 {
                     break;

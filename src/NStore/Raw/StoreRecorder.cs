@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace NStore.Raw
 {
@@ -25,11 +26,11 @@ namespace NStore.Raw
         private readonly IDictionary<long, object> _map = new Dictionary<long, object>();
         public int Length => _data.Count;
 
-        public ScanAction Consume(long storeIndex, string partitionId, long idx, object payload)
+        public Task<ScanAction> Consume(long storeIndex, string partitionId, long idx, object payload)
         {
             _data.Add(new Element(storeIndex, partitionId, idx, payload));
             _map[idx] = payload;
-            return ScanAction.Continue;
+            return Task.FromResult(ScanAction.Continue);
         }
 
         public void Replay(Action<long, string, long, object> action, int startAt = 0)

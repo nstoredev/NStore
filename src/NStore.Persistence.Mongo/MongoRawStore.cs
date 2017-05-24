@@ -141,7 +141,7 @@ namespace NStore.Persistence.Mongo
                     foreach (var chunk in batch)
                     {
                         if (ScanAction.Stop ==
-                            consumer.Consume(chunk.Id, chunk.PartitionId, chunk.Index, _serializer.Deserialize(chunk.PartitionId, chunk.Payload)))
+                            await consumer.Consume(chunk.Id, chunk.PartitionId, chunk.Index, _serializer.Deserialize(chunk.PartitionId, chunk.Payload)))
                         {
                             return;
                         }
