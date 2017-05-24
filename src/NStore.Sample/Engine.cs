@@ -43,7 +43,7 @@ namespace NStore.Sample
             _streams = new StreamStore(_raw);
             _aggregateFactory = new DefaultAggregateFactory();
 
-            var network = new LocalAreaNetworkSimulator(10, 50);
+            var network = new ReliableNetworkSimulator(10, 50);
             _appProjections = new AppProjections(network, quiet);
 
             _poller = new PollingClient(_raw, _appProjections);

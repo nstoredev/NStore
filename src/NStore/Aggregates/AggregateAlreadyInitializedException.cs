@@ -8,7 +8,7 @@ namespace NStore.Aggregates
         public string AggregateId { get; }
 
         public AggregateAlreadyInitializedException(Type aggregateType, string aggregateId)
-            :base((string) $"Aggregate {aggregateId} of type {aggregateType.Name} has already been initialized.")
+            :base($"Aggregate {aggregateId} of type {aggregateType.Name} has already been initialized.")
         {
             AggregateType = aggregateType;
             AggregateId = aggregateId;

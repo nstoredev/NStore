@@ -16,13 +16,13 @@ namespace NStore.InMemory
         private readonly Dictionary<string, Partition> _partitions = new Dictionary<string, Partition>();
         private int _sequence = 0;
         private readonly INetworkSimulator _networkSimulator;
-        private readonly Partition Empty = new Partition("::empty");
+        private readonly Partition _emptyPartition = new Partition("::empty");
 
         public InMemoryRawStore(INetworkSimulator networkSimulator = null, Func<object, object> cloneFunc = null)
         {
             _cloneFunc = cloneFunc ?? (o => o);
             _networkSimulator = networkSimulator ?? new LocalhostSimulator();
-            _partitions.Add(Empty.Id, Empty);
+            _partitions.Add(_emptyPartition.Id, _emptyPartition);
         }
 
         public async Task ScanPartitionAsync(
@@ -39,12 +39,12 @@ namespace NStore.InMemory
             lock (_lock)
             {
                 Partition partition;
-                if (_partitions.TryGetValue(partitionId, out partition) == false)
+                if (!_partitions.TryGetValue(partitionId, out partition))
                 {
                     return;
                 }
 
-                IEnumerable<Chunk> list = partition.Chunks.AsEnumerable();
+                var list = partition.Chunks.AsEnumerable();
 
                 if (direction == ScanDirection.Backward)
                 {
@@ -72,7 +72,7 @@ namespace NStore.InMemory
             long sequenceStart,
             ScanDirection direction,
             IStoreConsumer consumer,
-            int limit = Int32.MaxValue,
+            int limit = int.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         )
         {
@@ -149,7 +149,7 @@ namespace NStore.InMemory
                     chunk.PartitionId = "::empty";
                     chunk.Index = chunk.Id;
                     chunk.OpId = chunk.Id.ToString();
-                    Empty.Write(chunk);
+                    _emptyPartition.Write(chunk);
                     _chunks.Add(chunk);
                     throw;
                 }
@@ -161,7 +161,7 @@ namespace NStore.InMemory
         public async Task DeleteAsync(
             string partitionId,
             long fromIndex = 0,
-            long toIndex = Int64.MaxValue,
+            long toIndex = long.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         )
         {
@@ -174,7 +174,7 @@ namespace NStore.InMemory
                     throw new StreamDeleteException(partitionId);
                 }
 
-                Chunk[] deleted = partition.Delete(fromIndex, toIndex);
+                var deleted = partition.Delete(fromIndex, toIndex);
                 if (deleted.Length == 0)
                 {
                     throw new StreamDeleteException(partitionId);

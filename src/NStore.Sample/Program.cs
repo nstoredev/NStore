@@ -72,7 +72,7 @@ namespace NStore.Sample
             {
                 case "memory":
                 {
-                    var network = new LocalAreaNetworkSimulator(2, 10);
+                    var network = new ReliableNetworkSimulator(2, 10);
                     return new InMemoryRawStore(network);
                 }
 
