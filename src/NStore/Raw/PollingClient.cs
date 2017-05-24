@@ -8,18 +8,18 @@ namespace NStore.Raw
     {
         private CancellationTokenSource _source;
         private readonly IRawStore _store;
-        private readonly IStoreObserver _observer;
+        private readonly IStoreConsumer _consumer;
         public long Delay { get; set; }
-	    long _lastScan = 0;
+        long _lastScan = 0;
 
-	    public long Position => _lastScan;
-	    
-        public PollingClient(IRawStore store, IStoreObserver observer)
+        public long Position => _lastScan;
+
+        public PollingClient(IRawStore store, IStoreConsumer consumer)
         {
-            _observer = observer;
+            _consumer = consumer;
             _store = store;
             Delay = 200;
-		}
+        }
 
         public void Stop()
         {
@@ -28,27 +28,32 @@ namespace NStore.Raw
 
         public void Start()
         {
-			_source = new CancellationTokenSource();
-			var token = _source.Token;
+            _source = new CancellationTokenSource();
+            var token = _source.Token;
 
-			var wrapper = new LambdaStoreObserver((storeIndex,streamId, streamIndex, payload) => {
+            var wrapper = new LambdaStoreConsumer((storeIndex, streamId, streamIndex, payload) =>
+            {
+                // retry if out of sequence
+                if (storeIndex != _lastScan+1)
+                    return ScanAction.Stop;
+
                 _lastScan = storeIndex;
-                return _observer.Observe(storeIndex,streamId,streamIndex, payload);
+                return _consumer.Consume(storeIndex, streamId, streamIndex, payload);
             });
 
-			Task.Run(async () =>
-			{
-				while (!token.IsCancellationRequested)
-				{
+            Task.Run(async () =>
+            {
+                while (!token.IsCancellationRequested)
+                {
                     await this._store.ScanStoreAsync(
-						_lastScan,
-						ScanDirection.Forward,
-						wrapper,
-						cancellationToken: token
-					);
-					await Task.Delay(200, token);
-				}
-			}, token);
+                        _lastScan + 1,
+                        ScanDirection.Forward,
+                        wrapper,
+                        cancellationToken: token
+                    );
+                    await Task.Delay(200, token);
+                }
+            }, token);
         }
     }
 }

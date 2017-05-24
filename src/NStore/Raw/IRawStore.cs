@@ -12,7 +12,7 @@ namespace NStore.Raw
         /// <param name="partitionId"></param>
         /// <param name="fromIndexInclusive"></param>
         /// <param name="direction"></param>
-        /// <param name="partitionObserver"></param>
+        /// <param name="partitionConsumer"></param>
         /// <param name="toIndexInclusive"></param>
         /// <param name="limit"></param>
         /// <param name="cancellationToken"></param>
@@ -21,7 +21,7 @@ namespace NStore.Raw
             string partitionId,
             long fromIndexInclusive,
             ScanDirection direction,
-            IPartitionObserver partitionObserver,
+            IPartitionConsumer partitionConsumer,
             long toIndexInclusive = Int64.MaxValue,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
@@ -32,14 +32,14 @@ namespace NStore.Raw
         /// </summary>
         /// <param name="sequenceStart">starting id (included) </param>
         /// <param name="direction">Scan direction</param>
-        /// <param name="observer"></param>
+        /// <param name="consumer"></param>
         /// <param name="limit">Max items</param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         Task ScanStoreAsync(
             long sequenceStart,
             ScanDirection direction,
-            IStoreObserver observer,
+            IStoreConsumer consumer,
             int limit = int.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         );

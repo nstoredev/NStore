@@ -23,13 +23,13 @@ namespace NStore.Raw
         }
 
         public async Task ScanPartitionAsync(string partitionId, long fromIndexInclusive, ScanDirection direction,
-            IPartitionObserver partitionObserver, long toIndexInclusive = Int64.MaxValue, int limit = Int32.MaxValue,
+            IPartitionConsumer partitionConsumer, long toIndexInclusive = Int64.MaxValue, int limit = Int32.MaxValue,
             CancellationToken cancellationToken = new CancellationToken())
         {
-            var counter = new LambdaPartitionObserver((l, o) =>
+            var counter = new LambdaPartitionConsumer((l, o) =>
             {
                 PartitionScanCounter.IncCounter1();
-                return partitionObserver.Observe(l, o);
+                return partitionConsumer.Consume(l, o);
             });
 
             await PartitionScanCounter.CaptureAsync(() =>
@@ -44,14 +44,14 @@ namespace NStore.Raw
                 ));
         }
 
-        public async Task ScanStoreAsync(long sequenceStart, ScanDirection direction, IStoreObserver observer,
+        public async Task ScanStoreAsync(long sequenceStart, ScanDirection direction, IStoreConsumer consumer,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = new CancellationToken())
         {
-			var storeObserver = new LambdaStoreObserver((si,s, l, o) =>
+			var storeObserver = new LambdaStoreConsumer((si,s, l, o) =>
             {
             	StoreScanCounter.IncCounter1();
-            	return observer.Observe(si,s,l, o);
+            	return consumer.Consume(si,s,l, o);
             });
 
             await StoreScanCounter.CaptureAsync(() =>

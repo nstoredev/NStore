@@ -65,7 +65,7 @@ namespace NStore.Persistence.Mongo
             string partitionId,
             long fromIndexInclusive,
             ScanDirection direction,
-            IPartitionObserver partitionObserver,
+            IPartitionConsumer partitionConsumer,
             long toIndexInclusive = Int64.MaxValue,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
@@ -94,8 +94,8 @@ namespace NStore.Persistence.Mongo
                     var batch = cursor.Current;
                     foreach (var b in batch)
                     {
-                        if (ScanCallbackResult.Stop ==
-                            partitionObserver.Observe(b.Index, _serializer.Deserialize(partitionId, b.Payload)))
+                        if (ScanAction.Stop ==
+                            partitionConsumer.Consume(b.Index, _serializer.Deserialize(partitionId, b.Payload)))
                         {
                             return;
                         }
@@ -107,7 +107,7 @@ namespace NStore.Persistence.Mongo
         public async Task ScanStoreAsync(
             long sequenceStart,
             ScanDirection direction,
-            IStoreObserver observer,
+            IStoreConsumer consumer,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         )
@@ -140,8 +140,8 @@ namespace NStore.Persistence.Mongo
                     var batch = cursor.Current;
                     foreach (var chunk in batch)
                     {
-                        if (ScanCallbackResult.Stop ==
-                            observer.Observe(chunk.Id, chunk.PartitionId, chunk.Index, _serializer.Deserialize(chunk.PartitionId, chunk.Payload)))
+                        if (ScanAction.Stop ==
+                            consumer.Consume(chunk.Id, chunk.PartitionId, chunk.Index, _serializer.Deserialize(chunk.PartitionId, chunk.Payload)))
                         {
                             return;
                         }

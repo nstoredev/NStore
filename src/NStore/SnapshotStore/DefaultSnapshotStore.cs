@@ -24,10 +24,10 @@ namespace NStore.SnapshotStore
                 aggregateId,
                 0,
                 ScanDirection.Backward,
-                new LambdaPartitionObserver((l, o) =>
+                new LambdaPartitionConsumer((l, o) =>
                 {
                     snapshotInfo = (SnapshotInfo)o;
-                    return ScanCallbackResult.Stop;
+                    return ScanAction.Stop;
                 }),
                 version,
                 1,

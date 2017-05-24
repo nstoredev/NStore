@@ -1,8 +1,8 @@
 ﻿namespace NStore.Raw
 {
-    public interface IPartitionObserver
+    public interface IPartitionConsumer
     {
-        ScanCallbackResult Observe(
+        ScanAction Consume(
             long partitionIndex, 
             object payload
         );

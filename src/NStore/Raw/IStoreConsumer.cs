@@ -1,8 +1,8 @@
 namespace NStore.Raw
 {
-    public interface IStoreObserver
+    public interface IStoreConsumer
     {
-        ScanCallbackResult Observe(
+        ScanAction Consume(
             long storeIndex,
             string streamId,
             long partitionIndex,

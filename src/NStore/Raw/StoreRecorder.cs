@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace NStore.Raw
 {
-    public class StoreRecorder : IStoreObserver
+    public class StoreRecorder : IStoreConsumer
     {
         private sealed class Element
         {
@@ -23,28 +23,24 @@ namespace NStore.Raw
 
         private readonly IList<Element> _data = new List<Element>();
         private readonly IDictionary<long, object> _map = new Dictionary<long, object>();
-        public IEnumerable<object> Data => _data;
         public int Length => _data.Count;
 
-        public ScanCallbackResult Observe(long storeIndex, string partitionId, long idx, object payload)
+        public ScanAction Consume(long storeIndex, string partitionId, long idx, object payload)
         {
             _data.Add(new Element(storeIndex, partitionId, idx, payload));
             _map[idx] = payload;
-            return ScanCallbackResult.Continue;
+            return ScanAction.Continue;
         }
 
-        public void Replay(Action<object> action, int startAt = 0)
+        public void Replay(Action<long, string, long, object> action, int startAt = 0)
         {
             for (var i = startAt; i < _data.Count; i++)
             {
-                action(_data[i].Payload);
+                var d = _data[i];
+                action(d.StoreIndex, d.PartitionId, d.Index, d.Payload);
             }
         }
 
-        public bool IsEmpty => _data.Count == 0;
         public object this[int position] => _data[position].Payload;
-
-        public long GetIndex(int position) => _data[position].Index;
-        public object ByIndex(int index) => _map[index];
     }
 }

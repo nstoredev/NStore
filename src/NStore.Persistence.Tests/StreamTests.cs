@@ -69,7 +69,7 @@ namespace NStore.Persistence.Tests
             var stream = _streams.OpenOptimisticConcurrency(id);
             if (readToEnd)
             {
-                await stream.Read(NullPartitionObserver.Instance);
+                await stream.Read(NullPartitionConsumer.Instance);
             }
             return stream;
         }
@@ -145,7 +145,7 @@ namespace NStore.Persistence.Tests
         public async void appending_on_a_partially_loaded_stream_should_throw()
         {
             var stream = await Open("stream_1", false);
-            await stream.Read(NullPartitionObserver.Instance, 0, 10);
+            await stream.Read(NullPartitionConsumer.Instance, 0, 10);
             var ex = await Assert.ThrowsAnyAsync<AppendFailedException>(() =>
                 stream.Append("b")
             );

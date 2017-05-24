@@ -20,17 +20,17 @@ namespace NStore.Streams
             this.Raw = raw;
         }
 
-        public Task Read(IPartitionObserver partitionObserver, int fromIndexInclusive, int toIndexInclusive, CancellationToken cancellationToken = default(CancellationToken))
+        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, int toIndexInclusive, CancellationToken cancellationToken = default(CancellationToken))
         {
             // @@TODO: micro optimization for reading only last index? (fromIndexInclusive == toIndexInclusive == Int32.MaxValue)
-            var readConsumer = partitionObserver;
+            var readConsumer = partitionConsumer;
             if (toIndexInclusive == Int32.MaxValue)
             {
                 Version = 0;
-                readConsumer = new LambdaPartitionObserver((l, o) =>
+                readConsumer = new LambdaPartitionConsumer((l, o) =>
                 {
                     Version = l;
-                    return partitionObserver.Observe(l, o);
+                    return partitionConsumer.Consume(l, o);
                 });
             }
 

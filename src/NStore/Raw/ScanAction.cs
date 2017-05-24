@@ -1,6 +1,6 @@
 ﻿namespace NStore.Raw
 {
-    public enum ScanCallbackResult
+    public enum ScanAction
     {
         Stop,
         Continue

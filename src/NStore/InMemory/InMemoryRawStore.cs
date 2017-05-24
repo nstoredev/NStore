@@ -27,7 +27,7 @@ namespace NStore.InMemory
             string partitionId,
             long fromIndexInclusive,
             ScanDirection direction,
-            IPartitionObserver partitionObserver,
+            IPartitionConsumer partitionConsumer,
             long toIndexInclusive = Int64.MaxValue,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
@@ -59,7 +59,7 @@ namespace NStore.InMemory
                 await _networkSimulator.WaitFast().ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if (partitionObserver.Observe(chunk.Index, _cloneFunc(chunk.Payload)) == ScanCallbackResult.Stop)
+                if (partitionConsumer.Consume(chunk.Index, _cloneFunc(chunk.Payload)) == ScanAction.Stop)
                 {
                     break;
                 }
@@ -69,7 +69,7 @@ namespace NStore.InMemory
         public async Task ScanStoreAsync(
             long sequenceStart,
             ScanDirection direction,
-            IStoreObserver observer,
+            IStoreConsumer consumer,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         )
@@ -99,7 +99,7 @@ namespace NStore.InMemory
             {
                 await _networkSimulator.Wait().ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
-                if (observer.Observe(chunk.Id, chunk.PartitionId, chunk.Index, _cloneFunc(chunk.Payload)) == ScanCallbackResult.Stop)
+                if (consumer.Consume(chunk.Id, chunk.PartitionId, chunk.Index, _cloneFunc(chunk.Payload)) == ScanAction.Stop)
                 {
                     break;
                 }
@@ -114,7 +114,7 @@ namespace NStore.InMemory
             CancellationToken cancellationToken = default(CancellationToken)
         )
         {
-            var id = ++_sequence;
+            var id = Interlocked.Increment(ref _sequence);
             var chunk = new Chunk()
             {
                 Id = id,
@@ -142,6 +142,7 @@ namespace NStore.InMemory
                 catch (DuplicateStreamIndexException)
                 {
                     // write empty chunk
+                    chunk.Id = Interlocked.Increment(ref _sequence);
                     chunk.PartitionId = "::system";
                     chunk.Index = chunk.Id;
                     chunk.OpId = chunk.Id.ToString();

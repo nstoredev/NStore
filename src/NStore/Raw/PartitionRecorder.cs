@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace NStore.Raw
 {
-    public class PartitionRecorder : IPartitionObserver
+    public class PartitionRecorder : IPartitionConsumer
     {
         private sealed class Element
         {
@@ -22,11 +22,11 @@ namespace NStore.Raw
         public IEnumerable<object> Data => _data;
         public int Length => _data.Count;
 
-        public ScanCallbackResult Observe(long idx, object payload)
+        public ScanAction Consume(long idx, object payload)
         {
             _data.Add(new Element(idx, payload));
             _map[idx] = payload;
-            return ScanCallbackResult.Continue;
+            return ScanAction.Continue;
         }
 
         public void Replay(Action<object> action, int startAt = 0)

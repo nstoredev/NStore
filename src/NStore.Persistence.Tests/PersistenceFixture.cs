@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using NStore.Raw;
@@ -30,7 +31,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task can_insert_at_first_index()
         {
-            await Store.PersistAsync("Stream_1", 1, new {data = "this is a test"});
+            await Store.PersistAsync("Stream_1", 1, new { data = "this is a test" });
         }
     }
 
@@ -52,7 +53,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_work()
         {
-            await Store.PersistAsync("Stream_1", long.MaxValue, new {data = "this is a test"});
+            await Store.PersistAsync("Stream_1", long.MaxValue, new { data = "this is a test" });
         }
     }
 
@@ -61,11 +62,11 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_throw()
         {
-            await Store.PersistAsync("dup", 1, new {data = "first attempt"});
-            await Store.PersistAsync("dup", 2, new {data = "should not work"});
+            await Store.PersistAsync("dup", 1, new { data = "first attempt" });
+            await Store.PersistAsync("dup", 2, new { data = "should not work" });
 
             var ex = await Assert.ThrowsAnyAsync<DuplicateStreamIndexException>(() =>
-                Store.PersistAsync("dup", 1, new {data = "this is a test"})
+                Store.PersistAsync("dup", 1, new { data = "this is a test" })
             );
 
             Assert.Equal("Duplicated index 1 on stream dup", ex.Message);
@@ -113,10 +114,10 @@ namespace NStore.Persistence.Tests
 
             await Store.ScanPartitionAsync(
                 "Stream_1", 0, ScanDirection.Forward,
-                new LambdaPartitionObserver((idx, pl) =>
+                new LambdaPartitionConsumer((idx, pl) =>
                 {
                     payload = pl;
-                    return ScanCallbackResult.Stop;
+                    return ScanAction.Stop;
                 })
             );
 
@@ -132,10 +133,10 @@ namespace NStore.Persistence.Tests
                 "Stream_1",
                 0,
                 ScanDirection.Backward,
-                new LambdaPartitionObserver((idx, pl) =>
+                new LambdaPartitionConsumer((idx, pl) =>
                 {
                     payload = pl;
-                    return ScanCallbackResult.Stop;
+                    return ScanAction.Stop;
                 })
             );
 
@@ -274,10 +275,10 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("BA", 0, System.Text.Encoding.UTF8.GetBytes("this is a test"));
 
             byte[] payload = null;
-            await Store.ScanPartitionAsync("BA", 0, ScanDirection.Forward, new LambdaPartitionObserver((i, p) =>
+            await Store.ScanPartitionAsync("BA", 0, ScanDirection.Forward, new LambdaPartitionConsumer((i, p) =>
             {
-                payload = (byte[]) p;
-                return ScanCallbackResult.Continue;
+                payload = (byte[])p;
+                return ScanAction.Continue;
             }));
 
             var text = System.Text.Encoding.UTF8.GetString(payload);
@@ -291,14 +292,14 @@ namespace NStore.Persistence.Tests
         public async Task cannot_append_same_operation_twice_on_same_stream()
         {
             var opId = "operation_1";
-            await Store.PersistAsync("Id_1", 0, new {data = "this is a test"}, opId);
-            await Store.PersistAsync("Id_1", 1, new {data = "this is a test"}, opId);
+            await Store.PersistAsync("Id_1", 0, new { data = "this is a test" }, opId);
+            await Store.PersistAsync("Id_1", 1, new { data = "this is a test" }, opId);
 
             var list = new List<object>();
-            await Store.ScanPartitionAsync("Id_1", 0, ScanDirection.Forward, new LambdaPartitionObserver((i, p) =>
+            await Store.ScanPartitionAsync("Id_1", 0, ScanDirection.Forward, new LambdaPartitionConsumer((i, p) =>
             {
                 list.Add(p);
-                return ScanCallbackResult.Continue;
+                return ScanAction.Continue;
             }));
 
             Assert.Equal(1, list.Count());
@@ -312,15 +313,15 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("Id_2", 1, "b", opId);
 
             var list = new List<object>();
-            await Store.ScanPartitionAsync("Id_1", 0, ScanDirection.Forward, new LambdaPartitionObserver((i, p) =>
+            await Store.ScanPartitionAsync("Id_1", 0, ScanDirection.Forward, new LambdaPartitionConsumer((i, p) =>
             {
                 list.Add(p);
-                return ScanCallbackResult.Continue;
+                return ScanAction.Continue;
             }));
-            await Store.ScanPartitionAsync("Id_2", 0, ScanDirection.Forward, new LambdaPartitionObserver((i, p) =>
+            await Store.ScanPartitionAsync("Id_2", 0, ScanDirection.Forward, new LambdaPartitionConsumer((i, p) =>
             {
                 list.Add(p);
-                return ScanCallbackResult.Continue;
+                return ScanAction.Continue;
             }));
 
             Assert.Equal(2, list.Count());
@@ -352,10 +353,10 @@ namespace NStore.Persistence.Tests
         {
             await Store.DeleteAsync("delete");
             bool almostOneChunk = false;
-            await Store.ScanPartitionAsync("delete", 0, ScanDirection.Forward, new LambdaPartitionObserver((l, o) =>
+            await Store.ScanPartitionAsync("delete", 0, ScanDirection.Forward, new LambdaPartitionConsumer((l, o) =>
             {
                 almostOneChunk = true;
-                return ScanCallbackResult.Stop;
+                return ScanAction.Stop;
             }));
 
             Assert.False(almostOneChunk, "Should not contains chunks");
@@ -379,8 +380,8 @@ namespace NStore.Persistence.Tests
             await Store.ScanPartitionAsync("delete_3", 0, ScanDirection.Forward, acc);
 
             Assert.Equal(2, acc.Length);
-            Assert.True((string) acc[0] == "2");
-            Assert.True((string) acc[1] == "3");
+            Assert.True((string)acc[0] == "2");
+            Assert.True((string)acc[1] == "3");
         }
 
         [Fact]
@@ -391,8 +392,8 @@ namespace NStore.Persistence.Tests
             await Store.ScanPartitionAsync("delete_4", 0, ScanDirection.Forward, acc);
 
             Assert.Equal(2, acc.Length);
-            Assert.True((string) acc[0] == "1");
-            Assert.True((string) acc[1] == "2");
+            Assert.True((string)acc[0] == "1");
+            Assert.True((string)acc[1] == "2");
         }
 
         [Fact]
@@ -403,33 +404,39 @@ namespace NStore.Persistence.Tests
             await Store.ScanPartitionAsync("delete_5", 0, ScanDirection.Forward, acc);
 
             Assert.Equal(2, acc.Length);
-            Assert.True((string) acc[0] == "1");
-            Assert.True((string) acc[1] == "3");
+            Assert.True((string)acc[0] == "1");
+            Assert.True((string)acc[1] == "3");
         }
     }
 
     public class concurrency_test : BasePersistenceTest
     {
         [Fact]
-        public async void a()
+        public async void polling_client_should_not_miss_data()
         {
-            var observer = new StoreRecorder();
+            var recorder = new StoreRecorder();
 
-            var poller = new PollingClient(Store, observer);
+            var poller = new PollingClient(Store, recorder) { Delay = 0 };
 
             poller.Start();
-
-            await Enumerable.Range(1, 200).ForEachAsync(8, async i =>
+            const int range = 2048;
+            await Enumerable.Range(1, range).ForEachAsync(32, async i =>
             {
                 await Store.PersistAsync("p", -1, "demo");
             }).ConfigureAwait(false);
 
-            await Task.Delay(500);
+            await Task.Delay(1000);
 
             poller.Stop();
-            
-            Assert.Equal(200, poller.Position);
-            Assert.Equal(200, observer.Length);
+
+            //Console.WriteLine("Dumping recorder");
+            //recorder.Replay((storeIndex, partitionId, index, payload) =>
+            //{
+            //    Console.WriteLine($"{storeIndex:D5} - {partitionId.PadRight(20)} - {index:D5}");
+            //});
+
+            Assert.Equal(range, poller.Position);
+            Assert.Equal(range, recorder.Length);
         }
     }
 }

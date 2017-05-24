@@ -20,7 +20,7 @@ namespace NStore.Tests.Persistence
         {
             var tape = new PartitionRecorder();
 
-            tape.Observe(1, "a");
+            tape.Consume(1, "a");
 
             Assert.False(tape.IsEmpty);
             Assert.Equal(1, tape.Length);
@@ -32,7 +32,7 @@ namespace NStore.Tests.Persistence
         {
             var tape = new PartitionRecorder();
 
-            tape.Observe(1, "a");
+            tape.Consume(1, "a");
 
             var list = new List<object>();
             tape.Replay(list.Add);

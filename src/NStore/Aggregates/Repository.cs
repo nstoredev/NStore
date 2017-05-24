@@ -47,11 +47,11 @@ namespace NStore.Aggregates
             var stream = OpenStream(aggregate, version != Int32.MaxValue);
 
             int readCount = 0;
-            var consumer = new LambdaPartitionObserver((changesetIndex, changesetPayload) =>
+            var consumer = new LambdaPartitionConsumer((changesetIndex, changesetPayload) =>
             {
                 readCount++;
                 persister.ApplyChanges((Changeset)changesetPayload);
-                return ScanCallbackResult.Continue;
+                return ScanAction.Continue;
             });
 
             // we use aggregate.Version because snapshot could be rejected

@@ -11,9 +11,9 @@ using NStore.Sample.Support;
 
 namespace NStore.Sample.Projections
 {
-    public class AppProjections : IStoreObserver
+    public class AppProjections : IStoreConsumer
     {
-        public long Position { get; set; } = 0;
+        public long Position { get; private set; } = 0;
         public RoomsOnSaleProjection Rooms { get; }
         public ConfirmedBookingsProjection Bookings { get; }
 
@@ -43,7 +43,7 @@ namespace NStore.Sample.Projections
             Setup();
         }
 
-        public ScanCallbackResult Observe(
+        public ScanAction Consume(
             long storeIndex,
             string streamId,
             long partitionIndex,
@@ -70,7 +70,7 @@ namespace NStore.Sample.Projections
                 // * Add a timeout to stop if out of sequence (crash)*
                 // * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-                return ScanCallbackResult.Stop;
+                return ScanAction.Stop;
             }
 
             _catchingUp = false;
@@ -83,7 +83,7 @@ namespace NStore.Sample.Projections
             // skip fillers
             if (payload == null)
             {
-                return ScanCallbackResult.Continue;
+                return ScanAction.Continue;
             }
 
             _dispatchedCount++;
@@ -98,7 +98,7 @@ namespace NStore.Sample.Projections
                 _reporter.Report($"dispatched changeset #{storeIndex} took {sw.ElapsedMilliseconds}ms");
             };
 			
-            return ScanCallbackResult.Continue;
+            return ScanAction.Continue;
         }
 
         private void StoreMetrics(Changeset changes)
