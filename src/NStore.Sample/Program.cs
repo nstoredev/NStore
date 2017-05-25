@@ -11,11 +11,12 @@ namespace NStore.Sample
     class Program
     {
         private static string Mongo = "mongodb://localhost/NStoreSample";
-        private static CommandLineApplication cmd = new CommandLineApplication(throwOnUnexpectedArg: false);
+        private static readonly CommandLineApplication Cmd = new CommandLineApplication(throwOnUnexpectedArg: false);
 
         private static string _providerName = "memory";
         private static bool _useSnapshots = true;
         private static bool _quietMode = false;
+        private static bool _fastMode = false;
 
         static void Main(string[] args)
         {
@@ -23,13 +24,13 @@ namespace NStore.Sample
             
             var store = BuildStore(_providerName);
 
-            using (var app = new SampleApp(store, _providerName, _useSnapshots,_quietMode))
+            using (var app = new SampleApp(store, _providerName, _useSnapshots,_quietMode, _fastMode))
             {
                 Console.WriteLine(
                     "Press ENTER to start and wait projections, then press ENTER again to show data & stats.");
                 Console.ReadLine();
                 app.CreateRooms(32);
-                app.AddSomeBookings(200);
+               // app.AddSomeBookings(200);
 
                 Console.ReadLine();
 
@@ -43,13 +44,14 @@ namespace NStore.Sample
 
         static void ParseCommandLine(string[] args)
         {
-            var mongo = cmd.Option("-m|--mongo", "Use mongo as storage", CommandOptionType.NoValue);
-            var snapshots = cmd.Option("-s|--snapshots", "Use snapsthos", CommandOptionType.NoValue);
-			var quietmode = cmd.Option("-q|--quiet", "Quiet mode", CommandOptionType.NoValue);
+            var mongo = Cmd.Option("-m|--mongo", "Use mongo as storage", CommandOptionType.NoValue);
+            var snapshots = Cmd.Option("-s|--snapshots", "Use snapsthos", CommandOptionType.NoValue);
+            var quietmode = Cmd.Option("-q|--quiet", "Quiet mode", CommandOptionType.NoValue);
+            var fastmode = Cmd.Option("-f|--fast", "Fast mode: latency @ 1ms", CommandOptionType.NoValue);
 
-			cmd.HelpOption("-? | -h | --help");
+			Cmd.HelpOption("-? | -h | --help");
 
-            cmd.OnExecute(() =>
+            Cmd.OnExecute(() =>
             {
                 if (mongo.HasValue())
                 {
@@ -58,10 +60,11 @@ namespace NStore.Sample
 
                 _useSnapshots = snapshots.HasValue();
                 _quietMode = quietmode.HasValue();
+                _fastMode = fastmode.HasValue();
                 return 0;
             });
             
-            cmd.Execute(args);
+            Cmd.Execute(args);
         }
 
         static IRawStore BuildStore(string store)

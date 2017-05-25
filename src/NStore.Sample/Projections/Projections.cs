@@ -90,7 +90,7 @@ namespace NStore.Sample.Projections
             sw.Start();
             await Task.WhenAll
             (
-                _projections.Select(p => p.Project(changes)).ToArray()
+                _projections.Select(p => p.Project(changes))
             );
             sw.Stop();
 

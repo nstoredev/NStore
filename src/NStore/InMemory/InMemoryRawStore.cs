@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -149,6 +148,7 @@ namespace NStore.InMemory
                     chunk.PartitionId = "::empty";
                     chunk.Index = chunk.Id;
                     chunk.OpId = chunk.Id.ToString();
+                    chunk.Payload = null;
                     _emptyPartition.Write(chunk);
                     _chunks.Add(chunk);
                     throw;

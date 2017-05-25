@@ -6,7 +6,8 @@ namespace NStore.Benchmarks
     {
         public static void Main(string[] args)
         {
-            var summary = BenchmarkRunner.Run<AppendOnlyBenchmark>();
+            //var summary = BenchmarkRunner.Run<AppendOnlyBenchmark>();
+            var summary = BenchmarkRunner.Run<ParallelWritesBenchmark>();
         }
     }
 }

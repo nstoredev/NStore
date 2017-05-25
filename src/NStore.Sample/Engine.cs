@@ -1,8 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using MongoDB.Driver;
 using NStore.Aggregates;
 using NStore.InMemory;
 using NStore.Raw;
@@ -19,7 +19,6 @@ namespace NStore.Sample
     {
         private readonly string _name;
         private int _rooms;
-        private readonly IRawStore _raw;
 
         private readonly IStreamStore _streams;
         private readonly IAggregateFactory _aggregateFactory;
@@ -31,23 +30,25 @@ namespace NStore.Sample
         private readonly ISnapshotStore _snapshots;
         readonly bool _quiet;
         private readonly PollingClient _poller;
-        
-        public SampleApp(IRawStore store, string name, bool useSnapshots, bool quiet)
+
+        public SampleApp(IRawStore store, string name, bool useSnapshots, bool quiet, bool fast)
         {
             _quiet = quiet;
             _name = name;
             _rooms = 32;
             _storeProfile = new ProfileDecorator(store);
-            _raw = _storeProfile;
 
-            _streams = new StreamStore(_raw);
+            _streams = new StreamStore(_storeProfile);
             _aggregateFactory = new DefaultAggregateFactory();
 
-            var network = new ReliableNetworkSimulator(10, 50);
+            INetworkSimulator network = fast
+                ? new ReliableNetworkSimulator(1, 1)
+                : new ReliableNetworkSimulator(10, 50);
+
             _appProjections = new AppProjections(network, quiet);
 
-            _poller = new PollingClient(_raw, _appProjections);
-            
+            _poller = new PollingClient(_storeProfile, _appProjections);
+
             if (useSnapshots)
             {
                 var inMemoryRawStore = new InMemoryRawStore(cloneFunc: CloneSnapshot);
@@ -68,7 +69,6 @@ namespace NStore.Sample
 
         private IRepository GetRepository()
         {
-            // return new IdentityMapRepositoryDecorator(new Repository(_aggregateFactory, _streams));
             return new Repository(_aggregateFactory, _streams, _snapshots);
         }
 
@@ -80,7 +80,7 @@ namespace NStore.Sample
             sw.Start();
             int created = 0;
 
-            Enumerable.Range(1, _rooms).ForEachAsync(8, async i =>
+            var all = Enumerable.Range(1, _rooms).Select(async i =>
             {
                 var repository = GetRepository(); // repository is not thread safe!
                 var id = GetRoomId(i);
@@ -92,17 +92,21 @@ namespace NStore.Sample
 
                 Interlocked.Increment(ref created);
 
-                if (!_quiet){
+                if (!_quiet)
+                {
                     _reporter.Report($"Listed Room {id}");
                 }
-            }).GetAwaiter().GetResult();
+            });
+
+            Task.WhenAll(all).GetAwaiter().GetResult();
             sw.Stop();
 
-            if(created != _rooms){
+            if (created != _rooms)
+            {
                 throw new Exception("guru meditation!!!!");
             }
 
-            _reporter.Report($"Created {_rooms} in {sw.ElapsedMilliseconds} ms");
+            _reporter.Report($"Listed {_rooms} rooms in {sw.ElapsedMilliseconds} ms");
         }
 
         private string GetRoomId(int room)
@@ -113,7 +117,7 @@ namespace NStore.Sample
         private void Subscribe()
         {
             _poller.Start();
-            
+
 //            Task.Run(async () =>
 //            {
 //                long lastScan = 0;
@@ -144,10 +148,10 @@ namespace NStore.Sample
 
         public void ShowRooms()
         {
-            if(_quiet)
+            if (_quiet)
             {
                 _reporter.Report($"Rooms projection: {_appProjections.Rooms.List.Count()} rooms listed");
-			}
+            }
             else
             {
                 _reporter.Report("Rooms:");
@@ -161,8 +165,11 @@ namespace NStore.Sample
         public void AddSomeBookings(int bookings = 100)
         {
             var rnd = new Random(DateTime.Now.Millisecond);
+            long exceptions = 0;
+            var sw = new Stopwatch();
 
-            Enumerable.Range(1, bookings).ForEachAsync(8, async i =>
+            sw.Start();
+            var all = Enumerable.Range(1, bookings).Select(async i =>
             {
                 var id = GetRoomId(rnd.Next(_rooms) + 1);
                 var fromDate = DateTime.Today.AddDays(rnd.Next(10));
@@ -178,34 +185,41 @@ namespace NStore.Sample
                         room.AddBooking(new DateRange(fromDate, toDate));
 
                         await repository.Save(room, Guid.NewGuid().ToString()).ConfigureAwait(false);
-                        break;
+                        return;
                     }
                     catch (DuplicateStreamIndexException)
                     {
-                        Console.WriteLine($"Concurrency exception on {id} => retry");
+                        Interlocked.Increment(ref exceptions);
+                        if (!_quiet)
+                        {
+                            Console.WriteLine($"Concurrency exception on {id} => retry");
+                        }
                     }
                     catch (Exception e)
                     {
                         Console.WriteLine(e);
-                        break;
+                        return;
                     }
                 }
-            }).GetAwaiter().GetResult();
+            });
+
+            Task.WhenAll(all).GetAwaiter().GetResult();
+            sw.Stop();
+
+            this._reporter.Report(
+                $"Added {bookings} bookings (handling {exceptions} concurrency exceptions) in {sw.ElapsedMilliseconds} ms");
         }
 
         public void DumpMetrics()
         {
             this._reporter.Report(string.Empty);
             this._appProjections.DumpMetrics();
-
             this._reporter.Report(string.Empty);
             this._reporter.Report($"Stats - {_name} provider");
             this._reporter.Report($"  {_storeProfile.PersistCounter}");
             this._reporter.Report($"  {_storeProfile.PartitionScanCounter}");
             this._reporter.Report($"  {_storeProfile.DeleteCounter}");
             this._reporter.Report($"  {_storeProfile.StoreScanCounter}");
-
-
             if (_snapshotProfile != null)
             {
                 this._reporter.Report(string.Empty);
