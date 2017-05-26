@@ -30,7 +30,7 @@ namespace NStore.Sample
                     "Press ENTER to start and wait projections, then press ENTER again to show data & stats.");
                 Console.ReadLine();
                 app.CreateRooms(32);
-               // app.AddSomeBookings(200);
+                app.AddSomeBookings(200);
 
                 Console.ReadLine();
 

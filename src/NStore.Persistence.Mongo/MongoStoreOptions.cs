@@ -1,4 +1,5 @@
 ﻿using System;
+using MongoDB.Driver;
 
 namespace NStore.Persistence.Mongo
 {
@@ -15,9 +16,18 @@ namespace NStore.Persistence.Mongo
 
         public ISerializer Serializer { get; set; }
 
+        public Action<MongoClientSettings> CustomizePartitionSettings { get; set; }
+        public Action<MongoClientSettings> CustomizeSquenceSettings { get; set; }
+
         public bool IsValid()
         {
             return !String.IsNullOrWhiteSpace(PartitionsConnectionString);
+        }
+
+        public MongoStoreOptions()
+        {
+            this.CustomizePartitionSettings = settings => { };
+            this.CustomizeSquenceSettings = settings => { };
         }
     }
 }
