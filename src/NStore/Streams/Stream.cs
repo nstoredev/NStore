@@ -10,7 +10,6 @@ namespace NStore.Streams
         private IRawStore Raw { get; }
         public string Id { get; }
         public virtual bool IsWritable => true;
-
         public Stream(string streamId, IRawStore raw)
         {
             this.Id = streamId;
@@ -49,13 +48,32 @@ namespace NStore.Streams
             );
         }
 
+        public Task Append(object payload)
+        {
+            return Append(payload, null, default(CancellationToken));
+        }
 
-        public virtual Task Append(object payload, string operationId, CancellationToken cancellation = default(CancellationToken))
+        public Task Append(object payload, CancellationToken cancellation)
+        {
+            return Append(payload, null, cancellation);
+        }
+
+        public Task Append(object payload, string operationId)
+        {
+            return Append(payload, operationId, default(CancellationToken));
+        }
+ 
+        public virtual Task Append(object payload, string operationId, CancellationToken cancellation)
         {
             return Raw.PersistAsync(this.Id, -1, payload, operationId, cancellation);
         }
 
-        public virtual Task Delete(CancellationToken cancellation = default(CancellationToken))
+        public Task Delete()
+        {
+            return Delete(default(CancellationToken));
+        }
+
+        public virtual Task Delete(CancellationToken cancellation)
         {
             return Raw.DeleteAsync(this.Id, cancellationToken: cancellation);
         }

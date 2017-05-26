@@ -9,20 +9,13 @@ namespace NStore.Streams
 
         bool IsWritable { get; }
 
-        /// <summary>
-        /// Append
-        /// </summary>
-        /// <param name="payload"></param>
-        /// <param name="operationId"></param>
-        /// <param name="cancellation"></param>
-        /// <returns></returns>
-        Task Append(object payload, string operationId = null, CancellationToken cancellation = default(CancellationToken));
 
-        /// <summary>
-        /// Delete
-        /// </summary>
-        /// <param name="cancellation"></param>
-        /// <returns></returns>
-        Task Delete(CancellationToken cancellation = default(CancellationToken));
+        Task Append(object payload);
+        Task Append(object payload, CancellationToken cancellation);
+        Task Append(object payload, string operationId);
+        Task Append(object payload, string operationId, CancellationToken cancellation);
+
+        Task Delete();
+        Task Delete(CancellationToken cancellation);
     }
 }

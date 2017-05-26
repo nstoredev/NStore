@@ -63,6 +63,20 @@ namespace NStore.Streams
             );
         }
 
+        public Task Append(object payload)
+        {
+            return Append(payload, null, default(CancellationToken));
+        }
+
+        public Task Append(object payload, CancellationToken cancellation)
+        {
+            return Append(payload, null, cancellation);
+        }
+
+        public Task Append(object payload, string operationId)
+        {
+            return Append(payload, operationId, default(CancellationToken));
+        }        
 
         public async Task Append(object payload, string operationId, CancellationToken cancellation = default(CancellationToken))
         {
@@ -77,7 +91,12 @@ If you don't need to read use {typeof(Stream).Name} instead of {GetType().Name}.
             this.Version = desiredVersion;
         }
 
-        public Task Delete(CancellationToken cancellation = default(CancellationToken))
+        public Task Delete()
+        {
+            return Delete(default(CancellationToken));
+        }
+
+        public Task Delete(CancellationToken cancellation)
         {
             return Raw.DeleteAsync(this.Id, cancellationToken: cancellation);
         }
