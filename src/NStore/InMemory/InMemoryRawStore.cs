@@ -17,7 +17,21 @@ namespace NStore.InMemory
         private readonly INetworkSimulator _networkSimulator;
         private readonly Partition _emptyPartition = new Partition("::empty");
 
-        public InMemoryRawStore(INetworkSimulator networkSimulator = null, Func<object, object> cloneFunc = null)
+        public InMemoryRawStore() : this(null, null)
+        {
+        }
+
+        public InMemoryRawStore(INetworkSimulator networkSimulator)
+            : this(networkSimulator, null)
+        {
+        }
+
+        public InMemoryRawStore(Func<object, object> cloneFunc)
+            : this(null, cloneFunc)
+        {
+        }
+
+        public InMemoryRawStore(INetworkSimulator networkSimulator, Func<object, object> cloneFunc)
         {
             _cloneFunc = cloneFunc ?? (o => o);
             _networkSimulator = networkSimulator ?? new LocalhostSimulator();
@@ -88,7 +102,7 @@ namespace NStore.InMemory
                 }
                 else
                 {
-                    list = _chunks.ToArray()
+                    list = _chunks
                         .Where(x => x.Id <= sequenceStart)
                         .OrderByDescending(x => x.Id)
                         .Take(limit)
