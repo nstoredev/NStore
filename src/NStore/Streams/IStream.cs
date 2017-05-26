@@ -5,7 +5,7 @@ namespace NStore.Streams
 {
     public interface IStream : IReadOnlyStream
     {
-        //@@TODO add New() to avoid a db rountrip?
+        //@@REVIEW add New() to avoid a db rountrip?
 
         bool IsWritable { get; }
 

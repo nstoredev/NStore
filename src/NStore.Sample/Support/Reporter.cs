@@ -11,7 +11,7 @@ namespace NStore.Sample.Support
 
     public class NullReporter : IReporter
     {
-        public static IReporter Instance = new NullReporter();
+        public static readonly IReporter Instance = new NullReporter();
 
         private NullReporter()
         {
@@ -20,6 +20,7 @@ namespace NStore.Sample.Support
 
         public void Report(string message)
         {
+            // nothing to do here...
         }
     }
 

@@ -7,19 +7,32 @@ namespace NStore.Streams
 {
     public interface IReadOnlyStream
     {
-        /// <summary>
-        /// Read from stream
-        /// </summary>
-        /// <param name="partitionConsumer"></param>
-        /// <param name="fromIndexInclusive"></param>
-        /// <param name="toIndexInclusive"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
+        Task Read(
+            IPartitionConsumer partitionConsumer
+        );
+        
         Task Read(
             IPartitionConsumer partitionConsumer, 
-            int fromIndexInclusive = 0, 
-            int toIndexInclusive = Int32.MaxValue, 
-            CancellationToken cancellationToken = default(CancellationToken)
+            int fromIndexInclusive
+        );
+
+        Task Read(
+            IPartitionConsumer partitionConsumer, 
+            int fromIndexInclusive, 
+            CancellationToken cancellationToken
+        );  
+
+        Task Read(
+            IPartitionConsumer partitionConsumer, 
+            int fromIndexInclusive, 
+            int toIndexInclusive 
+        );
+        
+        Task Read(
+            IPartitionConsumer partitionConsumer, 
+            int fromIndexInclusive, 
+            int toIndexInclusive, 
+            CancellationToken cancellationToken
         );
     }
 }

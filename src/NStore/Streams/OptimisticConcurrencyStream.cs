@@ -19,10 +19,29 @@ namespace NStore.Streams
             this.Id = streamId;
             this.Raw = raw;
         }
-
-        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, int toIndexInclusive, CancellationToken cancellationToken = default(CancellationToken))
+        public Task Read(IPartitionConsumer partitionConsumer)
         {
-            // @@TODO: micro optimization for reading only last index? (fromIndexInclusive == toIndexInclusive == Int32.MaxValue)
+            return Read(partitionConsumer, 0, int.MaxValue, default(CancellationToken));
+        }
+        
+        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive)
+        {
+            return Read(partitionConsumer, fromIndexInclusive, int.MaxValue, default(CancellationToken));
+        }
+
+        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, CancellationToken cancellationToken)
+        {
+            return Read(partitionConsumer, fromIndexInclusive, int.MaxValue, cancellationToken);
+        }
+
+        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, int toIndexInclusive)
+        {
+            return Read(partitionConsumer, fromIndexInclusive, toIndexInclusive, default(CancellationToken));
+        }
+
+        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, int toIndexInclusive, CancellationToken cancellationToken)
+        {
+            // @@REVIEW: micro optimization for reading only last index? (fromIndexInclusive == toIndexInclusive == Int32.MaxValue)
             var readConsumer = partitionConsumer;
             if (toIndexInclusive == Int32.MaxValue)
             {

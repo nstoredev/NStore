@@ -17,7 +17,27 @@ namespace NStore.Streams
             this.Raw = raw;
         }
 
-        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, int toIndexInclusive, CancellationToken cancellationToken = default(CancellationToken))
+        public Task Read(IPartitionConsumer partitionConsumer)
+        {
+            return Read(partitionConsumer, 0, int.MaxValue, default(CancellationToken));
+        }
+        
+        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive)
+        {
+            return Read(partitionConsumer, fromIndexInclusive, int.MaxValue, default(CancellationToken));
+        }
+
+        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, CancellationToken cancellationToken)
+        {
+            return Read(partitionConsumer, fromIndexInclusive, int.MaxValue, cancellationToken);
+        }
+
+        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, int toIndexInclusive)
+        {
+            return Read(partitionConsumer, fromIndexInclusive, toIndexInclusive, default(CancellationToken));
+        }
+
+        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, int toIndexInclusive, CancellationToken cancellationToken)
         {
             return Raw.ScanPartitionAsync(
                 Id,
