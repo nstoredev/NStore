@@ -33,7 +33,12 @@ namespace NStore.Raw
             return Task.FromResult(ScanAction.Continue);
         }
 
-        public void Replay(Action<long, string, long, object> action, int startAt = 0)
+        public void Replay(Action<long, string, long, object> action)
+        {
+            Replay(action, 0);
+        }
+
+        public void Replay(Action<long, string, long, object> action, int startAt)
         {
             for (var i = startAt; i < _data.Count; i++)
             {

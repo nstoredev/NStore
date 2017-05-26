@@ -7,16 +7,41 @@ namespace NStore.Aggregates
     public interface IRepository
     {
         Task<T> GetById<T>(
+            string id
+        ) where T : IAggregate; 
+        
+        Task<T> GetById<T>(
             string id,
-            int version = Int32.MaxValue,
-            CancellationToken cancellationToken = default(CancellationToken)
+            CancellationToken cancellationToken
+        ) where T : IAggregate;    
+        
+        Task<T> GetById<T>(
+            string id,
+            int version,
+            CancellationToken cancellationToken
+        ) where T : IAggregate;       
+        
+        Task<T> GetById<T>(
+            string id,
+            int version
         ) where T : IAggregate;
 
         Task Save<T>(
             T aggregate, 
+            string operationId
+        ) where T : IAggregate;  
+        
+        Task Save<T>(
+            T aggregate, 
             string operationId,
-            Action<IHeadersAccessor> headers = null,
-            CancellationToken cancellationToken = default(CancellationToken)
+            Action<IHeadersAccessor> headers
+        ) where T : IAggregate;      
+        
+        Task Save<T>(
+            T aggregate, 
+            string operationId,
+            Action<IHeadersAccessor> headers,
+            CancellationToken cancellationToken
         ) where T : IAggregate;
     }
 }

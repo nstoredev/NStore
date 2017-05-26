@@ -78,7 +78,7 @@ namespace NStore.Streams
             return Append(payload, operationId, default(CancellationToken));
         }        
 
-        public async Task Append(object payload, string operationId, CancellationToken cancellation = default(CancellationToken))
+        public async Task Append(object payload, string operationId, CancellationToken cancellation)
         {
             if (Version == -1)
                 throw new AppendFailedException(this.Id,

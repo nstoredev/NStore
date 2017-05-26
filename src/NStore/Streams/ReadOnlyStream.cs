@@ -12,12 +12,12 @@ namespace NStore.Streams
         {
         }
 
-        public override Task Append(object payload, string operationId, CancellationToken cancellation = new CancellationToken())
+        public override Task Append(object payload, string operationId, CancellationToken cancellation )
         {
             throw new StreamReadOnlyException();
         }
 
-        public override Task Delete(CancellationToken cancellation = new CancellationToken())
+        public override Task Delete(CancellationToken cancellation )
         {
             throw new StreamReadOnlyException();
         }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,21 +15,36 @@ namespace NStore.Aggregates
         private readonly IDictionary<IAggregate, IStream> _openedStreams = new Dictionary<IAggregate, IStream>();
         private readonly ISnapshotStore _snapshots;
 
-        public Repository(IAggregateFactory factory, IStreamStore streams, ISnapshotStore snapshots = null)
+        public Repository(IAggregateFactory factory, IStreamStore streams)
+            : this(factory, streams, null)
+        {
+        }
+
+        public Repository(IAggregateFactory factory, IStreamStore streams, ISnapshotStore snapshots)
         {
             _factory = factory;
             _streams = streams;
             _snapshots = snapshots ?? new NullSnapshots();
         }
 
+        public Task<T> GetById<T>(string id) where T : IAggregate
+        {
+            return this.GetById<T>(id, int.MaxValue);
+        }
+
+        public Task<T> GetById<T>(string id, CancellationToken cancellationToken) where T : IAggregate
+        {
+            return this.GetById<T>(id, int.MaxValue, cancellationToken);
+        }
+
         public async Task<T> GetById<T>(
             string id,
-            int version = Int32.MaxValue,
-            CancellationToken cancellationToken = default(CancellationToken)
+            int version ,
+            CancellationToken cancellationToken
         ) where T : IAggregate
         {
             var aggregate = _factory.Create<T>();
-            var persister = (IEventSourcedAggregate)aggregate;
+            var persister = (IEventSourcedAggregate) aggregate;
             var snapshot = await _snapshots.Get(id, version, cancellationToken);
 
             if (snapshot != null)
@@ -50,7 +64,7 @@ namespace NStore.Aggregates
             var consumer = new LambdaPartitionConsumer((changesetIndex, changesetPayload) =>
             {
                 readCount++;
-                persister.ApplyChanges((Changeset)changesetPayload);
+                persister.ApplyChanges((Changeset) changesetPayload);
                 return ScanAction.Continue;
             });
 
@@ -69,14 +83,29 @@ namespace NStore.Aggregates
             return aggregate;
         }
 
+        public Task<T> GetById<T>(string id, int version) where T : IAggregate
+        {
+            return this.GetById<T>(id, version, default(CancellationToken));
+        }
+
+        public Task Save<T>(T aggregate, string operationId) where T : IAggregate
+        {
+            return this.Save<T>(aggregate, operationId, null, default(CancellationToken));
+        }
+
+        public Task Save<T>(T aggregate, string operationId, Action<IHeadersAccessor> headers) where T : IAggregate
+        {
+            return this.Save<T>(aggregate, operationId, headers, default(CancellationToken));
+        }
+
         public async Task Save<T>(
             T aggregate,
             string operationId,
-            Action<IHeadersAccessor> headers = null,
-            CancellationToken cancellationToken = default(CancellationToken)
+            Action<IHeadersAccessor> headers,
+            CancellationToken cancellationToken
         ) where T : IAggregate
         {
-            var persister = (IEventSourcedAggregate)aggregate;
+            var persister = (IEventSourcedAggregate) aggregate;
             var changeSet = persister.GetChangeSet();
             if (changeSet.IsEmpty)
                 return;

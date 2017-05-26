@@ -15,14 +15,17 @@ namespace NStore.Raw
 
         public string Name { get; }
 
-        // fond a bug on macos
         public TimeSpan Elapsed => TimeSpan.FromMilliseconds((double)_ticks / TimeSpan.TicksPerMillisecond);
         public long Calls => _calls;
         public long Exceptions => _exceptions;
         public long Counter1 => _counter1;
         public string Counter1Name { get; }
 
-        public TaskProfilingInfo(string name, string counter1Name = null)
+        public TaskProfilingInfo(string name) : this(name, null)
+        {
+        }
+
+        public TaskProfilingInfo(string name, string counter1Name)
         {
             Name = name;
             Counter1Name = counter1Name ?? "cnt1";

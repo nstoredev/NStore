@@ -29,7 +29,12 @@ namespace NStore.Raw
             return ScanAction.Continue;
         }
 
-        public void Replay(Action<object> action, int startAt = 0)
+        public void Replay(Action<object> action)
+        {
+            Replay(action, 0);
+        }
+
+        public void Replay(Action<object> action, int startAt)
         {
             for (var i = startAt; i < _data.Count; i++)
             {
@@ -43,7 +48,6 @@ namespace NStore.Raw
         public long GetIndex(int position) => _data[position].Index;
         public object ByIndex(int index) => _map[index];
 
-        //@@TODO refactor with dumper on Replay
         public void Dump()
         {
             int counter = 0;
