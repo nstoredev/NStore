@@ -62,8 +62,7 @@ namespace NStore.Persistence.Mongo
             }
         }
 
-        public async Task Drop(CancellationToken cancellationToken = default(CancellationToken)
-        )
+        public async Task Drop(CancellationToken cancellationToken = default(CancellationToken))
         {
             await this._partitionsDb
                 .DropCollectionAsync(_options.PartitionsCollectionName, cancellationToken)
@@ -90,7 +89,6 @@ namespace NStore.Persistence.Mongo
             );
 
             var sort = Builders<Chunk>.Sort.Ascending(x => x.Index);
-//                : Builders<Chunk>.Sort.Descending(x => x.Index);
 
             var options = new FindOptions<Chunk>() { Sort = sort };
             if (limit != int.MaxValue)
@@ -126,8 +124,8 @@ namespace NStore.Persistence.Mongo
         {
             var filter = Builders<Chunk>.Filter.And(
                 Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId),
-                Builders<Chunk>.Filter.Gte(x => x.Index, fromIndexInclusive),
-                Builders<Chunk>.Filter.Lte(x => x.Index, toIndexInclusive)
+                Builders<Chunk>.Filter.Lte(x => x.Index, fromIndexInclusive),
+                Builders<Chunk>.Filter.Gte(x => x.Index, toIndexInclusive)
             );
 
             var sort = Builders<Chunk>.Sort.Descending(x => x.Index);

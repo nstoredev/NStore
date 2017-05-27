@@ -93,9 +93,8 @@ namespace NStore.InMemory
                     return;
                 }
 
-                var list = partition.Chunks.AsEnumerable();
-                list = list.Reverse();
-                result = list.Where(x => x.Index >= fromIndexInclusive && x.Index <= toIndexInclusive)
+                result = partition.Chunks.Reverse()
+                    .Where(x => x.Index <= fromIndexInclusive && x.Index >= toIndexInclusive)
                     .Take(limit)
                     .ToArray();
             }

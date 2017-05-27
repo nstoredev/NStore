@@ -22,13 +22,13 @@ namespace NStore.SnapshotStore
 
             await _store.ReadPartitionBackward(
                 aggregateId,
-                0,
+                version,
                 new LambdaPartitionConsumer((l, o) =>
                 {
                     snapshotInfo = (SnapshotInfo)o;
                     return ScanAction.Stop;
                 }),
-                version,
+                0,
                 1,
                 cancellationToken
             );

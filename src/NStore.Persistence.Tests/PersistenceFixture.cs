@@ -131,7 +131,7 @@ namespace NStore.Persistence.Tests
 
             await Store.ReadPartitionBackward(
                 "Stream_1",
-                0,
+                long.MaxValue,
                 new LambdaPartitionConsumer((idx, pl) =>
                 {
                     payload = pl;
@@ -163,9 +163,9 @@ namespace NStore.Persistence.Tests
 
             await Store.ReadPartitionBackward(
                 "Stream_1",
-                2,
+                3,
                 tape,
-                3
+                2
             );
 
             Assert.Equal(2, tape.Length);

@@ -19,7 +19,7 @@ namespace NStore.Raw
             string partitionId,
             long fromIndexInclusive,
             IPartitionConsumer partitionConsumer,
-            long toIndexInclusive = Int64.MaxValue,
+            long toIndexInclusive = 0,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         );
