@@ -6,21 +6,18 @@ namespace NStore.Raw
 {
     public interface IRawStore
     {
-        /// <summary>
-        /// Scan partition
-        /// </summary>
-        /// <param name="partitionId"></param>
-        /// <param name="fromIndexInclusive"></param>
-        /// <param name="direction"></param>
-        /// <param name="partitionConsumer"></param>
-        /// <param name="toIndexInclusive"></param>
-        /// <param name="limit"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        Task ScanPartitionAsync(
+        Task ReadPartitionForward(
             string partitionId,
             long fromIndexInclusive,
-            ScanDirection direction,
+            IPartitionConsumer partitionConsumer,
+            long toIndexInclusive = Int64.MaxValue,
+            int limit = Int32.MaxValue,
+            CancellationToken cancellationToken = default(CancellationToken)
+        );
+
+        Task ReadPartitionBackward(
+            string partitionId,
+            long fromIndexInclusive,
             IPartitionConsumer partitionConsumer,
             long toIndexInclusive = Int64.MaxValue,
             int limit = Int32.MaxValue,

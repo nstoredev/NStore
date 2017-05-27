@@ -53,10 +53,9 @@ namespace NStore.Streams
                 });
             }
 
-            return Raw.ScanPartitionAsync(
+            return Raw.ReadPartitionForward(
                 Id,
                 fromIndexInclusive,
-                ScanDirection.Forward,
                 readConsumer,
                 toIndexInclusive,
                 cancellationToken: cancellationToken

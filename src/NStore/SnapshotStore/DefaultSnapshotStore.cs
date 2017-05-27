@@ -20,10 +20,9 @@ namespace NStore.SnapshotStore
         {
             SnapshotInfo snapshotInfo = null;
 
-            await _store.ScanPartitionAsync(
+            await _store.ReadPartitionBackward(
                 aggregateId,
                 0,
-                ScanDirection.Backward,
                 new LambdaPartitionConsumer((l, o) =>
                 {
                     snapshotInfo = (SnapshotInfo)o;

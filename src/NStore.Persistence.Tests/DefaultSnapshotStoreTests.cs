@@ -39,7 +39,7 @@ namespace NStore.Persistence.Tests
             await _snapshots.Add("empty", nullSnapshot);
 
             var tape = new PartitionRecorder();
-            await Store.ScanPartitionAsync("empty", 0, ScanDirection.Forward, tape);
+            await Store.ReadPartitionForward("empty", 0, tape);
 
             Assert.True(tape.IsEmpty);
         }
@@ -64,7 +64,7 @@ namespace NStore.Persistence.Tests
             await _snapshots.Remove("Aggregate_1");
 
             var tape = new PartitionRecorder();
-            await Store.ScanPartitionAsync("Aggregate_1", 0, ScanDirection.Forward, tape);
+            await Store.ReadPartitionForward("Aggregate_1", 0, tape);
 
             Assert.True(tape.IsEmpty);
         }

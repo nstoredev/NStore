@@ -8,22 +8,31 @@ namespace NStore.Raw
     {
         public Task DeleteAsync(string partitionId, long fromIndex = 0, long toIndex = long.MaxValue, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
 
         public Task PersistAsync(string partitionId, long index, object payload, string operationId = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
 
-        public Task ScanPartitionAsync(string partitionId, long fromIndexInclusive, ScanDirection direction, IPartitionConsumer partitionConsumer, long toIndexInclusive = long.MaxValue, int limit = int.MaxValue, CancellationToken cancellationToken = default(CancellationToken))
+        public Task ReadPartitionForward(string partitionId, long fromIndexInclusive, IPartitionConsumer partitionConsumer,
+            long toIndexInclusive = Int64.MaxValue, int limit = Int32.MaxValue,
+            CancellationToken cancellationToken = new CancellationToken())
         {
-			return Task.FromResult(0);
+            return Task.CompletedTask;
+        }
+
+        public Task ReadPartitionBackward(string partitionId, long fromIndexInclusive, IPartitionConsumer partitionConsumer,
+            long toIndexInclusive = Int64.MaxValue, int limit = Int32.MaxValue,
+            CancellationToken cancellationToken = new CancellationToken())
+        {
+            return Task.CompletedTask;
         }
 
         public Task ScanStoreAsync(long sequenceStart, ScanDirection direction, IStoreConsumer consumer, int limit = int.MaxValue, CancellationToken cancellationToken = default(CancellationToken))
         {
-			return Task.FromResult(0);
+            return Task.CompletedTask;
         }
     }
 }

@@ -38,10 +38,9 @@ namespace NStore.Streams
 
         public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, int toIndexInclusive, CancellationToken cancellationToken)
         {
-            return Raw.ScanPartitionAsync(
+            return Raw.ReadPartitionForward(
                 Id,
                 fromIndexInclusive,
-                ScanDirection.Forward,
                 partitionConsumer,
                 toIndexInclusive,
                 cancellationToken: cancellationToken

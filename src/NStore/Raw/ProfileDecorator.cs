@@ -22,7 +22,7 @@ namespace NStore.Raw
             StoreScanCounter = new TaskProfilingInfo("Store Scan", "chunks read");
         }
 
-        public async Task ScanPartitionAsync(string partitionId, long fromIndexInclusive, ScanDirection direction,
+        public async Task ReadPartitionForward(string partitionId, long fromIndexInclusive,
             IPartitionConsumer partitionConsumer, long toIndexInclusive = Int64.MaxValue, int limit = Int32.MaxValue,
             CancellationToken cancellationToken = new CancellationToken())
         {
@@ -33,10 +33,30 @@ namespace NStore.Raw
             });
 
             await PartitionScanCounter.CaptureAsync(() =>
-                _store.ScanPartitionAsync(
+                _store.ReadPartitionForward(
                     partitionId,
                     fromIndexInclusive,
-                    direction,
+                    counter,
+                    toIndexInclusive,
+                    limit,
+                    cancellationToken
+                ));
+        }
+
+        public async Task ReadPartitionBackward(string partitionId, long fromIndexInclusive,
+            IPartitionConsumer partitionConsumer, long toIndexInclusive = Int64.MaxValue, int limit = Int32.MaxValue,
+            CancellationToken cancellationToken = new CancellationToken())
+        {
+            var counter = new LambdaPartitionConsumer((l, o) =>
+            {
+                PartitionScanCounter.IncCounter1();
+                return partitionConsumer.Consume(l, o);
+            });
+
+            await PartitionScanCounter.CaptureAsync(() =>
+                _store.ReadPartitionBackward(
+                    partitionId,
+                    fromIndexInclusive,
                     counter,
                     toIndexInclusive,
                     limit,
@@ -48,10 +68,10 @@ namespace NStore.Raw
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = new CancellationToken())
         {
-			var storeObserver = new LambdaStoreConsumer((si,s, l, o) =>
+            var storeObserver = new LambdaStoreConsumer((si, s, l, o) =>
             {
-            	StoreScanCounter.IncCounter1();
-            	return consumer.Consume(si,s,l, o);
+                StoreScanCounter.IncCounter1();
+                return consumer.Consume(si, s, l, o);
             });
 
             await StoreScanCounter.CaptureAsync(() =>

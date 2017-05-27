@@ -38,10 +38,9 @@ namespace NStore.InMemory
             _partitions.Add(_emptyPartition.Id, _emptyPartition);
         }
 
-        public async Task ScanPartitionAsync(
+        public async Task ReadPartitionForward(
             string partitionId,
             long fromIndexInclusive,
-            ScanDirection direction,
             IPartitionConsumer partitionConsumer,
             long toIndexInclusive = Int64.MaxValue,
             int limit = Int32.MaxValue,
@@ -59,11 +58,43 @@ namespace NStore.InMemory
 
                 var list = partition.Chunks.AsEnumerable();
 
-                if (direction == ScanDirection.Backward)
+                result = list.Where(x => x.Index >= fromIndexInclusive && x.Index <= toIndexInclusive)
+                    .Take(limit)
+                    .ToArray();
+            }
+
+            foreach (var chunk in result)
+            {
+                await _networkSimulator.WaitFast().ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (partitionConsumer.Consume(chunk.Index, _cloneFunc(chunk.Payload)) == ScanAction.Stop)
                 {
-                    list = list.Reverse();
+                    break;
+                }
+            }
+        }
+
+        public async Task ReadPartitionBackward(
+            string partitionId,
+            long fromIndexInclusive,
+            IPartitionConsumer partitionConsumer,
+            long toIndexInclusive = Int64.MaxValue,
+            int limit = Int32.MaxValue,
+            CancellationToken cancellationToken = default(CancellationToken)
+        )
+        {
+            Chunk[] result;
+            lock (_lock)
+            {
+                Partition partition;
+                if (!_partitions.TryGetValue(partitionId, out partition))
+                {
+                    return;
                 }
 
+                var list = partition.Chunks.AsEnumerable();
+                list = list.Reverse();
                 result = list.Where(x => x.Index >= fromIndexInclusive && x.Index <= toIndexInclusive)
                     .Take(limit)
                     .ToArray();

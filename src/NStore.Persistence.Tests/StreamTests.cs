@@ -22,7 +22,7 @@ namespace NStore.Persistence.Tests
             await stream.Append("payload");
 
             var acc = new PartitionRecorder();
-            await Store.ScanPartitionAsync("stream_1", 0, ScanDirection.Forward, acc);
+            await Store.ReadPartitionForward("stream_1", 0, acc);
 
             Assert.Equal(1, acc.Length);
             Assert.Equal("payload", acc[0]);
@@ -94,7 +94,7 @@ namespace NStore.Persistence.Tests
 
             await stream.Append("payload");
             var tape = new PartitionRecorder();
-            await Store.ScanPartitionAsync("stream_1", 0, ScanDirection.Forward, tape);
+            await Store.ReadPartitionForward("stream_1", 0, tape);
 
             Assert.Equal(1, tape.Length);
             Assert.Equal("payload", tape[0]);
@@ -109,7 +109,7 @@ namespace NStore.Persistence.Tests
             await stream.Append("b");
 
             var tape = new PartitionRecorder();
-            await Store.ScanPartitionAsync("stream_1", 0, ScanDirection.Forward, tape);
+            await Store.ReadPartitionForward("stream_1", 0, tape);
 
             Assert.Equal(2, tape.Length);
             Assert.Equal("a", tape[0]);

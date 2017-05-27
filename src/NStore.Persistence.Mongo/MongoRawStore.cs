@@ -74,10 +74,9 @@ namespace NStore.Persistence.Mongo
                 .ConfigureAwait(false);
         }
 
-        public async Task ScanPartitionAsync(
+        public async Task ReadPartitionForward(
             string partitionId,
             long fromIndexInclusive,
-            ScanDirection direction,
             IPartitionConsumer partitionConsumer,
             long toIndexInclusive = Int64.MaxValue,
             int limit = Int32.MaxValue,
@@ -90,9 +89,48 @@ namespace NStore.Persistence.Mongo
                 Builders<Chunk>.Filter.Lte(x => x.Index, toIndexInclusive)
             );
 
-            var sort = direction == ScanDirection.Forward
-                ? Builders<Chunk>.Sort.Ascending(x => x.Index)
-                : Builders<Chunk>.Sort.Descending(x => x.Index);
+            var sort = Builders<Chunk>.Sort.Ascending(x => x.Index);
+//                : Builders<Chunk>.Sort.Descending(x => x.Index);
+
+            var options = new FindOptions<Chunk>() { Sort = sort };
+            if (limit != int.MaxValue)
+            {
+                options.Limit = limit;
+            }
+
+            using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
+            {
+                while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    var batch = cursor.Current;
+                    foreach (var b in batch)
+                    {
+                        if (ScanAction.Stop ==
+                            partitionConsumer.Consume(b.Index, _serializer.Deserialize(partitionId, b.Payload)))
+                        {
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        public async Task ReadPartitionBackward(
+            string partitionId,
+            long fromIndexInclusive,
+            IPartitionConsumer partitionConsumer,
+            long toIndexInclusive = Int64.MaxValue,
+            int limit = Int32.MaxValue,
+            CancellationToken cancellationToken = default(CancellationToken)
+        )
+        {
+            var filter = Builders<Chunk>.Filter.And(
+                Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId),
+                Builders<Chunk>.Filter.Gte(x => x.Index, fromIndexInclusive),
+                Builders<Chunk>.Filter.Lte(x => x.Index, toIndexInclusive)
+            );
+
+            var sort = Builders<Chunk>.Sort.Descending(x => x.Index);
 
             var options = new FindOptions<Chunk>() { Sort = sort };
             if (limit != int.MaxValue)
