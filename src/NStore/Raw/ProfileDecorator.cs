@@ -22,8 +22,8 @@ namespace NStore.Raw
             StoreScanCounter = new TaskProfilingInfo("Store Scan", "chunks read");
         }
 
-        public async Task ReadPartitionForward(string partitionId, long fromIndexInclusive,
-            IPartitionConsumer partitionConsumer, long toIndexInclusive = Int64.MaxValue, int limit = Int32.MaxValue,
+        public async Task ReadPartitionForward(string partitionId, long fromLowerIndexInclusive,
+            IPartitionConsumer partitionConsumer, long toUpperIndexInclusive = Int64.MaxValue, int limit = Int32.MaxValue,
             CancellationToken cancellationToken = new CancellationToken())
         {
             var counter = new LambdaPartitionConsumer((l, o) =>
@@ -35,16 +35,16 @@ namespace NStore.Raw
             await PartitionScanCounter.CaptureAsync(() =>
                 _store.ReadPartitionForward(
                     partitionId,
-                    fromIndexInclusive,
+                    fromLowerIndexInclusive,
                     counter,
-                    toIndexInclusive,
+                    toUpperIndexInclusive,
                     limit,
                     cancellationToken
                 ));
         }
 
-        public async Task ReadPartitionBackward(string partitionId, long fromIndexInclusive,
-            IPartitionConsumer partitionConsumer, long toIndexInclusive = Int64.MaxValue, int limit = Int32.MaxValue,
+        public async Task ReadPartitionBackward(string partitionId, long fromUpperIndexInclusive,
+            IPartitionConsumer partitionConsumer, long toLowerIndexInclusive = Int64.MaxValue, int limit = Int32.MaxValue,
             CancellationToken cancellationToken = new CancellationToken())
         {
             var counter = new LambdaPartitionConsumer((l, o) =>
@@ -56,9 +56,9 @@ namespace NStore.Raw
             await PartitionScanCounter.CaptureAsync(() =>
                 _store.ReadPartitionBackward(
                     partitionId,
-                    fromIndexInclusive,
+                    fromUpperIndexInclusive,
                     counter,
-                    toIndexInclusive,
+                    toLowerIndexInclusive,
                     limit,
                     cancellationToken
                 ));

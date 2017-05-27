@@ -40,9 +40,9 @@ namespace NStore.InMemory
 
         public async Task ReadPartitionForward(
             string partitionId,
-            long fromIndexInclusive,
+            long fromLowerIndexInclusive,
             IPartitionConsumer partitionConsumer,
-            long toIndexInclusive = Int64.MaxValue,
+            long toUpperIndexInclusive = Int64.MaxValue,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         )
@@ -58,7 +58,7 @@ namespace NStore.InMemory
 
                 var list = partition.Chunks.AsEnumerable();
 
-                result = list.Where(x => x.Index >= fromIndexInclusive && x.Index <= toIndexInclusive)
+                result = list.Where(x => x.Index >= fromLowerIndexInclusive && x.Index <= toUpperIndexInclusive)
                     .Take(limit)
                     .ToArray();
             }
@@ -77,9 +77,9 @@ namespace NStore.InMemory
 
         public async Task ReadPartitionBackward(
             string partitionId,
-            long fromIndexInclusive,
+            long fromUpperIndexInclusive,
             IPartitionConsumer partitionConsumer,
-            long toIndexInclusive = Int64.MaxValue,
+            long toLowerIndexInclusive = Int64.MaxValue,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         )
@@ -94,7 +94,7 @@ namespace NStore.InMemory
                 }
 
                 result = partition.Chunks.Reverse()
-                    .Where(x => x.Index <= fromIndexInclusive && x.Index >= toIndexInclusive)
+                    .Where(x => x.Index <= fromUpperIndexInclusive && x.Index >= toLowerIndexInclusive)
                     .Take(limit)
                     .ToArray();
             }

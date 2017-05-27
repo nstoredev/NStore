@@ -75,17 +75,17 @@ namespace NStore.Persistence.Mongo
 
         public async Task ReadPartitionForward(
             string partitionId,
-            long fromIndexInclusive,
+            long fromLowerIndexInclusive,
             IPartitionConsumer partitionConsumer,
-            long toIndexInclusive = Int64.MaxValue,
+            long toUpperIndexInclusive = Int64.MaxValue,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         )
         {
             var filter = Builders<Chunk>.Filter.And(
                 Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId),
-                Builders<Chunk>.Filter.Gte(x => x.Index, fromIndexInclusive),
-                Builders<Chunk>.Filter.Lte(x => x.Index, toIndexInclusive)
+                Builders<Chunk>.Filter.Gte(x => x.Index, fromLowerIndexInclusive),
+                Builders<Chunk>.Filter.Lte(x => x.Index, toUpperIndexInclusive)
             );
 
             var sort = Builders<Chunk>.Sort.Ascending(x => x.Index);
@@ -115,17 +115,17 @@ namespace NStore.Persistence.Mongo
 
         public async Task ReadPartitionBackward(
             string partitionId,
-            long fromIndexInclusive,
+            long fromUpperIndexInclusive,
             IPartitionConsumer partitionConsumer,
-            long toIndexInclusive = Int64.MaxValue,
+            long toLowerIndexInclusive = Int64.MaxValue,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         )
         {
             var filter = Builders<Chunk>.Filter.And(
                 Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId),
-                Builders<Chunk>.Filter.Lte(x => x.Index, fromIndexInclusive),
-                Builders<Chunk>.Filter.Gte(x => x.Index, toIndexInclusive)
+                Builders<Chunk>.Filter.Lte(x => x.Index, fromUpperIndexInclusive),
+                Builders<Chunk>.Filter.Gte(x => x.Index, toLowerIndexInclusive)
             );
 
             var sort = Builders<Chunk>.Sort.Descending(x => x.Index);

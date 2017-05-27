@@ -8,18 +8,18 @@ namespace NStore.Raw
     {
         Task ReadPartitionForward(
             string partitionId,
-            long fromIndexInclusive,
+            long fromLowerIndexInclusive,
             IPartitionConsumer partitionConsumer,
-            long toIndexInclusive = Int64.MaxValue,
+            long toUpperIndexInclusive = Int64.MaxValue,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         );
 
         Task ReadPartitionBackward(
             string partitionId,
-            long fromIndexInclusive,
+            long fromUpperIndexInclusive,
             IPartitionConsumer partitionConsumer,
-            long toIndexInclusive = 0,
+            long toLowerIndexInclusive = 0,
             int limit = Int32.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         );
