@@ -25,7 +25,7 @@ namespace NStore.Raw
         );
 
         Task ScanStoreAsync(
-            long sequenceStart,
+            long fromSequenceIdInclusive,
             ScanDirection direction,
             IStoreConsumer consumer,
             int limit,
@@ -43,8 +43,8 @@ namespace NStore.Raw
         /// @@REVIEW delete invalid stream should throw or not?
         Task DeleteAsync(
             string partitionId,
-            long fromIndex ,
-            long toIndex ,
+            long fromLowerIndexInclusive ,
+            long toUpperIndexInclusive ,
             CancellationToken cancellationToken 
         );
     }

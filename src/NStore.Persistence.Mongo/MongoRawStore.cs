@@ -154,7 +154,7 @@ namespace NStore.Persistence.Mongo
         }
 
         public async Task ScanStoreAsync(
-            long sequenceStart,
+            long fromSequenceIdInclusive,
             ScanDirection direction,
             IStoreConsumer consumer,
             int limit,
@@ -167,12 +167,12 @@ namespace NStore.Persistence.Mongo
             if (direction == ScanDirection.Forward)
             {
                 sort = Builders<Chunk>.Sort.Ascending(x => x.Id);
-                filter = Builders<Chunk>.Filter.Gte(x => x.Id, sequenceStart);
+                filter = Builders<Chunk>.Filter.Gte(x => x.Id, fromSequenceIdInclusive);
             }
             else
             {
                 sort = Builders<Chunk>.Sort.Descending(x => x.Id);
-                filter = Builders<Chunk>.Filter.Lte(x => x.Id, sequenceStart);
+                filter = Builders<Chunk>.Filter.Lte(x => x.Id, fromSequenceIdInclusive);
             }
 
             var options = new FindOptions<Chunk>() {Sort = sort};
@@ -223,25 +223,25 @@ namespace NStore.Persistence.Mongo
 
         public async Task DeleteAsync(
             string partitionId,
-            long fromIndex,
-            long toIndex,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
             CancellationToken cancellationToken
         )
         {
             var filterById = Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId);
-            if (fromIndex > 0)
+            if (fromLowerIndexInclusive > 0)
             {
                 filterById = Builders<Chunk>.Filter.And(
                     filterById,
-                    Builders<Chunk>.Filter.Gte(x => x.Index, fromIndex)
+                    Builders<Chunk>.Filter.Gte(x => x.Index, fromLowerIndexInclusive)
                 );
             }
 
-            if (toIndex < long.MaxValue)
+            if (toUpperIndexInclusive < long.MaxValue)
             {
                 filterById = Builders<Chunk>.Filter.And(
                     filterById,
-                    Builders<Chunk>.Filter.Lte(x => x.Index, toIndex)
+                    Builders<Chunk>.Filter.Lte(x => x.Index, toUpperIndexInclusive)
                 );
             }
 

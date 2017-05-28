@@ -7,7 +7,7 @@ using NStore.Sample.Support;
 
 namespace NStore.Sample
 {
-    class Program
+    static class Program
     {
         private static string Mongo = "mongodb://localhost/NStoreSample";
         private static readonly CommandLineApplication Cmd = new CommandLineApplication(throwOnUnexpectedArg: false);

@@ -112,7 +112,7 @@ namespace NStore.InMemory
         }
 
         public async Task ScanStoreAsync(
-            long sequenceStart,
+            long fromSequenceIdInclusive,
             ScanDirection direction,
             IStoreConsumer consumer,
             int limit ,
@@ -125,7 +125,7 @@ namespace NStore.InMemory
             {
                 if (direction == ScanDirection.Forward)
                 {
-                    list = _chunks.Where(x => x.Id >= sequenceStart)
+                    list = _chunks.Where(x => x.Id >= fromSequenceIdInclusive)
                         .OrderBy(x => x.Id)
                         .Take(limit)
                         .ToArray();
@@ -133,7 +133,7 @@ namespace NStore.InMemory
                 else
                 {
                     list = _chunks
-                        .Where(x => x.Id <= sequenceStart)
+                        .Where(x => x.Id <= fromSequenceIdInclusive)
                         .OrderByDescending(x => x.Id)
                         .Take(limit)
                         .ToArray();
@@ -204,8 +204,8 @@ namespace NStore.InMemory
 
         public async Task DeleteAsync(
             string partitionId,
-            long fromIndex ,
-            long toIndex ,
+            long fromLowerIndexInclusive ,
+            long toUpperIndexInclusive ,
             CancellationToken cancellationToken
         )
         {
@@ -218,7 +218,7 @@ namespace NStore.InMemory
                     throw new StreamDeleteException(partitionId);
                 }
 
-                var deleted = partition.Delete(fromIndex, toIndex);
+                var deleted = partition.Delete(fromLowerIndexInclusive, toUpperIndexInclusive);
                 if (deleted.Length == 0)
                 {
                     throw new StreamDeleteException(partitionId);
