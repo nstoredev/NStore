@@ -49,7 +49,8 @@ namespace NStore.Raw
                         _lastScan + 1,
                         ScanDirection.Forward,
                         wrapper,
-                        cancellationToken: token
+                        int.MaxValue,
+                        token
                     );
                     await Task.Delay(Delay, token);
                 }

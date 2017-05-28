@@ -28,7 +28,7 @@ namespace NStore.Streams
                 cancellationToken
             );
         }
- 
+
         public virtual Task Append(object payload, string operationId, CancellationToken cancellation)
         {
             return Raw.PersistAsync(this.Id, -1, payload, operationId, cancellation);
@@ -36,7 +36,7 @@ namespace NStore.Streams
 
         public virtual Task Delete(CancellationToken cancellation)
         {
-            return Raw.DeleteAsync(this.Id, cancellationToken: cancellation);
+            return Raw.DeleteAsync(this.Id, 0, long.MaxValue, cancellation);
         }
     }
 }

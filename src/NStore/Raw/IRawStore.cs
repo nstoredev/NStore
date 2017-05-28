@@ -24,54 +24,28 @@ namespace NStore.Raw
             CancellationToken cancellationToken
         );
 
-        /// <summary>
-        /// Scan full store
-        /// </summary>
-        /// <param name="sequenceStart">starting id (included) </param>
-        /// <param name="direction">Scan direction</param>
-        /// <param name="consumer"></param>
-        /// <param name="limit">Max items</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
         Task ScanStoreAsync(
             long sequenceStart,
             ScanDirection direction,
             IStoreConsumer consumer,
-            int limit = int.MaxValue,
-            CancellationToken cancellationToken = default(CancellationToken)
+            int limit,
+            CancellationToken cancellationToken
         );
 
-        /// <summary>
-        /// Persist a chunk in partition
-        /// </summary>
-        /// <param name="partitionId"></param>
-        /// <param name="index"></param>
-        /// <param name="payload"></param>
-        /// <param name="operationId"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
         Task PersistAsync(
             string partitionId,
             long index,
             object payload,
-            string operationId = null,
-            CancellationToken cancellationToken = default(CancellationToken)
+            string operationId,
+            CancellationToken cancellationToken
         );
 
-        /// <summary>
-        /// Delete a partition by id
-        /// </summary>
-        /// <param name="partitionId">Stream id</param>
-        /// <param name="fromIndex">From index</param>
-        /// <param name="toIndex">to Index</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns>Task</returns>
         /// @@REVIEW delete invalid stream should throw or not?
         Task DeleteAsync(
             string partitionId,
-            long fromIndex = 0,
-            long toIndex = long.MaxValue,
-            CancellationToken cancellationToken = default(CancellationToken)
+            long fromIndex ,
+            long toIndex ,
+            CancellationToken cancellationToken 
         );
     }
 
@@ -147,6 +121,75 @@ namespace NStore.Raw
                 int.MaxValue,
                 CancellationToken.None
             );
+        }
+
+        public static Task ScanStoreAsync(
+            this IRawStore store,
+            long sequenceStart,
+            ScanDirection direction,
+            IStoreConsumer consumer
+        )
+        {
+            return store.ScanStoreAsync(sequenceStart, direction, consumer, int.MaxValue, CancellationToken.None);
+        }
+
+        public static Task ScanStoreAsync(
+            this IRawStore store,
+            long sequenceStart,
+            ScanDirection direction,
+            IStoreConsumer consumer,
+            int limit
+        )
+        {
+            return store.ScanStoreAsync(sequenceStart, direction, consumer, limit, CancellationToken.None);
+        }
+
+        public static Task PersistAsync(
+            this IRawStore store,
+            string partitionId,
+            long index,
+            object payload
+        )
+        {
+            return store.PersistAsync(partitionId, index, payload, null, CancellationToken.None);
+        }
+
+        public static Task PersistAsync(
+            this IRawStore store,
+            string partitionId,
+            long index,
+            object payload,
+            string operationId
+        )
+        {
+            return store.PersistAsync(partitionId, index, payload, operationId, CancellationToken.None);
+        }
+
+        public static Task DeleteAsync(
+            this IRawStore store,
+            string partitionId
+        )
+        {
+            return store.DeleteAsync(partitionId, 0, long.MaxValue, CancellationToken.None);
+        }
+
+        public static Task DeleteAsync(
+            this IRawStore store,
+            string partitionId,
+            long fromLowerIndexInclusive
+        )
+        {
+            return store.DeleteAsync(partitionId, fromLowerIndexInclusive, long.MaxValue, CancellationToken.None);
+        }
+
+        public static Task DeleteAsync(
+            this IRawStore store,
+            string partitionId,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive
+        )
+        {
+            return store.DeleteAsync(partitionId, fromLowerIndexInclusive, toUpperIndexInclusive, CancellationToken.None);
         }
     }
 }

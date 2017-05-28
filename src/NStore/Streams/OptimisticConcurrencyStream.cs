@@ -20,27 +20,6 @@ namespace NStore.Streams
             this.Raw = raw;
         }
 
-        public Task Read(IPartitionConsumer partitionConsumer)
-        {
-            return Read(partitionConsumer, 0, int.MaxValue, default(CancellationToken));
-        }
-
-        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive)
-        {
-            return Read(partitionConsumer, fromIndexInclusive, int.MaxValue, default(CancellationToken));
-        }
-
-        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive,
-            CancellationToken cancellationToken)
-        {
-            return Read(partitionConsumer, fromIndexInclusive, int.MaxValue, cancellationToken);
-        }
-
-        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, int toIndexInclusive)
-        {
-            return Read(partitionConsumer, fromIndexInclusive, toIndexInclusive, default(CancellationToken));
-        }
-
         public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, int toIndexInclusive,
             CancellationToken cancellationToken)
         {
@@ -66,21 +45,6 @@ namespace NStore.Streams
             );
         }
 
-        public Task Append(object payload)
-        {
-            return Append(payload, null, default(CancellationToken));
-        }
-
-        public Task Append(object payload, CancellationToken cancellation)
-        {
-            return Append(payload, null, cancellation);
-        }
-
-        public Task Append(object payload, string operationId)
-        {
-            return Append(payload, operationId, default(CancellationToken));
-        }
-
         public async Task Append(object payload, string operationId, CancellationToken cancellation)
         {
             if (Version == -1)
@@ -94,14 +58,9 @@ If you don't need to read use {typeof(Stream).Name} instead of {GetType().Name}.
             this.Version = desiredVersion;
         }
 
-        public Task Delete()
-        {
-            return Delete(default(CancellationToken));
-        }
-
         public Task Delete(CancellationToken cancellation)
         {
-            return Raw.DeleteAsync(this.Id, cancellationToken: cancellation);
+            return Raw.DeleteAsync(this.Id, 0, long.MaxValue, cancellation);
         }
     }
 }

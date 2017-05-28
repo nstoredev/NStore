@@ -43,7 +43,7 @@ namespace NStore.SnapshotStore
 
             try
             {
-                await _store.PersistAsync(aggregateId, snapshot.AggregateVersion, snapshot, cancellationToken: cancellationToken);
+                await _store.PersistAsync(aggregateId, snapshot.AggregateVersion, snapshot, null, cancellationToken);
             }
             catch (DuplicateStreamIndexException)
             {
