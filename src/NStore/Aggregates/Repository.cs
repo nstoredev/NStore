@@ -119,11 +119,10 @@ namespace NStore.Aggregates
             headers?.Invoke(changeSet);
 
             await stream.Append(changeSet, operationId, cancellationToken).ConfigureAwait(false);
+            persister.ChangesPersisted(changeSet);
 
             //we need to await, it's responsibility of the snapshot provider to clone & store state (sync or async)
             await _snapshots.Add(aggregate.Id, persister.GetSnapshot(), cancellationToken);
-
-            persister.ChangesPersisted(changeSet);
         }
 
         private IStream OpenStream(IAggregate aggregate, bool isPartialLoad)

@@ -211,7 +211,21 @@ namespace NStore.Tests.AggregatesTests
 
             var snapshot = await Snapshots.Get("Ticket_1", int.MaxValue);
             Assert.NotNull(snapshot);
-            Assert.Equal(2, snapshot.AggregateVersion);
+            Assert.Equal(3, snapshot.AggregateVersion);
+            Assert.NotNull(snapshot.Data);
+            Assert.Equal(1, snapshot.SnapshotVersion);
+        }
+
+        [Fact]
+        public async void saving_new_aggregate_should_create_snapshot()
+        {
+            var ticket = await Repository.GetById<Ticket>("new_ticket");
+            ticket.Sale();
+            await Repository.Save(ticket, "save_snap");
+
+            var snapshot = await Snapshots.Get("new_ticket", int.MaxValue);
+            Assert.NotNull(snapshot);
+            Assert.Equal(1, snapshot.AggregateVersion);
             Assert.NotNull(snapshot.Data);
             Assert.Equal(1, snapshot.SnapshotVersion);
         }
