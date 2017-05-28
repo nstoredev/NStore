@@ -21,7 +21,7 @@ namespace NStore.Tests.Persistence
             Assert.Equal(0, _profile.PersistCounter.Calls);
 			Assert.Equal(0, _profile.DeleteCounter.Calls);
 			Assert.Equal(0, _profile.StoreScanCounter.Calls);
-			Assert.Equal(0, _profile.PartitionScanCounter.Calls);
+			Assert.Equal(0, _profile.PartitionReadForwardCounter.Calls);
 		}
 
         [Fact]
@@ -31,7 +31,7 @@ namespace NStore.Tests.Persistence
             Assert.Equal(1, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
 			Assert.Equal(0, _profile.StoreScanCounter.Calls);
-			Assert.Equal(0, _profile.PartitionScanCounter.Calls);
+			Assert.Equal(0, _profile.PartitionReadForwardCounter.Calls);
         }
 
         [Fact]
@@ -41,7 +41,7 @@ namespace NStore.Tests.Persistence
             Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(1, _profile.DeleteCounter.Calls);
 			Assert.Equal(0, _profile.StoreScanCounter.Calls);
-			Assert.Equal(0, _profile.PartitionScanCounter.Calls);
+			Assert.Equal(0, _profile.PartitionReadForwardCounter.Calls);
         }
 
 		[Fact]
@@ -51,7 +51,7 @@ namespace NStore.Tests.Persistence
             Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
 			Assert.Equal(1, _profile.StoreScanCounter.Calls);
-			Assert.Equal(0, _profile.PartitionScanCounter.Calls);
+			Assert.Equal(0, _profile.PartitionReadForwardCounter.Calls);
 		}
 
 		[Fact]
@@ -61,7 +61,7 @@ namespace NStore.Tests.Persistence
 		    Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
 			Assert.Equal(0, _profile.StoreScanCounter.Calls);
-			Assert.Equal(1, _profile.PartitionScanCounter.Calls);
+			Assert.Equal(1, _profile.PartitionReadForwardCounter.Calls);
 		}
     }
 }

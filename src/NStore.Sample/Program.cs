@@ -1,6 +1,5 @@
 ﻿using System;
 using Microsoft.Extensions.CommandLineUtils;
-using MongoDB.Bson.Serialization;
 using NStore.InMemory;
 using NStore.Persistence.Mongo;
 using NStore.Raw;
@@ -29,8 +28,11 @@ namespace NStore.Sample
                 Console.WriteLine(
                     "Press ENTER to start and wait projections, then press ENTER again to show data & stats.");
                 Console.ReadLine();
-                app.CreateRooms(32);
-                app.AddSomeBookings(200);
+                app.CreateRooms(8);
+                app.DumpMetrics();
+
+                app.AddSomeBookings(16);
+                app.DumpMetrics();
 
                 Console.ReadLine();
 

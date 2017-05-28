@@ -55,7 +55,7 @@ namespace NStore.Raw
         public override string ToString()
         {
             var sb = new StringBuilder();
-            sb.AppendFormat("{0} {1} calls", Name.PadRight(20), _calls);
+            sb.AppendFormat("{0} {1} calls", Name.PadRight(30), _calls);
 
             if (_exceptions > 0)
             {

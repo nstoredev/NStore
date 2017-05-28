@@ -34,7 +34,7 @@ namespace NStore.InMemory
         public InMemoryRawStore(INetworkSimulator networkSimulator, Func<object, object> cloneFunc)
         {
             _cloneFunc = cloneFunc ?? (o => o);
-            _networkSimulator = networkSimulator ?? new LocalhostSimulator();
+            _networkSimulator = networkSimulator ?? new NoNetworkLatencySimulator();
             _partitions.Add(_emptyPartition.Id, _emptyPartition);
         }
 

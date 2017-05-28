@@ -11,13 +11,15 @@ namespace NStore.Raw
         public TaskProfilingInfo PersistCounter { get; }
         public TaskProfilingInfo DeleteCounter { get; }
         public TaskProfilingInfo StoreScanCounter { get; }
-        public TaskProfilingInfo PartitionScanCounter { get; }
+        public TaskProfilingInfo PartitionReadForwardCounter { get; }
+        public TaskProfilingInfo PartitionReadBackwardCounter { get; }
 
         public ProfileDecorator(IRawStore store)
         {
             _store = store;
             PersistCounter = new TaskProfilingInfo("Persist");
-            PartitionScanCounter = new TaskProfilingInfo("Partition scan", "chunks read");
+            PartitionReadForwardCounter = new TaskProfilingInfo("Partition read forward", "chunks read");
+            PartitionReadBackwardCounter = new TaskProfilingInfo("Partition read backward", "chunks read");
             DeleteCounter = new TaskProfilingInfo("Delete");
             StoreScanCounter = new TaskProfilingInfo("Store Scan", "chunks read");
         }
@@ -28,11 +30,11 @@ namespace NStore.Raw
         {
             var counter = new LambdaPartitionConsumer((l, o) =>
             {
-                PartitionScanCounter.IncCounter1();
+                PartitionReadForwardCounter.IncCounter1();
                 return partitionConsumer.Consume(l, o);
             });
 
-            await PartitionScanCounter.CaptureAsync(() =>
+            await PartitionReadForwardCounter.CaptureAsync(() =>
                 _store.ReadPartitionForward(
                     partitionId,
                     fromLowerIndexInclusive,
@@ -49,11 +51,11 @@ namespace NStore.Raw
         {
             var counter = new LambdaPartitionConsumer((l, o) =>
             {
-                PartitionScanCounter.IncCounter1();
+                PartitionReadBackwardCounter.IncCounter1();
                 return partitionConsumer.Consume(l, o);
             });
 
-            await PartitionScanCounter.CaptureAsync(() =>
+            await PartitionReadBackwardCounter.CaptureAsync(() =>
                 _store.ReadPartitionBackward(
                     partitionId,
                     fromUpperIndexInclusive,

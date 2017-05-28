@@ -9,7 +9,7 @@ namespace NStore.Raw
         private CancellationTokenSource _source;
         private readonly IRawStore _store;
         private readonly IStoreConsumer _consumer;
-        public long Delay { get; set; }
+        public int Delay { get; set; }
         long _lastScan = 0;
 
         public long Position => _lastScan;
@@ -51,7 +51,7 @@ namespace NStore.Raw
                         wrapper,
                         cancellationToken: token
                     );
-                    await Task.Delay(200, token);
+                    await Task.Delay(Delay, token);
                 }
             }, token);
         }

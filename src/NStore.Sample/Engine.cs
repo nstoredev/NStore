@@ -41,9 +41,9 @@ namespace NStore.Sample
             _streams = new StreamStore(_storeProfile);
             _aggregateFactory = new DefaultAggregateFactory();
 
-            INetworkSimulator network = fast
-                ? new ReliableNetworkSimulator(1, 1)
-                : new ReliableNetworkSimulator(10, 50);
+            var network = fast
+                ? (INetworkSimulator) new NoNetworkLatencySimulator()
+                : (INetworkSimulator) new ReliableNetworkSimulator(10, 50);
 
             _appProjections = new AppProjections(network, quiet);
 
@@ -117,28 +117,6 @@ namespace NStore.Sample
         private void Subscribe()
         {
             _poller.Start();
-
-//            Task.Run(async () =>
-//            {
-//                long lastScan = 0;
-//                while (!token.IsCancellationRequested)
-//                {
-//                    long nextScan = _appProjections.Position + 1;
-//                    if (lastScan != nextScan)
-//                    {
-//                        _reporter.Report($"Scanning store from #{nextScan}");
-//                        lastScan = nextScan;
-//                    }
-//
-//                    await this._raw.ScanStoreAsync(
-//                        nextScan,
-//                        ScanDirection.Forward,
-//                        _appProjections,
-//                        cancellationToken: token
-//                    );
-//                    await Task.Delay(200, token);
-//                }
-//            }, token);
         }
 
         public void Dispose()
@@ -162,14 +140,14 @@ namespace NStore.Sample
             }
         }
 
-        public void AddSomeBookings(int bookings = 100)
+        public void AddSomeBookings(int bookings)
         {
             var rnd = new Random(DateTime.Now.Millisecond);
             long exceptions = 0;
             var sw = new Stopwatch();
 
             sw.Start();
-            var all = Enumerable.Range(1, bookings).Select(async i =>
+            Enumerable.Range(1, bookings).ForEachAsync(8,async i =>
             {
                 var id = GetRoomId(rnd.Next(_rooms) + 1);
                 var fromDate = DateTime.Today.AddDays(rnd.Next(10));
@@ -201,9 +179,7 @@ namespace NStore.Sample
                         return;
                     }
                 }
-            });
-
-            Task.WhenAll(all).GetAwaiter().GetResult();
+            }).GetAwaiter().GetResult();
             sw.Stop();
 
             this._reporter.Report(
@@ -215,17 +191,19 @@ namespace NStore.Sample
             this._reporter.Report(string.Empty);
             this._appProjections.DumpMetrics();
             this._reporter.Report(string.Empty);
-            this._reporter.Report($"Stats - {_name} provider");
+            this._reporter.Report($"Persistence - {_name} provider");
             this._reporter.Report($"  {_storeProfile.PersistCounter}");
-            this._reporter.Report($"  {_storeProfile.PartitionScanCounter}");
+            this._reporter.Report($"  {_storeProfile.PartitionReadForwardCounter}");
+            this._reporter.Report($"  {_storeProfile.PartitionReadBackwardCounter}");
             this._reporter.Report($"  {_storeProfile.DeleteCounter}");
             this._reporter.Report($"  {_storeProfile.StoreScanCounter}");
             if (_snapshotProfile != null)
             {
                 this._reporter.Report(string.Empty);
-                this._reporter.Report($"Stats - Cache");
+                this._reporter.Report($"Snapshots");
                 this._reporter.Report($"  {_snapshotProfile.PersistCounter}");
-                this._reporter.Report($"  {_snapshotProfile.PartitionScanCounter}");
+                this._reporter.Report($"  {_snapshotProfile.PartitionReadForwardCounter}");
+                this._reporter.Report($"  {_snapshotProfile.PartitionReadBackwardCounter}");
                 this._reporter.Report($"  {_snapshotProfile.DeleteCounter}");
                 this._reporter.Report($"  {_snapshotProfile.StoreScanCounter}");
             }
