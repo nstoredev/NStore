@@ -62,7 +62,7 @@ namespace NStore.Persistence.Mongo
             }
         }
 
-        public async Task Drop(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task Drop(CancellationToken cancellationToken)
         {
             await this._partitionsDb
                 .DropCollectionAsync(_options.PartitionsCollectionName, cancellationToken)
@@ -282,8 +282,6 @@ namespace NStore.Persistence.Mongo
                 }
                 catch (MongoWriteException ex)
                 {
-                    //Console.WriteLine($"Error {ex.Message} - {ex.GetType().FullName}");
-
                     if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
                     {
                         if (ex.Message.Contains(SequenceIdx))

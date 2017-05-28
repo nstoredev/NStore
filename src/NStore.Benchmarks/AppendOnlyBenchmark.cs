@@ -116,7 +116,7 @@ namespace NStore.Benchmarks
             _inmemoryStore = null;
 
             Task.WaitAll(
-                _mongoRawStores.Select(x => x.Drop()).ToArray()
+                _mongoRawStores.Select(x => x.Drop(CancellationToken.None)).ToArray()
             );
         }
 
