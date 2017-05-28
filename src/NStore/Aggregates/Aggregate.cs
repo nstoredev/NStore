@@ -115,7 +115,7 @@ namespace NStore.Aggregates
             this._dispatcher.Dispatch(@event);
         }
 
-        protected void Raise(object @event)
+        protected void Emit(object @event)
         {
             this.PendingChanges.Add(@event);
             this.Dispatch(@event);

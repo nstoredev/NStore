@@ -35,7 +35,7 @@ namespace NStore.Tests.AggregatesTests
                 throw new Exception($"Ticket already sold");
             }
 
-            Raise(new TicketSold());
+            Emit(new TicketSold());
         }
 
         public void Refund()
@@ -45,7 +45,7 @@ namespace NStore.Tests.AggregatesTests
                 throw new Exception($"Cannot refund an unsold ticket");
             }
 
-            Raise(new TicketRefunded());
+            Emit(new TicketRefunded());
         }
 
         public Changeset ExposePendingChanges()

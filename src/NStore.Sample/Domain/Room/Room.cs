@@ -18,18 +18,18 @@ namespace NStore.Sample.Domain.Room
         public void EnableBookings()
         {
             if(!this.State.BookingsEnabled)
-                Raise(new BookingsEnabled(this.Id));
+                Emit(new BookingsEnabled(this.Id));
         }
 
         public void AddBooking(DateRange dates)
         {
             if (State.IsAvailableOn(dates))
             {
-                Raise(new RoomBooked(this.Id, dates));
+                Emit(new RoomBooked(this.Id, dates));
             }
             else
             {
-                Raise(new RoomBookingFailed(this.Id, dates));
+                Emit(new RoomBookingFailed(this.Id, dates));
             }
         }
 
