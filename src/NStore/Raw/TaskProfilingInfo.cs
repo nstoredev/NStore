@@ -38,35 +38,40 @@ namespace NStore.Raw
             sw.Start();
             try
             {
-                await Task.Delay(100);
+                await task().ConfigureAwait(false);
             }
             catch (Exception)
             {
                 Interlocked.Increment(ref _exceptions);
+                throw;
             }
             finally
             {
                 sw.Stop();
                 Interlocked.Add(ref _ticks, sw.Elapsed.Ticks);
             }
-            await task().ConfigureAwait(false);
+        }
+
+        private string Format(long value)
+        {
+            return value.ToString().PadLeft(10);
         }
 
         public override string ToString()
         {
             var sb = new StringBuilder();
-            sb.AppendFormat("{0} {1} calls", Name.PadRight(30), _calls);
+            sb.AppendFormat("{0} {1} calls", Name.PadRight(30), Format(_calls));
 
-            if (_exceptions > 0)
-            {
-                sb.AppendFormat(" ({0} exceptions)", _exceptions);
-            }
-
-            sb.AppendFormat(" in {0}ms.", Elapsed.Milliseconds);
+            sb.AppendFormat(" took {0}ms.", Format(Elapsed.Milliseconds));
 
             if (_counter1 > 0)
             {
-                sb.AppendFormat(" {0} = {1}", Counter1Name, _counter1);
+                sb.AppendFormat(" {0} {1}", Format(_counter1), Counter1Name );
+            }
+
+            if (_exceptions > 0)
+            {
+                sb.AppendFormat(" {0} exceptions", Format(_exceptions));
             }
 
             return sb.ToString();
@@ -75,6 +80,27 @@ namespace NStore.Raw
         public void IncCounter1()
         {
             Interlocked.Increment(ref _counter1);
+        }
+
+        public T Capture<T>(Func<T> func)
+        {
+            Interlocked.Increment(ref _calls);
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            try
+            {
+                return func();
+            }
+            catch (Exception)
+            {
+                Interlocked.Increment(ref _exceptions);
+                throw;
+            }
+            finally
+            {
+                sw.Stop();
+                Interlocked.Add(ref _ticks, sw.Elapsed.Ticks);
+            }
         }
     }
 }

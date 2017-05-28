@@ -30,7 +30,7 @@ namespace NStore.Sample
         private readonly ISnapshotStore _snapshots;
         readonly bool _quiet;
         private readonly PollingClient _poller;
-
+        private TaskProfilingInfo _cloneProfiler;
         public SampleApp(IRawStore store, string name, bool useSnapshots, bool quiet, bool fast)
         {
             _quiet = quiet;
@@ -51,6 +51,7 @@ namespace NStore.Sample
 
             if (useSnapshots)
             {
+                _cloneProfiler = new TaskProfilingInfo("Cloning state");
                 var inMemoryRawStore = new InMemoryRawStore(cloneFunc: CloneSnapshot);
                 _snapshotProfile = new ProfileDecorator(inMemoryRawStore);
                 _snapshots = new DefaultSnapshotStore(_snapshotProfile);
@@ -64,7 +65,7 @@ namespace NStore.Sample
             if (arg == null)
                 return null;
 
-            return ObjectSerializer.Clone(arg);
+            return _cloneProfiler.Capture(() => ObjectSerializer.Clone(arg));
         }
 
         private IRepository GetRepository()
@@ -150,6 +151,7 @@ namespace NStore.Sample
             Enumerable.Range(1, bookings).ForEachAsync(8,async i =>
             {
                 var id = GetRoomId(rnd.Next(_rooms) + 1);
+
                 var fromDate = DateTime.Today.AddDays(rnd.Next(10));
                 var toDate = fromDate.AddDays(rnd.Next(5));
 
@@ -188,6 +190,7 @@ namespace NStore.Sample
 
         public void DumpMetrics()
         {
+            this._reporter.Report("* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *");
             this._reporter.Report(string.Empty);
             this._appProjections.DumpMetrics();
             this._reporter.Report(string.Empty);
@@ -197,16 +200,20 @@ namespace NStore.Sample
             this._reporter.Report($"  {_storeProfile.PartitionReadBackwardCounter}");
             this._reporter.Report($"  {_storeProfile.DeleteCounter}");
             this._reporter.Report($"  {_storeProfile.StoreScanCounter}");
+
             if (_snapshotProfile != null)
             {
                 this._reporter.Report(string.Empty);
                 this._reporter.Report($"Snapshots");
+                this._reporter.Report($"  {_cloneProfiler}");
                 this._reporter.Report($"  {_snapshotProfile.PersistCounter}");
                 this._reporter.Report($"  {_snapshotProfile.PartitionReadForwardCounter}");
                 this._reporter.Report($"  {_snapshotProfile.PartitionReadBackwardCounter}");
                 this._reporter.Report($"  {_snapshotProfile.DeleteCounter}");
                 this._reporter.Report($"  {_snapshotProfile.StoreScanCounter}");
             }
+            this._reporter.Report(string.Empty);
+            this._reporter.Report("* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *");
         }
     }
 }
