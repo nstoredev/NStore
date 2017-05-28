@@ -24,6 +24,31 @@ namespace NStore.Raw
             StoreScanCounter = new TaskProfilingInfo("Store Scan", "chunks read");
         }
 
+        public Task ReadPartitionForward(string partitionId, long fromLowerIndexInclusive, IPartitionConsumer partitionConsumer)
+        {
+            return ReadPartitionForward(
+                partitionId, 
+                fromLowerIndexInclusive, 
+                partitionConsumer, 
+                long.MaxValue,
+                int.MaxValue, 
+                CancellationToken.None
+            );
+        }
+
+        public Task ReadPartitionForward(string partitionId, long fromLowerIndexInclusive, IPartitionConsumer partitionConsumer,
+            long toUpperIndexInclusive)
+        {
+            return ReadPartitionForward(
+                partitionId, 
+                fromLowerIndexInclusive, 
+                partitionConsumer, 
+                toUpperIndexInclusive,
+                int.MaxValue, 
+                CancellationToken.None
+            );
+        }
+
         public async Task ReadPartitionForward(string partitionId, long fromLowerIndexInclusive,
             IPartitionConsumer partitionConsumer, long toUpperIndexInclusive = Int64.MaxValue, int limit = Int32.MaxValue,
             CancellationToken cancellationToken = new CancellationToken())

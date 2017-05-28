@@ -9,9 +9,22 @@ namespace NStore.Raw
         Task ReadPartitionForward(
             string partitionId,
             long fromLowerIndexInclusive,
+            IPartitionConsumer partitionConsumer
+        );
+        
+        Task ReadPartitionForward(
+            string partitionId,
+            long fromLowerIndexInclusive,
             IPartitionConsumer partitionConsumer,
-            long toUpperIndexInclusive = Int64.MaxValue,
-            int limit = Int32.MaxValue,
+            long toUpperIndexInclusive
+        );
+        
+        Task ReadPartitionForward(
+            string partitionId,
+            long fromLowerIndexInclusive,
+            IPartitionConsumer partitionConsumer,
+            long toUpperIndexInclusive,
+            int limit,
             CancellationToken cancellationToken = default(CancellationToken)
         );
 

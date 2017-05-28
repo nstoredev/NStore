@@ -1,4 +1,5 @@
-﻿using System.Runtime;
+﻿using System;
+using System.Runtime;
 using System.Threading;
 using System.Threading.Tasks;
 using NStore.Raw;
@@ -43,6 +44,7 @@ namespace NStore.Streams
                 fromIndexInclusive,
                 partitionConsumer,
                 toIndexInclusive,
+                limit:Int32.MaxValue,
                 cancellationToken: cancellationToken
             );
         }

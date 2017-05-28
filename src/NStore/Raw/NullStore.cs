@@ -16,8 +16,19 @@ namespace NStore.Raw
             return Task.CompletedTask;
         }
 
+        public Task ReadPartitionForward(string partitionId, long fromLowerIndexInclusive, IPartitionConsumer partitionConsumer)
+        {
+            return Task.CompletedTask;
+        }
+
         public Task ReadPartitionForward(string partitionId, long fromLowerIndexInclusive, IPartitionConsumer partitionConsumer,
-            long toUpperIndexInclusive = Int64.MaxValue, int limit = Int32.MaxValue,
+            long toUpperIndexInclusive)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task ReadPartitionForward(string partitionId, long fromLowerIndexInclusive, IPartitionConsumer partitionConsumer,
+            long toUpperIndexInclusive, int limit,
             CancellationToken cancellationToken = new CancellationToken())
         {
             return Task.CompletedTask;

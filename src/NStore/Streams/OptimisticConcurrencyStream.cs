@@ -19,17 +19,19 @@ namespace NStore.Streams
             this.Id = streamId;
             this.Raw = raw;
         }
+
         public Task Read(IPartitionConsumer partitionConsumer)
         {
             return Read(partitionConsumer, 0, int.MaxValue, default(CancellationToken));
         }
-        
+
         public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive)
         {
             return Read(partitionConsumer, fromIndexInclusive, int.MaxValue, default(CancellationToken));
         }
 
-        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, CancellationToken cancellationToken)
+        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive,
+            CancellationToken cancellationToken)
         {
             return Read(partitionConsumer, fromIndexInclusive, int.MaxValue, cancellationToken);
         }
@@ -39,7 +41,8 @@ namespace NStore.Streams
             return Read(partitionConsumer, fromIndexInclusive, toIndexInclusive, default(CancellationToken));
         }
 
-        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, int toIndexInclusive, CancellationToken cancellationToken)
+        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, int toIndexInclusive,
+            CancellationToken cancellationToken)
         {
             // @@REVIEW: micro optimization for reading only last index? (fromIndexInclusive == toIndexInclusive == Int32.MaxValue)
             var readConsumer = partitionConsumer;
@@ -58,6 +61,7 @@ namespace NStore.Streams
                 fromIndexInclusive,
                 readConsumer,
                 toIndexInclusive,
+                limit: Int32.MaxValue,
                 cancellationToken: cancellationToken
             );
         }
@@ -75,7 +79,7 @@ namespace NStore.Streams
         public Task Append(object payload, string operationId)
         {
             return Append(payload, operationId, default(CancellationToken));
-        }        
+        }
 
         public async Task Append(object payload, string operationId, CancellationToken cancellation)
         {
