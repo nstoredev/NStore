@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using Microsoft.Extensions.CommandLineUtils;
 using NStore.InMemory;
 using NStore.Persistence.Mongo;
@@ -93,7 +94,7 @@ namespace NStore.Sample
                         Serializer = new MongoCustomSerializer()
                     };
                     var mongo = new MongoRawStore(options);
-                    mongo.InitAsync().GetAwaiter().GetResult();
+                    mongo.InitAsync(CancellationToken.None).GetAwaiter().GetResult();
                     return mongo;
                 }
             }

@@ -17,7 +17,7 @@ namespace NStore.Persistence.Tests
         static BasePersistenceTest()
         {
             var baseConnectionString = Environment.GetEnvironmentVariable("TEST_MONGODB");
-            if (!String.IsNullOrEmpty(baseConnectionString))
+            if (!string.IsNullOrEmpty(baseConnectionString))
             {
                 var queryString = Environment.GetEnvironmentVariable("TEST_MONGODB_QUERYSTRING");
                 Mongo = $"{baseConnectionString.TrimEnd('/')}/nstore{queryString}";
@@ -44,7 +44,7 @@ namespace NStore.Persistence.Tests
 
             //           Console.WriteLine($"Setup {_id} {GetType().Name}");
 
-            _mongoRawStore.InitAsync().Wait();
+            _mongoRawStore.InitAsync(CancellationToken.None).Wait();
 
             return _mongoRawStore;
         }

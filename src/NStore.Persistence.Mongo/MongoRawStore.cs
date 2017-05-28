@@ -90,7 +90,18 @@ namespace NStore.Persistence.Mongo
 
             var sort = Builders<Chunk>.Sort.Ascending(x => x.Index);
 
-            var options = new FindOptions<Chunk>() {Sort = sort};
+            await ReadAndPushToConsumer(partitionId, partitionConsumer, limit, sort, filter, cancellationToken);
+        }
+
+        private async Task ReadAndPushToConsumer(
+            string partitionId, 
+            IPartitionConsumer partitionConsumer, 
+            int limit, 
+            SortDefinition<Chunk> sort, 
+            FilterDefinition<Chunk> filter, 
+            CancellationToken cancellationToken)
+        {
+            var options = new FindOptions<Chunk>() { Sort = sort };
             if (limit != int.MaxValue)
             {
                 options.Limit = limit;
@@ -130,27 +141,7 @@ namespace NStore.Persistence.Mongo
 
             var sort = Builders<Chunk>.Sort.Descending(x => x.Index);
 
-            var options = new FindOptions<Chunk>() {Sort = sort};
-            if (limit != int.MaxValue)
-            {
-                options.Limit = limit;
-            }
-
-            using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
-            {
-                while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    var batch = cursor.Current;
-                    foreach (var b in batch)
-                    {
-                        if (ScanAction.Stop ==
-                            partitionConsumer.Consume(b.Index, _serializer.Deserialize(partitionId, b.Payload)))
-                        {
-                            return;
-                        }
-                    }
-                }
-            }
+            await ReadAndPushToConsumer(partitionId, partitionConsumer, limit, sort, filter, cancellationToken);
         }
 
         public async Task ScanStoreAsync(
@@ -175,7 +166,7 @@ namespace NStore.Persistence.Mongo
                 filter = Builders<Chunk>.Filter.Lte(x => x.Id, fromSequenceIdInclusive);
             }
 
-            var options = new FindOptions<Chunk>() {Sort = sort};
+            var options = new FindOptions<Chunk>() { Sort = sort };
 
             if (limit != int.MaxValue)
             {
@@ -322,7 +313,7 @@ namespace NStore.Persistence.Mongo
             }
         }
 
-        public async Task InitAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task InitAsync(CancellationToken cancellationToken)
         {
             if (_partitionsDb == null)
                 Connect();
@@ -398,21 +389,6 @@ namespace NStore.Persistence.Mongo
                 .ConfigureAwait(false);
 
             return updateResult.LastValue;
-        }
-
-        public async Task DestroyStoreAsync(CancellationToken cancellationToken = default(CancellationToken))
-        {
-            if (this._partitionsDb != null)
-            {
-                await this._partitionsDb.Client
-                    .DropDatabaseAsync(this._partitionsDb.DatabaseNamespace.DatabaseName, cancellationToken)
-                    .ConfigureAwait(false);
-            }
-
-            _sequence = 0;
-            _partitionsDb = null;
-            _counters = null;
-            _chunks = null;
         }
     }
 }

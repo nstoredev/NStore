@@ -57,7 +57,7 @@ namespace NStore.Benchmarks
             var options = BuildMongoConnectionOptions();
 
             _mongoStore = new MongoRawStore(options);
-            _mongoStore.InitAsync().Wait();
+            _mongoStore.InitAsync(CancellationToken.None).Wait();
 
             async_worker(_mongoStore);
         }
@@ -67,7 +67,7 @@ namespace NStore.Benchmarks
         {
             var options = BuildMongoConnectionOptions();
             _mongoStore = new MongoRawStore(options);
-            _mongoStore.InitAsync().Wait();
+            _mongoStore.InitAsync(CancellationToken.None).Wait();
 
             paralell_worker(_mongoStore);
         }
@@ -77,7 +77,7 @@ namespace NStore.Benchmarks
         {
             var options = BuildMongoConnectionOptions();
             _mongoStore = new MongoRawStore(options);
-            _mongoStore.InitAsync().Wait();
+            _mongoStore.InitAsync(CancellationToken.None).Wait();
 
             task_worker(_mongoStore);
         }
