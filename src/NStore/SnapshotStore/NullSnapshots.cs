@@ -6,24 +6,30 @@ namespace NStore.SnapshotStore
 {
     public class NullSnapshots : ISnapshotStore
     {
-        public Task<SnapshotInfo> Get(string aggregateId, int version, CancellationToken cancellationToken = default(CancellationToken))
+        public Task<SnapshotInfo> Get(
+            string aggregateId, 
+            int version, 
+            CancellationToken cancellationToken)
         {
             return Task.FromResult((SnapshotInfo)null);
         }
 
-        public Task Add(string aggregateId, SnapshotInfo snapshot, CancellationToken cancellationToken = default(CancellationToken))
+        public Task Add(
+            string aggregateId, 
+            SnapshotInfo snapshot, 
+            CancellationToken cancellationToken)
         {
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
 
         public Task Remove(
             string aggregateId, 
-            int fromVersionInclusive = 0, 
-            int toVersionInclusive = Int32.MaxValue,
-            CancellationToken cancellationToken = default(CancellationToken)
+            int fromVersionInclusive, 
+            int toVersionInclusive,
+            CancellationToken cancellationToken 
         )
         {
-            return Task.FromResult(0);
+            return Task.CompletedTask;
         }
     }
 }

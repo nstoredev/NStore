@@ -16,7 +16,10 @@ namespace NStore.SnapshotStore
             _store = store;
         }
 
-        public async Task<SnapshotInfo> Get(string aggregateId, int version, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<SnapshotInfo> Get(
+            string aggregateId,
+            int version,
+            CancellationToken cancellationToken)
         {
             SnapshotInfo snapshotInfo = null;
 
@@ -36,7 +39,10 @@ namespace NStore.SnapshotStore
             return snapshotInfo;
         }
 
-        public async Task Add(string aggregateId, SnapshotInfo snapshot, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task Add(
+            string aggregateId,
+            SnapshotInfo snapshot,
+            CancellationToken cancellationToken)
         {
             if (snapshot == null || snapshot.IsEmpty)
                 return;
@@ -52,10 +58,10 @@ namespace NStore.SnapshotStore
         }
 
         public Task Remove(
-            string aggregateId, 
-            int fromVersionInclusive = 0, 
-            int toVersionInclusive = Int32.MaxValue,
-            CancellationToken cancellationToken = new CancellationToken())
+            string aggregateId,
+            int fromVersionInclusive,
+            int toVersionInclusive,
+            CancellationToken cancellationToken)
         {
             return _store.DeleteAsync(aggregateId, fromVersionInclusive, toVersionInclusive, cancellationToken);
         }
