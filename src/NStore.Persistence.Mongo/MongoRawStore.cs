@@ -77,9 +77,9 @@ namespace NStore.Persistence.Mongo
             string partitionId,
             long fromLowerIndexInclusive,
             IPartitionConsumer partitionConsumer,
-            long toUpperIndexInclusive = Int64.MaxValue,
-            int limit = Int32.MaxValue,
-            CancellationToken cancellationToken = default(CancellationToken)
+            long toUpperIndexInclusive,
+            int limit,
+            CancellationToken cancellationToken
         )
         {
             var filter = Builders<Chunk>.Filter.And(
@@ -90,7 +90,7 @@ namespace NStore.Persistence.Mongo
 
             var sort = Builders<Chunk>.Sort.Ascending(x => x.Index);
 
-            var options = new FindOptions<Chunk>() { Sort = sort };
+            var options = new FindOptions<Chunk>() {Sort = sort};
             if (limit != int.MaxValue)
             {
                 options.Limit = limit;
@@ -117,9 +117,9 @@ namespace NStore.Persistence.Mongo
             string partitionId,
             long fromUpperIndexInclusive,
             IPartitionConsumer partitionConsumer,
-            long toLowerIndexInclusive = Int64.MaxValue,
-            int limit = Int32.MaxValue,
-            CancellationToken cancellationToken = default(CancellationToken)
+            long toLowerIndexInclusive,
+            int limit,
+            CancellationToken cancellationToken
         )
         {
             var filter = Builders<Chunk>.Filter.And(
@@ -130,7 +130,7 @@ namespace NStore.Persistence.Mongo
 
             var sort = Builders<Chunk>.Sort.Descending(x => x.Index);
 
-            var options = new FindOptions<Chunk>() { Sort = sort };
+            var options = new FindOptions<Chunk>() {Sort = sort};
             if (limit != int.MaxValue)
             {
                 options.Limit = limit;
@@ -157,8 +157,8 @@ namespace NStore.Persistence.Mongo
             long sequenceStart,
             ScanDirection direction,
             IStoreConsumer consumer,
-            int limit = Int32.MaxValue,
-            CancellationToken cancellationToken = default(CancellationToken)
+            int limit,
+            CancellationToken cancellationToken
         )
         {
             SortDefinition<Chunk> sort;
@@ -175,7 +175,7 @@ namespace NStore.Persistence.Mongo
                 filter = Builders<Chunk>.Filter.Lte(x => x.Id, sequenceStart);
             }
 
-            var options = new FindOptions<Chunk>() { Sort = sort };
+            var options = new FindOptions<Chunk>() {Sort = sort};
 
             if (limit != int.MaxValue)
             {
@@ -190,7 +190,8 @@ namespace NStore.Persistence.Mongo
                     foreach (var chunk in batch)
                     {
                         if (ScanAction.Stop ==
-                            await consumer.Consume(chunk.Id, chunk.PartitionId, chunk.Index, _serializer.Deserialize(chunk.PartitionId, chunk.Payload)))
+                            await consumer.Consume(chunk.Id, chunk.PartitionId, chunk.Index,
+                                _serializer.Deserialize(chunk.PartitionId, chunk.Payload)))
                         {
                             return;
                         }
@@ -204,7 +205,7 @@ namespace NStore.Persistence.Mongo
             long index,
             object payload,
             string operationId,
-            CancellationToken cancellationToken = default(CancellationToken)
+            CancellationToken cancellationToken
         )
         {
             long id = await GetNextId(cancellationToken).ConfigureAwait(false);
@@ -222,9 +223,9 @@ namespace NStore.Persistence.Mongo
 
         public async Task DeleteAsync(
             string partitionId,
-            long fromIndex = 0,
-            long toIndex = long.MaxValue,
-            CancellationToken cancellationToken = default(CancellationToken)
+            long fromIndex,
+            long toIndex,
+            CancellationToken cancellationToken
         )
         {
             var filterById = Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId);
@@ -249,7 +250,10 @@ namespace NStore.Persistence.Mongo
                 throw new StreamDeleteException(partitionId);
         }
 
-        private async Task PersistAsEmptyAsync(Chunk chunk, CancellationToken cancellationToken = default(CancellationToken))
+        private async Task PersistAsEmptyAsync(
+            Chunk chunk,
+            CancellationToken cancellationToken = default(CancellationToken)
+        )
         {
             Chunk empty;
             //@@REVIEW partial index on mongo?
@@ -318,8 +322,7 @@ namespace NStore.Persistence.Mongo
             }
         }
 
-        public async Task InitAsync(CancellationToken cancellationToken = default(CancellationToken)
-        )
+        public async Task InitAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             if (_partitionsDb == null)
                 Connect();
@@ -397,7 +400,6 @@ namespace NStore.Persistence.Mongo
             return updateResult.LastValue;
         }
 
-        //@@TODO remove
         public async Task DestroyStoreAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             if (this._partitionsDb != null)

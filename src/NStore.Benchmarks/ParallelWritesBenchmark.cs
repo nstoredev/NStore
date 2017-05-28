@@ -20,7 +20,7 @@ namespace NStore.Benchmarks
         [Benchmark]
         public void for_each_async()
         {
-            var store = new InMemoryRawStore(new ReliableNetworkSimulator(1, 1));
+            var store = (IRawStore) new InMemoryRawStore(new ReliableNetworkSimulator(1, 1));
             _iterations.ForEachAsync(Workers, i =>
                 store.PersistAsync("Stream_1", i, new {data = "this is a test"})
             ).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -30,7 +30,7 @@ namespace NStore.Benchmarks
         [Benchmark]
         public void task_when_all()
         {
-            var store = new InMemoryRawStore(new ReliableNetworkSimulator(1, 1));
+            var store = (IRawStore) new InMemoryRawStore(new ReliableNetworkSimulator(1, 1));
             var all = _iterations.Select(i =>
                 store.PersistAsync("Stream_1", i, new {data = "this is a test"}));
             Task.WhenAll(all).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -39,7 +39,7 @@ namespace NStore.Benchmarks
         [Benchmark]
         public void task_wait_all()
         {
-            var store = new InMemoryRawStore(new ReliableNetworkSimulator(1, 1));
+            var store = (IRawStore) new InMemoryRawStore(new ReliableNetworkSimulator(1, 1));
             var all = _iterations.Select(i =>
                 store.PersistAsync("Stream_1", i, new {data = "this is a test"}));
             Task.WaitAll(all.ToArray());

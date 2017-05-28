@@ -42,9 +42,9 @@ namespace NStore.InMemory
             string partitionId,
             long fromLowerIndexInclusive,
             IPartitionConsumer partitionConsumer,
-            long toUpperIndexInclusive = Int64.MaxValue,
-            int limit = Int32.MaxValue,
-            CancellationToken cancellationToken = default(CancellationToken)
+            long toUpperIndexInclusive ,
+            int limit,
+            CancellationToken cancellationToken
         )
         {
             Chunk[] result;
@@ -79,9 +79,9 @@ namespace NStore.InMemory
             string partitionId,
             long fromUpperIndexInclusive,
             IPartitionConsumer partitionConsumer,
-            long toLowerIndexInclusive = Int64.MaxValue,
-            int limit = Int32.MaxValue,
-            CancellationToken cancellationToken = default(CancellationToken)
+            long toLowerIndexInclusive,
+            int limit,
+            CancellationToken cancellationToken
         )
         {
             Chunk[] result;
@@ -115,8 +115,8 @@ namespace NStore.InMemory
             long sequenceStart,
             ScanDirection direction,
             IStoreConsumer consumer,
-            int limit = int.MaxValue,
-            CancellationToken cancellationToken = default(CancellationToken)
+            int limit ,
+            CancellationToken cancellationToken 
         )
         {
             Chunk[] list;
@@ -156,8 +156,8 @@ namespace NStore.InMemory
             string partitionId,
             long index,
             object payload,
-            string operationId = null,
-            CancellationToken cancellationToken = default(CancellationToken)
+            string operationId,
+            CancellationToken cancellationToken
         )
         {
             var id = Interlocked.Increment(ref _sequence);
@@ -204,9 +204,9 @@ namespace NStore.InMemory
 
         public async Task DeleteAsync(
             string partitionId,
-            long fromIndex = 0,
-            long toIndex = long.MaxValue,
-            CancellationToken cancellationToken = default(CancellationToken)
+            long fromIndex ,
+            long toIndex ,
+            CancellationToken cancellationToken
         )
         {
             await _networkSimulator.Wait().ConfigureAwait(false);
