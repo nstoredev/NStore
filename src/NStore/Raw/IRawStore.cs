@@ -9,32 +9,19 @@ namespace NStore.Raw
         Task ReadPartitionForward(
             string partitionId,
             long fromLowerIndexInclusive,
-            IPartitionConsumer partitionConsumer
-        );
-        
-        Task ReadPartitionForward(
-            string partitionId,
-            long fromLowerIndexInclusive,
-            IPartitionConsumer partitionConsumer,
-            long toUpperIndexInclusive
-        );
-        
-        Task ReadPartitionForward(
-            string partitionId,
-            long fromLowerIndexInclusive,
             IPartitionConsumer partitionConsumer,
             long toUpperIndexInclusive,
             int limit,
-            CancellationToken cancellationToken = default(CancellationToken)
+            CancellationToken cancellationToken
         );
 
         Task ReadPartitionBackward(
             string partitionId,
             long fromUpperIndexInclusive,
             IPartitionConsumer partitionConsumer,
-            long toLowerIndexInclusive = 0,
-            int limit = Int32.MaxValue,
-            CancellationToken cancellationToken = default(CancellationToken)
+            long toLowerIndexInclusive,
+            int limit,
+            CancellationToken cancellationToken
         );
 
         /// <summary>
@@ -79,12 +66,87 @@ namespace NStore.Raw
         /// <param name="toIndex">to Index</param>
         /// <param name="cancellationToken"></param>
         /// <returns>Task</returns>
-        /// @@TODO delete invalid stream should throw or not?
+        /// @@REVIEW delete invalid stream should throw or not?
         Task DeleteAsync(
             string partitionId,
             long fromIndex = 0,
             long toIndex = long.MaxValue,
             CancellationToken cancellationToken = default(CancellationToken)
         );
+    }
+
+
+    public static class RawStoreExtensions
+    {
+        public static Task ReadPartitionForward(
+            this IRawStore store,
+            string partitionId,
+            long fromLowerIndexInclusive,
+            IPartitionConsumer partitionConsumer
+        )
+        {
+            return store.ReadPartitionForward(
+                partitionId,
+                fromLowerIndexInclusive,
+                partitionConsumer,
+                long.MaxValue,
+                int.MaxValue,
+                CancellationToken.None
+            );
+        }
+
+        public static Task ReadPartitionForward(
+            this IRawStore store,
+            string partitionId,
+            long fromLowerIndexInclusive,
+            IPartitionConsumer partitionConsumer,
+            long toUpperIndexInclusive
+        )
+        {
+            return store.ReadPartitionForward(
+                partitionId,
+                fromLowerIndexInclusive,
+                partitionConsumer,
+                toUpperIndexInclusive,
+                int.MaxValue,
+                CancellationToken.None
+            );
+        }
+
+
+        public static Task ReadPartitionBackward(
+            this IRawStore store,
+            string partitionId,
+            long fromUpperIndexInclusive,
+            IPartitionConsumer partitionConsumer
+        )
+        {
+            return store.ReadPartitionBackward(
+                partitionId,
+                fromUpperIndexInclusive,
+                partitionConsumer,
+                0,
+                int.MaxValue,
+                CancellationToken.None
+            );
+        }
+
+        public static Task ReadPartitionBackward(
+            this IRawStore store,
+            string partitionId,
+            long fromUpperIndexInclusive,
+            IPartitionConsumer partitionConsumer,
+            long toLowerIndexInclusive
+        )
+        {
+            return store.ReadPartitionBackward(
+                partitionId,
+                fromUpperIndexInclusive,
+                partitionConsumer,
+                toLowerIndexInclusive,
+                int.MaxValue,
+                CancellationToken.None
+            );
+        }
     }
 }

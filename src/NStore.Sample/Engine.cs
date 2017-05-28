@@ -30,7 +30,7 @@ namespace NStore.Sample
         private readonly ISnapshotStore _snapshots;
         readonly bool _quiet;
         private readonly PollingClient _poller;
-        private TaskProfilingInfo _cloneProfiler;
+        private readonly TaskProfilingInfo _cloneProfiler;
         public SampleApp(IRawStore store, string name, bool useSnapshots, bool quiet, bool fast)
         {
             _quiet = quiet;

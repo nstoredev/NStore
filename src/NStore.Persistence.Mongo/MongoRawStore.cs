@@ -73,31 +73,6 @@ namespace NStore.Persistence.Mongo
                 .ConfigureAwait(false);
         }
 
-        public Task ReadPartitionForward(string partitionId, long fromLowerIndexInclusive, IPartitionConsumer partitionConsumer)
-        {
-            return ReadPartitionForward(
-                partitionId, 
-                fromLowerIndexInclusive, 
-                partitionConsumer, 
-                long.MaxValue,
-                int.MaxValue, 
-                CancellationToken.None
-            );
-        }
-
-        public Task ReadPartitionForward(string partitionId, long fromLowerIndexInclusive, IPartitionConsumer partitionConsumer,
-            long toUpperIndexInclusive)
-        {
-            return ReadPartitionForward(
-                partitionId, 
-                fromLowerIndexInclusive, 
-                partitionConsumer, 
-                toUpperIndexInclusive,
-                int.MaxValue, 
-                CancellationToken.None
-            );
-        }
-
         public async Task ReadPartitionForward(
             string partitionId,
             long fromLowerIndexInclusive,
