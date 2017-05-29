@@ -7,7 +7,7 @@ using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using NStore.Aggregates;
 using NStore.InMemory;
-using NStore.Raw;
+using NStore.Persistence;
 using NStore.Sample.Support;
 
 namespace NStore.Sample.Projections

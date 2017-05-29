@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using NStore.Raw;
+using NStore.Persistence;
 using Xunit;
 
 // ReSharper disable InconsistentNaming
@@ -14,7 +14,7 @@ namespace NStore.Persistence.Tests
 {
     public abstract partial class BasePersistenceTest : IDisposable
     {
-        public IRawStore Store { get; }
+        public IPersistence Store { get; }
 
         protected BasePersistenceTest()
         {

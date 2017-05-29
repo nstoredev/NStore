@@ -1,59 +1,12 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 
-namespace NStore.Raw
+namespace NStore.Persistence
 {
-    public interface IRawStore
-    {
-        Task ReadPartitionForward(
-            string partitionId,
-            long fromLowerIndexInclusive,
-            IPartitionConsumer partitionConsumer,
-            long toUpperIndexInclusive,
-            int limit,
-            CancellationToken cancellationToken
-        );
-
-        Task ReadPartitionBackward(
-            string partitionId,
-            long fromUpperIndexInclusive,
-            IPartitionConsumer partitionConsumer,
-            long toLowerIndexInclusive,
-            int limit,
-            CancellationToken cancellationToken
-        );
-
-        Task ScanStoreAsync(
-            long fromSequenceIdInclusive,
-            ScanDirection direction,
-            IStoreConsumer consumer,
-            int limit,
-            CancellationToken cancellationToken
-        );
-
-        Task PersistAsync(
-            string partitionId,
-            long index,
-            object payload,
-            string operationId,
-            CancellationToken cancellationToken
-        );
-
-        /// @@REVIEW delete invalid stream should throw or not?
-        Task DeleteAsync(
-            string partitionId,
-            long fromLowerIndexInclusive ,
-            long toUpperIndexInclusive ,
-            CancellationToken cancellationToken 
-        );
-    }
-
-
     public static class RawStoreExtensions
     {
         public static Task ReadPartitionForward(
-            this IRawStore store,
+            this IPersistence store,
             string partitionId,
             long fromLowerIndexInclusive,
             IPartitionConsumer partitionConsumer
@@ -70,7 +23,7 @@ namespace NStore.Raw
         }
 
         public static Task ReadPartitionForward(
-            this IRawStore store,
+            this IPersistence store,
             string partitionId,
             long fromLowerIndexInclusive,
             IPartitionConsumer partitionConsumer,
@@ -89,7 +42,7 @@ namespace NStore.Raw
 
 
         public static Task ReadPartitionBackward(
-            this IRawStore store,
+            this IPersistence store,
             string partitionId,
             long fromUpperIndexInclusive,
             IPartitionConsumer partitionConsumer
@@ -106,7 +59,7 @@ namespace NStore.Raw
         }
 
         public static Task ReadPartitionBackward(
-            this IRawStore store,
+            this IPersistence store,
             string partitionId,
             long fromUpperIndexInclusive,
             IPartitionConsumer partitionConsumer,
@@ -124,7 +77,7 @@ namespace NStore.Raw
         }
 
         public static Task ScanStoreAsync(
-            this IRawStore store,
+            this IPersistence store,
             long sequenceStart,
             ScanDirection direction,
             IStoreConsumer consumer
@@ -134,7 +87,7 @@ namespace NStore.Raw
         }
 
         public static Task ScanStoreAsync(
-            this IRawStore store,
+            this IPersistence store,
             long sequenceStart,
             ScanDirection direction,
             IStoreConsumer consumer,
@@ -145,7 +98,7 @@ namespace NStore.Raw
         }
 
         public static Task PersistAsync(
-            this IRawStore store,
+            this IPersistence store,
             string partitionId,
             long index,
             object payload
@@ -155,7 +108,7 @@ namespace NStore.Raw
         }
 
         public static Task PersistAsync(
-            this IRawStore store,
+            this IPersistence store,
             string partitionId,
             long index,
             object payload,
@@ -166,7 +119,7 @@ namespace NStore.Raw
         }
 
         public static Task DeleteAsync(
-            this IRawStore store,
+            this IPersistence store,
             string partitionId
         )
         {
@@ -174,7 +127,7 @@ namespace NStore.Raw
         }
 
         public static Task DeleteAsync(
-            this IRawStore store,
+            this IPersistence store,
             string partitionId,
             long fromLowerIndexInclusive
         )
@@ -183,7 +136,7 @@ namespace NStore.Raw
         }
 
         public static Task DeleteAsync(
-            this IRawStore store,
+            this IPersistence store,
             string partitionId,
             long fromLowerIndexInclusive,
             long toUpperIndexInclusive

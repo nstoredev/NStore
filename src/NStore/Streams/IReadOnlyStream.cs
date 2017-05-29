@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using NStore.Raw;
+using NStore.Persistence;
 
 namespace NStore.Streams
 {

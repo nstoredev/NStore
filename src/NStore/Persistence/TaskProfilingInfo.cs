@@ -4,7 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace NStore.Raw
+namespace NStore.Persistence
 {
     public class TaskProfilingInfo
     {

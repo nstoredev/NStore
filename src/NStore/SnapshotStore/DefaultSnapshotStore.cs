@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using NStore.Raw;
+using NStore.Persistence;
 
 namespace NStore.SnapshotStore
 {
     public class DefaultSnapshotStore : ISnapshotStore
     {
-        private readonly IRawStore _store;
+        private readonly IPersistence _store;
 
-        public DefaultSnapshotStore(IRawStore store)
+        public DefaultSnapshotStore(IPersistence store)
         {
             _store = store;
         }

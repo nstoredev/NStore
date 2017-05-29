@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NStore.Raw
+namespace NStore.Persistence
 {
     public class DuplicateStreamIndexException : Exception
     {

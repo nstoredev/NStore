@@ -1,13 +1,13 @@
 ﻿using System;
-using NStore.Raw;
+using NStore.Persistence;
 
 namespace NStore.Streams
 {
     public class StreamStore : IStreamStore
     {
-        private readonly IRawStore _raw;
+        private readonly IPersistence _raw;
 
-        public StreamStore(IRawStore raw)
+        public StreamStore(IPersistence raw)
         {
             if (raw == null) throw new ArgumentNullException(nameof(raw));
             _raw = raw;

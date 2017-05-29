@@ -1,14 +1,14 @@
 ﻿using NStore.InMemory;
-using NStore.Raw;
+using NStore.Persistence;
 using NStore.SnapshotStore;
 
 namespace NStore.Persistence.Tests
 {
     public partial class BasePersistenceTest
     {
-        public IRawStore Create()
+        public IPersistence Create()
         {
-            var store = new InMemoryRawStore(cloneFunc:Clone);
+            var store = new InMemoryPersistence(cloneFunc:Clone);
             return store;
         }
 

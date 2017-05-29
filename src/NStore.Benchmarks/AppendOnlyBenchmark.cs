@@ -7,7 +7,7 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Attributes.Jobs;
 using NStore.InMemory;
 using NStore.Persistence.Mongo;
-using NStore.Raw;
+using NStore.Persistence;
 
 namespace NStore.Benchmarks
 {
@@ -15,13 +15,13 @@ namespace NStore.Benchmarks
     [Config("columns=Mean,StdError,StdDev,OperationPerSecond,Min,Max")]
     public class AppendOnlyBenchmark
     {
-        private MongoRawStore _mongoStore;
-        private InMemoryRawStore _inmemoryStore;
+        private MongoPersistence _mongoStore;
+        private InMemoryPersistence _inmemoryStore;
         private IEnumerable<int> _iterations;
         private const string Mongo = "mongodb://localhost/nstore";
         private static int Id = 0;
 
-        private IList<MongoRawStore> _mongoRawStores;
+        private IList<MongoPersistence> _mongoRawStores;
 
         [Params(10000)]
         public int Writes { get; set; }
@@ -33,21 +33,21 @@ namespace NStore.Benchmarks
         [Benchmark]
         public void load_memory_parallel()
         {
-            _inmemoryStore = new InMemoryRawStore();
+            _inmemoryStore = new InMemoryPersistence();
             paralell_worker(_inmemoryStore);
         }
 
         [Benchmark]
         public void load_memory_async()
         {
-            _inmemoryStore = new InMemoryRawStore();
+            _inmemoryStore = new InMemoryPersistence();
             async_worker(_inmemoryStore);
         }
 
         [Benchmark]
         public void load_memory_task()
         {
-            _inmemoryStore = new InMemoryRawStore();
+            _inmemoryStore = new InMemoryPersistence();
             task_worker(_inmemoryStore);
         }
 
@@ -56,7 +56,7 @@ namespace NStore.Benchmarks
         {
             var options = BuildMongoConnectionOptions();
 
-            _mongoStore = new MongoRawStore(options);
+            _mongoStore = new MongoPersistence(options);
             _mongoStore.InitAsync(CancellationToken.None).Wait();
 
             async_worker(_mongoStore);
@@ -66,7 +66,7 @@ namespace NStore.Benchmarks
         public void load_mongo_parallel()
         {
             var options = BuildMongoConnectionOptions();
-            _mongoStore = new MongoRawStore(options);
+            _mongoStore = new MongoPersistence(options);
             _mongoStore.InitAsync(CancellationToken.None).Wait();
 
             paralell_worker(_mongoStore);
@@ -76,7 +76,7 @@ namespace NStore.Benchmarks
         public void load_mongo_task()
         {
             var options = BuildMongoConnectionOptions();
-            _mongoStore = new MongoRawStore(options);
+            _mongoStore = new MongoPersistence(options);
             _mongoStore.InitAsync(CancellationToken.None).Wait();
 
             task_worker(_mongoStore);
@@ -107,7 +107,7 @@ namespace NStore.Benchmarks
         public void Setup()
         {
             _iterations = Enumerable.Range(0, Writes);
-            _mongoRawStores = new List<MongoRawStore>();
+            _mongoRawStores = new List<MongoPersistence>();
         }
 
         [Cleanup]
@@ -120,14 +120,14 @@ namespace NStore.Benchmarks
             );
         }
 
-        private void paralell_worker(IRawStore store)
+        private void paralell_worker(IPersistence store)
         {
             _iterations.ForEachAsync(Workers, i =>
                 store.PersistAsync("Stream_1", i, new { data = "this is a test" })
             ).ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
-        private void async_worker(IRawStore store)
+        private void async_worker(IPersistence store)
         {
             var all = _iterations.Select(i =>
                 store.PersistAsync("Stream_1", i, new { data = "this is a test" })
@@ -136,7 +136,7 @@ namespace NStore.Benchmarks
             Task.WhenAll(all).GetAwaiter().GetResult();
         }
 
-        private void task_worker(IRawStore store)
+        private void task_worker(IPersistence store)
         {
             var all = _iterations.Select(i => Task.Run(async () =>
                 await store.PersistAsync("Stream_1", i, new { data = "this is a test" })

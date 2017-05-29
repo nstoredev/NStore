@@ -2,19 +2,19 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace NStore.Raw
+namespace NStore.Persistence
 {
     public class PollingClient
     {
         private CancellationTokenSource _source;
-        private readonly IRawStore _store;
+        private readonly IPersistence _store;
         private readonly IStoreConsumer _consumer;
         public int Delay { get; set; }
         long _lastScan = 0;
 
         public long Position => _lastScan;
 
-        public PollingClient(IRawStore store, IStoreConsumer consumer)
+        public PollingClient(IPersistence store, IStoreConsumer consumer)
         {
             _consumer = consumer;
             _store = store;

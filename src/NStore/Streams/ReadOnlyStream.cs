@@ -1,6 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using NStore.Raw;
+using NStore.Persistence;
 
 namespace NStore.Streams
 {
@@ -8,7 +8,7 @@ namespace NStore.Streams
     {
         public override bool IsWritable => false;
 
-        public ReadOnlyStream(string streamId, IRawStore raw) : base(streamId, raw)
+        public ReadOnlyStream(string streamId, IPersistence raw) : base(streamId, raw)
         {
         }
 

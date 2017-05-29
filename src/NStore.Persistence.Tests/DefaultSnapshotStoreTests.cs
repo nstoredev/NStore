@@ -1,5 +1,5 @@
 ﻿using System;
-using NStore.Raw;
+using NStore.Persistence;
 using NStore.SnapshotStore;
 using Xunit;
 

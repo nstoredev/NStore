@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Threading;
 using NStore.Persistence.Mongo;
-using NStore.Raw;
+using NStore.Persistence;
 
 // ReSharper disable CheckNamespace
 namespace NStore.Persistence.Tests
 {
     public partial class BasePersistenceTest
     {
-        private MongoRawStore _mongoRawStore;
+        private MongoPersistence _mongoPersistence;
         private MongoStoreOptions _options;
         private static string Mongo;
         private static int _staticId = 1;
@@ -28,7 +28,7 @@ namespace NStore.Persistence.Tests
             }
         }
 
-        private IRawStore Create()
+        private IPersistence Create()
         {
             _id = Interlocked.Increment(ref _staticId);
 
@@ -40,13 +40,13 @@ namespace NStore.Persistence.Tests
                 SequenceCollectionName = "seq_" + _id,
                 DropOnInit = true
             };
-            _mongoRawStore = new MongoRawStore(_options);
+            _mongoPersistence = new MongoPersistence(_options);
 
             //           Console.WriteLine($"Setup {_id} {GetType().Name}");
 
-            _mongoRawStore.InitAsync(CancellationToken.None).Wait();
+            _mongoPersistence.InitAsync(CancellationToken.None).Wait();
 
-            return _mongoRawStore;
+            return _mongoPersistence;
         }
 
         private void Clear()

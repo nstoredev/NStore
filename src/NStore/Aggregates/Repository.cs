@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using NStore.Raw;
+using NStore.Persistence;
 using NStore.SnapshotStore;
 using NStore.Streams;
 

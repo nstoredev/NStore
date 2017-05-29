@@ -2,16 +2,16 @@
 using System.Runtime;
 using System.Threading;
 using System.Threading.Tasks;
-using NStore.Raw;
+using NStore.Persistence;
 
 namespace NStore.Streams
 {
     public class Stream : IStream
     {
-        private IRawStore Raw { get; }
+        private IPersistence Raw { get; }
         public string Id { get; }
         public virtual bool IsWritable => true;
-        public Stream(string streamId, IRawStore raw)
+        public Stream(string streamId, IPersistence raw)
         {
             this.Id = streamId;
             this.Raw = raw;

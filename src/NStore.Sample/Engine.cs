@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NStore.Aggregates;
 using NStore.InMemory;
-using NStore.Raw;
+using NStore.Persistence;
 using NStore.Sample.Domain.Room;
 using NStore.Sample.Projections;
 using NStore.Sample.Support;
@@ -31,7 +31,7 @@ namespace NStore.Sample
         readonly bool _quiet;
         private readonly PollingClient _poller;
         private readonly TaskProfilingInfo _cloneProfiler;
-        public SampleApp(IRawStore store, string name, bool useSnapshots, bool quiet, bool fast)
+        public SampleApp(IPersistence store, string name, bool useSnapshots, bool quiet, bool fast)
         {
             _quiet = quiet;
             _name = name;
@@ -52,7 +52,7 @@ namespace NStore.Sample
             if (useSnapshots)
             {
                 _cloneProfiler = new TaskProfilingInfo("Cloning state");
-                var inMemoryRawStore = new InMemoryRawStore(cloneFunc: CloneSnapshot);
+                var inMemoryRawStore = new InMemoryPersistence(cloneFunc: CloneSnapshot);
                 _snapshotProfile = new ProfileDecorator(inMemoryRawStore);
                 _snapshots = new DefaultSnapshotStore(_snapshotProfile);
             }

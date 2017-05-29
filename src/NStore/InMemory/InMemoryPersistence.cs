@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using NStore.Raw;
+using NStore.Persistence;
 
 namespace NStore.InMemory
 {
-    public class InMemoryRawStore : IRawStore
+    public class InMemoryPersistence : IPersistence
     {
         private readonly Func<object, object> _cloneFunc;
         private readonly object _lock = new object();
@@ -17,21 +17,21 @@ namespace NStore.InMemory
         private readonly INetworkSimulator _networkSimulator;
         private readonly Partition _emptyPartition = new Partition("::empty");
 
-        public InMemoryRawStore() : this(null, null)
+        public InMemoryPersistence() : this(null, null)
         {
         }
 
-        public InMemoryRawStore(INetworkSimulator networkSimulator)
+        public InMemoryPersistence(INetworkSimulator networkSimulator)
             : this(networkSimulator, null)
         {
         }
 
-        public InMemoryRawStore(Func<object, object> cloneFunc)
+        public InMemoryPersistence(Func<object, object> cloneFunc)
             : this(null, cloneFunc)
         {
         }
 
-        public InMemoryRawStore(INetworkSimulator networkSimulator, Func<object, object> cloneFunc)
+        public InMemoryPersistence(INetworkSimulator networkSimulator, Func<object, object> cloneFunc)
         {
             _cloneFunc = cloneFunc ?? (o => o);
             _networkSimulator = networkSimulator ?? new NoNetworkLatencySimulator();

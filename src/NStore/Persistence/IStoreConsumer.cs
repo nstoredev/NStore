@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace NStore.Raw
+namespace NStore.Persistence
 {
     public interface IStoreConsumer
     {

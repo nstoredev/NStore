@@ -2,11 +2,11 @@
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Driver;
-using NStore.Raw;
+using NStore.Persistence;
 
 namespace NStore.Persistence.Mongo
 {
-    public class MongoRawStore : IRawStore
+    public class MongoPersistence : IPersistence
     {
         private IMongoDatabase _partitionsDb;
         private IMongoDatabase _countersDb;
@@ -21,7 +21,7 @@ namespace NStore.Persistence.Mongo
         private const string SequenceIdx = "partition_sequence";
         private const string OperationIdx = "partition_operation";
 
-        public MongoRawStore(MongoStoreOptions options)
+        public MongoPersistence(MongoStoreOptions options)
         {
             if (options == null || !options.IsValid())
                 throw new Exception("Invalid options");

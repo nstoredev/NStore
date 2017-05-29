@@ -2,9 +2,9 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace NStore.Raw
+namespace NStore.Persistence
 {
-    public class NullStore : IRawStore
+    public class NullStore : IPersistence
     {
         public Task DeleteAsync(
             string partitionId,

@@ -3,7 +3,7 @@ using System.Threading;
 using Microsoft.Extensions.CommandLineUtils;
 using NStore.InMemory;
 using NStore.Persistence.Mongo;
-using NStore.Raw;
+using NStore.Persistence;
 using NStore.Sample.Support;
 
 namespace NStore.Sample
@@ -70,7 +70,7 @@ namespace NStore.Sample
             Cmd.Execute(args);
         }
 
-        static IRawStore BuildStore(string store)
+        static IPersistence BuildStore(string store)
         {
             Console.WriteLine($"Selected store is {store}");
 
@@ -79,7 +79,7 @@ namespace NStore.Sample
                 case "memory":
                 {
                     var network = new ReliableNetworkSimulator(2, 10);
-                    return new InMemoryRawStore(network);
+                    return new InMemoryPersistence(network);
                 }
 
                 case "mongo":
@@ -93,7 +93,7 @@ namespace NStore.Sample
                         DropOnInit = true,
                         Serializer = new MongoCustomSerializer()
                     };
-                    var mongo = new MongoRawStore(options);
+                    var mongo = new MongoPersistence(options);
                     mongo.InitAsync(CancellationToken.None).GetAwaiter().GetResult();
                     return mongo;
                 }

@@ -1,20 +1,20 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using NStore.Raw;
+using NStore.Persistence;
 
 namespace NStore.Streams
 {
     //@@REVIEW: can be refatored to a Decorator on Stream
     public class OptimisticConcurrencyStream : IStream
     {
-        private IRawStore Raw { get; }
+        private IPersistence Raw { get; }
 
         public long Version { get; private set; } = -1;
         public string Id { get; }
         public bool IsWritable => true;
 
-        public OptimisticConcurrencyStream(string streamId, IRawStore raw)
+        public OptimisticConcurrencyStream(string streamId, IPersistence raw)
         {
             this.Id = streamId;
             this.Raw = raw;

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace NStore.Raw
+namespace NStore.Persistence
 {
     public class PartitionRecorder : IPartitionConsumer
     {

@@ -1,5 +1,5 @@
 using NStore.InMemory;
-using NStore.Raw;
+using NStore.Persistence;
 using Xunit;
 
 namespace NStore.Tests.Persistence
@@ -7,7 +7,7 @@ namespace NStore.Tests.Persistence
     public class StatsDecoratorTests
     {
         private readonly ProfileDecorator _profile;
-        private readonly IRawStore _store;
+        private readonly IPersistence _store;
         
         public StatsDecoratorTests()
         {

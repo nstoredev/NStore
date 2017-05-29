@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using NStore.Raw;
+using NStore.Persistence;
 using NStore.Streams;
 using Xunit;
 

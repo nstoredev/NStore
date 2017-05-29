@@ -1,13 +1,13 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace NStore.Raw
+namespace NStore.Persistence
 {
-    public class ProfileDecorator : IRawStore
+    public class ProfileDecorator : IPersistence
     {
-        private readonly IRawStore _store;
+        private readonly IPersistence _store;
 
-        public ProfileDecorator(IRawStore store)
+        public ProfileDecorator(IPersistence store)
         {
             _store = store;
             PersistCounter = new TaskProfilingInfo("Persist");

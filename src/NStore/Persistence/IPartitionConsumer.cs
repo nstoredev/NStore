@@ -1,4 +1,4 @@
-﻿namespace NStore.Raw
+﻿namespace NStore.Persistence
 {
     public interface IPartitionConsumer
     {

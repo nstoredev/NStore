@@ -1,7 +1,7 @@
 ﻿using System;
 using NStore.Aggregates;
 using NStore.InMemory;
-using NStore.Raw;
+using NStore.Persistence;
 using NStore.SnapshotStore;
 using NStore.Streams;
 using Xunit;
@@ -13,7 +13,7 @@ namespace NStore.Tests.AggregatesTests
     public abstract class BaseRepositoryTest
     {
         protected IStreamStore Streams { get; }
-        protected IRawStore Raw { get; }
+        protected IPersistence Raw { get; }
         private IAggregateFactory AggregateFactory { get; }
         protected ISnapshotStore Snapshots { get; set; }
         private IRepository _repository;
@@ -21,7 +21,7 @@ namespace NStore.Tests.AggregatesTests
 
         protected BaseRepositoryTest()
         {
-            Raw = new InMemoryRawStore();
+            Raw = new InMemoryPersistence();
 
             Streams = new StreamStore(Raw);
             AggregateFactory = new DefaultAggregateFactory();
@@ -189,7 +189,7 @@ namespace NStore.Tests.AggregatesTests
     {
         public with_snapshots()
         {
-            Snapshots = new DefaultSnapshotStore(new InMemoryRawStore());
+            Snapshots = new DefaultSnapshotStore(new InMemoryPersistence());
 
             Raw.PersistAsync("Ticket_1", 1, new Changeset(1, new TicketSold())).Wait();
             Raw.PersistAsync("Ticket_1", 2, new Changeset(2, new TicketRefunded())).Wait();
@@ -235,7 +235,7 @@ namespace NStore.Tests.AggregatesTests
     {
         public with_snapshot_only()
         {
-            Snapshots = new DefaultSnapshotStore(new InMemoryRawStore());
+            Snapshots = new DefaultSnapshotStore(new InMemoryPersistence());
         }
 
         [Fact]
