@@ -8,7 +8,7 @@ namespace NStore.Streams
     {
         public override bool IsWritable => false;
 
-        public ReadOnlyStream(string streamId, IPersistence raw) : base(streamId, raw)
+        public ReadOnlyStream(string streamId, IPersistence persistence) : base(streamId, persistence)
         {
         }
 

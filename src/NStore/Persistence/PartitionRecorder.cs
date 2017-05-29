@@ -47,16 +47,5 @@ namespace NStore.Persistence
 
         public long GetIndex(int position) => _data[position].Index;
         public object ByIndex(int index) => _map[index];
-
-        public void Dump()
-        {
-            int counter = 0;
-            Console.WriteLine("Dumping accumulator");
-            foreach (Element d in _data)
-            {
-                Console.WriteLine($"    {counter++:0000} => {d}");
-            }
-            Console.WriteLine("done.");
-        }
     }
 }

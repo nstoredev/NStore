@@ -24,10 +24,10 @@ namespace NStore.Persistence
             CancellationToken cancellationToken
         );
 
-        Task ScanStoreAsync(
+        Task ReadAllAsync(
             long fromSequenceIdInclusive,
-            ScanDirection direction,
-            IStoreConsumer consumer,
+            ReadDirection direction,
+            IAllPartitionsConsumer consumer,
             int limit,
             CancellationToken cancellationToken
         );
@@ -43,9 +43,9 @@ namespace NStore.Persistence
         /// @@REVIEW delete invalid stream should throw or not?
         Task DeleteAsync(
             string partitionId,
-            long fromLowerIndexInclusive ,
-            long toUpperIndexInclusive ,
-            CancellationToken cancellationToken 
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            CancellationToken cancellationToken
         );
     }
 }

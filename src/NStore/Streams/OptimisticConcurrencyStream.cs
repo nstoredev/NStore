@@ -8,16 +8,16 @@ namespace NStore.Streams
     //@@REVIEW: can be refatored to a Decorator on Stream
     public class OptimisticConcurrencyStream : IStream
     {
-        private IPersistence Raw { get; }
+        private IPersistence Persistence { get; }
 
         public long Version { get; private set; } = -1;
         public string Id { get; }
         public bool IsWritable => true;
 
-        public OptimisticConcurrencyStream(string streamId, IPersistence raw)
+        public OptimisticConcurrencyStream(string streamId, IPersistence persistence)
         {
             this.Id = streamId;
-            this.Raw = raw;
+            this.Persistence = persistence;
         }
 
         public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, int toIndexInclusive,
@@ -35,7 +35,7 @@ namespace NStore.Streams
                 });
             }
 
-            return Raw.ReadPartitionForward(
+            return Persistence.ReadPartitionForward(
                 Id,
                 fromIndexInclusive,
                 readConsumer,
@@ -54,13 +54,13 @@ Append can be called only after a Read operation.
 If you don't need to read use {typeof(Stream).Name} instead of {GetType().Name}.")
                     ;
             long desiredVersion = this.Version + 1;
-            await Raw.PersistAsync(this.Id, desiredVersion, payload, operationId, cancellation);
+            await Persistence.PersistAsync(this.Id, desiredVersion, payload, operationId, cancellation);
             this.Version = desiredVersion;
         }
 
         public Task Delete(CancellationToken cancellation)
         {
-            return Raw.DeleteAsync(this.Id, 0, long.MaxValue, cancellation);
+            return Persistence.DeleteAsync(this.Id, 0, long.MaxValue, cancellation);
         }
     }
 }

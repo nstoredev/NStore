@@ -11,7 +11,7 @@ namespace NStore.Tests.Persistence
         
         public StatsDecoratorTests()
         {
-            var nullStore = new NullStore();
+            var nullStore = new NullPersistence();
             _store = _profile = new ProfileDecorator(nullStore);
         }
 
@@ -47,7 +47,7 @@ namespace NStore.Tests.Persistence
 		[Fact]
 		public async void scan_store_should_be_recorded()
 		{
-            await _store.ScanStoreAsync(0, ScanDirection.Forward, new StoreRecorder(), 10);
+            await _store.ScanStoreAsync(0, ReadDirection.Forward, new AllPartitionsRecorder(), 10);
             Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
 			Assert.Equal(1, _profile.StoreScanCounter.Calls);

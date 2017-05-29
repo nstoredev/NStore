@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace NStore.Persistence
 {
-    public class NullStore : IPersistence
+    public class NullPersistence : IPersistence
     {
         public Task DeleteAsync(
             string partitionId,
@@ -48,10 +48,10 @@ namespace NStore.Persistence
             return Task.CompletedTask;
         }
 
-        public Task ScanStoreAsync(
+        public Task ReadAllAsync(
             long fromSequenceIdInclusive, 
-            ScanDirection direction, 
-            IStoreConsumer consumer, 
+            ReadDirection direction, 
+            IAllPartitionsConsumer consumer, 
             int limit, 
             CancellationToken cancellationToken)
         {

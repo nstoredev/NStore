@@ -1,6 +1,6 @@
 ﻿namespace NStore.Persistence
 {
-    public enum ScanDirection
+    public enum ReadDirection
     {
         Forward,
         Backward

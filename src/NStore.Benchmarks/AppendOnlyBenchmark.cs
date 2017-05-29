@@ -21,7 +21,7 @@ namespace NStore.Benchmarks
         private const string Mongo = "mongodb://localhost/nstore";
         private static int Id = 0;
 
-        private IList<MongoPersistence> _mongoRawStores;
+        private IList<MongoPersistence> _mongoPersistence;
 
         [Params(10000)]
         public int Writes { get; set; }
@@ -107,7 +107,7 @@ namespace NStore.Benchmarks
         public void Setup()
         {
             _iterations = Enumerable.Range(0, Writes);
-            _mongoRawStores = new List<MongoPersistence>();
+            _mongoPersistence = new List<MongoPersistence>();
         }
 
         [Cleanup]
@@ -116,7 +116,7 @@ namespace NStore.Benchmarks
             _inmemoryStore = null;
 
             Task.WaitAll(
-                _mongoRawStores.Select(x => x.Drop(CancellationToken.None)).ToArray()
+                _mongoPersistence.Select(x => x.Drop(CancellationToken.None)).ToArray()
             );
         }
 

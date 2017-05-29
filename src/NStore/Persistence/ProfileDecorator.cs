@@ -73,21 +73,21 @@ namespace NStore.Persistence
                 ));
         }
 
-        public async Task ScanStoreAsync(
+        public async Task ReadAllAsync(
             long fromSequenceIdInclusive,
-            ScanDirection direction,
-            IStoreConsumer consumer,
+            ReadDirection direction,
+            IAllPartitionsConsumer consumer,
             int limit,
             CancellationToken cancellationToken)
         {
-            var storeObserver = new LambdaStoreConsumer((si, s, l, o) =>
+            var storeObserver = new LambdaAllPartitionsConsumer((si, s, l, o) =>
             {
                 StoreScanCounter.IncCounter1();
                 return consumer.Consume(si, s, l, o);
             });
 
             await StoreScanCounter.CaptureAsync(() =>
-                _store.ScanStoreAsync(fromSequenceIdInclusive, direction, storeObserver, limit, cancellationToken)
+                _store.ReadAllAsync(fromSequenceIdInclusive, direction, storeObserver, limit, cancellationToken)
             );
         }
 

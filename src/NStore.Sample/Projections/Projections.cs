@@ -12,7 +12,7 @@ using NStore.Sample.Support;
 
 namespace NStore.Sample.Projections
 {
-    public class AppProjections : IStoreConsumer
+    public class AppProjections : IAllPartitionsConsumer
     {
         public long Position { get; private set; } = 0;
         public RoomsOnSaleProjection Rooms { get; }
@@ -43,12 +43,12 @@ namespace NStore.Sample.Projections
         }
 
         public async Task<ScanAction> Consume(
-            long storeIndex,
-            string streamId,
-            long partitionIndex,
+            long position,
+            string partitionId,
+            long index,
             object payload)
         {
-            if (storeIndex != Position + 1)
+            if (position != Position + 1)
             {
                 // * * * * * * * * * * * * * * * * * * * * * * * * *
                 // * WARNING: ˌɛsəˈtɛrɪk/ stuff can be done here   *
@@ -61,7 +61,7 @@ namespace NStore.Sample.Projections
                 if (!_catchingUp)
                 {
                     _reporter.Report(
-                        $"!!!!!!!!!!!!!!!! Projection out of sequence {storeIndex} => wait next poll !!!!!!!!!!!!!!!!");
+                        $"!!!!!!!!!!!!!!!! Projection out of sequence {position} => wait next poll !!!!!!!!!!!!!!!!");
                     _catchingUp = true;
                 }
 
@@ -74,7 +74,7 @@ namespace NStore.Sample.Projections
 
             _catchingUp = false;
 
-            Position = storeIndex;
+            Position = position;
 
             Changeset changes = (Changeset) payload;
             StoreMetrics(changes);
@@ -96,7 +96,7 @@ namespace NStore.Sample.Projections
 
             if (!_quiet)
             {
-                _reporter.Report($"dispatched changeset #{storeIndex} took {sw.ElapsedMilliseconds}ms");
+                _reporter.Report($"dispatched changeset #{position} took {sw.ElapsedMilliseconds}ms");
             }
 
             return ScanAction.Continue;

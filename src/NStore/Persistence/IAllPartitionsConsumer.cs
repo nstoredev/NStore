@@ -2,12 +2,12 @@ using System.Threading.Tasks;
 
 namespace NStore.Persistence
 {
-    public interface IStoreConsumer
+    public interface IAllPartitionsConsumer
     {
         Task<ScanAction> Consume(
-            long storeIndex,
-            string streamId,
-            long partitionIndex,
+            long position,
+            string partitionId,
+            long index,
             object payload
         );
     }

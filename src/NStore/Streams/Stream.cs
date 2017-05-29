@@ -8,18 +8,18 @@ namespace NStore.Streams
 {
     public class Stream : IStream
     {
-        private IPersistence Raw { get; }
+        private IPersistence Persistence { get; }
         public string Id { get; }
         public virtual bool IsWritable => true;
-        public Stream(string streamId, IPersistence raw)
+        public Stream(string streamId, IPersistence persistence)
         {
             this.Id = streamId;
-            this.Raw = raw;
+            this.Persistence = persistence;
         }
 
         public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, int toIndexInclusive, CancellationToken cancellationToken)
         {
-            return Raw.ReadPartitionForward(
+            return Persistence.ReadPartitionForward(
                 Id,
                 fromIndexInclusive,
                 partitionConsumer,
@@ -31,12 +31,12 @@ namespace NStore.Streams
 
         public virtual Task Append(object payload, string operationId, CancellationToken cancellation)
         {
-            return Raw.PersistAsync(this.Id, -1, payload, operationId, cancellation);
+            return Persistence.PersistAsync(this.Id, -1, payload, operationId, cancellation);
         }
 
         public virtual Task Delete(CancellationToken cancellation)
         {
-            return Raw.DeleteAsync(this.Id, 0, long.MaxValue, cancellation);
+            return Persistence.DeleteAsync(this.Id, 0, long.MaxValue, cancellation);
         }
     }
 }

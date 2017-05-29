@@ -10,7 +10,7 @@ namespace NStore.Persistence.Tests
     {
         private MongoPersistence _mongoPersistence;
         private MongoStoreOptions _options;
-        private static string Mongo;
+        private static readonly string Mongo;
         private static int _staticId = 1;
         private int _id;
 
@@ -42,8 +42,6 @@ namespace NStore.Persistence.Tests
             };
             _mongoPersistence = new MongoPersistence(_options);
 
-            //           Console.WriteLine($"Setup {_id} {GetType().Name}");
-
             _mongoPersistence.InitAsync(CancellationToken.None).Wait();
 
             return _mongoPersistence;
@@ -51,15 +49,7 @@ namespace NStore.Persistence.Tests
 
         private void Clear()
         {
-            //          Console.WriteLine($"Cleanup {_id} {GetType().Name}");
-            try
-            {
-                //    _mongoRawStore.Drop().Wait();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"ERROR: {ex.Message}");
-            }
+            // nothing to do
         }
     }
 }

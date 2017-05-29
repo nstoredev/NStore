@@ -13,7 +13,7 @@ namespace NStore.Tests.AggregatesTests
     public abstract class BaseRepositoryTest
     {
         protected IStreamStore Streams { get; }
-        protected IPersistence Raw { get; }
+        protected IPersistence Persistence { get; }
         private IAggregateFactory AggregateFactory { get; }
         protected ISnapshotStore Snapshots { get; set; }
         private IRepository _repository;
@@ -21,9 +21,9 @@ namespace NStore.Tests.AggregatesTests
 
         protected BaseRepositoryTest()
         {
-            Raw = new InMemoryPersistence();
+            Persistence = new InMemoryPersistence();
 
-            Streams = new StreamStore(Raw);
+            Streams = new StreamStore(Persistence);
             AggregateFactory = new DefaultAggregateFactory();
         }
 
@@ -103,8 +103,8 @@ namespace NStore.Tests.AggregatesTests
     {
         public with_populated_stream()
         {
-            Raw.PersistAsync("Ticket_1", 1, new Changeset(1, new TicketSold())).Wait();
-            Raw.PersistAsync("Ticket_1", 2, new Changeset(2, new TicketRefunded())).Wait();
+            Persistence.PersistAsync("Ticket_1", 1, new Changeset(1, new TicketSold())).Wait();
+            Persistence.PersistAsync("Ticket_1", 2, new Changeset(2, new TicketRefunded())).Wait();
         }
 
         [Fact]
@@ -191,8 +191,8 @@ namespace NStore.Tests.AggregatesTests
         {
             Snapshots = new DefaultSnapshotStore(new InMemoryPersistence());
 
-            Raw.PersistAsync("Ticket_1", 1, new Changeset(1, new TicketSold())).Wait();
-            Raw.PersistAsync("Ticket_1", 2, new Changeset(2, new TicketRefunded())).Wait();
+            Persistence.PersistAsync("Ticket_1", 1, new Changeset(1, new TicketSold())).Wait();
+            Persistence.PersistAsync("Ticket_1", 2, new Changeset(2, new TicketRefunded())).Wait();
         }
 
         [Fact]

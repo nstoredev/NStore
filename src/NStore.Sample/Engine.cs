@@ -52,8 +52,8 @@ namespace NStore.Sample
             if (useSnapshots)
             {
                 _cloneProfiler = new TaskProfilingInfo("Cloning state");
-                var inMemoryRawStore = new InMemoryPersistence(cloneFunc: CloneSnapshot);
-                _snapshotProfile = new ProfileDecorator(inMemoryRawStore);
+                var inMemoryPersistence = new InMemoryPersistence(cloneFunc: CloneSnapshot);
+                _snapshotProfile = new ProfileDecorator(inMemoryPersistence);
                 _snapshots = new DefaultSnapshotStore(_snapshotProfile);
             }
 

@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace NStore.Persistence
 {
-    public static class RawStoreExtensions
+    public static class PersistenceExtensions
     {
         public static Task ReadPartitionForward(
             this IPersistence store,
@@ -79,22 +79,22 @@ namespace NStore.Persistence
         public static Task ScanStoreAsync(
             this IPersistence store,
             long sequenceStart,
-            ScanDirection direction,
-            IStoreConsumer consumer
+            ReadDirection direction,
+            IAllPartitionsConsumer consumer
         )
         {
-            return store.ScanStoreAsync(sequenceStart, direction, consumer, int.MaxValue, CancellationToken.None);
+            return store.ReadAllAsync(sequenceStart, direction, consumer, int.MaxValue, CancellationToken.None);
         }
 
         public static Task ScanStoreAsync(
             this IPersistence store,
             long sequenceStart,
-            ScanDirection direction,
-            IStoreConsumer consumer,
+            ReadDirection direction,
+            IAllPartitionsConsumer consumer,
             int limit
         )
         {
-            return store.ScanStoreAsync(sequenceStart, direction, consumer, limit, CancellationToken.None);
+            return store.ReadAllAsync(sequenceStart, direction, consumer, limit, CancellationToken.None);
         }
 
         public static Task PersistAsync(

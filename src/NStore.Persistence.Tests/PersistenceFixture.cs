@@ -176,8 +176,8 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_all_forward()
         {
-            var tape = new StoreRecorder();
-            await Store.ScanStoreAsync(0, ScanDirection.Forward, tape);
+            var tape = new AllPartitionsRecorder();
+            await Store.ScanStoreAsync(0, ReadDirection.Forward, tape);
 
             Assert.Equal(5, tape.Length);
             Assert.Equal("a", tape[0]);
@@ -190,10 +190,10 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_all_forward_from_middle()
         {
-            var tape = new StoreRecorder();
+            var tape = new AllPartitionsRecorder();
             await Store.ScanStoreAsync(
                 3,
-                ScanDirection.Forward, 
+                ReadDirection.Forward, 
                 tape
             );
 
@@ -206,10 +206,10 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_all_forward_from_middle_limit_one()
         {
-            var tape = new StoreRecorder();
+            var tape = new AllPartitionsRecorder();
             await Store.ScanStoreAsync(
                 3,
-                ScanDirection.Forward, 
+                ReadDirection.Forward, 
                 tape,
                 1
             );
@@ -221,10 +221,10 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_all_backward()
         {
-            var buffer = new StoreRecorder();
+            var buffer = new AllPartitionsRecorder();
             await Store.ScanStoreAsync(
                 long.MaxValue,
-                ScanDirection.Backward,
+                ReadDirection.Backward,
                 buffer
             );
 
@@ -239,10 +239,10 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_all_backward_from_middle()
         {
-            var buffer = new StoreRecorder();
+            var buffer = new AllPartitionsRecorder();
             await Store.ScanStoreAsync(
                 3,
-                ScanDirection.Backward,
+                ReadDirection.Backward,
                 buffer
             );
 
@@ -255,8 +255,8 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_all_backward_from_middle_limit_one()
         {
-            var buffer = new StoreRecorder();
-            await Store.ScanStoreAsync(3, ScanDirection.Backward, buffer, 1);
+            var buffer = new AllPartitionsRecorder();
+            await Store.ScanStoreAsync(3, ReadDirection.Backward, buffer, 1);
 
             Assert.Equal(1, buffer.Length);
             Assert.Equal("c", buffer[0]);
@@ -410,7 +410,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async void polling_client_should_not_miss_data()
         {
-            var recorder = new StoreRecorder();
+            var recorder = new AllPartitionsRecorder();
 
             var poller = new PollingClient(Store, recorder) { Delay = 0 };
 

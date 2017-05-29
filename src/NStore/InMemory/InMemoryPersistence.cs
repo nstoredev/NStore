@@ -111,10 +111,10 @@ namespace NStore.InMemory
             }
         }
 
-        public async Task ScanStoreAsync(
+        public async Task ReadAllAsync(
             long fromSequenceIdInclusive,
-            ScanDirection direction,
-            IStoreConsumer consumer,
+            ReadDirection direction,
+            IAllPartitionsConsumer consumer,
             int limit ,
             CancellationToken cancellationToken 
         )
@@ -123,7 +123,7 @@ namespace NStore.InMemory
 
             lock (_lock)
             {
-                if (direction == ScanDirection.Forward)
+                if (direction == ReadDirection.Forward)
                 {
                     list = _chunks.Where(x => x.Id >= fromSequenceIdInclusive)
                         .OrderBy(x => x.Id)

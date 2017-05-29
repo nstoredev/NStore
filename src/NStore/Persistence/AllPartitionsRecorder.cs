@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace NStore.Persistence
 {
-    public class StoreRecorder : IStoreConsumer
+    public class AllPartitionsRecorder : IAllPartitionsConsumer
     {
         private sealed class Element
         {
@@ -26,10 +26,10 @@ namespace NStore.Persistence
         private readonly IDictionary<long, object> _map = new Dictionary<long, object>();
         public int Length => _data.Count;
 
-        public Task<ScanAction> Consume(long storeIndex, string partitionId, long idx, object payload)
+        public Task<ScanAction> Consume(long position, string partitionId, long index, object payload)
         {
-            _data.Add(new Element(storeIndex, partitionId, idx, payload));
-            _map[idx] = payload;
+            _data.Add(new Element(position, partitionId, index, payload));
+            _map[index] = payload;
             return Task.FromResult(ScanAction.Continue);
         }
 
