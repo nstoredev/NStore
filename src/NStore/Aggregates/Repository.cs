@@ -68,7 +68,7 @@ namespace NStore.Aggregates
                 return Task.FromResult(true);
             });
 
-            consumer = new TplPartitionConsumer(consumer, cancellationToken);
+//            consumer = new TplPartitionConsumer(consumer, cancellationToken);
 
             // we use aggregate.Version because snapshot could be rejected
             // Starting point is inclusive, so almost one changeset should be loaded

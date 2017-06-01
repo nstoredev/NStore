@@ -30,6 +30,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		..\README.md = ..\README.md
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Tpl", "NStore.Tpl\NStore.Tpl.csproj", "{AE81867F-7915-4EF5-BF16-1B84EE147FF3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -68,6 +70,10 @@ Global
 		{8258C6B1-9457-41D8-8FDB-594C670D5233}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8258C6B1-9457-41D8-8FDB-594C670D5233}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8258C6B1-9457-41D8-8FDB-594C670D5233}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE81867F-7915-4EF5-BF16-1B84EE147FF3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE81867F-7915-4EF5-BF16-1B84EE147FF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE81867F-7915-4EF5-BF16-1B84EE147FF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE81867F-7915-4EF5-BF16-1B84EE147FF3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -81,5 +87,6 @@ Global
 		{B6D8D313-5A21-49C3-9FDF-CF3A23FF54C8} = {81A65A86-5489-4358-9848-6BE40A4D13A1}
 		{FD2A7B25-F3BF-4D46-9314-59E30B0D7BC8} = {D3212016-BB8D-4E16-94C4-2D0990B2C14A}
 		{8258C6B1-9457-41D8-8FDB-594C670D5233} = {D3212016-BB8D-4E16-94C4-2D0990B2C14A}
+		{AE81867F-7915-4EF5-BF16-1B84EE147FF3} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
 	EndGlobalSection
 EndGlobal

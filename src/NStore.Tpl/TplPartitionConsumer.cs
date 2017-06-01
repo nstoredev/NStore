@@ -4,8 +4,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
+using NStore.Persistence;
 
-namespace NStore.Persistence
+namespace NStore.Tpl
 {
     public class TplPartitionConsumer : IPartitionConsumer
     {
@@ -27,7 +28,7 @@ namespace NStore.Persistence
 
         private async Task Process(IPartitionData partitionData)
         {
-//            if (_isRunning)
+            if (_isRunning)
             {
                 _isRunning = await _consumer.OnNext(partitionData).ConfigureAwait(false);
             }
