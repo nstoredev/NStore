@@ -10,7 +10,7 @@ namespace NStore.Persistence
         {
         }
 
-        public ScanAction Consume(long partitionIndex, object payload)
+        public ScanAction Consume(IPartitionData data)
         {
 			return ScanAction.Continue;
 		}

@@ -4,20 +4,20 @@ namespace NStore.Persistence
 {
     public class LambdaPartitionConsumer : IPartitionConsumer
     {
-        private readonly Func<long, object, ScanAction> _fn;
+        private readonly ProcessPartitionData _fn;
         private Exception _failed;
         public bool ReadCompleted { get; private set; }
         public bool Failed => this._failed != null;
         public Exception LastError => _failed;
         
-        public LambdaPartitionConsumer(Func<long, object, ScanAction> fn)
+        public LambdaPartitionConsumer(ProcessPartitionData fn)
         {
             _fn = fn;
         }
 
-        public ScanAction Consume(long partitionIndex, object payload)
+        public ScanAction Consume(IPartitionData partitionData)
         {
-            return this._fn(partitionIndex, payload);
+            return this._fn(partitionData);
         }
 
         public void Completed()

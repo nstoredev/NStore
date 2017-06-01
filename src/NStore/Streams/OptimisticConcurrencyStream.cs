@@ -28,10 +28,10 @@ namespace NStore.Streams
             if (toIndexInclusive == Int32.MaxValue)
             {
                 Version = 0;
-                readConsumer = new LambdaPartitionConsumer((l, o) =>
+                readConsumer = new LambdaPartitionConsumer(data =>
                 {
-                    Version = l;
-                    return partitionConsumer.Consume(l, o);
+                    Version = data.Index;
+                    return partitionConsumer.Consume(data);
                 });
             }
 

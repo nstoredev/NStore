@@ -94,11 +94,11 @@ namespace NStore.Persistence.Mongo
         }
 
         private async Task ReadAndPushToConsumer(
-            string partitionId, 
-            IPartitionConsumer partitionConsumer, 
-            int limit, 
-            SortDefinition<Chunk> sort, 
-            FilterDefinition<Chunk> filter, 
+            string partitionId,
+            IPartitionConsumer partitionConsumer,
+            int limit,
+            SortDefinition<Chunk> sort,
+            FilterDefinition<Chunk> filter,
             CancellationToken cancellationToken)
         {
             var options = new FindOptions<Chunk>() { Sort = sort };
@@ -114,8 +114,8 @@ namespace NStore.Persistence.Mongo
                     var batch = cursor.Current;
                     foreach (var b in batch)
                     {
-                        if (ScanAction.Stop ==
-                            partitionConsumer.Consume(b.Index, _serializer.Deserialize(partitionId, b.Payload)))
+                        b.Payload = _serializer.Deserialize(partitionId, b.Payload);
+                        if (ScanAction.Stop == partitionConsumer.Consume(b))
                         {
                             return;
                         }
@@ -157,13 +157,13 @@ namespace NStore.Persistence.Mongo
 
             if (direction == ReadDirection.Forward)
             {
-                sort = Builders<Chunk>.Sort.Ascending(x => x.Id);
-                filter = Builders<Chunk>.Filter.Gte(x => x.Id, fromSequenceIdInclusive);
+                sort = Builders<Chunk>.Sort.Ascending(x => x.Position);
+                filter = Builders<Chunk>.Filter.Gte(x => x.Position, fromSequenceIdInclusive);
             }
             else
             {
-                sort = Builders<Chunk>.Sort.Descending(x => x.Id);
-                filter = Builders<Chunk>.Filter.Lte(x => x.Id, fromSequenceIdInclusive);
+                sort = Builders<Chunk>.Sort.Descending(x => x.Position);
+                filter = Builders<Chunk>.Filter.Lte(x => x.Position, fromSequenceIdInclusive);
             }
 
             var options = new FindOptions<Chunk>() { Sort = sort };
@@ -181,7 +181,7 @@ namespace NStore.Persistence.Mongo
                     foreach (var chunk in batch)
                     {
                         if (ScanAction.Stop ==
-                            await consumer.Consume(chunk.Id, chunk.PartitionId, chunk.Index,
+                            await consumer.Consume(chunk.Position, chunk.PartitionId, chunk.Index,
                                 _serializer.Deserialize(chunk.PartitionId, chunk.Payload)))
                         {
                             return;
@@ -202,7 +202,7 @@ namespace NStore.Persistence.Mongo
             long id = await GetNextId(cancellationToken).ConfigureAwait(false);
             var doc = new Chunk()
             {
-                Id = id,
+                Position = id,
                 PartitionId = partitionId,
                 Index = index < 0 ? id : index,
                 Payload = _serializer.Serialize(partitionId, payload),
@@ -252,17 +252,17 @@ namespace NStore.Persistence.Mongo
             {
                 // reuse chunk
                 empty = chunk;
-                empty.Index = empty.Id;
+                empty.Index = empty.Position;
             }
             else
             {
                 empty = new Chunk()
                 {
-                    Id = chunk.Id,
+                    Position = chunk.Position,
                     PartitionId = "::empty",
-                    Index = chunk.Id,
+                    Index = chunk.Position,
                     Payload = null,
-                    OpId = "_" + chunk.Id
+                    OpId = "_" + chunk.Position
                 };
             }
             await InternalPersistAsync(empty, cancellationToken).ConfigureAwait(false);
@@ -299,9 +299,9 @@ namespace NStore.Persistence.Mongo
                         if (ex.Message.Contains("_id_"))
                         {
                             Console.WriteLine(
-                                $"Error writing chunk #{chunk.Id} => {ex.Message} - {ex.GetType().FullName} ");
+                                $"Error writing chunk #{chunk.Position} => {ex.Message} - {ex.GetType().FullName} ");
                             await ReloadSequence(cancellationToken).ConfigureAwait(false);
-                            chunk.Id = await GetNextId(cancellationToken).ConfigureAwait(false);
+                            chunk.Position = await GetNextId(cancellationToken).ConfigureAwait(false);
                             continue;
                         }
                     }
@@ -355,8 +355,8 @@ namespace NStore.Persistence.Mongo
             var filter = Builders<Chunk>.Filter.Empty;
             var lastSequenceNumber = await _chunks
                 .Find(filter)
-                .SortByDescending(x => x.Id)
-                .Project(x => x.Id)
+                .SortByDescending(x => x.Position)
+                .Project(x => x.Position)
                 .Limit(1)
                 .FirstOrDefaultAsync(cancellationToken: cancellationToken)
                 .ConfigureAwait(false);

@@ -1,8 +1,12 @@
-﻿namespace NStore.Persistence.Mongo
+﻿using MongoDB.Bson.Serialization.Attributes;
+
+namespace NStore.Persistence.Mongo
 {
-    internal class Chunk
+    internal class Chunk : IPersistenceData
     {
-        public long Id { get; set; }
+        [BsonId]
+        public long Position { get; set; }
+
         public string PartitionId { get; set; }
         public long Index { get; set; }
         public object Payload { get; set; }

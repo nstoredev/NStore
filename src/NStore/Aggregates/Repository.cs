@@ -39,12 +39,12 @@ namespace NStore.Aggregates
 
         public async Task<T> GetById<T>(
             string id,
-            int version ,
+            int version,
             CancellationToken cancellationToken
         ) where T : IAggregate
         {
             var aggregate = _factory.Create<T>();
-            var persister = (IEventSourcedAggregate) aggregate;
+            var persister = (IEventSourcedAggregate)aggregate;
             var snapshot = await _snapshots.Get(id, version, cancellationToken);
 
             if (snapshot != null)
@@ -61,10 +61,10 @@ namespace NStore.Aggregates
             var stream = OpenStream(aggregate, version != Int32.MaxValue);
 
             int readCount = 0;
-            var consumer = new LambdaPartitionConsumer((changesetIndex, changesetPayload) =>
+            var consumer = new LambdaPartitionConsumer(data =>
             {
                 readCount++;
-                persister.ApplyChanges((Changeset) changesetPayload);
+                persister.ApplyChanges((Changeset)data.Payload);
                 return ScanAction.Continue;
             });
 
@@ -105,7 +105,7 @@ namespace NStore.Aggregates
             CancellationToken cancellationToken
         ) where T : IAggregate
         {
-            var persister = (IEventSourcedAggregate) aggregate;
+            var persister = (IEventSourcedAggregate)aggregate;
             var changeSet = persister.GetChangeSet();
             if (changeSet.IsEmpty)
                 return;

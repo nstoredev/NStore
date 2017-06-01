@@ -16,12 +16,10 @@ namespace NStore.Persistence
 
     public interface IPartitionConsumer
     {
-        ScanAction Consume(
-            long partitionIndex, 
-            object payload
-        );
-
+        ScanAction Consume(IPartitionData data);
         void Completed();
         void OnError(Exception ex);
     }
+
+    public delegate ScanAction ProcessPartitionData(IPartitionData data);
 }

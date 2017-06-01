@@ -114,9 +114,9 @@ namespace NStore.Persistence.Tests
             object payload = null;
 
             await Store.ReadPartitionForward(
-                "Stream_1", 0, new LambdaPartitionConsumer((idx, pl) =>
+                "Stream_1", 0, new LambdaPartitionConsumer( data =>
                 {
-                    payload = pl;
+                    payload = data.Payload;
                     return ScanAction.Stop;
                 })
             );
@@ -132,9 +132,9 @@ namespace NStore.Persistence.Tests
             await Store.ReadPartitionBackward(
                 "Stream_1",
                 long.MaxValue,
-                new LambdaPartitionConsumer((idx, pl) =>
+                new LambdaPartitionConsumer(data =>
                 {
-                    payload = pl;
+                    payload = data.Payload;
                     return ScanAction.Stop;
                 })
             );
@@ -271,9 +271,9 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("BA", 0, System.Text.Encoding.UTF8.GetBytes("this is a test"));
 
             byte[] payload = null;
-            await Store.ReadPartitionForward("BA", 0, new LambdaPartitionConsumer((i, p) =>
+            await Store.ReadPartitionForward("BA", 0, new LambdaPartitionConsumer(data =>
             {
-                payload = (byte[])p;
+                payload = (byte[])data.Payload;
                 return ScanAction.Continue;
             }));
 
@@ -292,9 +292,9 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("Id_1", 1, new { data = "this is a test" }, opId);
 
             var list = new List<object>();
-            await Store.ReadPartitionForward("Id_1", 0, new LambdaPartitionConsumer((i, p) =>
+            await Store.ReadPartitionForward("Id_1", 0, new LambdaPartitionConsumer(data =>
             {
-                list.Add(p);
+                list.Add(data.Payload);
                 return ScanAction.Continue;
             }));
 
@@ -309,14 +309,14 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("Id_2", 1, "b", opId);
 
             var list = new List<object>();
-            await Store.ReadPartitionForward("Id_1", 0, new LambdaPartitionConsumer((i, p) =>
+            await Store.ReadPartitionForward("Id_1", 0, new LambdaPartitionConsumer(data =>
             {
-                list.Add(p);
+                list.Add(data.Payload);
                 return ScanAction.Continue;
             }));
-            await Store.ReadPartitionForward("Id_2", 0, new LambdaPartitionConsumer((i, p) =>
+            await Store.ReadPartitionForward("Id_2", 0, new LambdaPartitionConsumer(data =>
             {
-                list.Add(p);
+                list.Add(data.Payload);
                 return ScanAction.Continue;
             }));
 
@@ -349,7 +349,7 @@ namespace NStore.Persistence.Tests
         {
             await Store.DeleteAsync("delete");
             bool almostOneChunk = false;
-            await Store.ReadPartitionForward("delete", 0, new LambdaPartitionConsumer((l, o) =>
+            await Store.ReadPartitionForward("delete", 0, new LambdaPartitionConsumer(data =>
             {
                 almostOneChunk = true;
                 return ScanAction.Stop;

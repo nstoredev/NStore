@@ -22,10 +22,10 @@ namespace NStore.Persistence
         public IEnumerable<object> Data => _data;
         public int Length => _data.Count;
 
-        public ScanAction Consume(long idx, object payload)
+        public ScanAction Consume(IPartitionData data)
         {
-            _data.Add(new Element(idx, payload));
-            _map[idx] = payload;
+            _data.Add(new Element(data.Index, data.Payload));
+            _map[data.Index] = data.Payload;
             return ScanAction.Continue;
         }
 

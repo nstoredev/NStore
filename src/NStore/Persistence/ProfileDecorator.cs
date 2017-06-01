@@ -31,10 +31,10 @@ namespace NStore.Persistence
             int limit,
             CancellationToken cancellationToken)
         {
-            var counter = new LambdaPartitionConsumer((l, o) =>
+            var counter = new LambdaPartitionConsumer(data =>
             {
                 PartitionReadForwardCounter.IncCounter1();
-                return partitionConsumer.Consume(l, o);
+                return partitionConsumer.Consume(data);
             });
 
             await PartitionReadForwardCounter.CaptureAsync(() =>
@@ -56,10 +56,10 @@ namespace NStore.Persistence
             int limit,
             CancellationToken cancellationToken)
         {
-            var counter = new LambdaPartitionConsumer((l, o) =>
+            var counter = new LambdaPartitionConsumer(data =>
             {
                 PartitionReadBackwardCounter.IncCounter1();
-                return partitionConsumer.Consume(l, o);
+                return partitionConsumer.Consume(data);
             });
 
             await PartitionReadBackwardCounter.CaptureAsync(() =>

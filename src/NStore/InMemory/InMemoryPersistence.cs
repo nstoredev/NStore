@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 using NStore.Persistence;
 using NStore.Reactive;
 
@@ -37,12 +38,12 @@ namespace NStore.InMemory
             while (_requests.TryDequeue(out long batch))
             {
                 // query
-                
+
                 // scan
-                
+
                 // signal
-                
-            
+
+
             }
         }
     }
@@ -171,7 +172,10 @@ namespace NStore.InMemory
                     await _networkSimulator.WaitFast().ConfigureAwait(false);
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    if (partitionConsumer.Consume(chunk.Index, _cloneFunc(chunk.Payload)) == ScanAction.Stop)
+                    //                    var b = new ActionBlock<IPartitionData>(d => partitionConsumer.Consume(d));
+
+                    chunk.Payload = _cloneFunc(chunk.Payload);
+                    if (partitionConsumer.Consume(chunk) == ScanAction.Stop)
                     {
                         partitionConsumer.Completed();
                         return;
