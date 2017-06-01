@@ -2,13 +2,23 @@
 
 namespace NStore.Sample.Domain.Room
 {
+    public class InvalidDateRangeException : Exception
+    {
+        public InvalidDateRangeException(DateTime from, DateTime to) : base($"Invalid interval {from}-{to}")
+        {
+        }
+    }
+
     public class DateRange
     {
-        public DateTime From { get; }
-        public DateTime To { get; }
+        public DateTime From { get; private set; }
+        public DateTime To { get; private set; }
 
         public DateRange(DateTime from, DateTime to)
         {
+            if (from > to)
+                throw new InvalidDateRangeException(from,to);
+
             this.From = from;
             this.To = to;
         }
@@ -29,7 +39,7 @@ namespace NStore.Sample.Domain.Room
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((DateRange) obj);
+            return Equals((DateRange)obj);
         }
 
         public override int GetHashCode()
