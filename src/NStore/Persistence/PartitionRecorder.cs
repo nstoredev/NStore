@@ -29,6 +29,16 @@ namespace NStore.Persistence
             return ScanAction.Continue;
         }
 
+        public void Completed()
+        {
+            
+        }
+
+        public void OnError(Exception ex)
+        {
+            throw ex;
+        }
+
         public void Replay(Action<object> action)
         {
             Replay(action, 0);

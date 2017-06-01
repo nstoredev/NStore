@@ -2,4 +2,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard1.6</TargetFramework>
   </PropertyGroup>
+  <ItemGroup>
+    <Folder Include="Reactive\" />
+  </ItemGroup>
 </Project>
