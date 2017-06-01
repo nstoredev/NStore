@@ -4,9 +4,9 @@ using NStore.Persistence;
 
 namespace NStore.InMemory
 {
-    internal class Partition
+    internal class InMemoryPartition
     {
-        public Partition(string partitionId)
+        public InMemoryPartition(string partitionId)
         {
             this.Id = partitionId;
         }

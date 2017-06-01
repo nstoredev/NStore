@@ -32,7 +32,7 @@ namespace NStore.Sample
                 app.CreateRooms(32);
                 app.DumpMetrics();
 
-                app.AddSomeBookings(2048);
+                app.AddSomeBookings(256);
                 app.DumpMetrics();
 
                 Console.ReadLine();
