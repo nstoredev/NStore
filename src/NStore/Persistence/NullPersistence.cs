@@ -48,6 +48,11 @@ namespace NStore.Persistence
             return Task.CompletedTask;
         }
 
+        public Task<IPartitionData> PeekPartition(string partitionId, int maxVersion, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<IPartitionData>(null);
+        }
+
         public Task ReadAllAsync(
             long fromSequenceIdInclusive, 
             ReadDirection direction, 

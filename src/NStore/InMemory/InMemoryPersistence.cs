@@ -1,81 +1,12 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
 using NStore.Persistence;
-using NStore.Reactive;
 
 namespace NStore.InMemory
 {
-    public sealed class MemoryPartition :
-        IPublisher<IPartitionData>,
-        ISubscription
-    {
-        private readonly ConcurrentQueue<long> _requests = new ConcurrentQueue<long>();
-        private ISubscriber<IPartitionData> _subscriber;
-        public void Subscribe(ISubscriber<IPartitionData> subscriber)
-        {
-            // throw if already subscribed
-            _subscriber = subscriber;
-            subscriber.OnSubscribe(this);
-            Run();
-        }
-
-        public void Request(long n)
-        {
-            _requests.Enqueue(n);
-        }
-
-        public void Cancel()
-        {
-        }
-
-        private void Run()
-        {
-            while (_requests.TryDequeue(out long batch))
-            {
-                // query
-
-                // scan
-
-                // signal
-
-
-            }
-        }
-    }
-
-    public class MemorySubscriber : ISubscriber<IPartitionData>
-    {
-        private ISubscription _subscription;
-
-        public void OnSubscribe(ISubscription subscription)
-        {
-            _subscription = subscription;
-            _subscription.Request(1);
-        }
-
-        public void OnNext(IPartitionData element)
-        {
-            _subscription.Request(1);
-        }
-
-        public void OnError(Exception cause)
-        {
-            // if transient error => renew subscription?
-            throw new NotImplementedException();
-        }
-
-        public void OnComplete()
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-
     public class InMemoryPersistence : IPersistence
     {
         private readonly Func<object, object> _cloneFunc;
@@ -132,7 +63,7 @@ namespace NStore.InMemory
                     .ToArray();
             }
 
-            await StartProducer(partitionConsumer, cancellationToken, result);
+            await StartProducer(partitionConsumer, result, cancellationToken);
         }
 
         public async Task ReadPartitionBackward(
@@ -159,36 +90,61 @@ namespace NStore.InMemory
                     .ToArray();
             }
 
-            await StartProducer(partitionConsumer, cancellationToken, result);
+            await StartProducer(partitionConsumer, result, cancellationToken);
         }
 
-        private async Task StartProducer(IPartitionConsumer partitionConsumer, CancellationToken cancellationToken,
-            Chunk[] result)
+        public Task<IPartitionData> PeekPartition(string partitionId, int maxValue, CancellationToken cancellationToken)
+        {
+            lock (_lock)
+            {
+                Partition partition;
+                if (!_partitions.TryGetValue(partitionId, out partition))
+                {
+                    return Task.FromResult<IPartitionData>(null);
+                }
+
+                var chunk = partition.Chunks.Reverse()
+                    .Where(x => x.Index <= maxValue)
+                    .Take(1)
+                    .SingleOrDefault();
+
+                if (chunk != null)
+                {
+                    chunk.Payload = _cloneFunc(chunk.Payload);
+                }
+
+                return Task.FromResult<IPartitionData>(chunk);
+            }
+        }
+
+        private async Task StartProducer(
+            IPartitionConsumer partitionConsumer,
+            Chunk[] chunks,
+            CancellationToken cancellationToken)
         {
             try
             {
-                foreach (var chunk in result)
+                foreach (var chunk in chunks)
                 {
                     await _networkSimulator.WaitFast().ConfigureAwait(false);
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    //                    var b = new ActionBlock<IPartitionData>(d => partitionConsumer.Consume(d));
-
                     chunk.Payload = _cloneFunc(chunk.Payload);
-                    if (partitionConsumer.Consume(chunk) == ScanAction.Stop)
+
+                    if (!await partitionConsumer.OnNext(chunk))
                     {
-                        partitionConsumer.Completed();
+                        await partitionConsumer.Completed();
                         return;
                     }
                 }
             }
             catch (Exception e)
             {
-                partitionConsumer.OnError(e);
+                await partitionConsumer.OnError(e);
                 return;
             }
 
-            partitionConsumer.Completed();
+            await partitionConsumer.Completed();
         }
 
         public async Task ReadAllAsync(

@@ -24,6 +24,12 @@ namespace NStore.Persistence
             CancellationToken cancellationToken
         );
 
+        Task<IPartitionData> PeekPartition(
+            string partitionId,
+            int maxVersion,
+            CancellationToken cancellationToken
+        );
+
         Task ReadAllAsync(
             long fromSequenceIdInclusive,
             ReadDirection direction,

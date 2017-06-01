@@ -198,6 +198,7 @@ namespace NStore.Sample
             this._reporter.Report($"  {_storeProfile.PersistCounter}");
             this._reporter.Report($"  {_storeProfile.PartitionReadForwardCounter}");
             this._reporter.Report($"  {_storeProfile.PartitionReadBackwardCounter}");
+            this._reporter.Report($"  {_storeProfile.PeekCounter}");
             this._reporter.Report($"  {_storeProfile.DeleteCounter}");
             this._reporter.Report($"  {_storeProfile.StoreScanCounter}");
 
@@ -209,6 +210,7 @@ namespace NStore.Sample
                 this._reporter.Report($"  {_snapshotProfile.PersistCounter}");
                 this._reporter.Report($"  {_snapshotProfile.PartitionReadForwardCounter}");
                 this._reporter.Report($"  {_snapshotProfile.PartitionReadBackwardCounter}");
+                this._reporter.Report($"  {_snapshotProfile.PeekCounter}");
                 this._reporter.Report($"  {_snapshotProfile.DeleteCounter}");
                 this._reporter.Report($"  {_snapshotProfile.StoreScanCounter}");
             }

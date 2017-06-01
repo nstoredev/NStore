@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace NStore.Persistence
 {
@@ -10,19 +12,20 @@ namespace NStore.Persistence
         {
         }
 
-        public ScanAction Consume(IPartitionData data)
+        public Task<bool> OnNext(IPartitionData data)
         {
-			return ScanAction.Continue;
+            // continue
+            return Task.FromResult(true);
 		}
 
-        public void Completed()
+        public Task Completed()
         {
-            
+            return Task.CompletedTask;
         }
 
-        public void OnError(Exception ex)
+        public Task OnError(Exception ex )
         {
-            throw ex;
+            return Task.CompletedTask;
         }
     }
 }

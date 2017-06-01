@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace NStore.Persistence
 {
@@ -16,10 +18,10 @@ namespace NStore.Persistence
 
     public interface IPartitionConsumer
     {
-        ScanAction Consume(IPartitionData data);
-        void Completed();
-        void OnError(Exception ex);
+        Task<bool> OnNext(IPartitionData data);
+        Task Completed();
+        Task OnError(Exception ex);
     }
 
-    public delegate ScanAction ProcessPartitionData(IPartitionData data);
+    public delegate Task<bool> ProcessPartitionData(IPartitionData data);
 }

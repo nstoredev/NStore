@@ -117,7 +117,7 @@ namespace NStore.Persistence.Tests
                 "Stream_1", 0, new LambdaPartitionConsumer( data =>
                 {
                     payload = data.Payload;
-                    return ScanAction.Stop;
+                    return Task.FromResult(false);
                 })
             );
 
@@ -135,7 +135,7 @@ namespace NStore.Persistence.Tests
                 new LambdaPartitionConsumer(data =>
                 {
                     payload = data.Payload;
-                    return ScanAction.Stop;
+                    return Task.FromResult(false);
                 })
             );
 
@@ -145,16 +145,41 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_read_only_first_two_chunks()
         {
-            var tape = new PartitionRecorder();
+            var recorder = new PartitionRecorder();
 
             await Store.ReadPartitionForward(
-                "Stream_1", 0, tape, 2
+                "Stream_1", 0, recorder, 2
             );
 
-            Assert.Equal(2, tape.Length);
-            Assert.Equal("a", tape[0]);
-            Assert.Equal("b", tape[1]);
+            Assert.Equal(2, recorder.Length);
+            Assert.Equal("a", recorder[0]);
+            Assert.Equal("b", recorder[1]);
         }
+
+        [Fact]
+        public async Task read_forward_should_call_complete_on_consumer()
+        {
+            var recorder = new PartitionRecorder();
+
+            await Store.ReadPartitionForward(
+                "Stream_1", 0, recorder, 2
+            );
+
+            Assert.True(recorder.ReadCompleted);
+        }
+
+        [Fact]
+        public async Task read_backward_should_call_complete_on_consumer()
+        {
+            var recorder = new PartitionRecorder();
+
+            await Store.ReadPartitionBackward(
+                "Stream_1", 2, recorder, 0
+            );
+
+            Assert.True(recorder.ReadCompleted);
+        }
+
 
         [Fact]
         public async Task should_read_only_last_two_chunks()
@@ -261,6 +286,7 @@ namespace NStore.Persistence.Tests
             Assert.Equal(1, buffer.Length);
             Assert.Equal("c", buffer[0]);
         }
+
     }
 
     public class ByteArrayPersistenceTest : BasePersistenceTest
@@ -274,7 +300,7 @@ namespace NStore.Persistence.Tests
             await Store.ReadPartitionForward("BA", 0, new LambdaPartitionConsumer(data =>
             {
                 payload = (byte[])data.Payload;
-                return ScanAction.Continue;
+                return Task.FromResult(true);
             }));
 
             var text = System.Text.Encoding.UTF8.GetString(payload);
@@ -295,7 +321,7 @@ namespace NStore.Persistence.Tests
             await Store.ReadPartitionForward("Id_1", 0, new LambdaPartitionConsumer(data =>
             {
                 list.Add(data.Payload);
-                return ScanAction.Continue;
+                return Task.FromResult(true);
             }));
 
             Assert.Equal(1, list.Count());
@@ -312,12 +338,12 @@ namespace NStore.Persistence.Tests
             await Store.ReadPartitionForward("Id_1", 0, new LambdaPartitionConsumer(data =>
             {
                 list.Add(data.Payload);
-                return ScanAction.Continue;
+                return Task.FromResult(true);
             }));
             await Store.ReadPartitionForward("Id_2", 0, new LambdaPartitionConsumer(data =>
             {
                 list.Add(data.Payload);
-                return ScanAction.Continue;
+                return Task.FromResult(true);
             }));
 
             Assert.Equal(2, list.Count());
@@ -352,7 +378,7 @@ namespace NStore.Persistence.Tests
             await Store.ReadPartitionForward("delete", 0, new LambdaPartitionConsumer(data =>
             {
                 almostOneChunk = true;
-                return ScanAction.Stop;
+                return Task.FromResult(false);
             }));
 
             Assert.False(almostOneChunk, "Should not contains chunks");

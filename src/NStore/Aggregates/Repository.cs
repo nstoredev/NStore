@@ -61,12 +61,14 @@ namespace NStore.Aggregates
             var stream = OpenStream(aggregate, version != Int32.MaxValue);
 
             int readCount = 0;
-            var consumer = new LambdaPartitionConsumer(data =>
+            IPartitionConsumer consumer = new LambdaPartitionConsumer(data =>
             {
                 readCount++;
                 persister.ApplyChanges((Changeset)data.Payload);
-                return ScanAction.Continue;
+                return Task.FromResult(true);
             });
+
+            consumer = new TplPartitionConsumer(consumer, cancellationToken);
 
             // we use aggregate.Version because snapshot could be rejected
             // Starting point is inclusive, so almost one changeset should be loaded

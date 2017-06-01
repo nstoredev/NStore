@@ -15,9 +15,11 @@ namespace NStore.Persistence
             PartitionReadBackwardCounter = new TaskProfilingInfo("Partition read backward", "chunks read");
             DeleteCounter = new TaskProfilingInfo("Delete");
             StoreScanCounter = new TaskProfilingInfo("Store Scan", "chunks read");
+            PeekCounter = new TaskProfilingInfo("Peek");
         }
 
         public TaskProfilingInfo PersistCounter { get; }
+        public TaskProfilingInfo PeekCounter { get; }
         public TaskProfilingInfo DeleteCounter { get; }
         public TaskProfilingInfo StoreScanCounter { get; }
         public TaskProfilingInfo PartitionReadForwardCounter { get; }
@@ -31,11 +33,10 @@ namespace NStore.Persistence
             int limit,
             CancellationToken cancellationToken)
         {
-            var counter = new LambdaPartitionConsumer(data =>
+            var counter = new PartitionConsumerWrapper(partitionConsumer)
             {
-                PartitionReadForwardCounter.IncCounter1();
-                return partitionConsumer.Consume(data);
-            });
+                BeforeOnNext = data => PartitionReadForwardCounter.IncCounter1()
+            };
 
             await PartitionReadForwardCounter.CaptureAsync(() =>
                 _store.ReadPartitionForward(
@@ -56,11 +57,10 @@ namespace NStore.Persistence
             int limit,
             CancellationToken cancellationToken)
         {
-            var counter = new LambdaPartitionConsumer(data =>
+            var counter = new PartitionConsumerWrapper(partitionConsumer)
             {
-                PartitionReadBackwardCounter.IncCounter1();
-                return partitionConsumer.Consume(data);
-            });
+                BeforeOnNext = data => PartitionReadBackwardCounter.IncCounter1()
+            };
 
             await PartitionReadBackwardCounter.CaptureAsync(() =>
                 _store.ReadPartitionBackward(
@@ -71,6 +71,13 @@ namespace NStore.Persistence
                     limit,
                     cancellationToken
                 ));
+        }
+
+        public Task<IPartitionData> PeekPartition(string partitionId, int maxVersion, CancellationToken cancellationToken)
+        {
+            return PeekCounter.CaptureAsync(() =>
+                _store.PeekPartition(partitionId, maxVersion, cancellationToken)
+            );
         }
 
         public async Task ReadAllAsync(

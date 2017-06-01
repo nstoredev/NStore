@@ -3,9 +3,6 @@
     <TargetFramework>netstandard1.6</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Folder Include="Reactive\" />
-  </ItemGroup>
-  <ItemGroup>
     <Reference Include="System.Threading.Tasks.Dataflow">
       <HintPath>..\..\..\..\..\Users\andrea.balducci\.nuget\packages\system.threading.tasks.dataflow\4.7.0\lib\netstandard1.1\System.Threading.Tasks.Dataflow.dll</HintPath>
     </Reference>

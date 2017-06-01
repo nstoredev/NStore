@@ -2,7 +2,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Driver;
-using NStore.Persistence;
 
 namespace NStore.Persistence.Mongo
 {
@@ -115,13 +114,15 @@ namespace NStore.Persistence.Mongo
                     foreach (var b in batch)
                     {
                         b.Payload = _serializer.Deserialize(partitionId, b.Payload);
-                        if (ScanAction.Stop == partitionConsumer.Consume(b))
+                        if (!await partitionConsumer.OnNext(b))
                         {
                             return;
                         }
                     }
                 }
             }
+
+            await partitionConsumer.Completed();
         }
 
         public async Task ReadPartitionBackward(
@@ -142,6 +143,22 @@ namespace NStore.Persistence.Mongo
             var sort = Builders<Chunk>.Sort.Descending(x => x.Index);
 
             await ReadAndPushToConsumer(partitionId, partitionConsumer, limit, sort, filter, cancellationToken);
+        }
+
+        public async Task<IPartitionData> PeekPartition(string partitionId, int maxVersion, CancellationToken cancellationToken)
+        {
+            var filter = Builders<Chunk>.Filter.And(
+                Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId),
+                Builders<Chunk>.Filter.Lte(x => x.Index, maxVersion)
+            );
+
+            var sort = Builders<Chunk>.Sort.Descending(x => x.Index);
+            var options = new FindOptions<Chunk>() { Sort = sort, Limit = 1 };
+
+            using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
+            {
+                return await cursor.FirstOrDefaultAsync(cancellationToken);
+            }
         }
 
         public async Task ReadAllAsync(

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace NStore.Persistence
 {
@@ -21,20 +23,22 @@ namespace NStore.Persistence
         private readonly IDictionary<long, object> _map = new Dictionary<long, object>();
         public IEnumerable<object> Data => _data;
         public int Length => _data.Count;
+        public bool ReadCompleted { get; private set; }
 
-        public ScanAction Consume(IPartitionData data)
+        public Task<bool> OnNext(IPartitionData data)
         {
             _data.Add(new Element(data.Index, data.Payload));
             _map[data.Index] = data.Payload;
-            return ScanAction.Continue;
+            return Task.FromResult(true);
         }
 
-        public void Completed()
+        public Task Completed()
         {
-            
+            ReadCompleted = true;
+            return Task.CompletedTask;
         }
 
-        public void OnError(Exception ex)
+        public Task OnError(Exception ex)
         {
             throw ex;
         }

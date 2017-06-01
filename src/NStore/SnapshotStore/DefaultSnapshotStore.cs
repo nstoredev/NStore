@@ -21,22 +21,8 @@ namespace NStore.SnapshotStore
             int version,
             CancellationToken cancellationToken)
         {
-            SnapshotInfo snapshotInfo = null;
-
-            await _store.ReadPartitionBackward(
-                aggregateId,
-                version,
-                new LambdaPartitionConsumer(data =>
-                {
-                    snapshotInfo = (SnapshotInfo)data.Payload;
-                    return ScanAction.Stop;
-                }),
-                0,
-                1,
-                cancellationToken
-            );
-
-            return snapshotInfo;
+            var data = await _store.PeekPartition(aggregateId, version, cancellationToken);
+            return (SnapshotInfo) data?.Payload;
         }
 
         public async Task Add(

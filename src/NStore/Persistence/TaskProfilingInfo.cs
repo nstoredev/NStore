@@ -38,7 +38,28 @@ namespace NStore.Persistence
             sw.Start();
             try
             {
-                await task().ConfigureAwait(false);
+                await task();
+            }
+            catch (Exception)
+            {
+                Interlocked.Increment(ref _exceptions);
+                throw;
+            }
+            finally
+            {
+                sw.Stop();
+                Interlocked.Add(ref _ticks, sw.Elapsed.Ticks);
+            }
+        }
+
+        public async Task<TResult> CaptureAsync<TResult>(Func<Task<TResult>> task)
+        {
+            Interlocked.Increment(ref _calls);
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            try
+            {
+                return await task();
             }
             catch (Exception)
             {

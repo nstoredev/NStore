@@ -20,7 +20,10 @@ namespace NStore.Streams
             this.Persistence = persistence;
         }
 
-        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, int toIndexInclusive,
+        public Task Read(
+            IPartitionConsumer partitionConsumer,
+            int fromIndexInclusive,
+            int toIndexInclusive,
             CancellationToken cancellationToken)
         {
             // @@REVIEW: micro optimization for reading only last index? (fromIndexInclusive == toIndexInclusive == Int32.MaxValue)
@@ -28,11 +31,10 @@ namespace NStore.Streams
             if (toIndexInclusive == Int32.MaxValue)
             {
                 Version = 0;
-                readConsumer = new LambdaPartitionConsumer(data =>
+                readConsumer = new PartitionConsumerWrapper(partitionConsumer)
                 {
-                    Version = data.Index;
-                    return partitionConsumer.Consume(data);
-                });
+                    BeforeOnNext = data => Version = data.Index
+                };
             }
 
             return Persistence.ReadPartitionForward(

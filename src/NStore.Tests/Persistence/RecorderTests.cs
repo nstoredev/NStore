@@ -27,7 +27,7 @@ namespace NStore.Tests.Persistence
         {
             var recorder = new PartitionRecorder();
 
-            recorder.Consume(new Data{ Index = 1, Payload = "a"});
+            recorder.OnNext(new Data{ Index = 1, Payload = "a"});
 
             Assert.False(recorder.IsEmpty);
             Assert.Equal(1, recorder.Length);
@@ -39,7 +39,7 @@ namespace NStore.Tests.Persistence
         {
             var recorder = new PartitionRecorder();
 
-            recorder.Consume(new Data { Index = 1, Payload = "a" });
+            recorder.OnNext(new Data { Index = 1, Payload = "a" });
 
             var list = new List<object>();
             recorder.Replay(list.Add);

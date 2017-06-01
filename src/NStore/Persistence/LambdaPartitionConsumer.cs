@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace NStore.Persistence
 {
@@ -15,19 +17,21 @@ namespace NStore.Persistence
             _fn = fn;
         }
 
-        public ScanAction Consume(IPartitionData partitionData)
+        public Task<bool> OnNext(IPartitionData partitionData)
         {
             return this._fn(partitionData);
         }
 
-        public void Completed()
+        public Task Completed()
         {
             this.ReadCompleted = true;
+            return Task.CompletedTask;
         }
 
-        public void OnError(Exception ex)
+        public Task OnError(Exception ex)
         {
             _failed = ex;
+            return Task.CompletedTask;
         }
     }
 }
