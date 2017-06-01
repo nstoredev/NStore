@@ -70,7 +70,7 @@ namespace NStore.Sample
 
         private IRepository GetRepository()
         {
-            return new Repository(_aggregateFactory, _streams, _snapshots);
+            return new TplRepository(_aggregateFactory, _streams, _snapshots);
         }
 
         public void CreateRooms(int rooms)

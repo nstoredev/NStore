@@ -6,6 +6,7 @@
   <ItemGroup>
     <ProjectReference Include="..\NStore.Persistence.Mongo\NStore.Persistence.Mongo.csproj">
     </ProjectReference>
+    <ProjectReference Include="..\NStore.Tpl\NStore.Tpl.csproj" />
     <ProjectReference Include="..\NStore\NStore.csproj">
     </ProjectReference>
   </ItemGroup>

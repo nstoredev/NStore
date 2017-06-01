@@ -66,7 +66,7 @@ namespace NStore.Aggregates
                 readCount++;
                 persister.ApplyChanges((Changeset)data.Payload);
                 return Task.FromResult(true);
-            }));
+            }), cancellationToken);
 
             // we use aggregate.Version because snapshot could be rejected
             // Starting point is inclusive, so almost one changeset should be loaded
@@ -83,7 +83,7 @@ namespace NStore.Aggregates
             return aggregate;
         }
 
-        protected virtual ISubscription ConfigureConsumer(ISubscription consumer)
+        protected virtual ISubscription ConfigureConsumer(ISubscription consumer, CancellationToken token)
         {
             return consumer;
         }
