@@ -8,15 +8,15 @@ namespace NStore.Persistence
     {
         private CancellationTokenSource _source;
         private readonly IPersistence _store;
-        private readonly IAllPartitionsConsumer _consumer;
+        private readonly ISubscription _subscription;
         public int Delay { get; set; }
         long _lastScan = 0;
 
         public long Position => _lastScan;
 
-        public PollingClient(IPersistence store, IAllPartitionsConsumer consumer)
+        public PollingClient(IPersistence store, ISubscription subscription)
         {
-            _consumer = consumer;
+            _subscription = subscription;
             _store = store;
             Delay = 200;
         }
@@ -31,14 +31,14 @@ namespace NStore.Persistence
             _source = new CancellationTokenSource();
             var token = _source.Token;
 
-            var wrapper = new LambdaAllPartitionsConsumer((storeIndex, streamId, streamIndex, payload) =>
+            var wrapper = new LambdaSubscription((data) =>
             {
                 // retry if out of sequence
-                if (storeIndex != _lastScan+1)
-                    return Task.FromResult(ScanAction.Stop);
+                if (data.Position != _lastScan+1)
+                    return Task.FromResult(false);
 
-                _lastScan = storeIndex;
-                return _consumer.Consume(storeIndex, streamId, streamIndex, payload);
+                _lastScan = data.Position;
+                return _subscription.OnNext(data);
             });
 
             Task.Run(async () =>

@@ -4,15 +4,15 @@ using System.Threading.Tasks;
 
 namespace NStore.Persistence
 {
-    public class NullPartitionConsumer : IPartitionConsumer
+    public class NullSubscription : ISubscription
     {
-        public static readonly NullPartitionConsumer Instance = new NullPartitionConsumer();
+        public static readonly NullSubscription Instance = new NullSubscription();
 
-        private NullPartitionConsumer()
+        private NullSubscription()
         {
         }
 
-        public Task<bool> OnNext(IPartitionData data)
+        public Task<bool> OnNext(IChunk data)
         {
             // continue
             return Task.FromResult(true);

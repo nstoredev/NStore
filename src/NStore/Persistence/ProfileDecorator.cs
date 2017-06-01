@@ -28,12 +28,12 @@ namespace NStore.Persistence
         public async Task ReadPartitionForward(
             string partitionId,
             long fromLowerIndexInclusive,
-            IPartitionConsumer partitionConsumer,
+            ISubscription subscription,
             long toUpperIndexInclusive,
             int limit,
             CancellationToken cancellationToken)
         {
-            var counter = new PartitionConsumerWrapper(partitionConsumer)
+            var counter = new SubscriptionWrapper(subscription)
             {
                 BeforeOnNext = data => PartitionReadForwardCounter.IncCounter1()
             };
@@ -52,12 +52,12 @@ namespace NStore.Persistence
         public async Task ReadPartitionBackward(
             string partitionId,
             long fromUpperIndexInclusive,
-            IPartitionConsumer partitionConsumer,
+            ISubscription subscription,
             long toLowerIndexInclusive,
             int limit,
             CancellationToken cancellationToken)
         {
-            var counter = new PartitionConsumerWrapper(partitionConsumer)
+            var counter = new SubscriptionWrapper(subscription)
             {
                 BeforeOnNext = data => PartitionReadBackwardCounter.IncCounter1()
             };
@@ -73,7 +73,7 @@ namespace NStore.Persistence
                 ));
         }
 
-        public Task<IPartitionData> PeekPartition(string partitionId, int maxVersion, CancellationToken cancellationToken)
+        public Task<IChunk> PeekPartition(string partitionId, int maxVersion, CancellationToken cancellationToken)
         {
             return PeekCounter.CaptureAsync(() =>
                 _store.PeekPartition(partitionId, maxVersion, cancellationToken)
@@ -83,18 +83,17 @@ namespace NStore.Persistence
         public async Task ReadAllAsync(
             long fromSequenceIdInclusive,
             ReadDirection direction,
-            IAllPartitionsConsumer consumer,
+            ISubscription subscription,
             int limit,
             CancellationToken cancellationToken)
         {
-            var storeObserver = new LambdaAllPartitionsConsumer((si, s, l, o) =>
+            var wrapper = new SubscriptionWrapper(subscription)
             {
-                StoreScanCounter.IncCounter1();
-                return consumer.Consume(si, s, l, o);
-            });
+                BeforeOnNext = d => StoreScanCounter.IncCounter1()
+            };
 
             await StoreScanCounter.CaptureAsync(() =>
-                _store.ReadAllAsync(fromSequenceIdInclusive, direction, storeObserver, limit, cancellationToken)
+                _store.ReadAllAsync(fromSequenceIdInclusive, direction, wrapper, limit, cancellationToken)
             );
         }
 

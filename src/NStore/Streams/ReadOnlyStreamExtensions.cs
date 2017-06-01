@@ -6,19 +6,19 @@ namespace NStore.Streams
 {
     public static class ReadOnlyStreamExtensions
     {
-        public static Task Read(this IReadOnlyStream stream, IPartitionConsumer partitionConsumer)
+        public static Task Read(this IReadOnlyStream stream, ISubscription subscription)
         {
-            return stream.Read(partitionConsumer, 0, int.MaxValue, CancellationToken.None);
+            return stream.Read(subscription, 0, int.MaxValue, CancellationToken.None);
         }
 
-        public static Task Read(this IReadOnlyStream stream, IPartitionConsumer partitionConsumer, int fromIndexInclusive)
+        public static Task Read(this IReadOnlyStream stream, ISubscription subscription, int fromIndexInclusive)
         {
-            return stream.Read(partitionConsumer, fromIndexInclusive, int.MaxValue, CancellationToken.None);
+            return stream.Read(subscription, fromIndexInclusive, int.MaxValue, CancellationToken.None);
         }
 
-        public static Task Read(this IReadOnlyStream stream, IPartitionConsumer partitionConsumer, int fromIndexInclusive, int toIndexInclusive)
+        public static Task Read(this IReadOnlyStream stream, ISubscription subscription, int fromIndexInclusive, int toIndexInclusive)
         {
-            return stream.Read(partitionConsumer, fromIndexInclusive, toIndexInclusive, CancellationToken.None);
+            return stream.Read(subscription, fromIndexInclusive, toIndexInclusive, CancellationToken.None);
         }
     }
 }

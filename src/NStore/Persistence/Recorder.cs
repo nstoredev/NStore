@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace NStore.Persistence
 {
-    public class PartitionRecorder : IPartitionConsumer
+    public class Recorder : ISubscription
     {
         private sealed class Element
         {
@@ -25,7 +25,7 @@ namespace NStore.Persistence
         public int Length => _data.Count;
         public bool ReadCompleted { get; private set; }
 
-        public Task<bool> OnNext(IPartitionData data)
+        public Task<bool> OnNext(IChunk data)
         {
             _data.Add(new Element(data.Index, data.Payload));
             _map[data.Index] = data.Payload;

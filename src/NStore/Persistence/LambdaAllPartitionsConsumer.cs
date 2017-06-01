@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace NStore.Persistence
 {
-    public class LambdaAllPartitionsConsumer : IAllPartitionsConsumer
+    public class LambdaAllPartitionsConsumer
     {
         private readonly Func<long, string, long, object, Task<ScanAction>> _fn;
 

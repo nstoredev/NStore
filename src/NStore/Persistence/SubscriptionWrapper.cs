@@ -3,18 +3,18 @@ using System.Threading.Tasks;
 
 namespace NStore.Persistence
 {
-    public class PartitionConsumerWrapper : IPartitionConsumer
+    public class SubscriptionWrapper : ISubscription
     {
-        private readonly IPartitionConsumer _wrapped;
+        private readonly ISubscription _wrapped;
 
-        public PartitionConsumerWrapper(IPartitionConsumer wrapped)
+        public SubscriptionWrapper(ISubscription wrapped)
         {
             _wrapped = wrapped;
         }
 
-        public Action<IPartitionData> BeforeOnNext { get; set; }
+        public Action<IChunk> BeforeOnNext { get; set; }
 
-        public async Task<bool> OnNext(IPartitionData data)
+        public async Task<bool> OnNext(IChunk data)
         {
             BeforeOnNext?.Invoke(data);
             return await _wrapped.OnNext(data);

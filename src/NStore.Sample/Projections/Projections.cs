@@ -12,7 +12,7 @@ using NStore.Sample.Support;
 
 namespace NStore.Sample.Projections
 {
-    public class AppProjections : IAllPartitionsConsumer
+    public class AppProjections : ISubscription
     {
         public long Position { get; private set; } = 0;
         public RoomsOnSaleProjection Rooms { get; }
@@ -40,66 +40,6 @@ namespace NStore.Sample.Projections
                 network
             );
             Setup();
-        }
-
-        public async Task<ScanAction> Consume(
-            long position,
-            string partitionId,
-            long index,
-            object payload)
-        {
-            if (position != Position + 1)
-            {
-                // * * * * * * * * * * * * * * * * * * * * * * * * *
-                // * WARNING: ˌɛsəˈtɛrɪk/ stuff can be done here   *
-                // * * * * * * * * * * * * * * * * * * * * * * * * *
-
-
-                // * * * * * * * * * * * * * * * * * * * * * * * * *
-                // * Or just sit down and watch basic stuff @ work *
-                // * * * * * * * * * * * * * * * * * * * * * * * * *
-                if (!_catchingUp)
-                {
-                    _reporter.Report(
-                        $"!!!!!!!!!!!!!!!! Projection out of sequence {position} => wait next poll !!!!!!!!!!!!!!!!");
-                    _catchingUp = true;
-                }
-
-                // * * * * * * * * * * * * * * * * * * * * * * * * * *
-                // * Add a timeout to stop if out of sequence (crash)*
-                // * * * * * * * * * * * * * * * * * * * * * * * * * *
-
-                return ScanAction.Stop;
-            }
-
-            _catchingUp = false;
-
-            Position = position;
-
-            Changeset changes = (Changeset) payload;
-            StoreMetrics(changes);
-
-            // skip fillers
-            if (payload == null)
-            {
-                return ScanAction.Continue;
-            }
-
-            _dispatchedCount++;
-            var sw = new Stopwatch();
-            sw.Start();
-            await Task.WhenAll
-            (
-                _projections.Select(p => p.Project(changes))
-            );
-            sw.Stop();
-
-            if (!_quiet)
-            {
-                _reporter.Report($"dispatched changeset #{position} took {sw.ElapsedMilliseconds}ms");
-            }
-
-            return ScanAction.Continue;
         }
 
         private void StoreMetrics(Changeset changes)
@@ -135,6 +75,73 @@ namespace NStore.Sample.Projections
             _reporter.Report("Changesets:");
             _reporter.Report($"  Dispatched => {_dispatchedCount}");
             _reporter.Report($"  Fillers    => {_fillersCount}");
+        }
+
+        public async Task<bool> OnNext(IChunk data)
+        {
+            if (data.Position != Position + 1)
+            {
+                // * * * * * * * * * * * * * * * * * * * * * * * * *
+                // * WARNING: ˌɛsəˈtɛrɪk/ stuff can be done here   *
+                // * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+                // * * * * * * * * * * * * * * * * * * * * * * * * *
+                // * Or just sit down and watch basic stuff @ work *
+                // * * * * * * * * * * * * * * * * * * * * * * * * *
+                if (!_catchingUp)
+                {
+                    _reporter.Report(
+                        $"!!!!!!!!!!!!!!!! Projection out of sequence {data.Position} => wait next poll !!!!!!!!!!!!!!!!");
+                    _catchingUp = true;
+                }
+
+                // * * * * * * * * * * * * * * * * * * * * * * * * * *
+                // * Add a timeout to stop if out of sequence (crash)*
+                // * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+                return false;
+            }
+
+            _catchingUp = false;
+
+            Position = data.Position;
+
+            Changeset changes = (Changeset)data.Payload;
+            StoreMetrics(changes);
+
+            // skip fillers
+            if (changes == null)
+            {
+                return true;
+            }
+
+            _dispatchedCount++;
+            var sw = new Stopwatch();
+            sw.Start();
+            await Task.WhenAll
+            (
+                _projections.Select(p => p.Project(changes))
+            );
+            sw.Stop();
+
+            if (!_quiet)
+            {
+                _reporter.Report($"dispatched changeset #{data.Position} took {sw.ElapsedMilliseconds}ms");
+            }
+
+            return true;
+        }
+
+        public Task Completed()
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task OnError(Exception ex)
+        {
+            _reporter.Report($"ERROR {ex.Message}");
+            return Task.CompletedTask;
         }
     }
 }

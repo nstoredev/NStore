@@ -7,8 +7,9 @@ namespace NStore.Tests.Persistence
 {
     public class RecorderTests
     {
-        public class Data : IPartitionData
+        public class Data : IChunk
         {
+            public long Position { get; set; }
             public string PartitionId { get; set; }
             public long Index { get; set; }
             public object Payload { get; set; }
@@ -17,7 +18,7 @@ namespace NStore.Tests.Persistence
         [Fact]
         public void new_tape_is_empty()
         {
-            var tape = new PartitionRecorder();
+            var tape = new Recorder();
 
             Assert.True(tape.IsEmpty);
         }
@@ -25,9 +26,9 @@ namespace NStore.Tests.Persistence
         [Fact]
         public void record()
         {
-            var recorder = new PartitionRecorder();
+            var recorder = new Recorder();
 
-            recorder.OnNext(new Data{ Index = 1, Payload = "a"});
+            recorder.OnNext(new Data { Index = 1, Payload = "a" });
 
             Assert.False(recorder.IsEmpty);
             Assert.Equal(1, recorder.Length);
@@ -37,7 +38,7 @@ namespace NStore.Tests.Persistence
         [Fact]
         public void replay()
         {
-            var recorder = new PartitionRecorder();
+            var recorder = new Recorder();
 
             recorder.OnNext(new Data { Index = 1, Payload = "a" });
 

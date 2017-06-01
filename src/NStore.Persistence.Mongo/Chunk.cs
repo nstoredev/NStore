@@ -2,7 +2,7 @@
 
 namespace NStore.Persistence.Mongo
 {
-    internal class Chunk : IPersistenceData
+    internal class Chunk : IChunk
     {
         [BsonId]
         public long Position { get; set; }

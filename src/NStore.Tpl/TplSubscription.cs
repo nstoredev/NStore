@@ -8,17 +8,17 @@ using NStore.Persistence;
 
 namespace NStore.Tpl
 {
-    public class TplPartitionConsumer : IPartitionConsumer
+    public class TplSubscription : ISubscription
     {
-        private readonly IPartitionConsumer _consumer;
-        private readonly ActionBlock<IPartitionData> _producer;
+        private readonly ISubscription _consumer;
+        private readonly ActionBlock<IChunk> _producer;
 
         private bool _isRunning;
 
-        public TplPartitionConsumer(IPartitionConsumer consumer, CancellationToken token)
+        public TplSubscription(ISubscription consumer, CancellationToken token)
         {
             _consumer = consumer;
-            _producer = new ActionBlock<IPartitionData>(Process, new ExecutionDataflowBlockOptions()
+            _producer = new ActionBlock<IChunk>(Process, new ExecutionDataflowBlockOptions()
             {
                 CancellationToken = token,
                 SingleProducerConstrained = true
@@ -26,15 +26,15 @@ namespace NStore.Tpl
             _isRunning = true;
         }
 
-        private async Task Process(IPartitionData partitionData)
+        private async Task Process(IChunk chunk)
         {
             if (_isRunning)
             {
-                _isRunning = await _consumer.OnNext(partitionData).ConfigureAwait(false);
+                _isRunning = await _consumer.OnNext(chunk).ConfigureAwait(false);
             }
         }
 
-        public async Task<bool> OnNext(IPartitionData data)
+        public async Task<bool> OnNext(IChunk data)
         {
             await _producer.SendAsync(data).ConfigureAwait(false);
             return _isRunning;

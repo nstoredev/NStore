@@ -21,7 +21,7 @@ namespace NStore.Persistence.Tests
             var stream = _streams.Open("stream_1");
             await stream.Append("payload");
 
-            var acc = new PartitionRecorder();
+            var acc = new Recorder();
             await Store.ReadPartitionForward("stream_1", 0, acc);
 
             Assert.Equal(1, acc.Length);
@@ -34,7 +34,7 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("stream_2", 1, "payload");
 
             var stream = _streams.Open("stream_2");
-            var acc = new PartitionRecorder();
+            var acc = new Recorder();
             await stream.Read(acc);
 
             Assert.Equal(1, acc.Length);
@@ -48,7 +48,7 @@ namespace NStore.Persistence.Tests
             var stream = _streams.Open("stream_3");
             await stream.Delete();
 
-            var acc = new PartitionRecorder();
+            var acc = new Recorder();
             await stream.Read(acc);
 
             Assert.True(acc.IsEmpty);
@@ -69,7 +69,7 @@ namespace NStore.Persistence.Tests
             var stream = _streams.OpenOptimisticConcurrency(id);
             if (readToEnd)
             {
-                await stream.Read(NullPartitionConsumer.Instance);
+                await stream.Read(NullSubscription.Instance);
             }
             return stream;
         }
@@ -80,7 +80,7 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("stream_2", 1, "payload");
 
             var stream = await Open("stream_2");
-            var acc = new PartitionRecorder();
+            var acc = new Recorder();
             await stream.Read(acc);
 
             Assert.Equal(1, acc.Length);
@@ -93,7 +93,7 @@ namespace NStore.Persistence.Tests
             var stream = await Open("stream_1");
 
             await stream.Append("payload");
-            var tape = new PartitionRecorder();
+            var tape = new Recorder();
             await Store.ReadPartitionForward("stream_1", 0, tape);
 
             Assert.Equal(1, tape.Length);
@@ -108,7 +108,7 @@ namespace NStore.Persistence.Tests
             await stream.Append("a");
             await stream.Append("b");
 
-            var tape = new PartitionRecorder();
+            var tape = new Recorder();
             await Store.ReadPartitionForward("stream_1", 0, tape);
 
             Assert.Equal(2, tape.Length);
@@ -145,7 +145,7 @@ namespace NStore.Persistence.Tests
         public async void appending_on_a_partially_loaded_stream_should_throw()
         {
             var stream = await Open("stream_1", false);
-            await stream.Read(NullPartitionConsumer.Instance, 0, 10);
+            await stream.Read(NullSubscription.Instance, 0, 10);
             var ex = await Assert.ThrowsAnyAsync<AppendFailedException>(() =>
                 stream.Append("b")
             );
@@ -167,7 +167,7 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("stream_2", 1, "payload");
 
             var stream = _streams.OpenReadOnly("stream_2");
-            var acc = new PartitionRecorder();
+            var acc = new Recorder();
             await stream.Read(acc);
 
             Assert.Equal(1, acc.Length);

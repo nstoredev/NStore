@@ -61,14 +61,12 @@ namespace NStore.Aggregates
             var stream = OpenStream(aggregate, version != Int32.MaxValue);
 
             int readCount = 0;
-            IPartitionConsumer consumer = new LambdaPartitionConsumer(data =>
+            var consumer = ConfigureConsumer(new LambdaSubscription(data =>
             {
                 readCount++;
                 persister.ApplyChanges((Changeset)data.Payload);
                 return Task.FromResult(true);
-            });
-
-//            consumer = new TplPartitionConsumer(consumer, cancellationToken);
+            }));
 
             // we use aggregate.Version because snapshot could be rejected
             // Starting point is inclusive, so almost one changeset should be loaded
@@ -83,6 +81,11 @@ namespace NStore.Aggregates
             }
 
             return aggregate;
+        }
+
+        protected virtual ISubscription ConfigureConsumer(ISubscription consumer)
+        {
+            return consumer;
         }
 
         public Task<T> GetById<T>(string id, int version) where T : IAggregate

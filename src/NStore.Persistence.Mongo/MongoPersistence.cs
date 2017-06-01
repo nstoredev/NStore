@@ -75,7 +75,7 @@ namespace NStore.Persistence.Mongo
         public async Task ReadPartitionForward(
             string partitionId,
             long fromLowerIndexInclusive,
-            IPartitionConsumer partitionConsumer,
+            ISubscription subscription,
             long toUpperIndexInclusive,
             int limit,
             CancellationToken cancellationToken
@@ -89,12 +89,12 @@ namespace NStore.Persistence.Mongo
 
             var sort = Builders<Chunk>.Sort.Ascending(x => x.Index);
 
-            await ReadAndPushToConsumer(partitionId, partitionConsumer, limit, sort, filter, cancellationToken);
+            await ReadAndPushToConsumer(partitionId, subscription, limit, sort, filter, cancellationToken);
         }
 
         private async Task ReadAndPushToConsumer(
             string partitionId,
-            IPartitionConsumer partitionConsumer,
+            ISubscription subscription,
             int limit,
             SortDefinition<Chunk> sort,
             FilterDefinition<Chunk> filter,
@@ -114,21 +114,22 @@ namespace NStore.Persistence.Mongo
                     foreach (var b in batch)
                     {
                         b.Payload = _serializer.Deserialize(partitionId, b.Payload);
-                        if (!await partitionConsumer.OnNext(b))
+                        if (!await subscription.OnNext(b))
                         {
+                            await subscription.Completed();
                             return;
                         }
                     }
                 }
             }
 
-            await partitionConsumer.Completed();
+            await subscription.Completed();
         }
 
         public async Task ReadPartitionBackward(
             string partitionId,
             long fromUpperIndexInclusive,
-            IPartitionConsumer partitionConsumer,
+            ISubscription subscription,
             long toLowerIndexInclusive,
             int limit,
             CancellationToken cancellationToken
@@ -142,10 +143,10 @@ namespace NStore.Persistence.Mongo
 
             var sort = Builders<Chunk>.Sort.Descending(x => x.Index);
 
-            await ReadAndPushToConsumer(partitionId, partitionConsumer, limit, sort, filter, cancellationToken);
+            await ReadAndPushToConsumer(partitionId, subscription, limit, sort, filter, cancellationToken);
         }
 
-        public async Task<IPartitionData> PeekPartition(string partitionId, int maxVersion, CancellationToken cancellationToken)
+        public async Task<IChunk> PeekPartition(string partitionId, int maxVersion, CancellationToken cancellationToken)
         {
             var filter = Builders<Chunk>.Filter.And(
                 Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId),
@@ -164,7 +165,7 @@ namespace NStore.Persistence.Mongo
         public async Task ReadAllAsync(
             long fromSequenceIdInclusive,
             ReadDirection direction,
-            IAllPartitionsConsumer consumer,
+            ISubscription subscription,
             int limit,
             CancellationToken cancellationToken
         )
@@ -197,15 +198,17 @@ namespace NStore.Persistence.Mongo
                     var batch = cursor.Current;
                     foreach (var chunk in batch)
                     {
-                        if (ScanAction.Stop ==
-                            await consumer.Consume(chunk.Position, chunk.PartitionId, chunk.Index,
-                                _serializer.Deserialize(chunk.PartitionId, chunk.Payload)))
+                        chunk.Payload = _serializer.Deserialize(chunk.PartitionId, chunk.Payload);
+
+                        if (! await subscription.OnNext(chunk))
                         {
+                            await subscription.Completed();
                             return;
                         }
                     }
                 }
             }
+            await subscription.Completed();
         }
 
         public async Task PersistAsync(

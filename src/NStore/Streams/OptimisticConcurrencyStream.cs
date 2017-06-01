@@ -21,17 +21,17 @@ namespace NStore.Streams
         }
 
         public Task Read(
-            IPartitionConsumer partitionConsumer,
+            ISubscription subscription,
             int fromIndexInclusive,
             int toIndexInclusive,
             CancellationToken cancellationToken)
         {
             // @@REVIEW: micro optimization for reading only last index? (fromIndexInclusive == toIndexInclusive == Int32.MaxValue)
-            var readConsumer = partitionConsumer;
+            var readConsumer = subscription;
             if (toIndexInclusive == Int32.MaxValue)
             {
                 Version = 0;
-                readConsumer = new PartitionConsumerWrapper(partitionConsumer)
+                readConsumer = new SubscriptionWrapper(subscription)
                 {
                     BeforeOnNext = data => Version = data.Index
                 };

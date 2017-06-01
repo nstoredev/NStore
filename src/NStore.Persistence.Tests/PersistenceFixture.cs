@@ -43,7 +43,7 @@ namespace NStore.Persistence.Tests
         {
             await Store.PersistAsync("Stream_Neg", -1, "payload");
 
-            var tape = new PartitionRecorder();
+            var tape = new Recorder();
             await Store.ReadPartitionForward("Stream_Neg", 0, tape);
             Assert.Equal("payload", tape.ByIndex(1));
         }
@@ -114,7 +114,7 @@ namespace NStore.Persistence.Tests
             object payload = null;
 
             await Store.ReadPartitionForward(
-                "Stream_1", 0, new LambdaPartitionConsumer( data =>
+                "Stream_1", 0, new LambdaSubscription( data =>
                 {
                     payload = data.Payload;
                     return Task.FromResult(false);
@@ -132,7 +132,7 @@ namespace NStore.Persistence.Tests
             await Store.ReadPartitionBackward(
                 "Stream_1",
                 long.MaxValue,
-                new LambdaPartitionConsumer(data =>
+                new LambdaSubscription(data =>
                 {
                     payload = data.Payload;
                     return Task.FromResult(false);
@@ -145,7 +145,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_read_only_first_two_chunks()
         {
-            var recorder = new PartitionRecorder();
+            var recorder = new Recorder();
 
             await Store.ReadPartitionForward(
                 "Stream_1", 0, recorder, 2
@@ -159,7 +159,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_forward_should_call_complete_on_consumer()
         {
-            var recorder = new PartitionRecorder();
+            var recorder = new Recorder();
 
             await Store.ReadPartitionForward(
                 "Stream_1", 0, recorder, 2
@@ -171,7 +171,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_backward_should_call_complete_on_consumer()
         {
-            var recorder = new PartitionRecorder();
+            var recorder = new Recorder();
 
             await Store.ReadPartitionBackward(
                 "Stream_1", 2, recorder, 0
@@ -184,7 +184,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_read_only_last_two_chunks()
         {
-            var tape = new PartitionRecorder();
+            var tape = new Recorder();
 
             await Store.ReadPartitionBackward(
                 "Stream_1",
@@ -297,7 +297,7 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("BA", 0, System.Text.Encoding.UTF8.GetBytes("this is a test"));
 
             byte[] payload = null;
-            await Store.ReadPartitionForward("BA", 0, new LambdaPartitionConsumer(data =>
+            await Store.ReadPartitionForward("BA", 0, new LambdaSubscription(data =>
             {
                 payload = (byte[])data.Payload;
                 return Task.FromResult(true);
@@ -318,7 +318,7 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("Id_1", 1, new { data = "this is a test" }, opId);
 
             var list = new List<object>();
-            await Store.ReadPartitionForward("Id_1", 0, new LambdaPartitionConsumer(data =>
+            await Store.ReadPartitionForward("Id_1", 0, new LambdaSubscription(data =>
             {
                 list.Add(data.Payload);
                 return Task.FromResult(true);
@@ -335,12 +335,12 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("Id_2", 1, "b", opId);
 
             var list = new List<object>();
-            await Store.ReadPartitionForward("Id_1", 0, new LambdaPartitionConsumer(data =>
+            await Store.ReadPartitionForward("Id_1", 0, new LambdaSubscription(data =>
             {
                 list.Add(data.Payload);
                 return Task.FromResult(true);
             }));
-            await Store.ReadPartitionForward("Id_2", 0, new LambdaPartitionConsumer(data =>
+            await Store.ReadPartitionForward("Id_2", 0, new LambdaSubscription(data =>
             {
                 list.Add(data.Payload);
                 return Task.FromResult(true);
@@ -375,7 +375,7 @@ namespace NStore.Persistence.Tests
         {
             await Store.DeleteAsync("delete");
             bool almostOneChunk = false;
-            await Store.ReadPartitionForward("delete", 0, new LambdaPartitionConsumer(data =>
+            await Store.ReadPartitionForward("delete", 0, new LambdaSubscription(data =>
             {
                 almostOneChunk = true;
                 return Task.FromResult(false);
@@ -398,7 +398,7 @@ namespace NStore.Persistence.Tests
         public async void should_delete_first()
         {
             await Store.DeleteAsync("delete_3", 1, 1);
-            var acc = new PartitionRecorder();
+            var acc = new Recorder();
             await Store.ReadPartitionForward("delete_3", 0, acc);
 
             Assert.Equal(2, acc.Length);
@@ -410,7 +410,7 @@ namespace NStore.Persistence.Tests
         public async void should_delete_last()
         {
             await Store.DeleteAsync("delete_4", 3);
-            var acc = new PartitionRecorder();
+            var acc = new Recorder();
             await Store.ReadPartitionForward("delete_4", 0, acc);
 
             Assert.Equal(2, acc.Length);
@@ -422,7 +422,7 @@ namespace NStore.Persistence.Tests
         public async void should_delete_middle()
         {
             await Store.DeleteAsync("delete_5", 2, 2);
-            var acc = new PartitionRecorder();
+            var acc = new Recorder();
             await Store.ReadPartitionForward("delete_5", 0, acc);
 
             Assert.Equal(2, acc.Length);
@@ -482,7 +482,7 @@ namespace NStore.Persistence.Tests
             Task.WaitAll(writers);
 
             Assert.True(exceptions > 0);
-            var recorder = new PartitionRecorder();
+            var recorder = new Recorder();
             await Store.ReadPartitionForward("::empty", 0, recorder);
 
             Assert.Equal(exceptions, recorder.Length);

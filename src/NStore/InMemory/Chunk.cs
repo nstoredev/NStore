@@ -2,7 +2,7 @@
 
 namespace NStore.InMemory
 {
-    internal class Chunk : IPartitionData
+    internal class Chunk : IChunk
     {
         public long Position { get; set; }
         public string PartitionId { get; set; }

@@ -42,7 +42,7 @@ namespace NStore.InMemory
         public async Task ReadPartitionForward(
             string partitionId,
             long fromLowerIndexInclusive,
-            IPartitionConsumer partitionConsumer,
+            ISubscription subscription,
             long toUpperIndexInclusive,
             int limit,
             CancellationToken cancellationToken
@@ -63,13 +63,13 @@ namespace NStore.InMemory
                     .ToArray();
             }
 
-            await StartProducer(partitionConsumer, result, cancellationToken);
+            await StartProducer(subscription, result, cancellationToken);
         }
 
         public async Task ReadPartitionBackward(
             string partitionId,
             long fromUpperIndexInclusive,
-            IPartitionConsumer partitionConsumer,
+            ISubscription subscription,
             long toLowerIndexInclusive,
             int limit,
             CancellationToken cancellationToken
@@ -90,35 +90,44 @@ namespace NStore.InMemory
                     .ToArray();
             }
 
-            await StartProducer(partitionConsumer, result, cancellationToken);
+            await StartProducer(subscription, result, cancellationToken);
         }
 
-        public Task<IPartitionData> PeekPartition(string partitionId, int maxValue, CancellationToken cancellationToken)
+        public Task<IChunk> PeekPartition(string partitionId, int maxValue, CancellationToken cancellationToken)
         {
-            InMemoryPartition inMemoryPartition;
             lock (_lock)
             {
+                InMemoryPartition inMemoryPartition;
                 if (!_partitions.TryGetValue(partitionId, out inMemoryPartition))
                 {
-                    return Task.FromResult<IPartitionData>(null);
+                    return Task.FromResult<IChunk>(null);
                 }
+
+                var chunk = inMemoryPartition.Chunks.Reverse()
+                        .Where(x => x.Index <= maxValue)
+                        .Take(1)
+                        .SingleOrDefault();
+                return Task.FromResult(Clone(chunk));
             }
+        }
 
-            var chunk = inMemoryPartition.Chunks.Reverse()
-                    .Where(x => x.Index <= maxValue)
-                    .Take(1)
-                    .SingleOrDefault();
+        private IChunk Clone(Chunk source)
+        {
+            if (source == null)
+                return null;
 
-            if (chunk != null)
+            return new Chunk()
             {
-                chunk.Payload = _cloneFunc(chunk.Payload);
-            }
-
-            return Task.FromResult<IPartitionData>(chunk);
+                Position = source.Position,
+                Index = source.Index,
+                OpId = source.OpId,
+                PartitionId = source.PartitionId,
+                Payload = _cloneFunc(source.Payload)
+            };
         }
 
         private async Task StartProducer(
-            IPartitionConsumer partitionConsumer,
+            ISubscription subscription,
             IEnumerable<Chunk> chunks,
             CancellationToken cancellationToken)
         {
@@ -129,28 +138,26 @@ namespace NStore.InMemory
                     await _networkSimulator.WaitFast().ConfigureAwait(false);
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    chunk.Payload = _cloneFunc(chunk.Payload);
-
-                    if (!await partitionConsumer.OnNext(chunk))
+                    if (!await subscription.OnNext(Clone(chunk)))
                     {
-                        await partitionConsumer.Completed();
+                        await subscription.Completed();
                         return;
                     }
                 }
             }
             catch (Exception e)
             {
-                await partitionConsumer.OnError(e);
+                await subscription.OnError(e);
                 return;
             }
 
-            await partitionConsumer.Completed();
+            await subscription.Completed();
         }
 
         public async Task ReadAllAsync(
             long fromSequenceIdInclusive,
             ReadDirection direction,
-            IAllPartitionsConsumer consumer,
+            ISubscription subscription,
             int limit,
             CancellationToken cancellationToken
         )
@@ -180,12 +187,14 @@ namespace NStore.InMemory
             {
                 await _networkSimulator.Wait().ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
-                if (await consumer.Consume(chunk.Position, chunk.PartitionId, chunk.Index, _cloneFunc(chunk.Payload)) ==
-                    ScanAction.Stop)
+
+                if (!await subscription.OnNext(Clone(chunk)))
                 {
                     break;
                 }
             }
+
+            await subscription.Completed();
         }
 
         public async Task PersistAsync(

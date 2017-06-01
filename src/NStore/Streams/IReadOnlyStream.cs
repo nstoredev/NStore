@@ -8,7 +8,7 @@ namespace NStore.Streams
     public interface IReadOnlyStream
     {
         Task Read(
-            IPartitionConsumer partitionConsumer,
+            ISubscription subscription,
             int fromIndexInclusive,
             int toIndexInclusive,
             CancellationToken cancellationToken

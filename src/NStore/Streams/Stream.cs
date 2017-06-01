@@ -17,12 +17,12 @@ namespace NStore.Streams
             this.Persistence = persistence;
         }
 
-        public Task Read(IPartitionConsumer partitionConsumer, int fromIndexInclusive, int toIndexInclusive, CancellationToken cancellationToken)
+        public Task Read(ISubscription subscription, int fromIndexInclusive, int toIndexInclusive, CancellationToken cancellationToken)
         {
             return Persistence.ReadPartitionForward(
                 Id,
                 fromIndexInclusive,
-                partitionConsumer,
+                subscription,
                 toIndexInclusive,
                 int.MaxValue,
                 cancellationToken

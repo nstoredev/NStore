@@ -66,7 +66,7 @@ namespace NStore.Tests.Persistence
         [Fact]
 		public async void scan_partition_should_be_recorded()
 		{
-            await _store.ReadPartitionForward("empty",0, new PartitionRecorder(), 10);
+            await _store.ReadPartitionForward("empty",0, new Recorder(), 10);
 		    Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
 			Assert.Equal(0, _profile.StoreScanCounter.Calls);
@@ -78,7 +78,7 @@ namespace NStore.Tests.Persistence
         [Fact]
         public async void scan_partition_backward_should_be_recorded()
         {
-            await _store.ReadPartitionBackward("empty", 0, new PartitionRecorder(), 10);
+            await _store.ReadPartitionBackward("empty", 0, new Recorder(), 10);
             Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
             Assert.Equal(0, _profile.StoreScanCounter.Calls);

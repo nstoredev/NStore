@@ -4,22 +4,22 @@ using System.Threading.Tasks;
 
 namespace NStore.Persistence
 {
-    public class LambdaPartitionConsumer : IPartitionConsumer
+    public class LambdaSubscription : ISubscription
     {
-        private readonly ProcessPartitionData _fn;
+        private readonly StreamDataProcessor _fn;
         private Exception _failed;
         public bool ReadCompleted { get; private set; }
         public bool Failed => this._failed != null;
         public Exception LastError => _failed;
         
-        public LambdaPartitionConsumer(ProcessPartitionData fn)
+        public LambdaSubscription(StreamDataProcessor fn)
         {
             _fn = fn;
         }
 
-        public Task<bool> OnNext(IPartitionData partitionData)
+        public Task<bool> OnNext(IChunk chunk)
         {
-            return this._fn(partitionData);
+            return this._fn(chunk);
         }
 
         public Task Completed()

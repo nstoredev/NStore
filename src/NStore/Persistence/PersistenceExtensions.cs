@@ -9,13 +9,13 @@ namespace NStore.Persistence
             this IPersistence store,
             string partitionId,
             long fromLowerIndexInclusive,
-            IPartitionConsumer partitionConsumer
+            ISubscription subscription
         )
         {
             return store.ReadPartitionForward(
                 partitionId,
                 fromLowerIndexInclusive,
-                partitionConsumer,
+                subscription,
                 long.MaxValue,
                 int.MaxValue,
                 CancellationToken.None
@@ -26,14 +26,14 @@ namespace NStore.Persistence
             this IPersistence store,
             string partitionId,
             long fromLowerIndexInclusive,
-            IPartitionConsumer partitionConsumer,
+            ISubscription subscription,
             long toUpperIndexInclusive
         )
         {
             return store.ReadPartitionForward(
                 partitionId,
                 fromLowerIndexInclusive,
-                partitionConsumer,
+                subscription,
                 toUpperIndexInclusive,
                 int.MaxValue,
                 CancellationToken.None
@@ -45,13 +45,13 @@ namespace NStore.Persistence
             this IPersistence store,
             string partitionId,
             long fromUpperIndexInclusive,
-            IPartitionConsumer partitionConsumer
+            ISubscription subscription
         )
         {
             return store.ReadPartitionBackward(
                 partitionId,
                 fromUpperIndexInclusive,
-                partitionConsumer,
+                subscription,
                 0,
                 int.MaxValue,
                 CancellationToken.None
@@ -62,14 +62,14 @@ namespace NStore.Persistence
             this IPersistence store,
             string partitionId,
             long fromUpperIndexInclusive,
-            IPartitionConsumer partitionConsumer,
+            ISubscription subscription,
             long toLowerIndexInclusive
         )
         {
             return store.ReadPartitionBackward(
                 partitionId,
                 fromUpperIndexInclusive,
-                partitionConsumer,
+                subscription,
                 toLowerIndexInclusive,
                 int.MaxValue,
                 CancellationToken.None
@@ -80,21 +80,21 @@ namespace NStore.Persistence
             this IPersistence store,
             long sequenceStart,
             ReadDirection direction,
-            IAllPartitionsConsumer consumer
+            ISubscription subscription
         )
         {
-            return store.ReadAllAsync(sequenceStart, direction, consumer, int.MaxValue, CancellationToken.None);
+            return store.ReadAllAsync(sequenceStart, direction, subscription, int.MaxValue, CancellationToken.None);
         }
 
         public static Task ScanStoreAsync(
             this IPersistence store,
             long sequenceStart,
             ReadDirection direction,
-            IAllPartitionsConsumer consumer,
+            ISubscription subscription,
             int limit
         )
         {
-            return store.ReadAllAsync(sequenceStart, direction, consumer, limit, CancellationToken.None);
+            return store.ReadAllAsync(sequenceStart, direction, subscription, limit, CancellationToken.None);
         }
 
         public static Task PersistAsync(

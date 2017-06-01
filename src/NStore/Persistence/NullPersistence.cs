@@ -28,7 +28,7 @@ namespace NStore.Persistence
         public Task ReadPartitionForward(
             string partitionId,
             long fromLowerIndexInclusive,
-            IPartitionConsumer partitionConsumer,
+            ISubscription subscription,
             long toUpperIndexInclusive,
             int limit,
             CancellationToken cancellationToken
@@ -40,7 +40,7 @@ namespace NStore.Persistence
         public Task ReadPartitionBackward(
             string partitionId, 
             long fromUpperIndexInclusive, 
-            IPartitionConsumer partitionConsumer,
+            ISubscription subscription,
             long toLowerIndexInclusive, 
             int limit,
             CancellationToken cancellationToken)
@@ -48,15 +48,15 @@ namespace NStore.Persistence
             return Task.CompletedTask;
         }
 
-        public Task<IPartitionData> PeekPartition(string partitionId, int maxVersion, CancellationToken cancellationToken)
+        public Task<IChunk> PeekPartition(string partitionId, int maxVersion, CancellationToken cancellationToken)
         {
-            return Task.FromResult<IPartitionData>(null);
+            return Task.FromResult<IChunk>(null);
         }
 
         public Task ReadAllAsync(
             long fromSequenceIdInclusive, 
-            ReadDirection direction, 
-            IAllPartitionsConsumer consumer, 
+            ReadDirection direction,
+            ISubscription subscription, 
             int limit, 
             CancellationToken cancellationToken)
         {
