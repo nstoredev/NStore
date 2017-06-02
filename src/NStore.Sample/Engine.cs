@@ -159,8 +159,23 @@ namespace NStore.Sample
             var rnd = new Random(DateTime.Now.Millisecond);
             long exceptions = 0;
 
+            ProgressBar progress = null;
+
+            if (_quiet)
+            {
+                progress = new ProgressBar(60);
+            }
+            
+            int current = 0;
+
             async Task BookRoom(int i)
             {
+                if (progress != null)
+                {
+                    var percent = Interlocked.Increment(ref current) / (double) bookings;
+                    progress.Report(percent);
+                }
+
                 var id = GetRoomId(rnd.Next(_rooms) + 1);
 
                 var fromDate = DateTime.Today.AddDays(rnd.Next(10));
@@ -199,7 +214,7 @@ namespace NStore.Sample
                 MaxDegreeOfParallelism = Environment.ProcessorCount,
                 BoundedCapacity = 2000
             });
-            
+
             var sw = new Stopwatch();
             sw.Start();
             for (var i = 1; i <= bookings; i++)
@@ -208,8 +223,10 @@ namespace NStore.Sample
             }
             worker.Complete();
             await worker.Completion.ConfigureAwait(false);
-            
+
             sw.Stop();
+
+            progress?.Dispose();
 
             this._reporter.Report(
                 $"Added {bookings} bookings (handling {exceptions} concurrency exceptions) in {sw.ElapsedMilliseconds} ms");
