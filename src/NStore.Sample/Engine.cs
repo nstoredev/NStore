@@ -12,6 +12,7 @@ using NStore.Sample.Support;
 using NStore.SnapshotStore;
 using NStore.Streams;
 using System.Diagnostics;
+using System.Threading.Tasks.Dataflow;
 
 namespace NStore.Sample
 {
@@ -31,6 +32,7 @@ namespace NStore.Sample
         readonly bool _quiet;
         private readonly PollingClient _poller;
         private readonly TaskProfilingInfo _cloneProfiler;
+
         public SampleApp(IPersistence store, string name, bool useSnapshots, bool quiet, bool fast)
         {
             _quiet = quiet;
@@ -73,7 +75,7 @@ namespace NStore.Sample
             return new TplRepository(_aggregateFactory, _streams, _snapshots);
         }
 
-        public void CreateRooms(int rooms)
+        public async Task CreateRooms(int rooms)
         {
             _rooms = rooms;
 
@@ -81,10 +83,9 @@ namespace NStore.Sample
             sw.Start();
             int created = 0;
 
-            var all = Enumerable.Range(1, _rooms).Select(async i =>
+            async Task RoomBuilder(string id)
             {
                 var repository = GetRepository(); // repository is not thread safe!
-                var id = GetRoomId(i);
                 var room = await repository.GetById<Room>(id);
 
                 room.EnableBookings();
@@ -97,9 +98,21 @@ namespace NStore.Sample
                 {
                     _reporter.Report($"Listed Room {id}");
                 }
+            }
+
+            var worker = new ActionBlock<string>(RoomBuilder, new ExecutionDataflowBlockOptions()
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount
             });
 
-            Task.WhenAll(all).GetAwaiter().GetResult();
+            foreach (var i in Enumerable.Range(1, _rooms))
+            {
+                var id = GetRoomId(i);
+                await worker.SendAsync(id).ConfigureAwait(false);
+            }
+
+            worker.Complete();
+            await worker.Completion.ConfigureAwait(false);
             sw.Stop();
 
             if (created != _rooms)
@@ -141,14 +154,12 @@ namespace NStore.Sample
             }
         }
 
-        public void AddSomeBookings(int bookings)
+        public async Task AddSomeBookings(int bookings)
         {
             var rnd = new Random(DateTime.Now.Millisecond);
             long exceptions = 0;
-            var sw = new Stopwatch();
 
-            sw.Start();
-            Enumerable.Range(1, bookings).ForEachAsync(8,async i =>
+            async Task BookRoom(int i)
             {
                 var id = GetRoomId(rnd.Next(_rooms) + 1);
 
@@ -181,7 +192,23 @@ namespace NStore.Sample
                         return;
                     }
                 }
-            }).GetAwaiter().GetResult();
+            }
+
+            var worker = new ActionBlock<int>(BookRoom, new ExecutionDataflowBlockOptions()
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                BoundedCapacity = 2000
+            });
+            
+            var sw = new Stopwatch();
+            sw.Start();
+            for (var i = 1; i <= bookings; i++)
+            {
+                await worker.SendAsync(i).ConfigureAwait(false);
+            }
+            worker.Complete();
+            await worker.Completion.ConfigureAwait(false);
+            
             sw.Stop();
 
             this._reporter.Report(
@@ -190,7 +217,8 @@ namespace NStore.Sample
 
         public void DumpMetrics()
         {
-            this._reporter.Report("* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *");
+            this._reporter.Report(
+                "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *");
             this._reporter.Report(string.Empty);
             this._appProjections.DumpMetrics();
             this._reporter.Report(string.Empty);
@@ -215,7 +243,8 @@ namespace NStore.Sample
                 this._reporter.Report($"  {_snapshotProfile.StoreScanCounter}");
             }
             this._reporter.Report(string.Empty);
-            this._reporter.Report("* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *");
+            this._reporter.Report(
+                "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *");
         }
     }
 }

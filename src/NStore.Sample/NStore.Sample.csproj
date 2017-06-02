@@ -15,5 +15,8 @@
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="10.0.2">
     </PackageReference>
+    <PackageReference Include="System.Threading.Tasks.Dataflow">
+      <Version>4.7.0</Version>
+    </PackageReference>
   </ItemGroup>
 </Project>

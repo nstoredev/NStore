@@ -29,10 +29,13 @@ namespace NStore.Sample
                 Console.WriteLine(
                     "Press ENTER to start and wait projections, then press ENTER again to show data & stats.");
                 Console.ReadLine();
-                app.CreateRooms(32);
+                app.CreateRooms(32)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+                
                 app.DumpMetrics();
 
-                app.AddSomeBookings(4096*4);
+                app.AddSomeBookings(512)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
                 app.DumpMetrics();
 
                 Console.ReadLine();
