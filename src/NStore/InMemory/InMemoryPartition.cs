@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -20,9 +21,12 @@ namespace NStore.InMemory
 
         private Func<Chunk, Chunk> Clone { get; }
         public string Id { get; set; }
-        private IEnumerable<Chunk> Chunks => _byIndex.Values;
-        private readonly SortedDictionary<long, Chunk> _byIndex = 
+        private IEnumerable<Chunk> Chunks => _sortedChunks.Values;
+
+        private readonly SortedDictionary<long, Chunk> _sortedChunks =
             new SortedDictionary<long, Chunk>();
+
+        private readonly ConcurrentDictionary<string, byte> _operations = new ConcurrentDictionary<string, byte>();
         private readonly INetworkSimulator _networkSimulator;
 
         public Task ReadForward(
@@ -113,17 +117,16 @@ namespace NStore.InMemory
             _lockSlim.EnterWriteLock();
             try
             {
-                if (_byIndex.Values.Any(x => x.OpId == chunk.OpId))
-                {
+                if (_operations.ContainsKey(chunk.OpId))
                     return;
-                }
 
-                if (_byIndex.ContainsKey(chunk.Index))
+                if (_sortedChunks.ContainsKey(chunk.Index))
                 {
                     throw new DuplicateStreamIndexException(this.Id, chunk.Index);
                 }
 
-                _byIndex.Add(chunk.Index, chunk);
+                _operations.TryAdd(chunk.OpId,1);
+                _sortedChunks.Add(chunk.Index, chunk);
             }
             finally
             {
@@ -140,7 +143,8 @@ namespace NStore.InMemory
             _lockSlim.EnterWriteLock();
             foreach (var chunk in toDelete)
             {
-                this._byIndex.Remove(chunk.Index);
+                this._sortedChunks.Remove(chunk.Index);
+                this._operations.TryRemove(chunk.OpId, out byte b);
             }
             _lockSlim.ExitWriteLock();
 
