@@ -11,12 +11,14 @@ namespace NStore.InMemory
     public class InMemoryPersistence : IPersistence
     {
         private readonly Func<object, object> _cloneFunc;
-        private readonly object _lock = new object();
         private readonly List<Chunk> _chunks = new List<Chunk>();
-        private readonly ConcurrentDictionary<string, InMemoryPartition> _partitions = new ConcurrentDictionary<string, InMemoryPartition>();
+
+        private readonly ConcurrentDictionary<string, InMemoryPartition> _partitions =
+            new ConcurrentDictionary<string, InMemoryPartition>();
+
         private int _sequence = 0;
         private readonly INetworkSimulator _networkSimulator;
-        private readonly InMemoryPartition _emptyInMemoryPartition = new InMemoryPartition("::empty");
+        private readonly InMemoryPartition _emptyInMemoryPartition;
 
         public InMemoryPersistence() : this(null, null)
         {
@@ -36,10 +38,11 @@ namespace NStore.InMemory
         {
             _cloneFunc = cloneFunc ?? (o => o);
             _networkSimulator = networkSimulator ?? new NoNetworkLatencySimulator();
+            _emptyInMemoryPartition = new InMemoryPartition("::empty", _networkSimulator, Clone);
             _partitions.TryAdd(_emptyInMemoryPartition.Id, _emptyInMemoryPartition);
         }
 
-        public async Task ReadPartitionForward(
+        public Task ReadPartitionForward(
             string partitionId,
             long fromLowerIndexInclusive,
             ISubscription subscription,
@@ -48,25 +51,22 @@ namespace NStore.InMemory
             CancellationToken cancellationToken
         )
         {
-            Chunk[] result;
-            lock (_lock)
+            InMemoryPartition inMemoryPartition;
+            if (!_partitions.TryGetValue(partitionId, out inMemoryPartition))
             {
-                InMemoryPartition inMemoryPartition;
-                if (!_partitions.TryGetValue(partitionId, out inMemoryPartition))
-                {
-                    return;
-                }
-
-                result = inMemoryPartition.Chunks
-                    .Where(x => x.Index >= fromLowerIndexInclusive && x.Index <= toUpperIndexInclusive)
-                    .Take(limit)
-                    .ToArray();
+                return Task.CompletedTask;
             }
 
-            await StartProducer(subscription, result, cancellationToken);
+            return inMemoryPartition.ReadForward(
+                fromLowerIndexInclusive,
+                subscription,
+                toUpperIndexInclusive,
+                limit,
+                cancellationToken
+            );
         }
 
-        public async Task ReadPartitionBackward(
+        public Task ReadPartitionBackward(
             string partitionId,
             long fromUpperIndexInclusive,
             ISubscription subscription,
@@ -75,43 +75,33 @@ namespace NStore.InMemory
             CancellationToken cancellationToken
         )
         {
-            Chunk[] result;
-            lock (_lock)
+            InMemoryPartition inMemoryPartition;
+            if (!_partitions.TryGetValue(partitionId, out inMemoryPartition))
             {
-                InMemoryPartition inMemoryPartition;
-                if (!_partitions.TryGetValue(partitionId, out inMemoryPartition))
-                {
-                    return;
-                }
-
-                result = inMemoryPartition.Chunks.Reverse()
-                    .Where(x => x.Index <= fromUpperIndexInclusive && x.Index >= toLowerIndexInclusive)
-                    .Take(limit)
-                    .ToArray();
+                return Task.CompletedTask;
             }
 
-            await StartProducer(subscription, result, cancellationToken);
+            return inMemoryPartition.ReadBackward(
+                fromUpperIndexInclusive,
+                subscription,
+                toLowerIndexInclusive,
+                limit,
+                cancellationToken
+            );
         }
 
         public Task<IChunk> PeekPartition(string partitionId, int maxValue, CancellationToken cancellationToken)
         {
-            lock (_lock)
+            InMemoryPartition inMemoryPartition;
+            if (!_partitions.TryGetValue(partitionId, out inMemoryPartition))
             {
-                InMemoryPartition inMemoryPartition;
-                if (!_partitions.TryGetValue(partitionId, out inMemoryPartition))
-                {
-                    return Task.FromResult<IChunk>(null);
-                }
-
-                var chunk = inMemoryPartition.Chunks.Reverse()
-                        .Where(x => x.Index <= maxValue)
-                        .Take(1)
-                        .SingleOrDefault();
-                return Task.FromResult(Clone(chunk));
+                return Task.FromResult<IChunk>(null);
             }
+
+            return inMemoryPartition.Peek(maxValue, cancellationToken);
         }
 
-        private IChunk Clone(Chunk source)
+        private Chunk Clone(Chunk source)
         {
             if (source == null)
                 return null;
@@ -126,34 +116,6 @@ namespace NStore.InMemory
             };
         }
 
-        private async Task StartProducer(
-            ISubscription subscription,
-            IEnumerable<Chunk> chunks,
-            CancellationToken cancellationToken)
-        {
-            try
-            {
-                foreach (var chunk in chunks)
-                {
-                    await _networkSimulator.WaitFast().ConfigureAwait(false);
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    if (!await subscription.OnNext(Clone(chunk)))
-                    {
-                        await subscription.Completed();
-                        return;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                await subscription.OnError(e);
-                return;
-            }
-
-            await subscription.Completed();
-        }
-
         public async Task ReadAllAsync(
             long fromSequenceIdInclusive,
             ReadDirection direction,
@@ -164,23 +126,20 @@ namespace NStore.InMemory
         {
             Chunk[] list;
 
-            lock (_lock)
+            if (direction == ReadDirection.Forward)
             {
-                if (direction == ReadDirection.Forward)
-                {
-                    list = _chunks.Where(x => x.Position >= fromSequenceIdInclusive)
-                        .OrderBy(x => x.Position)
-                        .Take(limit)
-                        .ToArray();
-                }
-                else
-                {
-                    list = _chunks
-                        .Where(x => x.Position <= fromSequenceIdInclusive)
-                        .OrderByDescending(x => x.Position)
-                        .Take(limit)
-                        .ToArray();
-                }
+                list = _chunks.Where(x => x.Position >= fromSequenceIdInclusive)
+                    .OrderBy(x => x.Position)
+                    .Take(limit)
+                    .ToArray();
+            }
+            else
+            {
+                list = _chunks
+                    .Where(x => x.Position <= fromSequenceIdInclusive)
+                    .OrderByDescending(x => x.Position)
+                    .Take(limit)
+                    .ToArray();
             }
 
             foreach (var chunk in list)
@@ -217,33 +176,27 @@ namespace NStore.InMemory
 
             await _networkSimulator.Wait().ConfigureAwait(false);
 
-            lock (_lock)
-            {
-                InMemoryPartition partion;
-                if (!_partitions.TryGetValue(partitionId, out partion))
-                {
-                    partion = new InMemoryPartition(partitionId);
-                    _partitions[partitionId] = partion;
-                }
+            var partion = _partitions.GetOrAdd(partitionId,
+                new InMemoryPartition(partitionId, _networkSimulator, Clone)
+            );
 
-                try
-                {
-                    partion.Write(chunk);
-                }
-                catch (DuplicateStreamIndexException)
-                {
-                    // write empty chunk
-                    // keep same id to avoid holes in the stream
-                    chunk.PartitionId = "::empty";
-                    chunk.Index = chunk.Position;
-                    chunk.OpId = chunk.Position.ToString();
-                    chunk.Payload = null;
-                    _emptyInMemoryPartition.Write(chunk);
-                    _chunks.Add(chunk);
-                    throw;
-                }
-                _chunks.Add(chunk);
+            try
+            {
+                partion.Write(chunk);
             }
+            catch (DuplicateStreamIndexException)
+            {
+                // write empty chunk
+                // keep same id to avoid holes in the stream
+                chunk.PartitionId = "::empty";
+                chunk.Index = chunk.Position;
+                chunk.OpId = chunk.Position.ToString();
+                chunk.Payload = null;
+                _emptyInMemoryPartition.Write(chunk);
+                _chunks.Add(chunk);
+                throw;
+            }
+            _chunks.Add(chunk);
             await _networkSimulator.Wait().ConfigureAwait(false);
         }
 
@@ -255,24 +208,22 @@ namespace NStore.InMemory
         )
         {
             await _networkSimulator.Wait().ConfigureAwait(false);
-            lock (_lock)
+
+            InMemoryPartition inMemoryPartition;
+            if (!_partitions.TryGetValue(partitionId, out inMemoryPartition))
             {
-                InMemoryPartition inMemoryPartition;
-                if (!_partitions.TryGetValue(partitionId, out inMemoryPartition))
-                {
-                    throw new StreamDeleteException(partitionId);
-                }
+                throw new StreamDeleteException(partitionId);
+            }
 
-                var deleted = inMemoryPartition.Delete(fromLowerIndexInclusive, toUpperIndexInclusive);
-                if (deleted.Length == 0)
-                {
-                    throw new StreamDeleteException(partitionId);
-                }
+            var deleted = inMemoryPartition.Delete(fromLowerIndexInclusive, toUpperIndexInclusive);
+            if (deleted.Length == 0)
+            {
+                throw new StreamDeleteException(partitionId);
+            }
 
-                foreach (var d in deleted)
-                {
-                    _chunks.Remove(d);
-                }
+            foreach (var d in deleted)
+            {
+                _chunks.Remove(d);
             }
         }
     }

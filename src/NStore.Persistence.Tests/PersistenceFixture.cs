@@ -438,22 +438,27 @@ namespace NStore.Persistence.Tests
         {
             var recorder = new AllPartitionsRecorder();
 
-            var poller = new PollingClient(Store, recorder) { Delay = 0 };
+            var poller = new PollingClient(Store, recorder)
+            {
+                Delay = 0
+            };
 
             poller.Start();
             const int range = 2048;
-            await Enumerable.Range(1, range).ForEachAsync(32, async i => { await Store.PersistAsync("p", -1, "demo"); })
-                .ConfigureAwait(false);
+            await Enumerable.Range(1, range).ForEachAsync(32, 
+                    async i => { await Store.PersistAsync("p", -1, "demo"); }
+            )
+            .ConfigureAwait(false);
 
             await Task.Delay(1000);
 
             poller.Stop();
 
-            //Console.WriteLine("Dumping recorder");
-            //recorder.Replay((storeIndex, partitionId, index, payload) =>
-            //{
-            //    Console.WriteLine($"{storeIndex:D5} - {partitionId.PadRight(20)} - {index:D5}");
-            //});
+            Console.WriteLine("Dumping recorder");
+            recorder.Replay((storeIndex, partitionId, index, payload) =>
+            {
+                Console.WriteLine($"{storeIndex:D5} - {partitionId.PadRight(20)} - {index:D5}");
+            });
 
             Assert.Equal(range, poller.Position);
             Assert.Equal(range, recorder.Length);
