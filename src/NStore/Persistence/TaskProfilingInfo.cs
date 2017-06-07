@@ -83,7 +83,7 @@ namespace NStore.Persistence
             var sb = new StringBuilder();
             sb.AppendFormat("{0} {1} calls", Name.PadRight(30), Format(_calls));
 
-            sb.AppendFormat(" took {0}ms.", Format(Elapsed.Milliseconds));
+            sb.AppendFormat(" took {0}ms.", Format((long)Elapsed.TotalMilliseconds));
 
             if (_counter1 > 0)
             {

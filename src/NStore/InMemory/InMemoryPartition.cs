@@ -29,7 +29,7 @@ namespace NStore.InMemory
         private readonly ConcurrentDictionary<string, byte> _operations = new ConcurrentDictionary<string, byte>();
         private readonly INetworkSimulator _networkSimulator;
 
-        public Task ReadForward(
+        public async Task ReadForward(
             long fromLowerIndexInclusive,
             ISubscription subscription,
             long toUpperIndexInclusive,
@@ -44,8 +44,7 @@ namespace NStore.InMemory
                 .ToArray();
 
             _lockSlim.ExitReadLock();
-
-            return StartProducer(subscription, result, cancellationToken);
+            await StartProducer(subscription, result, cancellationToken);
         }
 
         public Task ReadBackward(
@@ -78,7 +77,6 @@ namespace NStore.InMemory
                 .SingleOrDefault();
 
             _lockSlim.ExitReadLock();
-
 
             return Task.FromResult((IChunk) Clone(chunk));
         }

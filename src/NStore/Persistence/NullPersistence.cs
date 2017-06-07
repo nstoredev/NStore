@@ -53,12 +53,7 @@ namespace NStore.Persistence
             return Task.FromResult<IChunk>(null);
         }
 
-        public Task ReadAllAsync(
-            long fromSequenceIdInclusive, 
-            ReadDirection direction,
-            ISubscription subscription, 
-            int limit, 
-            CancellationToken cancellationToken)
+        public Task ReadAllAsync(long fromSequenceIdInclusive, ISubscription subscription, int limit, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }

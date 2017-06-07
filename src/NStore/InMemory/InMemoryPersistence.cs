@@ -11,14 +11,13 @@ namespace NStore.InMemory
     public class InMemoryPersistence : IPersistence
     {
         private readonly Func<object, object> _cloneFunc;
-        private readonly List<Chunk> _chunks = new List<Chunk>();
+        private readonly Chunk[] _chunks;
 
         private readonly ConcurrentDictionary<string, InMemoryPartition> _partitions =
             new ConcurrentDictionary<string, InMemoryPartition>();
 
-        private readonly ReaderWriterLockSlim _lockSlim = new ReaderWriterLockSlim();
-
         private int _sequence = 0;
+        private int _lastWrittenPosition = -1;
         private readonly INetworkSimulator _networkSimulator;
         private readonly InMemoryPartition _emptyInMemoryPartition;
 
@@ -38,6 +37,7 @@ namespace NStore.InMemory
 
         public InMemoryPersistence(INetworkSimulator networkSimulator, Func<object, object> cloneFunc)
         {
+            _chunks = new Chunk[1024 * 1024];
             _cloneFunc = cloneFunc ?? (o => o);
             _networkSimulator = networkSimulator ?? new NoNetworkLatencySimulator();
             _emptyInMemoryPartition = new InMemoryPartition("::empty", _networkSimulator, Clone);
@@ -118,33 +118,23 @@ namespace NStore.InMemory
             };
         }
 
-        public async Task ReadAllAsync(
-            long fromSequenceIdInclusive,
-            ReadDirection direction,
-            ISubscription subscription,
-            int limit,
-            CancellationToken cancellationToken
-        )
+        public async Task ReadAllAsync(long fromSequenceIdInclusive, ISubscription subscription, int limit, CancellationToken cancellationToken)
         {
-            Chunk[] list;
+            int start = (int)Math.Max(fromSequenceIdInclusive - 1, 0);
+            if (start > _lastWrittenPosition)
+            {
+                await subscription.Completed();
+                return;
+            }
 
-            _lockSlim.EnterReadLock();
-            if (direction == ReadDirection.Forward)
+            var toRead = Math.Min(limit, _lastWrittenPosition - start + 1);
+            if (toRead <= 0)
             {
-                list = _chunks.Where(x => x.Position >= fromSequenceIdInclusive)
-                    .OrderBy(x => x.Position)
-                    .Take(limit)
-                    .ToArray();
+                await subscription.Completed();
+                return;
             }
-            else
-            {
-                list = _chunks
-                    .Where(x => x.Position <= fromSequenceIdInclusive)
-                    .OrderByDescending(x => x.Position)
-                    .Take(limit)
-                    .ToArray();
-            }
-            _lockSlim.ExitReadLock();
+
+            IEnumerable<Chunk> list = new ArraySegment<Chunk>(_chunks, start, toRead);
 
             foreach (var chunk in list)
             {
@@ -197,15 +187,30 @@ namespace NStore.InMemory
                 chunk.OpId = chunk.Position.ToString();
                 chunk.Payload = null;
                 _emptyInMemoryPartition.Write(chunk);
-                _lockSlim.EnterWriteLock();
-                _chunks.Add(chunk);
-                _lockSlim.ExitWriteLock();
+                SetChunk(chunk);
                 throw;
             }
-            _lockSlim.EnterWriteLock();
-            _chunks.Add(chunk);
-            _lockSlim.ExitWriteLock();
+            SetChunk(chunk);
             await _networkSimulator.Wait().ConfigureAwait(false);
+        }
+
+        private void SetChunk(Chunk chunk)
+        {
+            int slot = (int)chunk.Position - 1;
+            _chunks[slot] = chunk;
+            InterlockedExchangeIfGreaterThan(ref _lastWrittenPosition, slot, _lastWrittenPosition);
+        }
+
+        public static bool InterlockedExchangeIfGreaterThan(ref int location, int newValue, int comparison)
+        {
+            int initialValue;
+            do
+            {
+                initialValue = location;
+                if (initialValue > comparison) return false;
+            }
+            while (System.Threading.Interlocked.CompareExchange(ref location, newValue, initialValue) != initialValue);
+            return true;
         }
 
         public async Task DeleteAsync(
@@ -229,12 +234,10 @@ namespace NStore.InMemory
                 throw new StreamDeleteException(partitionId);
             }
 
-            _lockSlim.EnterWriteLock();
             foreach (var d in deleted)
             {
-                _chunks.Remove(d);
+                d.Deleted = true;
             }
-            _lockSlim.ExitWriteLock();
         }
     }
 }

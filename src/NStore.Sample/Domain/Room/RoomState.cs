@@ -1,7 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.CSharp.RuntimeBinder;
 using NStore.Aggregates;
 
 namespace NStore.Sample.Domain.Room
@@ -36,5 +35,28 @@ namespace NStore.Sample.Domain.Room
         {
             return !(!BookingsEnabled && _reservations.Any());
         }
+
+        //
+        //// uncomment to avoid reflection
+        //
+        //public override void Project(object @event)
+        //{
+        //    switch (@event)
+        //    {
+        //        case RoomBookingFailed e:
+        //            On(e);
+        //            break;
+
+        //        case RoomBooked e:
+        //            On(e);
+        //            break;
+
+        //        case BookingsEnabled e:
+        //            On(e);
+        //            break;
+        //    }
+
+        //    // ignore 
+        //}
     }
 }

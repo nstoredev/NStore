@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using NStore.Aggregates;
 using NStore.SnapshotStore;
-using Xunit;
 
 namespace NStore.Tests.AggregatesTests
 {

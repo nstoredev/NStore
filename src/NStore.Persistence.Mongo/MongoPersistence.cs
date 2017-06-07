@@ -162,29 +162,14 @@ namespace NStore.Persistence.Mongo
             }
         }
 
-        public async Task ReadAllAsync(
-            long fromSequenceIdInclusive,
-            ReadDirection direction,
-            ISubscription subscription,
-            int limit,
-            CancellationToken cancellationToken
-        )
+        public async Task ReadAllAsync(long fromSequenceIdInclusive, ISubscription subscription, int limit, CancellationToken cancellationToken)
         {
-            SortDefinition<Chunk> sort;
-            FilterDefinition<Chunk> filter;
+            var filter = Builders<Chunk>.Filter.Gte(x => x.Position, fromSequenceIdInclusive);
 
-            if (direction == ReadDirection.Forward)
+            var options = new FindOptions<Chunk>()
             {
-                sort = Builders<Chunk>.Sort.Ascending(x => x.Position);
-                filter = Builders<Chunk>.Filter.Gte(x => x.Position, fromSequenceIdInclusive);
-            }
-            else
-            {
-                sort = Builders<Chunk>.Sort.Descending(x => x.Position);
-                filter = Builders<Chunk>.Filter.Lte(x => x.Position, fromSequenceIdInclusive);
-            }
-
-            var options = new FindOptions<Chunk>() { Sort = sort };
+                Sort = Builders<Chunk>.Sort.Ascending(x => x.Position)
+            };
 
             if (limit != int.MaxValue)
             {
@@ -200,7 +185,7 @@ namespace NStore.Persistence.Mongo
                     {
                         chunk.Payload = _serializer.Deserialize(chunk.PartitionId, chunk.Payload);
 
-                        if (! await subscription.OnNext(chunk))
+                        if (!await subscription.OnNext(chunk))
                         {
                             await subscription.Completed();
                             return;

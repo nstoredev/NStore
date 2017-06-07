@@ -47,7 +47,6 @@ namespace NStore.Persistence
                 {
                     await this._store.ReadAllAsync(
                         _lastScan + 1,
-                        ReadDirection.Forward,
                         wrapper,
                         int.MaxValue,
                         token

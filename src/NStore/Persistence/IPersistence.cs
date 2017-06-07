@@ -31,10 +31,9 @@ namespace NStore.Persistence
         );
 
         Task ReadAllAsync(
-            long fromSequenceIdInclusive,
-            ReadDirection direction,
-            ISubscription subscription,
-            int limit,
+            long fromSequenceIdInclusive, 
+            ISubscription subscription, 
+            int limit, 
             CancellationToken cancellationToken
         );
 

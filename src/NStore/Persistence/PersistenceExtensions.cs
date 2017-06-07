@@ -76,25 +76,23 @@ namespace NStore.Persistence
             );
         }
 
-        public static Task ScanStoreAsync(
+        public static Task ReadAllAsync(
             this IPersistence store,
             long sequenceStart,
-            ReadDirection direction,
             ISubscription subscription
         )
         {
-            return store.ReadAllAsync(sequenceStart, direction, subscription, int.MaxValue, CancellationToken.None);
+            return store.ReadAllAsync(sequenceStart, subscription, int.MaxValue, CancellationToken.None);
         }
 
-        public static Task ScanStoreAsync(
+        public static Task ReadAllAsync(
             this IPersistence store,
             long sequenceStart,
-            ReadDirection direction,
             ISubscription subscription,
             int limit
         )
         {
-            return store.ReadAllAsync(sequenceStart, direction, subscription, limit, CancellationToken.None);
+            return store.ReadAllAsync(sequenceStart, subscription, limit, CancellationToken.None);
         }
 
         public static Task PersistAsync(
