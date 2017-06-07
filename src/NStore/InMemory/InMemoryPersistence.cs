@@ -138,6 +138,9 @@ namespace NStore.InMemory
 
             foreach (var chunk in list)
             {
+                if(chunk.Deleted)
+                    continue;
+                
                 await _networkSimulator.Wait().ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
 
