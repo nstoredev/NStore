@@ -44,8 +44,8 @@ namespace NStore.Sample
             _aggregateFactory = new DefaultAggregateFactory();
 
             var network = fast
-                ? (INetworkSimulator) new NoNetworkLatencySimulator()
-                : (INetworkSimulator) new ReliableNetworkSimulator(10, 50);
+                ? (INetworkSimulator)new NoNetworkLatencySimulator()
+                : (INetworkSimulator)new ReliableNetworkSimulator(10, 50);
 
             _appProjections = new AppProjections(network, quiet);
 
@@ -58,8 +58,6 @@ namespace NStore.Sample
                 _snapshotProfile = new ProfileDecorator(inMemoryPersistence);
                 _snapshots = new DefaultSnapshotStore(_snapshotProfile);
             }
-
-            Subscribe();
         }
 
         private object CloneSnapshot(object arg)
@@ -73,6 +71,45 @@ namespace NStore.Sample
         private IRepository GetRepository()
         {
             return new TplRepository(_aggregateFactory, _streams, _snapshots);
+        }
+
+        public async Task WriteSequentialStream()
+        {
+            var stream = _streams.Open("visits");
+            const int writes = 1000;
+            var progress = new ProgressBar(40);
+            progress.Report(0);
+
+            int written = 0;
+
+            async Task Write(int c)
+            {
+                await stream.Append(c, c.ToString()).ConfigureAwait(false);
+                Interlocked.Increment(ref written);
+                // ReSharper disable once AccessToDisposedClosure
+                progress.Report((double)written / writes);
+            }
+
+            var worker = new ActionBlock<int>(Write, new ExecutionDataflowBlockOptions()
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount
+            });
+
+            var sw = new Stopwatch();
+            sw.Start();
+
+            for (int c = 1; c <= writes; c++)
+            {
+                await worker.SendAsync(c);
+            }
+
+            worker.Complete();
+            await worker.Completion;
+            sw.Stop();
+
+            progress.Dispose();
+
+            _reporter.Report($"Written {writes} in {sw.ElapsedMilliseconds}ms (batch time)");
         }
 
         public async Task CreateRooms(int rooms)
@@ -128,7 +165,7 @@ namespace NStore.Sample
             return $"Room_{room:D3}";
         }
 
-        private void Subscribe()
+        public void StartPolling()
         {
             _poller.Start();
         }
@@ -165,14 +202,14 @@ namespace NStore.Sample
             {
                 progress = new ProgressBar(60);
             }
-            
+
             int current = 0;
 
             async Task BookRoom(int i)
             {
                 if (progress != null)
                 {
-                    var percent = Interlocked.Increment(ref current) / (double) bookings;
+                    var percent = Interlocked.Increment(ref current) / (double)bookings;
                     progress.Report(percent);
                 }
 

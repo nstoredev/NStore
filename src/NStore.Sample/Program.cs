@@ -27,6 +27,14 @@ namespace NStore.Sample
             using (var app = new SampleApp(store, _providerName, _useSnapshots,_quietMode, _fastMode))
             {
                 Console.WriteLine(
+                    "Press ENTER to start sequential stream write");
+                Console.ReadLine();
+                app.WriteSequentialStream().GetAwaiter().GetResult();
+                app.DumpMetrics();
+
+                app.StartPolling();
+
+                Console.WriteLine(
                     "Press ENTER to start and wait projections, then press ENTER again to show data & stats.");
                 Console.ReadLine();
                 app.CreateRooms(32)
