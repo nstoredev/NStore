@@ -401,11 +401,11 @@ namespace NStore.Persistence.Tests
 
             poller.Stop();
 
-            Console.WriteLine("Dumping recorder");
-            recorder.Replay((storeIndex, partitionId, index, payload) =>
-            {
-                Console.WriteLine($"{storeIndex:D5} - {partitionId.PadRight(20)} - {index:D5}");
-            });
+            //Console.WriteLine("Dumping recorder");
+            //recorder.Replay((storeIndex, partitionId, index, payload) =>
+            //{
+            //    Console.WriteLine($"{storeIndex:D5} - {partitionId.PadRight(20)} - {index:D5}");
+            //});
 
             Assert.Equal(range, poller.Position);
             Assert.Equal(range, recorder.Length);
