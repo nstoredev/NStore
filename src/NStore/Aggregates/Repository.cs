@@ -11,16 +11,16 @@ namespace NStore.Aggregates
     public class Repository : IRepository
     {
         private readonly IAggregateFactory _factory;
-        private readonly IStreamStore _streams;
+        private readonly IStreamsFactory _streams;
         private readonly IDictionary<IAggregate, IStream> _openedStreams = new Dictionary<IAggregate, IStream>();
         private readonly ISnapshotStore _snapshots;
 
-        public Repository(IAggregateFactory factory, IStreamStore streams)
+        public Repository(IAggregateFactory factory, IStreamsFactory streams)
             : this(factory, streams, null)
         {
         }
 
-        public Repository(IAggregateFactory factory, IStreamStore streams, ISnapshotStore snapshots)
+        public Repository(IAggregateFactory factory, IStreamsFactory streams, ISnapshotStore snapshots)
         {
             _factory = factory;
             _streams = streams;

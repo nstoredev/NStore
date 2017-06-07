@@ -12,11 +12,11 @@ namespace NStore.Sample.Support
 {
     public class TplRepository : Repository
     {
-        public TplRepository(IAggregateFactory factory, IStreamStore streams) : base(factory, streams)
+        public TplRepository(IAggregateFactory factory, IStreamsFactory streams) : base(factory, streams)
         {
         }
 
-        public TplRepository(IAggregateFactory factory, IStreamStore streams, ISnapshotStore snapshots) : base(factory, streams, snapshots)
+        public TplRepository(IAggregateFactory factory, IStreamsFactory streams, ISnapshotStore snapshots) : base(factory, streams, snapshots)
         {
         }
 

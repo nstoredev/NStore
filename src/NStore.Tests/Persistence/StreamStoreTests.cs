@@ -9,7 +9,7 @@ namespace NStore.Tests.Persistence
 {
     public class StreamStoreTests
     {
-        private readonly IStreamStore _store = new StreamStore(new InMemoryPersistence());
+        private readonly IStreamsFactory _store = new StreamsFactory(new InMemoryPersistence());
 
         [Fact]
         public void open_should_return_stream()

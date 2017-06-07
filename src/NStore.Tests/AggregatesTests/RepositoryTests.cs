@@ -12,7 +12,7 @@ namespace NStore.Tests.AggregatesTests
 {
     public abstract class BaseRepositoryTest
     {
-        protected IStreamStore Streams { get; }
+        protected IStreamsFactory Streams { get; }
         protected IPersistence Persistence { get; }
         private IAggregateFactory AggregateFactory { get; }
         protected ISnapshotStore Snapshots { get; set; }
@@ -23,7 +23,7 @@ namespace NStore.Tests.AggregatesTests
         {
             Persistence = new InMemoryPersistence();
 
-            Streams = new StreamStore(Persistence);
+            Streams = new StreamsFactory(Persistence);
             AggregateFactory = new DefaultAggregateFactory();
         }
 

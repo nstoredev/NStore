@@ -21,7 +21,7 @@ namespace NStore.Sample
         private readonly string _name;
         private int _rooms;
 
-        private readonly IStreamStore _streams;
+        private readonly IStreamsFactory _streams;
         private readonly IAggregateFactory _aggregateFactory;
         private readonly IReporter _reporter = new ColoredConsoleReporter("app", ConsoleColor.Gray);
 
@@ -40,7 +40,7 @@ namespace NStore.Sample
             _rooms = 32;
             _storeProfile = new ProfileDecorator(store);
 
-            _streams = new StreamStore(_storeProfile);
+            _streams = new StreamsFactory(_storeProfile);
             _aggregateFactory = new DefaultAggregateFactory();
 
             var network = fast

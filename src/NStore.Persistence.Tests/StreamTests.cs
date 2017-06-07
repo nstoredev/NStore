@@ -8,11 +8,11 @@ namespace NStore.Persistence.Tests
 {
     public class StreamTests : BasePersistenceTest
     {
-        private readonly IStreamStore _streams;
+        private readonly IStreamsFactory _streams;
 
         public StreamTests()
         {
-            _streams = new StreamStore(Store);
+            _streams = new StreamsFactory(Store);
         }
 
         [Fact]
@@ -57,11 +57,11 @@ namespace NStore.Persistence.Tests
 
     public class OptimisticConcurrencyStreamTests : BasePersistenceTest
     {
-        private readonly IStreamStore _streams;
+        private readonly IStreamsFactory _streams;
 
         public OptimisticConcurrencyStreamTests()
         {
-            _streams = new StreamStore(Store);
+            _streams = new StreamsFactory(Store);
         }
 
         private async Task<IStream> Open(string id, bool readToEnd = true)
@@ -154,11 +154,11 @@ namespace NStore.Persistence.Tests
 
     public class ReadOnlyStreamTests : BasePersistenceTest
     {
-        private readonly IStreamStore _streams;
+        private readonly IStreamsFactory _streams;
 
         public ReadOnlyStreamTests()
         {
-            _streams = new StreamStore(Store);
+            _streams = new StreamsFactory(Store);
         }
 
         [Fact]

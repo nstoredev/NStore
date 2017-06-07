@@ -3,11 +3,11 @@ using NStore.Persistence;
 
 namespace NStore.Streams
 {
-    public class StreamStore : IStreamStore
+    public class StreamsFactory : IStreamsFactory
     {
         private readonly IPersistence _persistence;
 
-        public StreamStore(IPersistence persistence)
+        public StreamsFactory(IPersistence persistence)
         {
             if (persistence == null)
                 throw new ArgumentNullException(nameof(persistence));
