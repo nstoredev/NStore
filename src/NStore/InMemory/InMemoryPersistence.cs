@@ -16,6 +16,8 @@ namespace NStore.InMemory
         private readonly ConcurrentDictionary<string, InMemoryPartition> _partitions =
             new ConcurrentDictionary<string, InMemoryPartition>();
 
+        private readonly ReaderWriterLockSlim _lockSlim = new ReaderWriterLockSlim();
+
         private int _sequence = 0;
         private readonly INetworkSimulator _networkSimulator;
         private readonly InMemoryPartition _emptyInMemoryPartition;
@@ -126,6 +128,7 @@ namespace NStore.InMemory
         {
             Chunk[] list;
 
+            _lockSlim.EnterReadLock();
             if (direction == ReadDirection.Forward)
             {
                 list = _chunks.Where(x => x.Position >= fromSequenceIdInclusive)
@@ -141,6 +144,7 @@ namespace NStore.InMemory
                     .Take(limit)
                     .ToArray();
             }
+            _lockSlim.ExitReadLock();
 
             foreach (var chunk in list)
             {
@@ -193,10 +197,14 @@ namespace NStore.InMemory
                 chunk.OpId = chunk.Position.ToString();
                 chunk.Payload = null;
                 _emptyInMemoryPartition.Write(chunk);
+                _lockSlim.EnterWriteLock();
                 _chunks.Add(chunk);
+                _lockSlim.ExitWriteLock();
                 throw;
             }
+            _lockSlim.EnterWriteLock();
             _chunks.Add(chunk);
+            _lockSlim.ExitWriteLock();
             await _networkSimulator.Wait().ConfigureAwait(false);
         }
 
@@ -221,10 +229,12 @@ namespace NStore.InMemory
                 throw new StreamDeleteException(partitionId);
             }
 
+            _lockSlim.EnterWriteLock();
             foreach (var d in deleted)
             {
                 _chunks.Remove(d);
             }
+            _lockSlim.ExitWriteLock();
         }
     }
 }

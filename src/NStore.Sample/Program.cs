@@ -34,7 +34,7 @@ namespace NStore.Sample
                 
                 app.DumpMetrics();
 
-                app.AddSomeBookings(2048)
+                app.AddSomeBookings(512)
                     .ConfigureAwait(false).GetAwaiter().GetResult();
                 app.DumpMetrics();
 

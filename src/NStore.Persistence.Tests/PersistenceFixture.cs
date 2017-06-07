@@ -114,11 +114,11 @@ namespace NStore.Persistence.Tests
             object payload = null;
 
             await Store.ReadPartitionForward(
-                "Stream_1", 0, new LambdaSubscription( data =>
-                {
-                    payload = data.Payload;
-                    return Task.FromResult(false);
-                })
+                "Stream_1", 0, new LambdaSubscription(data =>
+               {
+                   payload = data.Payload;
+                   return Task.FromResult(false);
+               })
             );
 
             Assert.Equal("a", payload);
@@ -218,7 +218,7 @@ namespace NStore.Persistence.Tests
             var tape = new AllPartitionsRecorder();
             await Store.ScanStoreAsync(
                 3,
-                ReadDirection.Forward, 
+                ReadDirection.Forward,
                 tape
             );
 
@@ -234,7 +234,7 @@ namespace NStore.Persistence.Tests
             var tape = new AllPartitionsRecorder();
             await Store.ScanStoreAsync(
                 3,
-                ReadDirection.Forward, 
+                ReadDirection.Forward,
                 tape,
                 1
             );
@@ -445,8 +445,8 @@ namespace NStore.Persistence.Tests
 
             poller.Start();
             const int range = 2048;
-            await Enumerable.Range(1, range).ForEachAsync(32, 
-                    async i => { await Store.PersistAsync("p", -1, "demo"); }
+            await Enumerable.Range(1, range).ForEachAsync(32,
+                async i => { await Store.PersistAsync("p", -1, "demo"); }
             )
             .ConfigureAwait(false);
 
