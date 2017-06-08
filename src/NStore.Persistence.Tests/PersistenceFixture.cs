@@ -409,7 +409,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class polling_client_should_detect_stream_holes : BasePersistenceTest
+    public class deleted_chunks_management : BasePersistenceTest
     {
         [Fact]
         public async void deleted_chunks_should_be_hidden_from_scan()
@@ -424,6 +424,8 @@ namespace NStore.Persistence.Tests
             await Store.ReadAllAsync(0, recorder);
 
             Assert.Equal(2, recorder.Length);
+            Assert.Equal("first", recorder[0]);
+            Assert.Equal("third", recorder[1]);
         } 
         
         [Fact]
@@ -438,6 +440,19 @@ namespace NStore.Persistence.Tests
 
             Assert.NotNull(chunk);
             Assert.Equal("first", chunk.Payload);
+        }
+
+        [Fact]
+        public async void poller()
+        {
+            await Store.PersistAsync("a", 1, "first");
+            await Store.PersistAsync("a", 2, "second");
+            await Store.PersistAsync("a", 3, "third");
+
+            await Store.DeleteAsync("a", 2, 2);
+            
+            var poller = new PollingClient(Store,NullSubscription.Instance);
+            
         }
     }
 

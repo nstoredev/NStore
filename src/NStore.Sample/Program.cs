@@ -42,7 +42,7 @@ namespace NStore.Sample
                 
                 app.DumpMetrics();
 
-                app.AddSomeBookings(512)
+                app.AddSomeBookings(1024)
                     .ConfigureAwait(false).GetAwaiter().GetResult();
                 app.DumpMetrics();
 
@@ -90,7 +90,7 @@ namespace NStore.Sample
                 case "memory":
                 {
                     var network = new ReliableNetworkSimulator(2, 10);
-                    return new InMemoryPersistence(network);
+                    return new InMemoryPersistence(network, ObjectSerializer.Clone);
                 }
 
                 case "mongo":

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +12,7 @@ using NStore.SnapshotStore;
 using NStore.Streams;
 using System.Diagnostics;
 using System.Threading.Tasks.Dataflow;
+using NStore.Persistence.Mongo;
 
 namespace NStore.Sample
 {
@@ -32,6 +32,8 @@ namespace NStore.Sample
         readonly bool _quiet;
         private readonly PollingClient _poller;
         private readonly TaskProfilingInfo _cloneProfiler;
+        private readonly ExecutionDataflowBlockOptions _unboundedOptions;
+        private readonly ExecutionDataflowBlockOptions _boundedOptions;
 
         public SampleApp(IPersistence store, string name, bool useSnapshots, bool quiet, bool fast)
         {
@@ -58,6 +60,27 @@ namespace NStore.Sample
                 _snapshotProfile = new ProfileDecorator(inMemoryPersistence);
                 _snapshots = new DefaultSnapshotStore(_snapshotProfile);
             }
+
+            _unboundedOptions = new ExecutionDataflowBlockOptions()
+            {
+                MaxDegreeOfParallelism = DataflowBlockOptions.Unbounded,
+                BoundedCapacity = DataflowBlockOptions.Unbounded,
+                EnsureOrdered =  false,
+                MaxMessagesPerTask = DataflowBlockOptions.Unbounded
+            };    
+            
+            _boundedOptions = new ExecutionDataflowBlockOptions()
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount * 2,
+                BoundedCapacity = 200,
+                EnsureOrdered =  true
+            };
+
+
+            if (store is MongoPersistence)
+            {
+                _unboundedOptions.MaxDegreeOfParallelism = Environment.ProcessorCount * 4;
+            }
         }
 
         private object CloneSnapshot(object arg)
@@ -76,7 +99,7 @@ namespace NStore.Sample
         public async Task WriteSequentialStream()
         {
             var stream = _streams.Open("visits");
-            const int writes = 1000;
+            const int writes = 10000;
             var progress = new ProgressBar(40);
             progress.Report(0);
 
@@ -90,10 +113,7 @@ namespace NStore.Sample
                 progress.Report((double)written / writes);
             }
 
-            var worker = new ActionBlock<int>(Write, new ExecutionDataflowBlockOptions()
-            {
-                MaxDegreeOfParallelism = Environment.ProcessorCount
-            });
+            var worker = new ActionBlock<int>(Write, _unboundedOptions);
 
             var sw = new Stopwatch();
             sw.Start();
@@ -137,10 +157,7 @@ namespace NStore.Sample
                 }
             }
 
-            var worker = new ActionBlock<string>(RoomBuilder, new ExecutionDataflowBlockOptions()
-            {
-                MaxDegreeOfParallelism = Environment.ProcessorCount
-            });
+            var worker = new ActionBlock<string>(RoomBuilder,_unboundedOptions);
 
             foreach (var i in Enumerable.Range(1, _rooms))
             {
@@ -246,11 +263,7 @@ namespace NStore.Sample
                 }
             }
 
-            var worker = new ActionBlock<int>(BookRoom, new ExecutionDataflowBlockOptions()
-            {
-                MaxDegreeOfParallelism = Environment.ProcessorCount,
-                BoundedCapacity = 2000
-            });
+            var worker = new ActionBlock<int>(BookRoom, _boundedOptions);
 
             var sw = new Stopwatch();
             sw.Start();

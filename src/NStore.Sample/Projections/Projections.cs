@@ -99,7 +99,6 @@ namespace NStore.Sample.Projections
                 // * * * * * * * * * * * * * * * * * * * * * * * * * *
                 // * Add a timeout to stop if out of sequence (crash)*
                 // * * * * * * * * * * * * * * * * * * * * * * * * * *
-
                 return false;
             }
 
@@ -107,7 +106,7 @@ namespace NStore.Sample.Projections
 
             Position = data.Position;
 
-            Changeset changes = (Changeset)data.Payload;
+            Changeset changes = data.Payload as Changeset;
             StoreMetrics(changes);
 
             // skip fillers

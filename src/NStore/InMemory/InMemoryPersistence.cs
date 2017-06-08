@@ -136,21 +136,28 @@ namespace NStore.InMemory
 
             IEnumerable<Chunk> list = new ArraySegment<Chunk>(_chunks, start, toRead);
 
-            foreach (var chunk in list)
+            try
             {
-                if(chunk.Deleted)
-                    continue;
-                
-                await _networkSimulator.Wait().ConfigureAwait(false);
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (!await subscription.OnNext(Clone(chunk)))
+                foreach (var chunk in list)
                 {
-                    break;
-                }
-            }
+                    if(chunk.Deleted)
+                        continue;
+                
+                    await _networkSimulator.Wait().ConfigureAwait(false);
+                    cancellationToken.ThrowIfCancellationRequested();
 
-            await subscription.Completed();
+                    if (!await subscription.OnNext(Clone(chunk)))
+                    {
+                        break;
+                    }
+                }
+
+                await subscription.Completed();
+            }
+            catch (Exception e)
+            {
+                await subscription.OnError(e);
+            }
         }
 
         public async Task PersistAsync(
