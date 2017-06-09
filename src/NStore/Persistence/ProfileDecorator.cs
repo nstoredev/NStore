@@ -73,10 +73,10 @@ namespace NStore.Persistence
                 ));
         }
 
-        public Task<IChunk> PeekPartition(string partitionId, int maxVersion, CancellationToken cancellationToken)
+        public Task<IChunk> ReadLast(string partitionId, int upToIndexInclusive, CancellationToken cancellationToken)
         {
             return PeekCounter.CaptureAsync(() =>
-                _store.PeekPartition(partitionId, maxVersion, cancellationToken)
+                _store.ReadLast(partitionId, upToIndexInclusive, cancellationToken)
             );
         }
 

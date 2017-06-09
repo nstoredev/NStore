@@ -24,9 +24,9 @@ namespace NStore.Persistence
             CancellationToken cancellationToken
         );
 
-        Task<IChunk> PeekPartition(
+        Task<IChunk> ReadLast(
             string partitionId,
-            int maxVersion,
+            int upToIndexInclusive,
             CancellationToken cancellationToken
         );
 

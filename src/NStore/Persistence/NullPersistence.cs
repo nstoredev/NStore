@@ -48,7 +48,7 @@ namespace NStore.Persistence
             return Task.CompletedTask;
         }
 
-        public Task<IChunk> PeekPartition(string partitionId, int maxVersion, CancellationToken cancellationToken)
+        public Task<IChunk> ReadLast(string partitionId, int upToIndexInclusive, CancellationToken cancellationToken)
         {
             return Task.FromResult<IChunk>(null);
         }

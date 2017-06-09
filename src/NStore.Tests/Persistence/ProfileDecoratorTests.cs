@@ -111,7 +111,7 @@ namespace NStore.Tests.Persistence
         [Fact]
         public async void peek_partition_should_be_recorded()
         {
-            var value = await _store.PeekPartition("empty", 1, CancellationToken.None);
+            var value = await _store.ReadLast("empty", 1, CancellationToken.None);
             Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
             Assert.Equal(0, _profile.StoreScanCounter.Calls);

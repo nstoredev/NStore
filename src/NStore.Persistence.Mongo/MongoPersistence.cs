@@ -146,11 +146,11 @@ namespace NStore.Persistence.Mongo
             await ReadAndPushToConsumer(partitionId, subscription, limit, sort, filter, cancellationToken);
         }
 
-        public async Task<IChunk> PeekPartition(string partitionId, int maxVersion, CancellationToken cancellationToken)
+        public async Task<IChunk> ReadLast(string partitionId, int upToIndexInclusive, CancellationToken cancellationToken)
         {
             var filter = Builders<Chunk>.Filter.And(
                 Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId),
-                Builders<Chunk>.Filter.Lte(x => x.Index, maxVersion)
+                Builders<Chunk>.Filter.Lte(x => x.Index, upToIndexInclusive)
             );
 
             var sort = Builders<Chunk>.Sort.Descending(x => x.Index);

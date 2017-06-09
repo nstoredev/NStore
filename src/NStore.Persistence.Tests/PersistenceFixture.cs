@@ -447,7 +447,7 @@ namespace NStore.Persistence.Tests
 
             await Store.DeleteAsync("a", 2, 2);
 
-            var chunk = await Store.PeekPartition("a", 100, CancellationToken.None);
+            var chunk = await Store.ReadLast("a", 100, CancellationToken.None);
 
             Assert.NotNull(chunk);
             Assert.Equal("first", chunk.Payload);

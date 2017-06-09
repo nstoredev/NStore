@@ -93,7 +93,7 @@ namespace NStore.InMemory
             );
         }
 
-        public Task<IChunk> PeekPartition(string partitionId, int maxValue, CancellationToken cancellationToken)
+        public Task<IChunk> ReadLast(string partitionId, int upToIndexInclusive, CancellationToken cancellationToken)
         {
             InMemoryPartition inMemoryPartition;
             if (!_partitions.TryGetValue(partitionId, out inMemoryPartition))
@@ -101,7 +101,7 @@ namespace NStore.InMemory
                 return Task.FromResult<IChunk>(null);
             }
 
-            return inMemoryPartition.Peek(maxValue, cancellationToken);
+            return inMemoryPartition.Peek(upToIndexInclusive, cancellationToken);
         }
 
         private Chunk Clone(Chunk source)

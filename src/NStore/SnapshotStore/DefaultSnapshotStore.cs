@@ -21,7 +21,7 @@ namespace NStore.SnapshotStore
             int version,
             CancellationToken cancellationToken)
         {
-            var data = await _store.PeekPartition(aggregateId, version, cancellationToken);
+            var data = await _store.ReadLast(aggregateId, version, cancellationToken);
             return (SnapshotInfo) data?.Payload;
         }
 
