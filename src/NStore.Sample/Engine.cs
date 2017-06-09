@@ -71,8 +71,8 @@ namespace NStore.Sample
             
             _boundedOptions = new ExecutionDataflowBlockOptions()
             {
-                MaxDegreeOfParallelism = Environment.ProcessorCount * 2,
-                BoundedCapacity = 200,
+                MaxDegreeOfParallelism = Environment.ProcessorCount * 8,
+                BoundedCapacity = 500,
                 EnsureOrdered =  true
             };
 
@@ -80,6 +80,7 @@ namespace NStore.Sample
             if (store is MongoPersistence)
             {
                 _unboundedOptions.MaxDegreeOfParallelism = Environment.ProcessorCount * 4;
+                _unboundedOptions.BoundedCapacity = 2000;
             }
         }
 
@@ -96,10 +97,9 @@ namespace NStore.Sample
             return new TplRepository(_aggregateFactory, _streams, _snapshots);
         }
 
-        public async Task WriteSequentialStream()
+        public async Task WriteSequentialStream(int writes)
         {
             var stream = _streams.Open("visits");
-            const int writes = 10000;
             var progress = new ProgressBar(40);
             progress.Report(0);
 
@@ -185,6 +185,11 @@ namespace NStore.Sample
         public void StartPolling()
         {
             _poller.Start();
+        }
+
+        public Task PollToEnd()
+        {
+            return _poller.Poll();
         }
 
         public void Dispose()

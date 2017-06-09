@@ -29,7 +29,8 @@ namespace NStore.Sample
                 Console.WriteLine(
                     "Press ENTER to start sequential stream write");
                 Console.ReadLine();
-                app.WriteSequentialStream().GetAwaiter().GetResult();
+                app.WriteSequentialStream(1000)
+                    .GetAwaiter().GetResult();
                 app.DumpMetrics();
 
                 app.StartPolling();
@@ -42,10 +43,12 @@ namespace NStore.Sample
                 
                 app.DumpMetrics();
 
-                app.AddSomeBookings(1024)
+                app.AddSomeBookings(1_024)
                     .ConfigureAwait(false).GetAwaiter().GetResult();
                 app.DumpMetrics();
 
+                app.PollToEnd()
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
                 Console.ReadLine();
 
                 app.ShowRooms();
@@ -102,7 +105,11 @@ namespace NStore.Sample
                         PartitionsCollectionName = "partitions",
                         SequenceCollectionName = "seq",
                         DropOnInit = true,
-                        Serializer = new MongoCustomSerializer()
+                        Serializer = new MongoCustomSerializer(),
+                        CustomizePartitionSettings = settings =>
+                        {
+                            settings.MaxConnectionPoolSize = 5000;
+                        }
                     };
                     var mongo = new MongoPersistence(options);
                     mongo.InitAsync(CancellationToken.None).GetAwaiter().GetResult();

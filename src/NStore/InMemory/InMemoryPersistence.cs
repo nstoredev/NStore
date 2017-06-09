@@ -20,6 +20,7 @@ namespace NStore.InMemory
         private int _lastWrittenPosition = -1;
         private readonly INetworkSimulator _networkSimulator;
         private readonly InMemoryPartition _emptyInMemoryPartition;
+        private readonly ReaderWriterLockSlim _lockSlim = new ReaderWriterLockSlim();
 
         public InMemoryPersistence() : this(null, null)
         {
@@ -121,13 +122,18 @@ namespace NStore.InMemory
         public async Task ReadAllAsync(long fromSequenceIdInclusive, ISubscription subscription, int limit, CancellationToken cancellationToken)
         {
             int start = (int)Math.Max(fromSequenceIdInclusive - 1, 0);
-            if (start > _lastWrittenPosition)
+
+            _lockSlim.EnterReadLock();
+            int lastWritten = _lastWrittenPosition;
+            _lockSlim.ExitReadLock();
+
+            if (start > lastWritten)
             {
                 await subscription.Completed();
                 return;
             }
 
-            var toRead = Math.Min(limit, _lastWrittenPosition - start + 1);
+            var toRead = Math.Min(limit, lastWritten - start + 1);
             if (toRead <= 0)
             {
                 await subscription.Completed();
@@ -208,19 +214,13 @@ namespace NStore.InMemory
         {
             int slot = (int)chunk.Position - 1;
             _chunks[slot] = chunk;
-            InterlockedExchangeIfGreaterThan(ref _lastWrittenPosition, slot, _lastWrittenPosition);
-        }
 
-        public static bool InterlockedExchangeIfGreaterThan(ref int location, int newValue, int comparison)
-        {
-            int initialValue;
-            do
+            _lockSlim.EnterWriteLock();
+            if (_lastWrittenPosition < slot)
             {
-                initialValue = location;
-                if (initialValue > comparison) return false;
+                _lastWrittenPosition = slot;
             }
-            while (System.Threading.Interlocked.CompareExchange(ref location, newValue, initialValue) != initialValue);
-            return true;
+            _lockSlim.ExitWriteLock();
         }
 
         public async Task DeleteAsync(

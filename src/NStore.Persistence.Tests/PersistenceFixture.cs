@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 using Xunit;
 
 // ReSharper disable InconsistentNaming
@@ -29,7 +30,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task can_insert_at_first_index()
         {
-            await Store.PersistAsync("Stream_1", 1, new {data = "this is a test"});
+            await Store.PersistAsync("Stream_1", 1, new { data = "this is a test" });
         }
     }
 
@@ -51,7 +52,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_work()
         {
-            await Store.PersistAsync("Stream_1", long.MaxValue, new {data = "this is a test"});
+            await Store.PersistAsync("Stream_1", long.MaxValue, new { data = "this is a test" });
         }
     }
 
@@ -60,11 +61,11 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_throw()
         {
-            await Store.PersistAsync("dup", 1, new {data = "first attempt"});
-            await Store.PersistAsync("dup", 2, new {data = "should not work"});
+            await Store.PersistAsync("dup", 1, new { data = "first attempt" });
+            await Store.PersistAsync("dup", 2, new { data = "should not work" });
 
             var ex = await Assert.ThrowsAnyAsync<DuplicateStreamIndexException>(() =>
-                Store.PersistAsync("dup", 1, new {data = "this is a test"})
+                Store.PersistAsync("dup", 1, new { data = "this is a test" })
             );
 
             Assert.Equal("Duplicated index 1 on stream dup", ex.Message);
@@ -242,7 +243,7 @@ namespace NStore.Persistence.Tests
             byte[] payload = null;
             await Store.ReadPartitionForward("BA", 0, new LambdaSubscription(data =>
             {
-                payload = (byte[]) data.Payload;
+                payload = (byte[])data.Payload;
                 return Task.FromResult(true);
             }));
 
@@ -257,8 +258,8 @@ namespace NStore.Persistence.Tests
         public async Task cannot_append_same_operation_twice_on_same_stream()
         {
             var opId = "operation_1";
-            await Store.PersistAsync("Id_1", 0, new {data = "this is a test"}, opId);
-            await Store.PersistAsync("Id_1", 1, new {data = "this is a test"}, opId);
+            await Store.PersistAsync("Id_1", 0, new { data = "this is a test" }, opId);
+            await Store.PersistAsync("Id_1", 1, new { data = "this is a test" }, opId);
 
             var list = new List<object>();
             await Store.ReadPartitionForward("Id_1", 0, new LambdaSubscription(data =>
@@ -345,8 +346,8 @@ namespace NStore.Persistence.Tests
             await Store.ReadPartitionForward("delete_3", 0, acc);
 
             Assert.Equal(2, acc.Length);
-            Assert.True((string) acc[0] == "2");
-            Assert.True((string) acc[1] == "3");
+            Assert.True((string)acc[0] == "2");
+            Assert.True((string)acc[1] == "3");
         }
 
         [Fact]
@@ -357,8 +358,8 @@ namespace NStore.Persistence.Tests
             await Store.ReadPartitionForward("delete_4", 0, acc);
 
             Assert.Equal(2, acc.Length);
-            Assert.True((string) acc[0] == "1");
-            Assert.True((string) acc[1] == "2");
+            Assert.True((string)acc[0] == "1");
+            Assert.True((string)acc[1] == "2");
         }
 
         [Fact]
@@ -369,40 +370,50 @@ namespace NStore.Persistence.Tests
             await Store.ReadPartitionForward("delete_5", 0, acc);
 
             Assert.Equal(2, acc.Length);
-            Assert.True((string) acc[0] == "1");
-            Assert.True((string) acc[1] == "3");
+            Assert.True((string)acc[0] == "1");
+            Assert.True((string)acc[1] == "3");
         }
     }
 
     public class concurrency_test : BasePersistenceTest
     {
-        [Fact]
-        public async void polling_client_should_not_miss_data()
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(64)] 
+        public async void polling_client_should_not_miss_data(int parallelism)
         {
             var recorder = new AllPartitionsRecorder();
 
             var poller = new PollingClient(Store, recorder)
             {
-                Delay = 100
+                Delay = 0
             };
 
             poller.Start();
 
-            const int range = 2048;
-            await Enumerable.Range(1, range).ForEachAsync(32,
-                    async i => { await Store.PersistAsync("p", -1, "demo"); }
-                )
-                .ConfigureAwait(false);
+            const int range = 10000;
 
-            await Task.Delay(1000);
+            var producer = new ActionBlock<int>(async i =>
+            {
+                await Store.PersistAsync("p", -1, "demo");
+            }, new ExecutionDataflowBlockOptions()
+            {
+                MaxDegreeOfParallelism = parallelism
+            });
+
+            foreach (var i in Enumerable.Range(1, range))
+            {
+                await producer.SendAsync(i);
+            }
+
+            producer.Complete();
+            await producer.Completion;
 
             poller.Stop();
 
-            //Console.WriteLine("Dumping recorder");
-            //recorder.Replay((storeIndex, partitionId, index, payload) =>
-            //{
-            //    Console.WriteLine($"{storeIndex:D5} - {partitionId.PadRight(20)} - {index:D5}");
-            //});
+            // read to end
+            await poller.Poll();
 
             Assert.Equal(range, poller.Position);
             Assert.Equal(range, recorder.Length);
@@ -419,15 +430,15 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("a", 3, "third");
 
             await Store.DeleteAsync("a", 2, 2);
-            
+
             var recorder = new AllPartitionsRecorder();
             await Store.ReadAllAsync(0, recorder);
 
             Assert.Equal(2, recorder.Length);
             Assert.Equal("first", recorder[0]);
             Assert.Equal("third", recorder[1]);
-        } 
-        
+        }
+
         [Fact]
         public async void deleted_chunks_should_be_hidden_from_peek()
         {
@@ -450,9 +461,11 @@ namespace NStore.Persistence.Tests
             await Store.PersistAsync("a", 3, "third");
 
             await Store.DeleteAsync("a", 2, 2);
-            
-            var poller = new PollingClient(Store,NullSubscription.Instance);
-            
+
+            var poller = new PollingClient(Store, NullSubscription.Instance);
+            //@@TODO
+
+
         }
     }
 
