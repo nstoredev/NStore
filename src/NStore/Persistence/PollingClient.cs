@@ -6,30 +6,52 @@ namespace NStore.Persistence
 {
     public class PollingClient
     {
+        internal class Reader : ISubscription
+        {
+            private readonly ISubscription _subscription;
+            public long Position { get; private set; } = 0;
+            
+            
+            public Reader(ISubscription subscription)
+            {
+                _subscription = subscription;
+            }
+
+            public Task<bool> OnNext(IChunk data)
+            {
+                if (data.Position != Position + 1)
+                    return Task.FromResult(false);
+
+                Position = data.Position;
+                return _subscription.OnNext(data);
+            }
+
+            public Task Completed()
+            {
+                return Task.CompletedTask;
+            }
+
+            public Task OnError(Exception ex)
+            {
+                return Task.CompletedTask;
+            }
+        }
+
         private CancellationTokenSource _source;
         private readonly IPersistence _store;
-        private readonly ISubscription _subscription;
-        public int Delay { get; set; }
-        long _lastScan = 0;
-        private readonly LambdaSubscription _wrapper;
+        public int PollingIntervalMilliseconds { get; set; }
+        public int MissingChunksTimeoutMilliseconds { get; set; }
 
-        public long Position => _lastScan;
+        public long Position => _reader.Position;
+
+        private readonly Reader _reader;
 
         public PollingClient(IPersistence store, ISubscription subscription)
         {
-            _subscription = subscription;
+            _reader = new Reader(subscription);
             _store = store;
-            Delay = 200;
-
-            _wrapper = new LambdaSubscription((data) =>
-            {
-                // retry if out of sequence
-                if (data.Position != _lastScan + 1)
-                    return Task.FromResult(false);
-
-                _lastScan = data.Position;
-                return _subscription.OnNext(data);
-            });
+            PollingIntervalMilliseconds = 200;
+            MissingChunksTimeoutMilliseconds = 0;
         }
 
         public void Stop()
@@ -47,7 +69,7 @@ namespace NStore.Persistence
                 while (!token.IsCancellationRequested)
                 {
                     await Poll(token);
-                    await Task.Delay(Delay, token);
+                    await Task.Delay(PollingIntervalMilliseconds, token);
                 }
             }, token);
         }
@@ -60,11 +82,13 @@ namespace NStore.Persistence
         public async Task Poll(CancellationToken token)
         {
             await this._store.ReadAllAsync(
-                _lastScan + 1,
-                _wrapper,
+                Position + 1,
+                _reader,
                 int.MaxValue,
                 token
             );
         }
+
+        public Func<long, Task> OnMissingChunk { get; set; }
     }
 }

@@ -387,7 +387,7 @@ namespace NStore.Persistence.Tests
 
             var poller = new PollingClient(Store, recorder)
             {
-                Delay = 0
+                PollingIntervalMilliseconds = 0
             };
 
             poller.Start();
@@ -454,7 +454,7 @@ namespace NStore.Persistence.Tests
         }
 
         [Fact]
-        public async void poller()
+        public async void poller_should_skip_missing_chunks()
         {
             await Store.PersistAsync("a", 1, "first");
             await Store.PersistAsync("a", 2, "second");
@@ -462,10 +462,15 @@ namespace NStore.Persistence.Tests
 
             await Store.DeleteAsync("a", 2, 2);
 
-            var poller = new PollingClient(Store, NullSubscription.Instance);
-            //@@TODO
+            var recored = new AllPartitionsRecorder();
+            var poller = new PollingClient(Store, recored);
+            await poller.Poll();
+            Assert.Equal(1, poller.Position);
 
-
+            await Task.Delay(1000);
+            
+            await poller.Poll();
+            Assert.Equal(3, poller.Position);
         }
     }
 
