@@ -11,7 +11,6 @@ namespace NStore.Persistence
             private readonly ISubscription _subscription;
             public long Position { get; private set; } = 0;
             
-            
             public Reader(ISubscription subscription)
             {
                 _subscription = subscription;

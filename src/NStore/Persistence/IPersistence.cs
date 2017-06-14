@@ -37,7 +37,7 @@ namespace NStore.Persistence
             CancellationToken cancellationToken
         );
 
-        Task PersistAsync(
+        Task<IChunk> PersistAsync(
             string partitionId,
             long index,
             object payload,

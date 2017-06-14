@@ -15,14 +15,9 @@ namespace NStore.Persistence
             return Task.CompletedTask;
         }
 
-        public Task PersistAsync(
-            string partitionId,
-            long index,
-            object payload,
-            string operationId,
-            CancellationToken cancellationToken)
+        public Task<IChunk> PersistAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
         {
-            return Task.CompletedTask;
+            return Task.FromResult<IChunk>(null);
         }
 
         public Task ReadPartitionForward(

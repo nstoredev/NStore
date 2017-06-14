@@ -92,14 +92,9 @@ namespace NStore.Persistence
             );
         }
 
-        public async Task PersistAsync(
-            string partitionId,
-            long index,
-            object payload,
-            string operationId,
-            CancellationToken cancellationToken)
+        public Task<IChunk> PersistAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
         {
-            await PersistCounter.CaptureAsync(() =>
+            return PersistCounter.CaptureAsync(() =>
                 _store.PersistAsync(partitionId, index, payload, operationId, cancellationToken)
             );
         }

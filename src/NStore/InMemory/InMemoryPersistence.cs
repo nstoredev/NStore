@@ -166,13 +166,7 @@ namespace NStore.InMemory
             }
         }
 
-        public async Task PersistAsync(
-            string partitionId,
-            long index,
-            object payload,
-            string operationId,
-            CancellationToken cancellationToken
-        )
+        public async Task<IChunk> PersistAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
         {
             var id = Interlocked.Increment(ref _sequence);
             var chunk = new Chunk()
@@ -208,6 +202,8 @@ namespace NStore.InMemory
             }
             SetChunk(chunk);
             await _networkSimulator.Wait().ConfigureAwait(false);
+
+            return chunk;
         }
 
         private void SetChunk(Chunk chunk)

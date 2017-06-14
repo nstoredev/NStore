@@ -196,16 +196,10 @@ namespace NStore.Persistence.Mongo
             await subscription.Completed();
         }
 
-        public async Task PersistAsync(
-            string partitionId,
-            long index,
-            object payload,
-            string operationId,
-            CancellationToken cancellationToken
-        )
+        public async Task<IChunk> PersistAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
         {
             long id = await GetNextId(cancellationToken).ConfigureAwait(false);
-            var doc = new Chunk()
+            var chunk = new Chunk()
             {
                 Position = id,
                 PartitionId = partitionId,
@@ -214,7 +208,9 @@ namespace NStore.Persistence.Mongo
                 OpId = operationId ?? Guid.NewGuid().ToString()
             };
 
-            await InternalPersistAsync(doc, cancellationToken).ConfigureAwait(false);
+            await InternalPersistAsync(chunk, cancellationToken).ConfigureAwait(false);
+
+            return chunk;
         }
 
         public async Task DeleteAsync(
