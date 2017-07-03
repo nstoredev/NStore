@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -6,21 +7,54 @@ namespace NStore.Persistence
 {
     public class PollingClient
     {
+        internal abstract class Command
+        {
+        }
+
+        internal class PollCommand : Command
+        {
+        }
+
         internal class Reader : ISubscription
         {
             private readonly ISubscription _subscription;
+            private readonly int _missingChunkMsTimeout;
             public long Position { get; private set; } = 0;
-            
-            public Reader(ISubscription subscription)
+            private DateTime _lastProcessedTs = DateTime.UtcNow;
+
+            public Func<long, Task> OnMissingChunk { get; set; }
+
+            public Reader(ISubscription subscription, int missingChunkMsTimeout)
             {
                 _subscription = subscription;
+                _missingChunkMsTimeout = missingChunkMsTimeout;
             }
 
             public Task<bool> OnNext(IChunk data)
             {
+//                if (data.Position != Position + 1)
+//                {
+//                    return Task.FromResult(false);
+//                }
+                
                 if (data.Position != Position + 1)
-                    return Task.FromResult(false);
+                {
+                    var elapsed = DateTime.UtcNow - _lastProcessedTs;
+                    
+                    if (elapsed.TotalMilliseconds >= _missingChunkMsTimeout)
+                    {
+                        Position = Position + 1;
+                        _lastProcessedTs = DateTime.UtcNow;
+                        
+                        OnMissingChunk?.Invoke(Position);
+                        
+//                        return Task.FromResult(true);
+                    }
 
+                    return Task.FromResult(false);
+                }
+
+                _lastProcessedTs = DateTime.UtcNow;
                 Position = data.Position;
                 return _subscription.OnNext(data);
             }
@@ -39,7 +73,6 @@ namespace NStore.Persistence
         private CancellationTokenSource _source;
         private readonly IPersistence _store;
         public int PollingIntervalMilliseconds { get; set; }
-        public int MissingChunksTimeoutMilliseconds { get; set; }
 
         public long Position => _reader.Position;
 
@@ -47,10 +80,9 @@ namespace NStore.Persistence
 
         public PollingClient(IPersistence store, ISubscription subscription)
         {
-            _reader = new Reader(subscription);
+            _reader = new Reader(subscription, 500);
             _store = store;
             PollingIntervalMilliseconds = 200;
-            MissingChunksTimeoutMilliseconds = 0;
         }
 
         public void Stop()
@@ -86,8 +118,10 @@ namespace NStore.Persistence
                 int.MaxValue,
                 token
             );
+            
+            // handle zero reads (holes)
         }
 
-        public Func<long, Task> OnMissingChunk { get; set; }
+        public Func<long, Task> OnMissingChunk => _reader.OnMissingChunk;
     }
 }
