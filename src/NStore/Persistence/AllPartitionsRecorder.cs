@@ -7,12 +7,16 @@ namespace NStore.Persistence
     public class AllPartitionsRecorder : ISubscription
     {
         private readonly IList<IChunk> _data = new List<IChunk>();
-        private readonly IDictionary<long, object> _map = new Dictionary<long, object>();
         public int Length => _data.Count;
 
         public void Replay(Action<long, string, long, object> action)
         {
             Replay(action, 0);
+        }
+
+        public Task OnStart(long position)
+        {
+            return Task.CompletedTask;
         }
 
         public void Replay(Action<long, string, long, object> action, int startAt)
@@ -42,16 +46,20 @@ namespace NStore.Persistence
         public Task<bool> OnNext(IChunk data)
         {
             _data.Add(data);
-            _map[data.Index] = data.Payload;
             return Task.FromResult(true);
         }
 
-        public Task Completed()
+        public Task Completed(long position)
         {
             return Task.CompletedTask;
         }
 
-        public Task OnError(Exception ex)
+        public Task Stopped(long position)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task OnError(long position, Exception ex)
         {
             throw ex;
         }

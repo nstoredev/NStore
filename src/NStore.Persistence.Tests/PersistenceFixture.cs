@@ -453,16 +453,22 @@ namespace NStore.Persistence.Tests
             Assert.Equal("first", chunk.Payload);
         }
 
-        [Fact]
-        public async void poller_should_skip_missing_chunks()
+        [Theory]
+        [InlineData(3,3)]
+        public async void poller_should_skip_missing_chunks(long missing, long expected)
         {
-            await Store.PersistAsync("a", 2, "second");
+            await Store.PersistAsync("a", 1, "1");
+            await Store.PersistAsync("a", 2, "2");
+            await Store.PersistAsync("a", 3, "3");
+
+            await Store.DeleteAsync("a", missing, missing);
 
             var recored = new AllPartitionsRecorder();
             var poller = new PollingClient(Store, recored);
+            poller.DumpMessages = true;
             await poller.Poll();
             await poller.Poll();
-            Assert.Equal(2, poller.Position);
+            Assert.Equal(expected, poller.Position);
         }
     }
 

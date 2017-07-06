@@ -132,14 +132,24 @@ namespace NStore.Sample.Projections
             return true;
         }
 
-        public Task Completed()
+        public Task Completed(long position)
         {
             return Task.CompletedTask;
         }
 
-        public Task OnError(Exception ex)
+        public Task Stopped(long position)
         {
-            _reporter.Report($"ERROR {ex.Message}");
+            return Task.CompletedTask;
+        }
+
+        public Task OnStart(long position)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task OnError(long position, Exception ex)
+        {
+            _reporter.Report($"ERROR on position {position}: {ex.Message}");
             return Task.CompletedTask;
         }
     }

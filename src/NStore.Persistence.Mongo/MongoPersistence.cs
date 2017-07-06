@@ -106,6 +106,7 @@ namespace NStore.Persistence.Mongo
                 options.Limit = limit;
             }
 
+            long position = 0;
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
             {
                 while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
@@ -113,17 +114,18 @@ namespace NStore.Persistence.Mongo
                     var batch = cursor.Current;
                     foreach (var b in batch)
                     {
+                        position = b.Position;
                         b.Payload = _serializer.Deserialize(partitionId, b.Payload);
                         if (!await subscription.OnNext(b))
                         {
-                            await subscription.Completed();
+                            await subscription.Completed(position);
                             return;
                         }
                     }
                 }
             }
 
-            await subscription.Completed();
+            await subscription.Completed(position);
         }
 
         public async Task ReadPartitionBackward(
@@ -176,6 +178,7 @@ namespace NStore.Persistence.Mongo
                 options.Limit = limit;
             }
 
+            long position = 0;
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
             {
                 while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
@@ -183,17 +186,18 @@ namespace NStore.Persistence.Mongo
                     var batch = cursor.Current;
                     foreach (var chunk in batch)
                     {
+                        position = chunk.Position;
                         chunk.Payload = _serializer.Deserialize(chunk.PartitionId, chunk.Payload);
 
                         if (!await subscription.OnNext(chunk))
                         {
-                            await subscription.Completed();
+                            await subscription.Completed(position);
                             return;
                         }
                     }
                 }
             }
-            await subscription.Completed();
+            await subscription.Completed(position);
         }
 
         public async Task<IChunk> PersistAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)

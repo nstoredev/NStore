@@ -121,6 +121,8 @@ namespace NStore.InMemory
 
         public async Task ReadAllAsync(long fromSequenceIdInclusive, ISubscription subscription, int limit, CancellationToken cancellationToken)
         {
+            await subscription.OnStart(fromSequenceIdInclusive);
+
             int start = (int)Math.Max(fromSequenceIdInclusive - 1, 0);
 
             _lockSlim.EnterReadLock();
@@ -129,40 +131,47 @@ namespace NStore.InMemory
 
             if (start > lastWritten)
             {
-                await subscription.Completed();
+                await subscription.Stopped(fromSequenceIdInclusive);
                 return;
             }
 
             var toRead = Math.Min(limit, lastWritten - start + 1);
             if (toRead <= 0)
             {
-                await subscription.Completed();
+                await subscription.Stopped(fromSequenceIdInclusive);
                 return;
             }
 
             IEnumerable<Chunk> list = new ArraySegment<Chunk>(_chunks, start, toRead);
 
+            long position = 0;
+
             try
             {
                 foreach (var chunk in list)
                 {
-                    if(chunk.Deleted)
+                    position = chunk.Position;
+
+                    if (chunk.Deleted)
+                    {
                         continue;
-                
+                    }
+
                     await _networkSimulator.Wait().ConfigureAwait(false);
                     cancellationToken.ThrowIfCancellationRequested();
 
                     if (!await subscription.OnNext(Clone(chunk)))
                     {
-                        break;
+                        await subscription.Stopped(position);
+                        return;
                     }
                 }
 
-                await subscription.Completed();
+                await subscription.Completed(position);
             }
             catch (Exception e)
             {
-                await subscription.OnError(e);
+                await subscription.OnError(position, e);
             }
         }
 

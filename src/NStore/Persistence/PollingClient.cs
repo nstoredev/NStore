@@ -7,15 +7,7 @@ namespace NStore.Persistence
 {
     public class PollingClient
     {
-        internal abstract class Command
-        {
-        }
-
-        internal class PollCommand : Command
-        {
-        }
-
-        internal class Reader : ISubscription
+        private class Reader : ISubscription
         {
             private readonly ISubscription _subscription;
             private readonly int _missingChunkMsTimeout;
@@ -23,6 +15,8 @@ namespace NStore.Persistence
             private DateTime _lastProcessedTs = DateTime.UtcNow;
 
             public Func<long, Task> OnMissingChunk { get; set; }
+            public bool DumpMessages { get; set; }
+            public long Processed { get; private set; }
 
             public Reader(ISubscription subscription, int missingChunkMsTimeout)
             {
@@ -32,23 +26,21 @@ namespace NStore.Persistence
 
             public Task<bool> OnNext(IChunk data)
             {
-//                if (data.Position != Position + 1)
-//                {
-//                    return Task.FromResult(false);
-//                }
-                
+                if (DumpMessages)
+                    Console.WriteLine($"OnNext({data.Position})");
+
                 if (data.Position != Position + 1)
                 {
                     var elapsed = DateTime.UtcNow - _lastProcessedTs;
-                    
+
                     if (elapsed.TotalMilliseconds >= _missingChunkMsTimeout)
                     {
                         Position = Position + 1;
                         _lastProcessedTs = DateTime.UtcNow;
-                        
+
                         OnMissingChunk?.Invoke(Position);
-                        
-//                        return Task.FromResult(true);
+
+                        //                        return Task.FromResult(true);
                     }
 
                     return Task.FromResult(false);
@@ -56,15 +48,35 @@ namespace NStore.Persistence
 
                 _lastProcessedTs = DateTime.UtcNow;
                 Position = data.Position;
+                Processed++;
                 return _subscription.OnNext(data);
             }
 
-            public Task Completed()
+            public Task OnStart(long position)
             {
+                if (DumpMessages)
+                    Console.WriteLine($"OnStart({position})");
+                Position = position - 1;
+                Processed = 0;
                 return Task.CompletedTask;
             }
 
-            public Task OnError(Exception ex)
+            public Task Completed(long position)
+            {
+                if (DumpMessages)
+                    Console.WriteLine($"Completed({position})");
+                Position = position;
+                return Task.CompletedTask;
+            }
+
+            public Task Stopped(long position)
+            {
+                if (DumpMessages)
+                    Console.WriteLine($"Stopped({position})");
+                return Task.CompletedTask;
+            }
+
+            public Task OnError(long position, Exception ex)
             {
                 return Task.CompletedTask;
             }
@@ -77,6 +89,12 @@ namespace NStore.Persistence
         public long Position => _reader.Position;
 
         private readonly Reader _reader;
+
+        public bool DumpMessages
+        {
+            get => _reader.DumpMessages;
+            set => _reader.DumpMessages = value;
+        }
 
         public PollingClient(IPersistence store, ISubscription subscription)
         {
@@ -112,13 +130,22 @@ namespace NStore.Persistence
 
         public async Task Poll(CancellationToken token)
         {
+            var start = Position + 1;
+
+            if (DumpMessages)
+                Console.WriteLine("--------------------------------------");
+
             await this._store.ReadAllAsync(
-                Position + 1,
+                start,
                 _reader,
                 int.MaxValue,
                 token
             );
-            
+            if (DumpMessages)
+            {
+                Console.WriteLine($"Polled from {start} to {_reader.Position}, processed {_reader.Processed} chunks");
+                Console.WriteLine("--------------------------------------");
+            }
             // handle zero reads (holes)
         }
 

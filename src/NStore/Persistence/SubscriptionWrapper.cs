@@ -20,14 +20,24 @@ namespace NStore.Persistence
             return await _wrapped.OnNext(data);
         }
 
-        public async Task Completed()
+        public async Task Completed(long position)
         {
-            await _wrapped.Completed();
+            await _wrapped.Completed(position);
         }
 
-        public async Task OnError(Exception ex)
+        public async Task Stopped(long position)
         {
-            await _wrapped.OnError(ex);
+            await _wrapped.Stopped(position);
+        }
+
+        public async Task OnStart(long position)
+        {
+            await _wrapped.OnStart(position);
+        }
+
+        public async Task OnError(long position, Exception ex)
+        {
+            await _wrapped.OnError(position, ex);
         }
     }
 }

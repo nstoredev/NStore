@@ -34,20 +34,32 @@ namespace NStore.Tpl
             }
         }
 
+        public Task OnStart(long position)
+        {
+            return Task.CompletedTask;
+        }
+
         public async Task<bool> OnNext(IChunk data)
         {
             await _producer.SendAsync(data).ConfigureAwait(false);
             return _isRunning;
         }
 
-        public async Task Completed()
+        public async Task Completed(long position)
         {
             _producer.Complete();
             await _producer.Completion.ConfigureAwait(false);
             _isRunning = false;
         }
 
-        public Task OnError(Exception ex)
+        public async Task Stopped(long position)
+        {
+            _producer.Complete();
+            await _producer.Completion.ConfigureAwait(false);
+            _isRunning = false;
+        }
+
+        public Task OnError(long position, Exception ex)
         {
             _isRunning = false;
             return Task.CompletedTask;

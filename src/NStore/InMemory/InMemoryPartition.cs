@@ -86,27 +86,29 @@ namespace NStore.InMemory
             IEnumerable<Chunk> chunks,
             CancellationToken cancellationToken)
         {
+            long position = 0;
             try
             {
                 foreach (var chunk in chunks)
                 {
+                    position = chunk.Position;
                     await _networkSimulator.WaitFast().ConfigureAwait(false);
                     cancellationToken.ThrowIfCancellationRequested();
 
                     if (!await subscription.OnNext(Clone(chunk)))
                     {
-                        await subscription.Completed();
+                        await subscription.Completed(position);
                         return;
                     }
                 }
             }
             catch (Exception e)
             {
-                await subscription.OnError(e);
+                await subscription.OnError(position, e);
                 return;
             }
 
-            await subscription.Completed();
+            await subscription.Completed(position);
         }
 
 

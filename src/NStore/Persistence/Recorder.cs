@@ -32,13 +32,24 @@ namespace NStore.Persistence
             return Task.FromResult(true);
         }
 
-        public Task Completed()
+        public Task Completed(long position)
         {
             ReadCompleted = true;
             return Task.CompletedTask;
         }
 
-        public Task OnError(Exception ex)
+        public Task Stopped(long position)
+        {
+            ReadCompleted = true;
+            return Task.CompletedTask;
+        }
+
+        public Task OnStart(long position)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task OnError(long position, Exception ex)
         {
             throw ex;
         }

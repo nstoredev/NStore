@@ -22,13 +22,24 @@ namespace NStore.Persistence
             return this._fn(chunk);
         }
 
-        public Task Completed()
+        public Task OnStart(long position)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task Completed(long position)
         {
             this.ReadCompleted = true;
             return Task.CompletedTask;
         }
 
-        public Task OnError(Exception ex)
+        public Task Stopped(long position)
+        {
+            this.ReadCompleted = true;
+            return Task.CompletedTask;
+        }
+
+        public Task OnError(long position, Exception ex)
         {
             _failed = ex;
             return Task.CompletedTask;
