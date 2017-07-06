@@ -150,12 +150,12 @@ namespace NStore.InMemory
             {
                 foreach (var chunk in list)
                 {
-                    position = chunk.Position;
-
                     if (chunk.Deleted)
                     {
                         continue;
                     }
+
+                    position = chunk.Position;
 
                     await _networkSimulator.Wait().ConfigureAwait(false);
                     cancellationToken.ThrowIfCancellationRequested();
@@ -167,7 +167,14 @@ namespace NStore.InMemory
                     }
                 }
 
-                await subscription.Completed(position);
+                if (position == 0)
+                {
+                    await subscription.Stopped(fromSequenceIdInclusive);
+                }
+                else
+                {
+                    await subscription.Completed(position);
+                }
             }
             catch (Exception e)
             {

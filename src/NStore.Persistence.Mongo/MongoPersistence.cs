@@ -179,6 +179,7 @@ namespace NStore.Persistence.Mongo
             }
 
             long position = 0;
+            await subscription.OnStart(fromSequenceIdInclusive);
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
             {
                 while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
@@ -191,13 +192,21 @@ namespace NStore.Persistence.Mongo
 
                         if (!await subscription.OnNext(chunk))
                         {
-                            await subscription.Completed(position);
+                            await subscription.Stopped(position);
                             return;
                         }
                     }
                 }
             }
-            await subscription.Completed(position);
+
+            if (position == 0)
+            {
+                await subscription.Stopped(fromSequenceIdInclusive);
+            }
+            else
+            {
+                await subscription.Completed(position);
+            }
         }
 
         public async Task<IChunk> PersistAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
