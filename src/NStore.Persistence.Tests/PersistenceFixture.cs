@@ -378,19 +378,28 @@ namespace NStore.Persistence.Tests
     public class concurrency_test : BasePersistenceTest
     {
         [Theory]
-        [InlineData(1)]
-        [InlineData(2)]
-        [InlineData(64)] 
-        public async void polling_client_should_not_miss_data(int parallelism)
+        [InlineData(1, false)]
+		[InlineData(2, false)]
+		[InlineData(4, false)]
+		[InlineData(8, false)]
+        [InlineData(64, false)]
+		[InlineData(1, true)]
+		[InlineData(2, true)]
+		[InlineData(4, true)]
+		[InlineData(8, true)]
+		[InlineData(64, true)]
+		public async void polling_client_should_not_miss_data(int parallelism, bool autopolling)
         {
             var recorder = new AllPartitionsRecorder();
 
             var poller = new PollingClient(Store, recorder)
             {
-                PollingIntervalMilliseconds = 0
+                PollingIntervalMilliseconds = 500,
+                HoleDetectionTimeout = 1000
             };
 
-            poller.Start();
+            if(autopolling)
+                poller.Start();
 
             const int range = 10000;
 
@@ -410,10 +419,11 @@ namespace NStore.Persistence.Tests
             producer.Complete();
             await producer.Completion;
 
-            poller.Stop();
+			if (autopolling)
+				poller.Stop();
 
-            // read to end
-            await poller.Poll();
+			// read to end
+			await poller.Poll();
 
             Assert.Equal(range, poller.Position);
             Assert.Equal(range, recorder.Length);
@@ -454,9 +464,9 @@ namespace NStore.Persistence.Tests
         }
 
         [Theory]
-		[InlineData(1, 3)]
-		[InlineData(2, 3)]
-//		[InlineData(3, 3)] @@TODO enable tombstone!
+        [InlineData(1, 3)]
+        [InlineData(2, 3)]
+        //		[InlineData(3, 3)] @@TODO enable tombstone!
         public async void poller_should_skip_missing_chunks(long missing, long expected)
         {
             await Store.PersistAsync("a", 1, "1");
@@ -467,7 +477,7 @@ namespace NStore.Persistence.Tests
 
             var recored = new AllPartitionsRecorder();
             var poller = new PollingClient(Store, recored);
-            poller.DumpMessages = true;
+          //  poller.DumpMessages = true;
             await poller.Poll();
             await poller.Poll();
             Assert.Equal(expected, poller.Position);

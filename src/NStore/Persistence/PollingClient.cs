@@ -10,7 +10,6 @@ namespace NStore.Persistence
         private class Reader : ISubscription
         {
             private readonly ISubscription _subscription;
-            private readonly int _missingChunkMsTimeout;
             public long Position { get; private set; } = 0;
             private DateTime _lastProcessedTs = DateTime.UtcNow;
 
@@ -20,10 +19,9 @@ namespace NStore.Persistence
             public bool HoleDetected { get; private set; }
             private bool _stopOnHole = true;
 
-            public Reader(ISubscription subscription, int missingChunkMsTimeout)
+            public Reader(ISubscription subscription)
             {
                 _subscription = subscription;
-                _missingChunkMsTimeout = missingChunkMsTimeout;
             }
 
             public Task<bool> OnNext(IChunk data)
@@ -83,7 +81,7 @@ namespace NStore.Persistence
         private CancellationTokenSource _source;
         private readonly IPersistence _store;
         public int PollingIntervalMilliseconds { get; set; }
-
+        public int HoleDetectionTimeout { get; set; }
         public long Position => _reader.Position;
 
         private readonly Reader _reader;
@@ -96,9 +94,10 @@ namespace NStore.Persistence
 
         public PollingClient(IPersistence store, ISubscription subscription)
         {
-            _reader = new Reader(subscription, 500);
+            _reader = new Reader(subscription);
             _store = store;
             PollingIntervalMilliseconds = 200;
+            HoleDetectionTimeout = 400;
         }
 
         public void Stop()
@@ -143,7 +142,7 @@ namespace NStore.Persistence
 
 				if (_reader.HoleDetected)
 				{
-					await Task.Delay(500);
+					await Task.Delay(HoleDetectionTimeout);
 				}
 
                 if (DumpMessages)
