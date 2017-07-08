@@ -17,6 +17,8 @@ namespace NStore.Persistence
             public Func<long, Task> OnMissingChunk { get; set; }
             public bool DumpMessages { get; set; }
             public long Processed { get; private set; }
+            public bool HoleDetected { get; private set; }
+            private bool _stopOnHole = true;
 
             public Reader(ISubscription subscription, int missingChunkMsTimeout)
             {
@@ -31,19 +33,10 @@ namespace NStore.Persistence
 
                 if (data.Position != Position + 1)
                 {
-                    var elapsed = DateTime.UtcNow - _lastProcessedTs;
-
-                    if (elapsed.TotalMilliseconds >= _missingChunkMsTimeout)
-                    {
-                        Position = Position + 1;
-                        _lastProcessedTs = DateTime.UtcNow;
-
-                        OnMissingChunk?.Invoke(Position);
-
-                        //                        return Task.FromResult(true);
-                    }
-
-                    return Task.FromResult(false);
+                    if(_stopOnHole){
+						HoleDetected = true;
+						return Task.FromResult(false);
+					}
                 }
 
                 _lastProcessedTs = DateTime.UtcNow;
@@ -56,8 +49,13 @@ namespace NStore.Persistence
             {
                 if (DumpMessages)
                     Console.WriteLine($"OnStart({position})");
+
                 Position = position - 1;
                 Processed = 0;
+
+                _stopOnHole = !this.HoleDetected;
+
+                this.HoleDetected = false;
                 return Task.CompletedTask;
             }
 
@@ -130,23 +128,32 @@ namespace NStore.Persistence
 
         public async Task Poll(CancellationToken token)
         {
-            var start = Position + 1;
-
-            if (DumpMessages)
-                Console.WriteLine("--------------------------------------");
-
-            await this._store.ReadAllAsync(
-                start,
-                _reader,
-                int.MaxValue,
-                token
-            );
-            if (DumpMessages)
+            do
             {
-                Console.WriteLine($"Polled from {start} to {_reader.Position}, processed {_reader.Processed} chunks");
-                Console.WriteLine("--------------------------------------");
-            }
-            // handle zero reads (holes)
+				if (DumpMessages)
+					Console.WriteLine("--------------------------------------");
+				
+                var start = Position + 1;
+				await this._store.ReadAllAsync(
+					start,
+					_reader,
+					int.MaxValue,
+					token
+				);
+
+				if (_reader.HoleDetected)
+				{
+					await Task.Delay(500);
+				}
+
+                if (DumpMessages)
+				{
+                    Console.WriteLine($"HoleDetected : {_reader.HoleDetected}");
+					Console.WriteLine($"Polled from {start} to {_reader.Position}, processed {_reader.Processed} chunks");
+					Console.WriteLine("--------------------------------------");
+				}
+			} 
+            while (_reader.HoleDetected);
         }
 
         public Func<long, Task> OnMissingChunk => _reader.OnMissingChunk;
