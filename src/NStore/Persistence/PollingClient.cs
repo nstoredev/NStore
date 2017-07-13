@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,9 +10,7 @@ namespace NStore.Persistence
         {
             private readonly ISubscription _subscription;
             public long Position { get; private set; } = 0;
-            private DateTime _lastProcessedTs = DateTime.UtcNow;
 
-            public Func<long, Task> OnMissingChunk { get; set; }
             public bool DumpMessages { get; set; }
             public long Processed { get; private set; }
             public bool HoleDetected { get; private set; }
@@ -27,17 +24,23 @@ namespace NStore.Persistence
             public Task<bool> OnNext(IChunk data)
             {
                 if (DumpMessages)
-                    Console.WriteLine($"OnNext({data.Position})");
+                    Console.WriteLine($"OnNext({data.Position}) {Thread.CurrentThread.ManagedThreadId}");
 
                 if (data.Position != Position + 1)
                 {
-                    if(_stopOnHole){
-						HoleDetected = true;
-						return Task.FromResult(false);
-					}
+                    if (_stopOnHole)
+                    {
+                        if (DumpMessages)
+                            Console.WriteLine($"Hole detected on ({data.Position})");
+                        HoleDetected = true;
+                        return Task.FromResult(false);
+                    }
+                    if (DumpMessages)
+                        Console.WriteLine($"Skipping hole on ({data.Position})");
                 }
 
-                _lastProcessedTs = DateTime.UtcNow;
+                HoleDetected = false;
+                _stopOnHole = true;
                 Position = data.Position;
                 Processed++;
                 return _subscription.OnNext(data);
@@ -129,32 +132,30 @@ namespace NStore.Persistence
         {
             do
             {
-				if (DumpMessages)
-					Console.WriteLine("--------------------------------------");
-				
-                var start = Position + 1;
-				await this._store.ReadAllAsync(
-					start,
-					_reader,
-					int.MaxValue,
-					token
-				);
+                if (DumpMessages)
+                    Console.WriteLine("--------------------------------------");
 
-				if (_reader.HoleDetected)
-				{
-					await Task.Delay(HoleDetectionTimeout);
-				}
+                var start = Position + 1;
+                await this._store.ReadAllAsync(
+                    start,
+                    _reader,
+                    int.MaxValue,
+                    token
+                );
+
+                if (_reader.HoleDetected)
+                {
+                    await Task.Delay(HoleDetectionTimeout, token);
+                }
 
                 if (DumpMessages)
-				{
+                {
                     Console.WriteLine($"HoleDetected : {_reader.HoleDetected}");
-					Console.WriteLine($"Polled from {start} to {_reader.Position}, processed {_reader.Processed} chunks");
-					Console.WriteLine("--------------------------------------");
-				}
-			} 
+                    Console.WriteLine($"Polled from {start} to {_reader.Position}, processed {_reader.Processed} chunks");
+                    Console.WriteLine("--------------------------------------");
+                }
+            }
             while (_reader.HoleDetected);
         }
-
-        public Func<long, Task> OnMissingChunk => _reader.OnMissingChunk;
     }
 }

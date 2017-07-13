@@ -12,7 +12,7 @@ namespace NStore.Persistence.Tests
 {
     public abstract partial class BasePersistenceTest : IDisposable
     {
-        public IPersistence Store { get; }
+        protected IPersistence Store { get; }
 
         protected BasePersistenceTest()
         {
@@ -374,62 +374,6 @@ namespace NStore.Persistence.Tests
             Assert.True((string)acc[1] == "3");
         }
     }
-
-    public class concurrency_test : BasePersistenceTest
-    {
-        [Theory]
-        [InlineData(1, false)]
-		[InlineData(2, false)]
-		[InlineData(4, false)]
-		[InlineData(8, false)]
-        [InlineData(64, false)]
-		[InlineData(1, true)]
-		[InlineData(2, true)]
-		[InlineData(4, true)]
-		[InlineData(8, true)]
-		[InlineData(64, true)]
-		public async void polling_client_should_not_miss_data(int parallelism, bool autopolling)
-        {
-            var recorder = new AllPartitionsRecorder();
-
-            var poller = new PollingClient(Store, recorder)
-            {
-                PollingIntervalMilliseconds = 500,
-                HoleDetectionTimeout = 1000
-            };
-
-            if(autopolling)
-                poller.Start();
-
-            const int range = 10000;
-
-            var producer = new ActionBlock<int>(async i =>
-            {
-                await Store.PersistAsync("p", -1, "demo");
-            }, new ExecutionDataflowBlockOptions()
-            {
-                MaxDegreeOfParallelism = parallelism
-            });
-
-            foreach (var i in Enumerable.Range(1, range))
-            {
-                await producer.SendAsync(i);
-            }
-
-            producer.Complete();
-            await producer.Completion;
-
-			if (autopolling)
-				poller.Stop();
-
-			// read to end
-			await poller.Poll();
-
-            Assert.Equal(range, poller.Position);
-            Assert.Equal(range, recorder.Length);
-        }
-    }
-
     public class deleted_chunks_management : BasePersistenceTest
     {
         [Fact]
@@ -477,7 +421,7 @@ namespace NStore.Persistence.Tests
 
             var recored = new AllPartitionsRecorder();
             var poller = new PollingClient(Store, recored);
-          //  poller.DumpMessages = true;
+//            poller.DumpMessages = true;
             await poller.Poll();
             await poller.Poll();
             Assert.Equal(expected, poller.Position);
@@ -511,6 +455,101 @@ namespace NStore.Persistence.Tests
             await Store.ReadPartitionForward("::empty", 0, recorder);
 
             Assert.Equal(exceptions, recorder.Length);
+        }
+    }
+
+    public class concurrency_test : BasePersistenceTest
+    {
+        [Theory]
+        [InlineData(1, false)]
+        [InlineData(8, false)]
+        [InlineData(1, true)]
+        [InlineData(8, true)]
+        public async void polling_client_should_not_miss_data(int parallelism, bool autopolling)
+        {
+            var sequenceChecker = new StrictSequenceChecker($"Workers {parallelism} autopolling {autopolling}");
+
+            var poller = new PollingClient(Store, sequenceChecker)
+            {
+                PollingIntervalMilliseconds = 0,
+                HoleDetectionTimeout = 1000,
+                DumpMessages = false
+            };
+
+            if (autopolling)
+                poller.Start();
+
+            const int range = 10000;
+
+            var producer = new ActionBlock<int>(async i =>
+            {
+                await Store.PersistAsync("p", -1, "demo");
+            }, new ExecutionDataflowBlockOptions()
+            {
+                MaxDegreeOfParallelism = parallelism
+            });
+
+            foreach (var i in Enumerable.Range(1, range))
+            {
+                await producer.SendAsync(i);
+            }
+
+            producer.Complete();
+            await producer.Completion;
+
+            if (autopolling)
+                poller.Stop();
+
+            // read to end
+            await poller.Poll();
+
+            Assert.Equal(range, poller.Position);
+            Assert.Equal(range, sequenceChecker.Position);
+        }
+    }
+
+    public class StrictSequenceChecker : ISubscription
+    {
+        private int _expectedPosition = 1;
+        private readonly string _configMessage;
+
+        public StrictSequenceChecker(string configMessage)
+        {
+            this._configMessage = configMessage;
+        }
+
+        public int Position => _expectedPosition - 1;
+
+        public Task OnStart(long position)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> OnNext(IChunk data)
+        {
+            if (_expectedPosition != data.Position)
+            {
+                throw new Exception($"Expected position {_expectedPosition} got {data.Position} | {_configMessage}");
+            }
+
+            _expectedPosition++;
+            return Task.FromResult(true);
+        }
+
+        public Task Completed(long position)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task Stopped(long position)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task OnError(long position, Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+            throw ex;
         }
     }
 }
