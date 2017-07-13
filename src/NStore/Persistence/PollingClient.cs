@@ -24,7 +24,7 @@ namespace NStore.Persistence
             public Task<bool> OnNext(IChunk data)
             {
                 if (DumpMessages)
-                    Console.WriteLine($"OnNext({data.Position}) {Thread.CurrentThread.ManagedThreadId}");
+                    Console.WriteLine($"OnNext({data.Position})");
 
                 if (data.Position != Position + 1)
                 {
