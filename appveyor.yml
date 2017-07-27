@@ -1,29 +1,24 @@
 version: 1.0.{build}
 image: Visual Studio 2017
 services:
-  - mongodb
+  - mssql2014
+shallow_clone: true
 build_script:
 - cmd: >-
     cd src
 
     dotnet restore
 
-    dotnet build -c release
 test_script:
 - cmd: >-
-    cd NStore.Tests
 
-    dotnet xunit
+    cd NStore.Persistence.MsSql.Tests
 
-    cd ..\NStore.Persistence.Tests
+    set NSTORE_MSSQL=Server=(local)\SQL2014,1433;Database=NStore;User ID=sa;Password=Password12!;MultipleActiveResultSets=true;Connection Timeout=5
 
-    dotnet xunit
+    set NSTORE-LOG-POLLER=1
 
-    cd ..\NStore.Persistence.Mongo.Tests
+    sqlcmd -S (local)\SQL2014,1433 -U sa -P Password12! -Q "CREATE DATABASE NStore" -d "master"
 
-    dotnet xunit
+    dotnet xunit -serialize 
 
-    cd ..\NStore.Sample.Tests
-
-    dotnet xunit    
-    

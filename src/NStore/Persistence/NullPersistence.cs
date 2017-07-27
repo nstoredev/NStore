@@ -20,6 +20,8 @@ namespace NStore.Persistence
             return Task.FromResult<IChunk>(null);
         }
 
+        public bool SupportsFillers => false;
+
         public Task ReadPartitionForward(
             string partitionId,
             long fromLowerIndexInclusive,

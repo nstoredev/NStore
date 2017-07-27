@@ -12,10 +12,29 @@ using NStore.SnapshotStore;
 using NStore.Streams;
 using System.Diagnostics;
 using System.Threading.Tasks.Dataflow;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 using NStore.Persistence.Mongo;
 
 namespace NStore.Sample
 {
+    public class ConsoleLoggerFactory : ILoggerFactory
+    {
+        public ILogger CreateLogger(string categoryName)
+        {
+            return new ConsoleLogger(categoryName, (s, level) => true, true);
+        }
+
+        public void AddProvider(ILoggerProvider provider)
+        {
+
+        }
+
+        public void Dispose()
+        {
+        }
+    }
+
     public class SampleApp : IDisposable
     {
         private readonly string _name;
@@ -34,7 +53,7 @@ namespace NStore.Sample
         private readonly TaskProfilingInfo _cloneProfiler;
         private readonly ExecutionDataflowBlockOptions _unboundedOptions;
         private readonly ExecutionDataflowBlockOptions _boundedOptions;
-
+        private readonly ILoggerFactory _loggerFactory = new ConsoleLoggerFactory();
         public SampleApp(IPersistence store, string name, bool useSnapshots, bool quiet, bool fast)
         {
             _quiet = quiet;
@@ -51,7 +70,7 @@ namespace NStore.Sample
 
             _appProjections = new AppProjections(network, quiet);
 
-            _poller = new PollingClient(_storeProfile, _appProjections);
+            _poller = new PollingClient(_storeProfile, _appProjections, this._loggerFactory);
 
             if (useSnapshots)
             {

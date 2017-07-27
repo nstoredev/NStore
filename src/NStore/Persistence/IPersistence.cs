@@ -6,6 +6,8 @@ namespace NStore.Persistence
 {
     public interface IPersistence
     {
+        bool SupportsFillers { get;  }
+
         Task ReadPartitionForward(
             string partitionId,
             long fromLowerIndexInclusive,

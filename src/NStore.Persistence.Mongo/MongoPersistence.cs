@@ -20,6 +20,8 @@ namespace NStore.Persistence.Mongo
         private const string SequenceIdx = "partition_sequence";
         private const string OperationIdx = "partition_operation";
 
+        public bool SupportsFillers => true;
+
         public MongoPersistence(MongoStoreOptions options)
         {
             if (options == null || !options.IsValid())
@@ -179,7 +181,7 @@ namespace NStore.Persistence.Mongo
             }
 
             long position = 0;
-            await subscription.OnStart(fromSequenceIdInclusive);
+            await subscription.OnStart(fromSequenceIdInclusive).ConfigureAwait(false);
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
             {
                 while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
@@ -192,7 +194,7 @@ namespace NStore.Persistence.Mongo
 
                         if (!await subscription.OnNext(chunk))
                         {
-                            await subscription.Stopped(position);
+                            await subscription.Stopped(position).ConfigureAwait(false);
                             return;
                         }
                     }
@@ -201,11 +203,11 @@ namespace NStore.Persistence.Mongo
 
             if (position == 0)
             {
-                await subscription.Stopped(fromSequenceIdInclusive);
+                await subscription.Stopped(fromSequenceIdInclusive).ConfigureAwait(false);
             }
             else
             {
-                await subscription.Completed(position);
+                await subscription.Completed(position).ConfigureAwait(false);
             }
         }
 

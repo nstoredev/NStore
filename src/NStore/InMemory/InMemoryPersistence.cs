@@ -22,6 +22,8 @@ namespace NStore.InMemory
         private readonly InMemoryPartition _emptyInMemoryPartition;
         private readonly ReaderWriterLockSlim _lockSlim = new ReaderWriterLockSlim();
 
+        public bool SupportsFillers => true;
+
         public InMemoryPersistence() : this(null, null)
         {
         }

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
+using Microsoft.Extensions.Logging;
 using Xunit;
 
 // ReSharper disable InconsistentNaming
@@ -13,10 +14,13 @@ namespace NStore.Persistence.Tests
     public abstract partial class BasePersistenceTest : IDisposable
     {
         protected IPersistence Store { get; }
-
+        protected readonly TestLoggerFactory LoggerFactory;
+        protected readonly ILogger _logger;
         protected BasePersistenceTest()
         {
-            Store = Create();
+            LoggerFactory = new TestLoggerFactory();
+            _logger = LoggerFactory.CreateLogger(GetType());
+            Store = new LogDecorator(Create(), LoggerFactory);
         }
 
         public void Dispose()
@@ -413,17 +417,22 @@ namespace NStore.Persistence.Tests
         //		[InlineData(3, 3)] @@TODO enable tombstone!
         public async void poller_should_skip_missing_chunks(long missing, long expected)
         {
-            await Store.PersistAsync("a", 1, "1");
-            await Store.PersistAsync("a", 2, "2");
-            await Store.PersistAsync("a", 3, "3");
+            await Store.PersistAsync("a", 1, "1").ConfigureAwait(false);
+            await Store.PersistAsync("a", 2, "2").ConfigureAwait(false);
+            await Store.PersistAsync("a", 3, "3").ConfigureAwait(false);
 
-            await Store.DeleteAsync("a", missing, missing);
+            await Store.DeleteAsync("a", missing, missing).ConfigureAwait(false);
 
             var recored = new AllPartitionsRecorder();
-            var poller = new PollingClient(Store, recored);
-//            poller.DumpMessages = true;
-            await poller.Poll();
-            await poller.Poll();
+            var poller = new PollingClient(Store, recored, this.LoggerFactory)
+            {
+                HoleDetectionTimeout = 100
+            };
+
+            var cts = new CancellationTokenSource(20000);
+
+            await poller.Poll(cts.Token).ConfigureAwait(false);
+            await poller.Poll(cts.Token).ConfigureAwait(false);
             Assert.Equal(expected, poller.Position);
         }
     }
@@ -434,6 +443,11 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async void on_concurrency_exception_holes_are_filled_with_empty_chunks()
         {
+            if (!Store.SupportsFillers)
+            {
+                return;
+            }
+
             var exceptions = 0;
             var writers = Enumerable.Range(1, 400).Select(async i =>
                 {
@@ -467,41 +481,54 @@ namespace NStore.Persistence.Tests
         [InlineData(8, true)]
         public async void polling_client_should_not_miss_data(int parallelism, bool autopolling)
         {
-            var sequenceChecker = new StrictSequenceChecker($"Workers {parallelism} autopolling {autopolling}");
+            _logger.LogDebug("Starting with {Parallelism} workers and Autopolling {Autopolling}", parallelism, autopolling);
 
-            var poller = new PollingClient(Store, sequenceChecker)
+            var sequenceChecker = new StrictSequenceChecker($"Workers {parallelism} autopolling {autopolling}");
+            var poller = new PollingClient(Store, sequenceChecker, this.LoggerFactory)
             {
                 PollingIntervalMilliseconds = 0,
-                HoleDetectionTimeout = 1000,
-                DumpMessages = false
+                HoleDetectionTimeout = 1000
             };
 
             if (autopolling)
+            {
                 poller.Start();
+                _logger.LogDebug("Started Polling");
+            }
 
-            const int range = 10000;
+            const int range = 1000;
 
             var producer = new ActionBlock<int>(async i =>
             {
-                await Store.PersistAsync("p", -1, "demo");
+                await Store.PersistAsync("p", -1, "demo").ConfigureAwait(false);
             }, new ExecutionDataflowBlockOptions()
             {
                 MaxDegreeOfParallelism = parallelism
             });
 
+            _logger.LogDebug("Started pushing data: {elements} elements", range);
+
             foreach (var i in Enumerable.Range(1, range))
             {
-                await producer.SendAsync(i);
+                await producer.SendAsync(i).ConfigureAwait(false);
             }
 
             producer.Complete();
-            await producer.Completion;
+            await producer.Completion.ConfigureAwait(false);
+            _logger.LogDebug("Data pushed");
 
             if (autopolling)
+            {
+                _logger.LogDebug("Stopping poller");
                 poller.Stop();
+                _logger.LogDebug("Poller stopped");
+            }
 
             // read to end
-            await poller.Poll();
+            _logger.LogDebug("Polling to end");
+            var timeout = new CancellationTokenSource(60000);
+            await poller.Poll(timeout.Token).ConfigureAwait(false);
+            _logger.LogDebug("Polling to end - done");
 
             Assert.Equal(range, poller.Position);
             Assert.Equal(range, sequenceChecker.Position);

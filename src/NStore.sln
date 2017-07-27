@@ -1,21 +1,21 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26403.3
+VisualStudioVersion = 15.0.26430.14
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore", "NStore\NStore.csproj", "{0AAD1793-0A61-42E6-9EBC-6729058EBE70}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore", "NStore\NStore.csproj", "{0AAD1793-0A61-42E6-9EBC-6729058EBE70}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Tests", "NStore.Tests\NStore.Tests.csproj", "{378A1E2D-A319-48E2-B5B1-7C9A2F8E5DE4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Tests", "NStore.Tests\NStore.Tests.csproj", "{378A1E2D-A319-48E2-B5B1-7C9A2F8E5DE4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Persistence.Tests", "NStore.Persistence.Tests\NStore.Persistence.Tests.csproj", "{97D57D73-D908-4ECC-88A8-440C29C92CE6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Persistence.Tests", "NStore.Persistence.Tests\NStore.Persistence.Tests.csproj", "{97D57D73-D908-4ECC-88A8-440C29C92CE6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Persistence.Mongo.Tests", "NStore.Persistence.Mongo.Tests\NStore.Persistence.Mongo.Tests.csproj", "{A93B56DD-FAF1-42A4-A414-E5DF6F97811A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Persistence.Mongo.Tests", "NStore.Persistence.Mongo.Tests\NStore.Persistence.Mongo.Tests.csproj", "{A93B56DD-FAF1-42A4-A414-E5DF6F97811A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Persistence.Mongo", "NStore.Persistence.Mongo\NStore.Persistence.Mongo.csproj", "{A5CFF506-C6FA-4AD1-86A3-559DBCFA8B2A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Persistence.Mongo", "NStore.Persistence.Mongo\NStore.Persistence.Mongo.csproj", "{A5CFF506-C6FA-4AD1-86A3-559DBCFA8B2A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Benchmarks", "NStore.Benchmarks\NStore.Benchmarks.csproj", "{B6D8D313-5A21-49C3-9FDF-CF3A23FF54C8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Benchmarks", "NStore.Benchmarks\NStore.Benchmarks.csproj", "{B6D8D313-5A21-49C3-9FDF-CF3A23FF54C8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Sample", "NStore.Sample\NStore.Sample.csproj", "{FD2A7B25-F3BF-4D46-9314-59E30B0D7BC8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Sample", "NStore.Sample\NStore.Sample.csproj", "{FD2A7B25-F3BF-4D46-9314-59E30B0D7BC8}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sample", "Sample", "{D3212016-BB8D-4E16-94C4-2D0990B2C14A}"
 EndProject
@@ -23,14 +23,18 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Library", "Library", "{F89E
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Benchmarks", "Benchmarks", "{81A65A86-5489-4358-9848-6BE40A4D13A1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Sample.Tests", "NStore.Sample.Tests\NStore.Sample.Tests.csproj", "{8258C6B1-9457-41D8-8FDB-594C670D5233}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Sample.Tests", "NStore.Sample.Tests\NStore.Sample.Tests.csproj", "{8258C6B1-9457-41D8-8FDB-594C670D5233}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E75BC5B3-4ED8-405F-B408-7CA58328C101}"
 	ProjectSection(SolutionItems) = preProject
 		..\README.md = ..\README.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Tpl", "NStore.Tpl\NStore.Tpl.csproj", "{AE81867F-7915-4EF5-BF16-1B84EE147FF3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Tpl", "NStore.Tpl\NStore.Tpl.csproj", "{AE81867F-7915-4EF5-BF16-1B84EE147FF3}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Persistence.MsSql", "NStore.Persistence.MsSql\NStore.Persistence.MsSql.csproj", "{DADB7A00-6F22-4AB0-8921-D72FF5199E8C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Persistence.MsSql.Tests", "NStore.Persistence.MsSql.Tests\NStore.Persistence.MsSql.Tests.csproj", "{7F1E1496-49F5-4C2B-A047-CA6534A3689C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -74,6 +78,14 @@ Global
 		{AE81867F-7915-4EF5-BF16-1B84EE147FF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AE81867F-7915-4EF5-BF16-1B84EE147FF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AE81867F-7915-4EF5-BF16-1B84EE147FF3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DADB7A00-6F22-4AB0-8921-D72FF5199E8C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DADB7A00-6F22-4AB0-8921-D72FF5199E8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DADB7A00-6F22-4AB0-8921-D72FF5199E8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DADB7A00-6F22-4AB0-8921-D72FF5199E8C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F1E1496-49F5-4C2B-A047-CA6534A3689C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F1E1496-49F5-4C2B-A047-CA6534A3689C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F1E1496-49F5-4C2B-A047-CA6534A3689C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F1E1496-49F5-4C2B-A047-CA6534A3689C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -88,5 +100,7 @@ Global
 		{FD2A7B25-F3BF-4D46-9314-59E30B0D7BC8} = {D3212016-BB8D-4E16-94C4-2D0990B2C14A}
 		{8258C6B1-9457-41D8-8FDB-594C670D5233} = {D3212016-BB8D-4E16-94C4-2D0990B2C14A}
 		{AE81867F-7915-4EF5-BF16-1B84EE147FF3} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
+		{DADB7A00-6F22-4AB0-8921-D72FF5199E8C} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
+		{7F1E1496-49F5-4C2B-A047-CA6534A3689C} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
 	EndGlobalSection
 EndGlobal

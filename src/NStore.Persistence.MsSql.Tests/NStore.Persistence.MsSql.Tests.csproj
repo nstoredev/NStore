@@ -3,7 +3,7 @@
 		<TargetFramework>netcoreapp1.1</TargetFramework>
 	</PropertyGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\NStore.Persistence.Mongo\NStore.Persistence.Mongo.csproj">
+		<ProjectReference Include="..\NStore.Persistence.MsSql\NStore.Persistence.MsSql.csproj">
 		</ProjectReference>
 		<ProjectReference Include="..\NStore\NStore.csproj">
 		</ProjectReference>
@@ -27,8 +27,6 @@
 		<PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
 		<DotNetCliToolReference Include="dotnet-xunit" Version="2.3.0-beta1-build3642" />
 		<DotNetCliToolReference Include="Microsoft.DotNet.Watcher.Tools" Version="1.0.0" />
-	</ItemGroup>
-	<ItemGroup>
-		<Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
+		<PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
 	</ItemGroup>
 </Project>

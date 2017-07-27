@@ -25,6 +25,8 @@ namespace NStore.Persistence
         public TaskProfilingInfo PartitionReadForwardCounter { get; }
         public TaskProfilingInfo PartitionReadBackwardCounter { get; }
 
+        public bool SupportsFillers => _store.SupportsFillers;
+
         public async Task ReadPartitionForward(
             string partitionId,
             long fromLowerIndexInclusive,
