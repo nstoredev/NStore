@@ -18,7 +18,7 @@ namespace NStore.Persistence.Tests
         protected readonly ILogger _logger;
         protected BasePersistenceTest()
         {
-            LoggerFactory = new TestLoggerFactory();
+            LoggerFactory = new TestLoggerFactory(TestSuitePrefix +"::"+ GetType().Name);
             _logger = LoggerFactory.CreateLogger(GetType());
             Store = new LogDecorator(Create(), LoggerFactory);
         }
@@ -26,6 +26,7 @@ namespace NStore.Persistence.Tests
         public void Dispose()
         {
             Clear();
+            _logger.LogDebug("Test disposed");
         }
     }
 
@@ -102,12 +103,12 @@ namespace NStore.Persistence.Tests
     {
         public ScanTest()
         {
-            Store.PersistAsync("Stream_1", 1, "a").Wait();
-            Store.PersistAsync("Stream_1", 2, "b").Wait();
-            Store.PersistAsync("Stream_1", 3, "c").Wait();
+            Store.PersistAsync("Stream_1", 1, "a").ConfigureAwait(false).GetAwaiter().GetResult();
+            Store.PersistAsync("Stream_1", 2, "b").ConfigureAwait(false).GetAwaiter().GetResult();
+            Store.PersistAsync("Stream_1", 3, "c").ConfigureAwait(false).GetAwaiter().GetResult();
 
-            Store.PersistAsync("Stream_2", 1, "d").Wait();
-            Store.PersistAsync("Stream_2", 2, "e").Wait();
+            Store.PersistAsync("Stream_2", 1, "d").ConfigureAwait(false).GetAwaiter().GetResult();
+            Store.PersistAsync("Stream_2", 2, "e").ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
         [Fact]
@@ -121,7 +122,7 @@ namespace NStore.Persistence.Tests
                     payload = data.Payload;
                     return Task.FromResult(false);
                 })
-            );
+            ).ConfigureAwait(false);
 
             Assert.Equal("a", payload);
         }
@@ -139,7 +140,7 @@ namespace NStore.Persistence.Tests
                     payload = data.Payload;
                     return Task.FromResult(false);
                 })
-            );
+            ).ConfigureAwait(false);
 
             Assert.Equal("c", payload);
         }
@@ -151,7 +152,7 @@ namespace NStore.Persistence.Tests
 
             await Store.ReadPartitionForward(
                 "Stream_1", 0, recorder, 2
-            );
+            ).ConfigureAwait(false);
 
             Assert.Equal(2, recorder.Length);
             Assert.Equal("a", recorder[0]);
@@ -165,7 +166,7 @@ namespace NStore.Persistence.Tests
 
             await Store.ReadPartitionForward(
                 "Stream_1", 0, recorder, 2
-            );
+            ).ConfigureAwait(false);
 
             Assert.True(recorder.ReadCompleted);
         }
@@ -177,7 +178,7 @@ namespace NStore.Persistence.Tests
 
             await Store.ReadPartitionBackward(
                 "Stream_1", 2, recorder, 0
-            );
+            ).ConfigureAwait(false);
 
             Assert.True(recorder.ReadCompleted);
         }
@@ -193,7 +194,7 @@ namespace NStore.Persistence.Tests
                 3,
                 tape,
                 2
-            );
+            ).ConfigureAwait(false);
 
             Assert.Equal(2, tape.Length);
             Assert.Equal("c", tape[0]);
@@ -204,7 +205,7 @@ namespace NStore.Persistence.Tests
         public async Task read_all_forward()
         {
             var tape = new AllPartitionsRecorder();
-            await Store.ReadAllAsync(0, tape);
+            await Store.ReadAllAsync(0, tape).ConfigureAwait(false);
 
             Assert.Equal(5, tape.Length);
             Assert.Equal("a", tape[0]);
@@ -218,7 +219,7 @@ namespace NStore.Persistence.Tests
         public async Task read_all_forward_from_middle()
         {
             var tape = new AllPartitionsRecorder();
-            await Store.ReadAllAsync(3, tape);
+            await Store.ReadAllAsync(3, tape).ConfigureAwait(false);
 
             Assert.Equal(3, tape.Length);
             Assert.Equal("c", tape[0]);
@@ -230,7 +231,7 @@ namespace NStore.Persistence.Tests
         public async Task read_all_forward_from_middle_limit_one()
         {
             var tape = new AllPartitionsRecorder();
-            await Store.ReadAllAsync(3, tape, 1);
+            await Store.ReadAllAsync(3, tape, 1).ConfigureAwait(false);
 
             Assert.Equal(1, tape.Length);
             Assert.Equal("c", tape[0]);
@@ -242,14 +243,14 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task InsertByteArray()
         {
-            await Store.PersistAsync("BA", 0, System.Text.Encoding.UTF8.GetBytes("this is a test"));
+            await Store.PersistAsync("BA", 0, System.Text.Encoding.UTF8.GetBytes("this is a test")).ConfigureAwait(false);
 
             byte[] payload = null;
             await Store.ReadPartitionForward("BA", 0, new LambdaSubscription(data =>
             {
                 payload = (byte[])data.Payload;
                 return Task.FromResult(true);
-            }));
+            })).ConfigureAwait(false);
 
             var text = System.Text.Encoding.UTF8.GetString(payload);
             Assert.Equal("this is a test", text);
@@ -262,15 +263,15 @@ namespace NStore.Persistence.Tests
         public async Task cannot_append_same_operation_twice_on_same_stream()
         {
             var opId = "operation_1";
-            await Store.PersistAsync("Id_1", 0, new { data = "this is a test" }, opId);
-            await Store.PersistAsync("Id_1", 1, new { data = "this is a test" }, opId);
+            await Store.PersistAsync("Id_1", 0, new { data = "this is a test" }, opId).ConfigureAwait(false);
+            await Store.PersistAsync("Id_1", 1, new { data = "this is a test" }, opId).ConfigureAwait(false);
 
             var list = new List<object>();
             await Store.ReadPartitionForward("Id_1", 0, new LambdaSubscription(data =>
             {
                 list.Add(data.Payload);
                 return Task.FromResult(true);
-            }));
+            })).ConfigureAwait(false);
 
             Assert.Equal(1, list.Count());
         }
@@ -279,8 +280,8 @@ namespace NStore.Persistence.Tests
         public async Task can_append_same_operation_to_two_streams()
         {
             var opId = "operation_2";
-            await Store.PersistAsync("Id_1", 0, "a", opId);
-            await Store.PersistAsync("Id_2", 1, "b", opId);
+            await Store.PersistAsync("Id_1", 0, "a", opId).ConfigureAwait(false);
+            await Store.PersistAsync("Id_2", 1, "b", opId).ConfigureAwait(false);
 
             var list = new List<object>();
             await Store.ReadPartitionForward("Id_1", 0, new LambdaSubscription(data =>
@@ -302,7 +303,7 @@ namespace NStore.Persistence.Tests
     {
         public DeleteStreamTest()
         {
-            Task.WaitAll
+            Task.WhenAll
             (
                 Store.PersistAsync("delete", 1, null),
                 Store.PersistAsync("delete_3", 1, "1"),
@@ -314,20 +315,20 @@ namespace NStore.Persistence.Tests
                 Store.PersistAsync("delete_5", 1, "1"),
                 Store.PersistAsync("delete_5", 2, "2"),
                 Store.PersistAsync("delete_5", 3, "3")
-            );
+            ).ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
 
         [Fact]
         public async void delete_stream()
         {
-            await Store.DeleteAsync("delete");
+            await Store.DeleteAsync("delete").ConfigureAwait(false);
             bool almostOneChunk = false;
             await Store.ReadPartitionForward("delete", 0, new LambdaSubscription(data =>
             {
                 almostOneChunk = true;
                 return Task.FromResult(false);
-            }));
+            })).ConfigureAwait(false);
 
             Assert.False(almostOneChunk, "Should not contains chunks");
         }
@@ -337,7 +338,7 @@ namespace NStore.Persistence.Tests
         {
             var ex = await Assert.ThrowsAnyAsync<StreamDeleteException>(() =>
                 Store.DeleteAsync("delete_2")
-            );
+            ).ConfigureAwait(false);
 
             Assert.Equal("delete_2", ex.StreamId);
         }
@@ -345,9 +346,9 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async void should_delete_first()
         {
-            await Store.DeleteAsync("delete_3", 1, 1);
+            await Store.DeleteAsync("delete_3", 1, 1).ConfigureAwait(false);
             var acc = new Recorder();
-            await Store.ReadPartitionForward("delete_3", 0, acc);
+            await Store.ReadPartitionForward("delete_3", 0, acc).ConfigureAwait(false);
 
             Assert.Equal(2, acc.Length);
             Assert.True((string)acc[0] == "2");
@@ -357,9 +358,9 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async void should_delete_last()
         {
-            await Store.DeleteAsync("delete_4", 3);
+            await Store.DeleteAsync("delete_4", 3).ConfigureAwait(false);
             var acc = new Recorder();
-            await Store.ReadPartitionForward("delete_4", 0, acc);
+            await Store.ReadPartitionForward("delete_4", 0, acc).ConfigureAwait(false);
 
             Assert.Equal(2, acc.Length);
             Assert.True((string)acc[0] == "1");
@@ -369,9 +370,9 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async void should_delete_middle()
         {
-            await Store.DeleteAsync("delete_5", 2, 2);
+            await Store.DeleteAsync("delete_5", 2, 2).ConfigureAwait(false);
             var acc = new Recorder();
-            await Store.ReadPartitionForward("delete_5", 0, acc);
+            await Store.ReadPartitionForward("delete_5", 0, acc).ConfigureAwait(false);
 
             Assert.Equal(2, acc.Length);
             Assert.True((string)acc[0] == "1");
@@ -383,14 +384,14 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async void deleted_chunks_should_be_hidden_from_scan()
         {
-            await Store.PersistAsync("a", 1, "first");
-            await Store.PersistAsync("a", 2, "second");
-            await Store.PersistAsync("a", 3, "third");
+            await Store.PersistAsync("a", 1, "first").ConfigureAwait(false);
+            await Store.PersistAsync("a", 2, "second").ConfigureAwait(false);
+            await Store.PersistAsync("a", 3, "third").ConfigureAwait(false);
 
-            await Store.DeleteAsync("a", 2, 2);
+            await Store.DeleteAsync("a", 2, 2).ConfigureAwait(false);
 
             var recorder = new AllPartitionsRecorder();
-            await Store.ReadAllAsync(0, recorder);
+            await Store.ReadAllAsync(0, recorder).ConfigureAwait(false);
 
             Assert.Equal(2, recorder.Length);
             Assert.Equal("first", recorder[0]);
@@ -400,12 +401,12 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async void deleted_chunks_should_be_hidden_from_peek()
         {
-            await Store.PersistAsync("a", 1, "first");
-            await Store.PersistAsync("a", 2, "second");
+            await Store.PersistAsync("a", 1, "first").ConfigureAwait(false);
+            await Store.PersistAsync("a", 2, "second").ConfigureAwait(false);
 
-            await Store.DeleteAsync("a", 2, 2);
+            await Store.DeleteAsync("a", 2, 2).ConfigureAwait(false);
 
-            var chunk = await Store.ReadLast("a", 100, CancellationToken.None);
+            var chunk = await Store.ReadLast("a", 100, CancellationToken.None).ConfigureAwait(false);
 
             Assert.NotNull(chunk);
             Assert.Equal("first", chunk.Payload);
@@ -453,7 +454,7 @@ namespace NStore.Persistence.Tests
                 {
                     try
                     {
-                        await Store.PersistAsync("collision_wanted", 1 + i % 5, "payload");
+                        await Store.PersistAsync("collision_wanted", 1 + i % 5, "payload").ConfigureAwait(false);
                     }
                     catch (DuplicateStreamIndexException)
                     {
@@ -462,11 +463,11 @@ namespace NStore.Persistence.Tests
                 }
             ).ToArray();
 
-            Task.WaitAll(writers);
+            await Task.WhenAll(writers).ConfigureAwait(false);
 
             Assert.True(exceptions > 0);
             var recorder = new Recorder();
-            await Store.ReadPartitionForward("::empty", 0, recorder);
+            await Store.ReadPartitionForward("::empty", 0, recorder).ConfigureAwait(false);
 
             Assert.Equal(exceptions, recorder.Length);
         }

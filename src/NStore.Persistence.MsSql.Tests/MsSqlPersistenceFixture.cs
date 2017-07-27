@@ -41,6 +41,7 @@ namespace NStore.Persistence.Tests
         private static readonly string ConnectionString;
         private static int _staticId = 0;
         private int _id;
+        private const string TestSuitePrefix = "Mssql";
 
         static BasePersistenceTest()
         {

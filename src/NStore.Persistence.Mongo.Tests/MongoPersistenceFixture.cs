@@ -13,7 +13,7 @@ namespace NStore.Persistence.Tests
         private static readonly string Mongo;
         private static int _staticId = 1;
         private int _id;
-
+        private const string TestSuitePrefix = "Mongo";
         static BasePersistenceTest()
         {
             var baseConnectionString = Environment.GetEnvironmentVariable("TEST_MONGODB");

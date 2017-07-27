@@ -6,15 +6,16 @@ namespace NStore.Persistence.Tests
 {
     public partial class BasePersistenceTest
     {
-        public IPersistence Create()
+        private const string TestSuitePrefix = "Memory";
+
+        private IPersistence Create()
         {
             var store = new InMemoryPersistence(cloneFunc:Clone);
             return store;
         }
 
-        public void Clear()
+        private void Clear()
         {
-
         }
         
         private static object Clone(object source)

@@ -15,7 +15,7 @@ namespace NStore.Persistence
         public LogDecorator(IPersistence persistence, ILoggerFactory loggerFactory)
         {
             _persistence = persistence;
-            _logger = loggerFactory.CreateLogger(GetType());
+            _logger = loggerFactory.CreateLogger("Persistence");
         }
 
         public bool SupportsFillers => _persistence.SupportsFillers;
@@ -29,7 +29,7 @@ namespace NStore.Persistence
             CancellationToken cancellationToken)
         {
             _logger.LogDebug("Start ReadPartitionForward(Partition {ParitionId}, from: {from})", partitionId, fromLowerIndexInclusive);
-            await _persistence.ReadPartitionForward(partitionId, fromLowerIndexInclusive, subscription, toUpperIndexInclusive, limit, cancellationToken);
+            await _persistence.ReadPartitionForward(partitionId, fromLowerIndexInclusive, subscription, toUpperIndexInclusive, limit, cancellationToken).ConfigureAwait(false);
             _logger.LogDebug("End ReadPartitionForward(Partition {ParitionId}, from: {from})", partitionId, fromLowerIndexInclusive);
         }
 
@@ -42,7 +42,7 @@ namespace NStore.Persistence
             CancellationToken cancellationToken)
         {
             _logger.LogDebug("Start ReadPartitionBackward(Partition {ParitionId}, from: {from})", partitionId, fromUpperIndexInclusive);
-            await _persistence.ReadPartitionBackward(partitionId, fromUpperIndexInclusive, subscription, toLowerIndexInclusive, limit, cancellationToken);
+            await _persistence.ReadPartitionBackward(partitionId, fromUpperIndexInclusive, subscription, toLowerIndexInclusive, limit, cancellationToken).ConfigureAwait(false);
             _logger.LogDebug("End ReadPartitionBackward(Partition {ParitionId}, from: {from})", partitionId, fromUpperIndexInclusive);
         }
 
@@ -52,7 +52,7 @@ namespace NStore.Persistence
             CancellationToken cancellationToken)
         {
             _logger.LogDebug("Start ReadLast(partitionId:{partitionId}, to:{to})", partitionId, upToIndexInclusive);
-            var result = await _persistence.ReadLast(partitionId, upToIndexInclusive, cancellationToken);
+            var result = await _persistence.ReadLast(partitionId, upToIndexInclusive, cancellationToken).ConfigureAwait(false);
             _logger.LogDebug("End ReadLast(partitionId:{partitionId}, to:{to})", partitionId, upToIndexInclusive);
             return result;
         }
@@ -64,7 +64,7 @@ namespace NStore.Persistence
             CancellationToken cancellationToken)
         {
             _logger.LogDebug("Start ReadAllAsync(from:{from}, limit:{limit})", fromSequenceIdInclusive, limit);
-            await _persistence.ReadAllAsync(fromSequenceIdInclusive, subscription, limit, cancellationToken);
+            await _persistence.ReadAllAsync(fromSequenceIdInclusive, subscription, limit, cancellationToken).ConfigureAwait(false);
             _logger.LogDebug("end ReadAllAsync(from:{from}, limit:{limit})", fromSequenceIdInclusive, limit);
         }
 
@@ -76,7 +76,7 @@ namespace NStore.Persistence
             CancellationToken cancellationToken)
         {
             _logger.LogDebug("Start PersistAsync({partitionId}, {index})", partitionId, index);
-            var result = await _persistence.PersistAsync(partitionId, index, payload, operationId, cancellationToken);
+            var result = await _persistence.PersistAsync(partitionId, index, payload, operationId, cancellationToken).ConfigureAwait(false);
             _logger.LogDebug("End PersistAsync({partitionId}, {index}) => {Position}", partitionId, index, result?.Position);
             return result;
         }
@@ -88,7 +88,7 @@ namespace NStore.Persistence
             CancellationToken cancellationToken)
         {
             _logger.LogDebug("Start DeleteAsync({partitionId}, {from}, {to})", partitionId, fromLowerIndexInclusive, toUpperIndexInclusive);
-            await _persistence.DeleteAsync(partitionId, fromLowerIndexInclusive, toUpperIndexInclusive, cancellationToken);
+            await _persistence.DeleteAsync(partitionId, fromLowerIndexInclusive, toUpperIndexInclusive, cancellationToken).ConfigureAwait(false);
             _logger.LogDebug("End DeleteAsync({partitionId}, {from}, {to})", partitionId, fromLowerIndexInclusive, toUpperIndexInclusive);
         }
     }
