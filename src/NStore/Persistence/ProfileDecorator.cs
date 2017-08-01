@@ -48,7 +48,7 @@ namespace NStore.Persistence
                     toUpperIndexInclusive,
                     limit,
                     cancellationToken
-                ));
+                )).ConfigureAwait(false);
         }
 
         public async Task ReadPartitionBackward(
@@ -72,7 +72,7 @@ namespace NStore.Persistence
                     toLowerIndexInclusive,
                     limit,
                     cancellationToken
-                ));
+                )).ConfigureAwait(false);
         }
 
         public Task<IChunk> ReadLast(string partitionId, int upToIndexInclusive, CancellationToken cancellationToken)
@@ -91,7 +91,7 @@ namespace NStore.Persistence
 
             await StoreScanCounter.CaptureAsync(() =>
                 _store.ReadAllAsync(fromSequenceIdInclusive, wrapper, limit, cancellationToken)
-            );
+            ).ConfigureAwait(false);
         }
 
         public Task<IChunk> PersistAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
@@ -109,7 +109,7 @@ namespace NStore.Persistence
         {
             await DeleteCounter.CaptureAsync(() =>
                 _store.DeleteAsync(partitionId, fromLowerIndexInclusive, toUpperIndexInclusive, cancellationToken)
-            );
+            ).ConfigureAwait(false);
         }
     }
 }

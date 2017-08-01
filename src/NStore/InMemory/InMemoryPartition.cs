@@ -44,7 +44,7 @@ namespace NStore.InMemory
                 .ToArray();
 
             _lockSlim.ExitReadLock();
-            await StartProducer(subscription, result, cancellationToken);
+            await StartProducer(subscription, result, cancellationToken).ConfigureAwait(false);
         }
 
         public Task ReadBackward(
@@ -95,20 +95,21 @@ namespace NStore.InMemory
                     await _networkSimulator.WaitFast().ConfigureAwait(false);
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    if (!await subscription.OnNext(Clone(chunk)))
+
+                    if (!await subscription.OnNext(Clone(chunk)).ConfigureAwait(false))
                     {
-                        await subscription.Completed(position);
+                        await subscription.Completed(position).ConfigureAwait(false);
                         return;
                     }
                 }
             }
             catch (Exception e)
             {
-                await subscription.OnError(position, e);
+                await subscription.OnError(position, e).ConfigureAwait(false);
                 return;
             }
 
-            await subscription.Completed(position);
+            await subscription.Completed(position).ConfigureAwait(false);
         }
 
 

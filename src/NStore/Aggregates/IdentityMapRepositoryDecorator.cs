@@ -33,7 +33,7 @@ namespace NStore.Aggregates
                 return (T)_identityMap[mapid];
             }
 
-            var aggregate = await _repository.GetById<T>(id, version, cancellationToken);
+            var aggregate = await _repository.GetById<T>(id, version, cancellationToken).ConfigureAwait(false);
 
             _identityMap.Add(mapid, aggregate);
             return aggregate;

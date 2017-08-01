@@ -16,7 +16,12 @@ namespace NStore.Persistence.Tests
         private const string TestSuitePrefix = "Mongo";
         static BasePersistenceTest()
         {
-            var baseConnectionString = Environment.GetEnvironmentVariable("TEST_MONGODB");
+            Mongo = Environment.GetEnvironmentVariable("NSTORE_MONGODB");
+            if (string.IsNullOrWhiteSpace(Mongo))
+            {
+                throw new Exception("NSTORE_MONGODB environment variable not set");
+            }
+/*
             if (!string.IsNullOrEmpty(baseConnectionString))
             {
                 var queryString = Environment.GetEnvironmentVariable("TEST_MONGODB_QUERYSTRING");
@@ -24,8 +29,9 @@ namespace NStore.Persistence.Tests
             }
             else
             {
-                Mongo = "mongodb://localhost/nstore";
+                Mongo = "mongodb://localhost/nstorex";
             }
+*/
         }
 
         private IPersistence Create()

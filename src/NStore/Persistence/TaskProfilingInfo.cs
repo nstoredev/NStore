@@ -38,7 +38,7 @@ namespace NStore.Persistence
             sw.Start();
             try
             {
-                await task();
+                await task().ConfigureAwait(false);
             }
             catch (Exception)
             {
@@ -59,7 +59,7 @@ namespace NStore.Persistence
             sw.Start();
             try
             {
-                return await task();
+                return await task().ConfigureAwait(false);
             }
             catch (Exception)
             {

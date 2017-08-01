@@ -68,14 +68,12 @@ namespace NStore.Persistence.Tests
             _sqlPersistence = new MsSqlPersistence(_options);
             _sqlPersistence.DestroyAllAsync(CancellationToken.None).Wait();
             _sqlPersistence.InitAsync(CancellationToken.None).Wait();
-            Console.WriteLine($"Connected and ready {_options.StreamsTableName}");
             return _sqlPersistence;
         }
 
         private void Clear()
         {
             _sqlPersistence.DestroyAllAsync(CancellationToken.None).Wait();
-            Console.WriteLine($"Cleared {_options.StreamsTableName}");
         }
     }
 }

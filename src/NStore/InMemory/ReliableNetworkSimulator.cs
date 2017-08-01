@@ -32,7 +32,7 @@ namespace NStore.InMemory
         protected virtual async Task<long> Simulate(int max)
         {
             var ms = _minDelayMs + _random.Next(max);
-            await Task.Delay(ms);
+            await Task.Delay(ms).ConfigureAwait(false);
             return ms;
         }
     }

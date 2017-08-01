@@ -45,7 +45,7 @@ namespace NStore.Aggregates
         {
             var aggregate = _factory.Create<T>();
             var persister = (IEventSourcedAggregate)aggregate;
-            var snapshot = await _snapshots.Get(id, version, cancellationToken);
+            var snapshot = await _snapshots.Get(id, version, cancellationToken).ConfigureAwait(false);
 
             if (snapshot != null)
             {
@@ -127,7 +127,7 @@ namespace NStore.Aggregates
             persister.ChangesPersisted(changeSet);
 
             //we need to await, it's responsibility of the snapshot provider to clone & store state (sync or async)
-            await _snapshots.Add(aggregate.Id, persister.GetSnapshot(), cancellationToken);
+            await _snapshots.Add(aggregate.Id, persister.GetSnapshot(), cancellationToken).ConfigureAwait(false);
         }
 
         private IStream OpenStream(IAggregate aggregate, bool isPartialLoad)

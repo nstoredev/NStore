@@ -21,7 +21,7 @@ namespace NStore.SnapshotStore
             int version,
             CancellationToken cancellationToken)
         {
-            var data = await _store.ReadLast(aggregateId, version, cancellationToken);
+            var data = await _store.ReadLast(aggregateId, version, cancellationToken).ConfigureAwait(false);
             return (SnapshotInfo) data?.Payload;
         }
 
@@ -35,7 +35,7 @@ namespace NStore.SnapshotStore
 
             try
             {
-                await _store.PersistAsync(aggregateId, snapshot.AggregateVersion, snapshot, null, cancellationToken);
+                await _store.PersistAsync(aggregateId, snapshot.AggregateVersion, snapshot, null, cancellationToken).ConfigureAwait(false);
             }
             catch (DuplicateStreamIndexException)
             {

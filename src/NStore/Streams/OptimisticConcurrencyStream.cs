@@ -56,7 +56,7 @@ Append can be called only after a Read operation.
 If you don't need to read use {typeof(Stream).Name} instead of {GetType().Name}.")
                     ;
             long desiredVersion = this.Version + 1;
-            await Persistence.PersistAsync(this.Id, desiredVersion, payload, operationId, cancellation);
+            await Persistence.PersistAsync(this.Id, desiredVersion, payload, operationId, cancellation).ConfigureAwait(false);
             this.Version = desiredVersion;
         }
 
