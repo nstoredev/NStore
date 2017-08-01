@@ -91,7 +91,7 @@ namespace NStore.Persistence.Mongo
 
             var sort = Builders<Chunk>.Sort.Ascending(x => x.Index);
 
-            await ReadAndPushToConsumer(partitionId, subscription, limit, sort, filter, cancellationToken);
+            await ReadAndPushToConsumer(partitionId, subscription, limit, sort, filter, cancellationToken).ConfigureAwait(false);
         }
 
         private async Task ReadAndPushToConsumer(
@@ -118,16 +118,16 @@ namespace NStore.Persistence.Mongo
                     {
                         position = b.Position;
                         b.Payload = _serializer.Deserialize(partitionId, b.Payload);
-                        if (!await subscription.OnNext(b))
+                        if (!await subscription.OnNext(b).ConfigureAwait(false))
                         {
-                            await subscription.Completed(position);
+                            await subscription.Completed(position).ConfigureAwait(false);
                             return;
                         }
                     }
                 }
             }
 
-            await subscription.Completed(position);
+            await subscription.Completed(position).ConfigureAwait(false);
         }
 
         public async Task ReadPartitionBackward(
@@ -147,7 +147,7 @@ namespace NStore.Persistence.Mongo
 
             var sort = Builders<Chunk>.Sort.Descending(x => x.Index);
 
-            await ReadAndPushToConsumer(partitionId, subscription, limit, sort, filter, cancellationToken);
+            await ReadAndPushToConsumer(partitionId, subscription, limit, sort, filter, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<IChunk> ReadLast(string partitionId, int upToIndexInclusive, CancellationToken cancellationToken)
@@ -162,7 +162,7 @@ namespace NStore.Persistence.Mongo
 
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
             {
-                return await cursor.FirstOrDefaultAsync(cancellationToken);
+                return await cursor.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -192,7 +192,7 @@ namespace NStore.Persistence.Mongo
                         position = chunk.Position;
                         chunk.Payload = _serializer.Deserialize(chunk.PartitionId, chunk.Payload);
 
-                        if (!await subscription.OnNext(chunk))
+                        if (!await subscription.OnNext(chunk).ConfigureAwait(false))
                         {
                             await subscription.Stopped(position).ConfigureAwait(false);
                             return;
