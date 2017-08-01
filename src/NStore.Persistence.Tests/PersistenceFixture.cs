@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -18,9 +17,12 @@ namespace NStore.Persistence.Tests
         protected readonly ILogger _logger;
         protected BasePersistenceTest()
         {
-            LoggerFactory = new TestLoggerFactory(TestSuitePrefix +"::"+ GetType().Name);
+            LoggerFactory = new TestLoggerFactory(TestSuitePrefix + "::" + GetType().Name);
             _logger = LoggerFactory.CreateLogger(GetType());
-            Store = new LogDecorator(Create(), LoggerFactory);
+            _logger.LogDebug("Creating store");
+            var persistence = Create();
+            _logger.LogDebug("Store created");
+            Store = new LogDecorator(persistence, LoggerFactory);
         }
 
         public void Dispose()
@@ -79,36 +81,26 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    internal static class AsyncExtensions
-    {
-        public static Task ForEachAsync<T>(
-            this IEnumerable<T> source, int dop, Func<T, Task> body)
-        {
-            return Task.WhenAll(
-                from partition in Partitioner.Create(source).GetPartitions(dop)
-                select Task.Run(async delegate
-                {
-                    using (partition)
-                        while (partition.MoveNext())
-                            await body(partition.Current)
-                                .ContinueWith(t =>
-                                {
-                                    //observe exceptions
-                                });
-                }));
-        }
-    }
-
     public class ScanTest : BasePersistenceTest
     {
         public ScanTest()
         {
-            Store.PersistAsync("Stream_1", 1, "a").ConfigureAwait(false).GetAwaiter().GetResult();
-            Store.PersistAsync("Stream_1", 2, "b").ConfigureAwait(false).GetAwaiter().GetResult();
-            Store.PersistAsync("Stream_1", 3, "c").ConfigureAwait(false).GetAwaiter().GetResult();
+            try
+            {
+                Store.PersistAsync("Stream_1", 1, "a").ConfigureAwait(false).GetAwaiter().GetResult();
+                Store.PersistAsync("Stream_1", 2, "b").ConfigureAwait(false).GetAwaiter().GetResult();
+                Store.PersistAsync("Stream_1", 3, "c").ConfigureAwait(false).GetAwaiter().GetResult();
 
-            Store.PersistAsync("Stream_2", 1, "d").ConfigureAwait(false).GetAwaiter().GetResult();
-            Store.PersistAsync("Stream_2", 2, "e").ConfigureAwait(false).GetAwaiter().GetResult();
+                Store.PersistAsync("Stream_2", 1, "d").ConfigureAwait(false).GetAwaiter().GetResult();
+                Store.PersistAsync("Stream_2", 2, "e").ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Scan test setup failed: {message}", e.Message);
+                throw;
+            }
+
+            _logger.LogDebug("Scan test data written");
         }
 
         [Fact]
@@ -301,24 +293,37 @@ namespace NStore.Persistence.Tests
 
     public class DeleteStreamTest : BasePersistenceTest
     {
-        public DeleteStreamTest()
+        protected DeleteStreamTest()
         {
-            Task.WhenAll
-            (
-                Store.PersistAsync("delete", 1, null),
-                Store.PersistAsync("delete_3", 1, "1"),
-                Store.PersistAsync("delete_3", 2, "2"),
-                Store.PersistAsync("delete_3", 3, "3"),
-                Store.PersistAsync("delete_4", 1, "1"),
-                Store.PersistAsync("delete_4", 2, "2"),
-                Store.PersistAsync("delete_4", 3, "3"),
-                Store.PersistAsync("delete_5", 1, "1"),
-                Store.PersistAsync("delete_5", 2, "2"),
-                Store.PersistAsync("delete_5", 3, "3")
-            ).ConfigureAwait(false).GetAwaiter().GetResult();
+            try
+            {
+                Task.WhenAll
+                (
+                    Store.PersistAsync("delete", 1, null),
+                    Store.PersistAsync("delete_3", 1, "1"),
+                    Store.PersistAsync("delete_3", 2, "2"),
+                    Store.PersistAsync("delete_3", 3, "3"),
+                    Store.PersistAsync("delete_4", 1, "1"),
+                    Store.PersistAsync("delete_4", 2, "2"),
+                    Store.PersistAsync("delete_4", 3, "3"),
+                    Store.PersistAsync("delete_5", 1, "1"),
+                    Store.PersistAsync("delete_5", 2, "2"),
+                    Store.PersistAsync("delete_5", 3, "3")
+                ).ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Delete stream test setup: {message}", e.Message);
+                throw;
+            }
+
+            _logger.LogDebug("Delete test data written");
         }
 
+    }
 
+    public class DeleteStreamTest_1 : DeleteStreamTest
+    {
         [Fact]
         public async void delete_stream()
         {
@@ -332,6 +337,10 @@ namespace NStore.Persistence.Tests
 
             Assert.False(almostOneChunk, "Should not contains chunks");
         }
+    }
+
+    public class DeleteStreamTest_2 : DeleteStreamTest
+    {
 
         [Fact]
         public async void delete_invalid_stream_should_throw_exception()
@@ -343,18 +352,29 @@ namespace NStore.Persistence.Tests
             Assert.Equal("delete_2", ex.StreamId);
         }
 
+    }
+
+    public class DeleteStreamTest_3 : DeleteStreamTest
+    {
         [Fact]
         public async void should_delete_first()
         {
+            _logger.LogDebug("deleting first chunk");
             await Store.DeleteAsync("delete_3", 1, 1).ConfigureAwait(false);
+            _logger.LogDebug("recording");
             var acc = new Recorder();
             await Store.ReadPartitionForward("delete_3", 0, acc).ConfigureAwait(false);
 
+            _logger.LogDebug("checking assertions");
             Assert.Equal(2, acc.Length);
             Assert.True((string)acc[0] == "2");
             Assert.True((string)acc[1] == "3");
+            _logger.LogDebug("done");
         }
+    }
 
+    public class DeleteStreamTest_4 : DeleteStreamTest
+    {
         [Fact]
         public async void should_delete_last()
         {
@@ -366,6 +386,10 @@ namespace NStore.Persistence.Tests
             Assert.True((string)acc[0] == "1");
             Assert.True((string)acc[1] == "2");
         }
+    }
+
+    public class DeleteStreamTest_5 : DeleteStreamTest
+    {
 
         [Fact]
         public async void should_delete_middle()
@@ -379,6 +403,7 @@ namespace NStore.Persistence.Tests
             Assert.True((string)acc[1] == "3");
         }
     }
+
     public class deleted_chunks_management : BasePersistenceTest
     {
         [Fact]

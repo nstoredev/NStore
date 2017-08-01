@@ -9,8 +9,32 @@ var configuration = Argument("configuration", "Release");
 //////////////////////////////////////////////////////////////////////
 // PREPARATION
 //////////////////////////////////////////////////////////////////////
-var msSqlServerConnectionString = EnvironmentVariable("NSTORE_MSSQL") ?? "Server=localhost,1433;User Id=sa;Password=NStoreD0ck3r";
+var msSqlServerConnectionString = RemoveQuotes(GetVariable("NSTORE_MSSQL_INSTANCE")) ?? "Server=localhost,1433;User Id=sa;Password=NStoreD0ck3r";
 var msSqlDatabaseConnectionString  = msSqlServerConnectionString +";Database=NStore";
+
+private string GetVariable(string key)
+{
+    var variable = Argument<string>(key, "___");
+    Information("Variable "+key+" is " + variable);
+    if(variable != "___")
+        return variable;
+    
+    return EnvironmentVariable(key);
+}
+
+private string RemoveQuotes(string cstring)
+{
+    if(cstring == null)
+        return null;
+ 
+    if (cstring.StartsWith("\""))
+        cstring = cstring.Substring(1);
+
+    if (cstring.EndsWith("\""))
+        cstring = cstring.Substring(0, cstring.Length - 1);
+
+    return cstring;
+}
 
 private void RunTest(string testProject, IDictionary<string,string> env = null)
 {
@@ -64,23 +88,32 @@ Task("TestMsSql")
     .IsDependentOn("RunLibraryTests")
     .Does(()=>
 {
-var sql = @"USE master
-IF EXISTS(select * from sys.databases where name='NStore')
-DROP DATABASE NStore
+    var dropdb = @"USE master
+    IF EXISTS(select * from sys.databases where name='NStore')
+    DROP DATABASE NStore
+    ";
 
-CREATE DATABASE NStore";
+    var createdb = @"USE master 
+    CREATE DATABASE NStore";
 
-    ExecuteSqlQuery(sql, new SqlQuerySettings()
+    var settings =  new SqlQuerySettings()
     {
         Provider = "MsSql",
         ConnectionString = msSqlServerConnectionString
-    });
-    
+    };
+
+    Information("Connected to sql server instance " + msSqlServerConnectionString);
+
+    ExecuteSqlQuery(dropdb, settings);
+    ExecuteSqlQuery(createdb, settings);
+
     var env = new Dictionary<string, string>{
         { "NSTORE_MSSQL", msSqlDatabaseConnectionString},
     };
     
     RunTest("NStore.Persistence.MsSql.Tests",env);
+
+    ExecuteSqlQuery(dropdb, settings);
 });
 
 Task("TestMongoDb")

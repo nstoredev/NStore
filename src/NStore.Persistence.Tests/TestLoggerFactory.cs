@@ -15,20 +15,34 @@ namespace NStore.Persistence.Tests
         public TestLoggerFactory(string provider)
         {
             _provider = provider;
-            _level = Environment.GetEnvironmentVariable("NSTORE_LOG_LEVEL") ?? "0";
+            _level = Environment.GetEnvironmentVariable("NSTORE_LOG_LEVEL") ?? "none";
             _logPoller = Environment.GetEnvironmentVariable("NSTORE_LOG_POLLER");
         }
 
         public ILogger CreateLogger(string categoryName)
         {
-            if(_level == "0")
+            var level = _level;
+
+            if (level == "none")
                 return NullLogger.Instance;
 
-            if (_logPoller == null && categoryName == typeof(PollingClient).FullName)
+            Func<string, LogLevel, bool> filter = (s, l) => true;
+
+            if (level == "info")
+            {
+                filter = (s, l) => l == LogLevel.Information;
+            }
+
+            if ((_logPoller == null || _logPoller == "0" || _logPoller == "none") && categoryName == typeof(PollingClient).FullName)
             {
                 return NullLogger.Instance;
             }
-            return new ConsoleLogger(_provider +"::"+categoryName, (s, level) => true, true);
+
+            return new ConsoleLogger(
+                _provider +"::"+categoryName,
+                filter, 
+                true
+            );
         }
 
         public void AddProvider(ILoggerProvider provider)

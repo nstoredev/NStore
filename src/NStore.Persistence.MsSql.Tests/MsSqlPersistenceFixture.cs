@@ -3,37 +3,13 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
-using Newtonsoft.Json;
 using NStore.Persistence.MsSql;
+using NStore.Persistence.MsSql.Tests;
 
 
 // ReSharper disable CheckNamespace
 namespace NStore.Persistence.Tests
 {
-    public class JsonMsSqlSerializer : IMsSqlPayloadSearializer
-    {
-        JsonSerializerSettings Settings { get; set; }
-
-        public JsonMsSqlSerializer()
-        {
-            this.Settings = new JsonSerializerSettings
-            {
-                TypeNameHandling = TypeNameHandling.All
-            };
-        }
-
-        public object Deserialize(string serialized)
-        {
-            return JsonConvert.DeserializeObject(serialized, Settings);
-        }
-
-        public string Serialize(object payload)
-        {
-            return JsonConvert.SerializeObject(payload, Settings);
-        }
-    }
-
     public partial class BasePersistenceTest
     {
         private MsSqlPersistence _sqlPersistence;
@@ -51,12 +27,19 @@ namespace NStore.Persistence.Tests
             //                "Server=(local)\\SqlExpress;Database=NStore;Trusted_Connection=True;MultipleActiveResultSets=true";
             // docker
             //            ConnectionString = "Server=localhost,1433;Database=NStore;User Id=sa;Password=NStoreD0ck3r;MultipleActiveResultSets=true";
+            if (ConnectionString.StartsWith("\""))
+                ConnectionString = ConnectionString.Substring(1);
+
+            if (ConnectionString.EndsWith("\""))
+                ConnectionString = ConnectionString.Substring(0, ConnectionString.Length - 1);
+
             Console.WriteLine($"Connected to {ConnectionString}");
         }
 
         private IPersistence Create()
         {
             _id = Interlocked.Increment(ref _staticId);
+            _logger.LogInformation("Starting test #{number}", _id);
 
             _options = new MsSqlPersistenceOptions(LoggerFactory)
             {
@@ -68,12 +51,15 @@ namespace NStore.Persistence.Tests
             _sqlPersistence = new MsSqlPersistence(_options);
             _sqlPersistence.DestroyAllAsync(CancellationToken.None).Wait();
             _sqlPersistence.InitAsync(CancellationToken.None).Wait();
+            _logger.LogInformation("Test #{number} started", _id);
             return _sqlPersistence;
         }
 
         private void Clear()
         {
+            _logger.LogInformation("Cleaning up test #{number}", _id);
             _sqlPersistence.DestroyAllAsync(CancellationToken.None).Wait();
+            _logger.LogInformation("Cleanup test #{number} done", _id);
         }
     }
 }

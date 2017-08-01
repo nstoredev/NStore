@@ -1,18 +1,18 @@
 version: 1.0.{build}
 image: Visual Studio 2017
 services:
-  - mssql2014
+  - mssql2016
   - mongodb
 shallow_clone: true
 build_script:
 - ps: >- 
 
-    $env:NSTORE_MSSQL = "Server=(local)\SQL2014,1433;User ID=sa;Password=Password12!;MultipleActiveResultSets=true";    
+    $env:NSTORE_LOG_POLLER = "none";    
     
-    $env:NSTORE_LOG_POLLER = "1";    
-    
-    sqlcmd -S "(local)\SQL2014,1433" -U sa -P Password12! -Q "CREATE DATABASE NStore" -d "master"
+    $env:NSTORE_LOG_LEVEL = "none";
 
-    .\build.ps1
+    .\build.ps1 -ScriptArgs '-NSTORE_MSSQL_INSTANCE="Server=(local)\SQL2016,1433;User ID=sa;Password=Password12!;"'
 
 test: off
+cache:
+  - C:\Users\appveyor\AppData\Local\NuGet -> appveyor.yml

@@ -368,7 +368,6 @@ namespace NStore.Persistence.MsSql
                 using (var connection = Connect())
                 {
                     await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-                    _logger.LogDebug($"Persist: {partitionId} - {index} - {textPayload}");
                     using (var command = new SqlCommand(_options.GetPersistScript(), connection))
                     {
                         command.Parameters.AddWithValue("@PartitionId", partitionId);
@@ -376,7 +375,7 @@ namespace NStore.Persistence.MsSql
                         command.Parameters.AddWithValue("@OperationId", chunk.OperationId);
                         command.Parameters.AddWithValue("@Payload", textPayload);
 
-                        var position = (long)await command.ExecuteScalarAsync(cancellationToken);
+                        var position = (long)await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
                         chunk.Position = position;
                     }
                 }
@@ -424,7 +423,7 @@ namespace NStore.Persistence.MsSql
                     command.Parameters.AddWithValue("@fromLowerIndexInclusive", fromLowerIndexInclusive);
                     command.Parameters.AddWithValue("@toUpperIndexInclusive", toUpperIndexInclusive);
 
-                    var deleted = (long)await command.ExecuteNonQueryAsync(cancellationToken);
+                    var deleted = (long)await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
 
                     if (deleted == 0)
                         throw new StreamDeleteException(partitionId);
