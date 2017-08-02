@@ -65,6 +65,13 @@ Task("Clean")
     .Does(() =>
 {
     CleanDirectory(artifactsDir);
+
+    if(testOutput != "")
+    {
+        CleanDirectory(testOutput);
+    }
+
+    EnsureDirectoryExists(testOutput);
 });
 
 Task("restore-packages")
@@ -167,6 +174,7 @@ Task("ReleaseBuild")
     .IsDependentOn("TestAll")
     .Does(() =>
 {
+    Information("Building configuration "+configuration);
     var settings = new DotNetCoreBuildSettings
 	{
 		Configuration = configuration
