@@ -66,12 +66,11 @@ Task("Clean")
 {
     CleanDirectory(artifactsDir);
 
-    if(testOutput != "")
+    if( testOutput != "" )
     {
         CleanDirectory(testOutput);
+        EnsureDirectoryExists(testOutput);
     }
-
-    EnsureDirectoryExists(testOutput);
 });
 
 Task("restore-packages")
