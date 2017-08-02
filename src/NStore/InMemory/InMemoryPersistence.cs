@@ -95,7 +95,7 @@ namespace NStore.InMemory
             );
         }
 
-        public Task<IChunk> ReadLast(string partitionId, int upToIndexInclusive, CancellationToken cancellationToken)
+        public Task<IChunk> ReadLast(string partitionId, int toUpperIndexInclusive, CancellationToken cancellationToken)
         {
             InMemoryPartition inMemoryPartition;
             if (!_partitions.TryGetValue(partitionId, out inMemoryPartition))
@@ -103,7 +103,7 @@ namespace NStore.InMemory
                 return Task.FromResult<IChunk>(null);
             }
 
-            return inMemoryPartition.Peek(upToIndexInclusive, cancellationToken);
+            return inMemoryPartition.Peek(toUpperIndexInclusive, cancellationToken);
         }
 
         private Chunk Clone(Chunk source)
@@ -184,7 +184,7 @@ namespace NStore.InMemory
             }
         }
 
-        public async Task<IChunk> PersistAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
+        public async Task<IChunk> AppendAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
         {
             var id = Interlocked.Increment(ref _sequence);
             var chunk = new Chunk()

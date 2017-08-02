@@ -48,12 +48,12 @@ namespace NStore.Persistence
 
         public async Task<IChunk> ReadLast(
             string partitionId,
-            int upToIndexInclusive,
+            int toUpperIndexInclusive,
             CancellationToken cancellationToken)
         {
-            _logger.LogDebug("Start ReadLast(partitionId:{partitionId}, to:{to})", partitionId, upToIndexInclusive);
-            var result = await _persistence.ReadLast(partitionId, upToIndexInclusive, cancellationToken).ConfigureAwait(false);
-            _logger.LogDebug("End ReadLast(partitionId:{partitionId}, to:{to})", partitionId, upToIndexInclusive);
+            _logger.LogDebug("Start ReadLast(partitionId:{partitionId}, to:{to})", partitionId, toUpperIndexInclusive);
+            var result = await _persistence.ReadLast(partitionId, toUpperIndexInclusive, cancellationToken).ConfigureAwait(false);
+            _logger.LogDebug("End ReadLast(partitionId:{partitionId}, to:{to})", partitionId, toUpperIndexInclusive);
             return result;
         }
 
@@ -68,7 +68,7 @@ namespace NStore.Persistence
             _logger.LogDebug("end ReadAllAsync(from:{from}, limit:{limit})", fromSequenceIdInclusive, limit);
         }
 
-        public async Task<IChunk> PersistAsync(
+        public async Task<IChunk> AppendAsync(
             string partitionId,
             long index,
             object payload,
@@ -76,7 +76,7 @@ namespace NStore.Persistence
             CancellationToken cancellationToken)
         {
             _logger.LogDebug("Start PersistAsync({partitionId}, {index})", partitionId, index);
-            var result = await _persistence.PersistAsync(partitionId, index, payload, operationId, cancellationToken).ConfigureAwait(false);
+            var result = await _persistence.AppendAsync(partitionId, index, payload, operationId, cancellationToken).ConfigureAwait(false);
             _logger.LogDebug("End PersistAsync({partitionId}, {index}) => {Position}", partitionId, index, result?.Position);
             return result;
         }

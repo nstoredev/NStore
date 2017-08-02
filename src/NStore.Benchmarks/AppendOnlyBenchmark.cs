@@ -123,14 +123,14 @@ namespace NStore.Benchmarks
         private void paralell_worker(IPersistence store)
         {
             _iterations.ForEachAsync(Workers, i =>
-                store.PersistAsync("Stream_1", i, new { data = "this is a test" })
+                store.AppendAsync("Stream_1", i, new { data = "this is a test" })
             ).ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
         private void async_worker(IPersistence store)
         {
             var all = _iterations.Select(i =>
-                store.PersistAsync("Stream_1", i, new { data = "this is a test" })
+                store.AppendAsync("Stream_1", i, new { data = "this is a test" })
             );
 
             Task.WhenAll(all).GetAwaiter().GetResult();
@@ -139,7 +139,7 @@ namespace NStore.Benchmarks
         private void task_worker(IPersistence store)
         {
             var all = _iterations.Select(i => Task.Run(async () =>
-                await store.PersistAsync("Stream_1", i, new { data = "this is a test" })
+                await store.AppendAsync("Stream_1", i, new { data = "this is a test" })
             ));
 
             Task.WhenAll(all).GetAwaiter().GetResult();

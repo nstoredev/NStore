@@ -90,25 +90,20 @@ namespace NStore.Persistence.Mongo
             );
 
             var sort = Builders<Chunk>.Sort.Ascending(x => x.Index);
-
-            await ReadAndPushToConsumer(partitionId, subscription, limit, sort, filter, cancellationToken).ConfigureAwait(false);
-        }
-
-        private async Task ReadAndPushToConsumer(
-            string partitionId,
-            ISubscription subscription,
-            int limit,
-            SortDefinition<Chunk> sort,
-            FilterDefinition<Chunk> filter,
-            CancellationToken cancellationToken)
-        {
             var options = new FindOptions<Chunk>() { Sort = sort };
             if (limit != int.MaxValue)
             {
                 options.Limit = limit;
             }
 
+            await PushToSubscriber(fromLowerIndexInclusive, subscription, options, filter, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task PushToSubscriber(long start, ISubscription subscription, FindOptions<Chunk> options, FilterDefinition<Chunk> filter, CancellationToken cancellationToken)
+        {
             long position = 0;
+            await subscription.OnStart(start).ConfigureAwait(false);
+
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
             {
                 while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
@@ -117,10 +112,10 @@ namespace NStore.Persistence.Mongo
                     foreach (var b in batch)
                     {
                         position = b.Position;
-                        b.Payload = _serializer.Deserialize(partitionId, b.Payload);
+                        b.Payload = _serializer.Deserialize(b.PartitionId, b.Payload);
                         if (!await subscription.OnNext(b).ConfigureAwait(false))
                         {
-                            await subscription.Completed(position).ConfigureAwait(false);
+                            await subscription.Stopped(position).ConfigureAwait(false);
                             return;
                         }
                     }
@@ -146,15 +141,20 @@ namespace NStore.Persistence.Mongo
             );
 
             var sort = Builders<Chunk>.Sort.Descending(x => x.Index);
+            var options = new FindOptions<Chunk>() { Sort = sort };
+            if (limit != int.MaxValue)
+            {
+                options.Limit = limit;
+            }
 
-            await ReadAndPushToConsumer(partitionId, subscription, limit, sort, filter, cancellationToken).ConfigureAwait(false);
+            await PushToSubscriber(fromUpperIndexInclusive, subscription, options, filter, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<IChunk> ReadLast(string partitionId, int upToIndexInclusive, CancellationToken cancellationToken)
+        public async Task<IChunk> ReadLast(string partitionId, int toUpperIndexInclusive, CancellationToken cancellationToken)
         {
             var filter = Builders<Chunk>.Filter.And(
                 Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId),
-                Builders<Chunk>.Filter.Lte(x => x.Index, upToIndexInclusive)
+                Builders<Chunk>.Filter.Lte(x => x.Index, toUpperIndexInclusive)
             );
 
             var sort = Builders<Chunk>.Sort.Descending(x => x.Index);
@@ -180,38 +180,10 @@ namespace NStore.Persistence.Mongo
                 options.Limit = limit;
             }
 
-            long position = 0;
-            await subscription.OnStart(fromSequenceIdInclusive).ConfigureAwait(false);
-            using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
-            {
-                while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    var batch = cursor.Current;
-                    foreach (var chunk in batch)
-                    {
-                        position = chunk.Position;
-                        chunk.Payload = _serializer.Deserialize(chunk.PartitionId, chunk.Payload);
-
-                        if (!await subscription.OnNext(chunk).ConfigureAwait(false))
-                        {
-                            await subscription.Stopped(position).ConfigureAwait(false);
-                            return;
-                        }
-                    }
-                }
-            }
-
-            if (position == 0)
-            {
-                await subscription.Stopped(fromSequenceIdInclusive).ConfigureAwait(false);
-            }
-            else
-            {
-                await subscription.Completed(position).ConfigureAwait(false);
-            }
+            await PushToSubscriber(fromSequenceIdInclusive, subscription, options, filter, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<IChunk> PersistAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
+        public async Task<IChunk> AppendAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
         {
             long id = await GetNextId(cancellationToken).ConfigureAwait(false);
             var chunk = new Chunk()

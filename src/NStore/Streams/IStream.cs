@@ -9,7 +9,7 @@ namespace NStore.Streams
 
         bool IsWritable { get; }
 
-        Task Append(object payload, string operationId, CancellationToken cancellation);
-        Task Delete(CancellationToken cancellation);
+        Task AppendAsync(object payload, string operationId, CancellationToken cancellation);
+        Task DeleteAsync(CancellationToken cancellation);
     }
 }

@@ -36,6 +36,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Persistence.MsSql", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Persistence.MsSql.Tests", "NStore.Persistence.MsSql.Tests\NStore.Persistence.MsSql.Tests.csproj", "{7F1E1496-49F5-4C2B-A047-CA6534A3689C}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Quickstart", "NStore.Quickstart\NStore.Quickstart.csproj", "{FFF50043-AC34-4859-A93D-817786169B82}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -86,6 +88,10 @@ Global
 		{7F1E1496-49F5-4C2B-A047-CA6534A3689C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7F1E1496-49F5-4C2B-A047-CA6534A3689C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7F1E1496-49F5-4C2B-A047-CA6534A3689C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FFF50043-AC34-4859-A93D-817786169B82}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FFF50043-AC34-4859-A93D-817786169B82}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FFF50043-AC34-4859-A93D-817786169B82}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FFF50043-AC34-4859-A93D-817786169B82}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -102,5 +108,6 @@ Global
 		{AE81867F-7915-4EF5-BF16-1B84EE147FF3} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
 		{DADB7A00-6F22-4AB0-8921-D72FF5199E8C} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
 		{7F1E1496-49F5-4C2B-A047-CA6534A3689C} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
+		{FFF50043-AC34-4859-A93D-817786169B82} = {D3212016-BB8D-4E16-94C4-2D0990B2C14A}
 	EndGlobalSection
 EndGlobal

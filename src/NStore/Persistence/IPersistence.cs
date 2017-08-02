@@ -28,7 +28,7 @@ namespace NStore.Persistence
 
         Task<IChunk> ReadLast(
             string partitionId,
-            int upToIndexInclusive,
+            int toUpperIndexInclusive,
             CancellationToken cancellationToken
         );
 
@@ -39,7 +39,16 @@ namespace NStore.Persistence
             CancellationToken cancellationToken
         );
 
-        Task<IChunk> PersistAsync(
+        /// <summary>
+        /// Appends a chunk in the global store
+        /// </summary>
+        /// <param name="partitionId"></param>
+        /// <param name="index"></param>
+        /// <param name="payload"></param>
+        /// <param name="operationId"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        Task<IChunk> AppendAsync(
             string partitionId,
             long index,
             object payload,

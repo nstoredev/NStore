@@ -7,7 +7,7 @@ namespace NStore.Streams
 {
     public interface IReadOnlyStream
     {
-        Task Read(
+        Task ReadAsync(
             ISubscription subscription,
             int fromIndexInclusive,
             int toIndexInclusive,

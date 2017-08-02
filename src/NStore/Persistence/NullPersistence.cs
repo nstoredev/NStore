@@ -15,7 +15,7 @@ namespace NStore.Persistence
             return Task.CompletedTask;
         }
 
-        public Task<IChunk> PersistAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
+        public Task<IChunk> AppendAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
         {
             return Task.FromResult<IChunk>(null);
         }
@@ -45,7 +45,7 @@ namespace NStore.Persistence
             return Task.CompletedTask;
         }
 
-        public Task<IChunk> ReadLast(string partitionId, int upToIndexInclusive, CancellationToken cancellationToken)
+        public Task<IChunk> ReadLast(string partitionId, int toUpperIndexInclusive, CancellationToken cancellationToken)
         {
             return Task.FromResult<IChunk>(null);
         }

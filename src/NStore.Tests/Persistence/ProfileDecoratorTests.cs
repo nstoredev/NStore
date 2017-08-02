@@ -51,7 +51,7 @@ namespace NStore.Tests.Persistence
         [Fact]
         public async void persist_should_be_recorded()
         {
-            await _store.PersistAsync("empty", 0, null);
+            await _store.AppendAsync("empty", 0, null);
             Assert.Equal(1, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
             Assert.Equal(0, _profile.StoreScanCounter.Calls);

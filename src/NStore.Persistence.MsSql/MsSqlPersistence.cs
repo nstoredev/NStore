@@ -148,31 +148,39 @@ namespace NStore.Persistence.MsSql
                         command.Parameters.AddWithValue("@toUpperIndexInclusive", toUpperIndexInclusive);
                     }
 
-                    long position = 0;
-                    using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
-                    {
-                        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                        {
-                            var chunk = new MsSqlChunk
-                            {
-                                Position = position = reader.GetInt64(0),
-                                PartitionId = reader.GetString(1),
-                                Index = reader.GetInt64(2),
-                                Payload = _options.Serializer.Deserialize(reader.GetString(3)),
-                                OperationId = reader.GetString(4),
-                                Deleted = reader.GetBoolean(5)
-                            };
-
-                            if (!await subscription.OnNext(chunk).ConfigureAwait(false))
-                            {
-                                await subscription.Completed(chunk.Position).ConfigureAwait(false);
-                                return;
-                            }
-                        }
-                    }
-                    await subscription.Completed(position).ConfigureAwait(false);
+                    await PushToSubscriber(command, fromLowerIndexInclusive, subscription, cancellationToken).ConfigureAwait(false);
                 }
             }
+        }
+
+        private async Task PushToSubscriber(SqlCommand command, long start, ISubscription subscription, CancellationToken cancellationToken)
+        {
+            long position = 0;
+            await subscription.OnStart(start).ConfigureAwait(false);
+
+            using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
+            {
+                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    var chunk = new MsSqlChunk
+                    {
+                        Position = position = reader.GetInt64(0),
+                        PartitionId = reader.GetString(1),
+                        Index = reader.GetInt64(2),
+                        Payload = _options.Serializer.Deserialize(reader.GetString(3)),
+                        OperationId = reader.GetString(4),
+                        Deleted = reader.GetBoolean(5)
+                    };
+
+                    if (!await subscription.OnNext(chunk).ConfigureAwait(false))
+                    {
+                        await subscription.Stopped(chunk.Position).ConfigureAwait(false);
+                        return;
+                    }
+                }
+            }
+
+            await subscription.Completed(position).ConfigureAwait(false);
         }
 
         public async Task ReadPartitionBackward(
@@ -223,29 +231,7 @@ namespace NStore.Persistence.MsSql
                         command.Parameters.AddWithValue("@toLowerIndexInclusive", toLowerIndexInclusive);
                     }
 
-                    long position = 0;
-                    using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
-                    {
-                        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                        {
-                            var chunk = new MsSqlChunk
-                            {
-                                Position = position = reader.GetInt64(0),
-                                PartitionId = reader.GetString(1),
-                                Index = reader.GetInt64(2),
-                                Payload = _options.Serializer.Deserialize(reader.GetString(3)),
-                                OperationId = reader.GetString(4),
-                                Deleted = reader.GetBoolean(5)
-                            };
-
-                            if (!await subscription.OnNext(chunk).ConfigureAwait(false))
-                            {
-                                await subscription.Completed(chunk.Position).ConfigureAwait(false);
-                                return;
-                            }
-                        }
-                    }
-                    await subscription.Completed(position).ConfigureAwait(false);
+                    await PushToSubscriber(command, fromUpperIndexInclusive, subscription, cancellationToken).ConfigureAwait(false);
                 }
             }
         }
@@ -303,46 +289,16 @@ namespace NStore.Persistence.MsSql
             using (var connection = Connect())
             {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-                long position = 0;
                 using (var command = new SqlCommand(sql, connection))
                 {
                     command.Parameters.AddWithValue("@fromPositionInclusive", fromSequenceIdInclusive);
-                    await subscription.OnStart(fromSequenceIdInclusive).ConfigureAwait(false);
-                    using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
-                    {
-                        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                        {
-                            var chunk = new MsSqlChunk
-                            {
-                                Position = position = reader.GetInt64(0),
-                                PartitionId = reader.GetString(1),
-                                Index = reader.GetInt64(2),
-                                Payload = _options.Serializer.Deserialize(reader.GetString(3)),
-                                OperationId = reader.GetString(4),
-                                Deleted = reader.GetBoolean(5)
-                            };
 
-                            if (!await subscription.OnNext(chunk).ConfigureAwait(false))
-                            {
-                                await subscription.Stopped(position).ConfigureAwait(false);
-                                return;
-                            }
-                        }
-                    }
-                }
-
-                if (position == 0)
-                {
-                    await subscription.Stopped(fromSequenceIdInclusive).ConfigureAwait(false);
-                }
-                else
-                {
-                    await subscription.Completed(position).ConfigureAwait(false);
+                    await PushToSubscriber(command, fromSequenceIdInclusive, subscription, cancellationToken);
                 }
             }
         }
 
-        public async Task<IChunk> PersistAsync(
+        public async Task<IChunk> AppendAsync(
             string partitionId,
             long index,
             object payload,

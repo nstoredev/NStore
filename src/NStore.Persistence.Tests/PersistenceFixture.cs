@@ -37,7 +37,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task can_insert_at_first_index()
         {
-            await Store.PersistAsync("Stream_1", 1, new { data = "this is a test" });
+            await Store.AppendAsync("Stream_1", 1, new { data = "this is a test" });
         }
     }
 
@@ -46,7 +46,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_persist_with_chunk_id()
         {
-            await Store.PersistAsync("Stream_Neg", -1, "payload");
+            await Store.AppendAsync("Stream_Neg", -1, "payload");
 
             var tape = new Recorder();
             await Store.ReadPartitionForward("Stream_Neg", 0, tape);
@@ -59,7 +59,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_work()
         {
-            await Store.PersistAsync("Stream_1", long.MaxValue, new { data = "this is a test" });
+            await Store.AppendAsync("Stream_1", long.MaxValue, new { data = "this is a test" });
         }
     }
 
@@ -68,11 +68,11 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_throw()
         {
-            await Store.PersistAsync("dup", 1, new { data = "first attempt" });
-            await Store.PersistAsync("dup", 2, new { data = "should not work" });
+            await Store.AppendAsync("dup", 1, new { data = "first attempt" });
+            await Store.AppendAsync("dup", 2, new { data = "should not work" });
 
             var ex = await Assert.ThrowsAnyAsync<DuplicateStreamIndexException>(() =>
-                Store.PersistAsync("dup", 1, new { data = "this is a test" })
+                Store.AppendAsync("dup", 1, new { data = "this is a test" })
             );
 
             Assert.Equal("Duplicated index 1 on stream dup", ex.Message);
@@ -87,12 +87,12 @@ namespace NStore.Persistence.Tests
         {
             try
             {
-                Store.PersistAsync("Stream_1", 1, "a").ConfigureAwait(false).GetAwaiter().GetResult();
-                Store.PersistAsync("Stream_1", 2, "b").ConfigureAwait(false).GetAwaiter().GetResult();
-                Store.PersistAsync("Stream_1", 3, "c").ConfigureAwait(false).GetAwaiter().GetResult();
+                Store.AppendAsync("Stream_1", 1, "a").ConfigureAwait(false).GetAwaiter().GetResult();
+                Store.AppendAsync("Stream_1", 2, "b").ConfigureAwait(false).GetAwaiter().GetResult();
+                Store.AppendAsync("Stream_1", 3, "c").ConfigureAwait(false).GetAwaiter().GetResult();
 
-                Store.PersistAsync("Stream_2", 1, "d").ConfigureAwait(false).GetAwaiter().GetResult();
-                Store.PersistAsync("Stream_2", 2, "e").ConfigureAwait(false).GetAwaiter().GetResult();
+                Store.AppendAsync("Stream_2", 1, "d").ConfigureAwait(false).GetAwaiter().GetResult();
+                Store.AppendAsync("Stream_2", 2, "e").ConfigureAwait(false).GetAwaiter().GetResult();
             }
             catch (Exception e)
             {
@@ -235,7 +235,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task InsertByteArray()
         {
-            await Store.PersistAsync("BA", 0, System.Text.Encoding.UTF8.GetBytes("this is a test")).ConfigureAwait(false);
+            await Store.AppendAsync("BA", 0, System.Text.Encoding.UTF8.GetBytes("this is a test")).ConfigureAwait(false);
 
             byte[] payload = null;
             await Store.ReadPartitionForward("BA", 0, new LambdaSubscription(data =>
@@ -255,8 +255,8 @@ namespace NStore.Persistence.Tests
         public async Task cannot_append_same_operation_twice_on_same_stream()
         {
             var opId = "operation_1";
-            await Store.PersistAsync("Id_1", 0, new { data = "this is a test" }, opId).ConfigureAwait(false);
-            await Store.PersistAsync("Id_1", 1, new { data = "this is a test" }, opId).ConfigureAwait(false);
+            await Store.AppendAsync("Id_1", 0, new { data = "this is a test" }, opId).ConfigureAwait(false);
+            await Store.AppendAsync("Id_1", 1, new { data = "this is a test" }, opId).ConfigureAwait(false);
 
             var list = new List<object>();
             await Store.ReadPartitionForward("Id_1", 0, new LambdaSubscription(data =>
@@ -272,8 +272,8 @@ namespace NStore.Persistence.Tests
         public async Task can_append_same_operation_to_two_streams()
         {
             var opId = "operation_2";
-            await Store.PersistAsync("Id_1", 0, "a", opId).ConfigureAwait(false);
-            await Store.PersistAsync("Id_2", 1, "b", opId).ConfigureAwait(false);
+            await Store.AppendAsync("Id_1", 0, "a", opId).ConfigureAwait(false);
+            await Store.AppendAsync("Id_2", 1, "b", opId).ConfigureAwait(false);
 
             var list = new List<object>();
             await Store.ReadPartitionForward("Id_1", 0, new LambdaSubscription(data =>
@@ -299,16 +299,16 @@ namespace NStore.Persistence.Tests
             {
                 Task.WhenAll
                 (
-                    Store.PersistAsync("delete", 1, null),
-                    Store.PersistAsync("delete_3", 1, "1"),
-                    Store.PersistAsync("delete_3", 2, "2"),
-                    Store.PersistAsync("delete_3", 3, "3"),
-                    Store.PersistAsync("delete_4", 1, "1"),
-                    Store.PersistAsync("delete_4", 2, "2"),
-                    Store.PersistAsync("delete_4", 3, "3"),
-                    Store.PersistAsync("delete_5", 1, "1"),
-                    Store.PersistAsync("delete_5", 2, "2"),
-                    Store.PersistAsync("delete_5", 3, "3")
+                    Store.AppendAsync("delete", 1, null),
+                    Store.AppendAsync("delete_3", 1, "1"),
+                    Store.AppendAsync("delete_3", 2, "2"),
+                    Store.AppendAsync("delete_3", 3, "3"),
+                    Store.AppendAsync("delete_4", 1, "1"),
+                    Store.AppendAsync("delete_4", 2, "2"),
+                    Store.AppendAsync("delete_4", 3, "3"),
+                    Store.AppendAsync("delete_5", 1, "1"),
+                    Store.AppendAsync("delete_5", 2, "2"),
+                    Store.AppendAsync("delete_5", 3, "3")
                 ).ConfigureAwait(false).GetAwaiter().GetResult();
             }
             catch (Exception e)
@@ -409,9 +409,9 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async void deleted_chunks_should_be_hidden_from_scan()
         {
-            await Store.PersistAsync("a", 1, "first").ConfigureAwait(false);
-            await Store.PersistAsync("a", 2, "second").ConfigureAwait(false);
-            await Store.PersistAsync("a", 3, "third").ConfigureAwait(false);
+            await Store.AppendAsync("a", 1, "first").ConfigureAwait(false);
+            await Store.AppendAsync("a", 2, "second").ConfigureAwait(false);
+            await Store.AppendAsync("a", 3, "third").ConfigureAwait(false);
 
             await Store.DeleteAsync("a", 2, 2).ConfigureAwait(false);
 
@@ -426,8 +426,8 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async void deleted_chunks_should_be_hidden_from_peek()
         {
-            await Store.PersistAsync("a", 1, "first").ConfigureAwait(false);
-            await Store.PersistAsync("a", 2, "second").ConfigureAwait(false);
+            await Store.AppendAsync("a", 1, "first").ConfigureAwait(false);
+            await Store.AppendAsync("a", 2, "second").ConfigureAwait(false);
 
             await Store.DeleteAsync("a", 2, 2).ConfigureAwait(false);
 
@@ -443,9 +443,9 @@ namespace NStore.Persistence.Tests
         //		[InlineData(3, 3)] @@TODO enable tombstone!
         public async void poller_should_skip_missing_chunks(long missing, long expected)
         {
-            await Store.PersistAsync("a", 1, "1").ConfigureAwait(false);
-            await Store.PersistAsync("a", 2, "2").ConfigureAwait(false);
-            await Store.PersistAsync("a", 3, "3").ConfigureAwait(false);
+            await Store.AppendAsync("a", 1, "1").ConfigureAwait(false);
+            await Store.AppendAsync("a", 2, "2").ConfigureAwait(false);
+            await Store.AppendAsync("a", 3, "3").ConfigureAwait(false);
 
             await Store.DeleteAsync("a", missing, missing).ConfigureAwait(false);
 
@@ -479,7 +479,7 @@ namespace NStore.Persistence.Tests
                 {
                     try
                     {
-                        await Store.PersistAsync("collision_wanted", 1 + i % 5, "payload").ConfigureAwait(false);
+                        await Store.AppendAsync("collision_wanted", 1 + i % 5, "payload").ConfigureAwait(false);
                     }
                     catch (DuplicateStreamIndexException)
                     {
@@ -526,7 +526,7 @@ namespace NStore.Persistence.Tests
 
             var producer = new ActionBlock<int>(async i =>
             {
-                await Store.PersistAsync("p", -1, "demo").ConfigureAwait(false);
+                await Store.AppendAsync("p", -1, "demo").ConfigureAwait(false);
             }, new ExecutionDataflowBlockOptions()
             {
                 MaxDegreeOfParallelism = parallelism

@@ -8,17 +8,17 @@ namespace NStore.Streams
     {
         public static Task Read(this IReadOnlyStream stream, ISubscription subscription)
         {
-            return stream.Read(subscription, 0, int.MaxValue, CancellationToken.None);
+            return stream.ReadAsync(subscription, 0, int.MaxValue, CancellationToken.None);
         }
 
         public static Task Read(this IReadOnlyStream stream, ISubscription subscription, int fromIndexInclusive)
         {
-            return stream.Read(subscription, fromIndexInclusive, int.MaxValue, CancellationToken.None);
+            return stream.ReadAsync(subscription, fromIndexInclusive, int.MaxValue, CancellationToken.None);
         }
 
         public static Task Read(this IReadOnlyStream stream, ISubscription subscription, int fromIndexInclusive, int toIndexInclusive)
         {
-            return stream.Read(subscription, fromIndexInclusive, toIndexInclusive, CancellationToken.None);
+            return stream.ReadAsync(subscription, fromIndexInclusive, toIndexInclusive, CancellationToken.None);
         }
     }
 }

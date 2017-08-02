@@ -7,7 +7,7 @@ using Xunit;
 
 namespace NStore.Tests.Persistence
 {
-    public class StreamStoreTests
+    public class StreamFactoryTests
     {
         private readonly IStreamsFactory _store = new StreamsFactory(new InMemoryPersistence());
 

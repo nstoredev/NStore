@@ -103,8 +103,8 @@ namespace NStore.Tests.AggregatesTests
     {
         public with_populated_stream()
         {
-            Persistence.PersistAsync("Ticket_1", 1, new Changeset(1, new TicketSold())).Wait();
-            Persistence.PersistAsync("Ticket_1", 2, new Changeset(2, new TicketRefunded())).Wait();
+            Persistence.AppendAsync("Ticket_1", 1, new Changeset(1, new TicketSold())).Wait();
+            Persistence.AppendAsync("Ticket_1", 2, new Changeset(2, new TicketRefunded())).Wait();
         }
 
         [Fact]
@@ -191,8 +191,8 @@ namespace NStore.Tests.AggregatesTests
         {
             Snapshots = new DefaultSnapshotStore(new InMemoryPersistence());
 
-            Persistence.PersistAsync("Ticket_1", 1, new Changeset(1, new TicketSold())).Wait();
-            Persistence.PersistAsync("Ticket_1", 2, new Changeset(2, new TicketRefunded())).Wait();
+            Persistence.AppendAsync("Ticket_1", 1, new Changeset(1, new TicketSold())).Wait();
+            Persistence.AppendAsync("Ticket_1", 2, new Changeset(2, new TicketRefunded())).Wait();
         }
 
         [Fact]

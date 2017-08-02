@@ -126,7 +126,7 @@ namespace NStore.Sample
 
             async Task Write(int c)
             {
-                await stream.Append(c, c.ToString()).ConfigureAwait(false);
+                await stream.AppendAsync(c, c.ToString()).ConfigureAwait(false);
                 Interlocked.Increment(ref written);
                 // ReSharper disable once AccessToDisposedClosure
                 progress.Report((double)written / writes);

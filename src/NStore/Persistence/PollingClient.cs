@@ -16,7 +16,6 @@ namespace NStore.Persistence
             public long Processed { get; private set; }
             public int RetriesOnHole { get; private set; }
             private bool _stopOnHole = true;
-
             public Reader(ISubscription subscription, ILogger logger)
             {
                 _subscription = subscription;
@@ -59,7 +58,11 @@ namespace NStore.Persistence
             {
                 _logger.LogDebug("Completed({Position})", position);
 
-                Position = position;
+                if (Processed > 0)
+                {
+                    Position = position;
+                }
+
                 return Task.CompletedTask;
             }
 

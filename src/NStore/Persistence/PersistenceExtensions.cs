@@ -95,17 +95,26 @@ namespace NStore.Persistence
             return store.ReadAllAsync(sequenceStart, subscription, limit, CancellationToken.None);
         }
 
-        public static Task PersistAsync(
+        public static Task AppendAsync(
+            this IPersistence store,
+            string partitionId,
+            object payload
+        )
+        {
+            return store.AppendAsync(partitionId, -1, payload, null, CancellationToken.None);
+        }
+
+        public static Task AppendAsync(
             this IPersistence store,
             string partitionId,
             long index,
             object payload
         )
         {
-            return store.PersistAsync(partitionId, index, payload, null, CancellationToken.None);
+            return store.AppendAsync(partitionId, index, payload, null, CancellationToken.None);
         }
 
-        public static Task PersistAsync(
+        public static Task AppendAsync(
             this IPersistence store,
             string partitionId,
             long index,
@@ -113,7 +122,7 @@ namespace NStore.Persistence
             string operationId
         )
         {
-            return store.PersistAsync(partitionId, index, payload, operationId, CancellationToken.None);
+            return store.AppendAsync(partitionId, index, payload, operationId, CancellationToken.None);
         }
 
         public static Task DeleteAsync(

@@ -19,7 +19,7 @@ namespace NStore.Persistence.Tests
         public async void create_stream()
         {
             var stream = _streams.Open("stream_1");
-            await stream.Append("payload");
+            await stream.AppendAsync("payload");
 
             var acc = new Recorder();
             await Store.ReadPartitionForward("stream_1", 0, acc);
@@ -31,7 +31,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async void read_stream()
         {
-            await Store.PersistAsync("stream_2", 1, "payload");
+            await Store.AppendAsync("stream_2", 1, "payload");
 
             var stream = _streams.Open("stream_2");
             var acc = new Recorder();
@@ -44,9 +44,9 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async void delete_stream()
         {
-            await Store.PersistAsync("stream_3", 1, "payload");
+            await Store.AppendAsync("stream_3", 1, "payload");
             var stream = _streams.Open("stream_3");
-            await stream.Delete();
+            await stream.DeleteAsync();
 
             var acc = new Recorder();
             await stream.Read(acc);
@@ -77,7 +77,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async void read_stream()
         {
-            await Store.PersistAsync("stream_2", 1, "payload").ConfigureAwait(false);
+            await Store.AppendAsync("stream_2", 1, "payload").ConfigureAwait(false);
 
             var stream = await Open("stream_2").ConfigureAwait(false);
             var acc = new Recorder();
@@ -92,7 +92,7 @@ namespace NStore.Persistence.Tests
         {
             var stream = await Open("stream_1").ConfigureAwait(false);
 
-            await stream.Append("payload").ConfigureAwait(false);
+            await stream.AppendAsync("payload").ConfigureAwait(false);
             var tape = new Recorder();
             await Store.ReadPartitionForward("stream_1", 0, tape).ConfigureAwait(false);
 
@@ -105,8 +105,8 @@ namespace NStore.Persistence.Tests
         public async void appending_two_chunks_sequentially()
         {
             var stream = await Open("stream_1").ConfigureAwait(false);
-            await stream.Append("a").ConfigureAwait(false);
-            await stream.Append("b").ConfigureAwait(false);
+            await stream.AppendAsync("a").ConfigureAwait(false);
+            await stream.AppendAsync("b").ConfigureAwait(false);
 
             var tape = new Recorder();
             await Store.ReadPartitionForward("stream_1", 0, tape).ConfigureAwait(false);
@@ -123,10 +123,10 @@ namespace NStore.Persistence.Tests
         {
             var streama = await Open("stream_1").ConfigureAwait(false);
             var streamb = await Open("stream_1").ConfigureAwait(false);
-            await streama.Append("a").ConfigureAwait(false);
+            await streama.AppendAsync("a").ConfigureAwait(false);
 
             var ex = await Assert.ThrowsAnyAsync<DuplicateStreamIndexException>(() =>
-                streamb.Append("b")
+                streamb.AppendAsync("b")
             ).ConfigureAwait(false);
 
             Assert.Equal(1, ex.Index);
@@ -137,7 +137,7 @@ namespace NStore.Persistence.Tests
         {
             var stream = await Open("stream_1", false).ConfigureAwait(false);
             var ex = await Assert.ThrowsAnyAsync<AppendFailedException>(() =>
-                stream.Append("b")
+                stream.AppendAsync("b")
             ).ConfigureAwait(false);
         }
 
@@ -147,7 +147,7 @@ namespace NStore.Persistence.Tests
             var stream = await Open("stream_1", false).ConfigureAwait(false);
             await stream.Read(NullSubscription.Instance, 0, 10).ConfigureAwait(false);
             var ex = await Assert.ThrowsAnyAsync<AppendFailedException>(() =>
-                stream.Append("b")
+                stream.AppendAsync("b")
             ).ConfigureAwait(false);
         }
     }
@@ -164,7 +164,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async void read_stream()
         {
-            await Store.PersistAsync("stream_2", 1, "payload").ConfigureAwait(false);
+            await Store.AppendAsync("stream_2", 1, "payload").ConfigureAwait(false);
 
             var stream = _streams.OpenReadOnly("stream_2");
             var acc = new Recorder();
@@ -179,7 +179,7 @@ namespace NStore.Persistence.Tests
         {
             var stream = _streams.OpenReadOnly("stream_2");
             var ex = await Assert.ThrowsAsync<StreamReadOnlyException>(() =>
-                stream.Delete()
+                stream.DeleteAsync()
             ).ConfigureAwait(false);
         }
 
@@ -188,7 +188,7 @@ namespace NStore.Persistence.Tests
         {
             var stream = _streams.OpenReadOnly("stream_2");
             var ex = await Assert.ThrowsAsync<StreamReadOnlyException>(() =>
-                stream.Append("a")
+                stream.AppendAsync("a")
             ).ConfigureAwait(false);
         }
     }

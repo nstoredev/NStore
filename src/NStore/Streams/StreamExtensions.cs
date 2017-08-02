@@ -1,23 +1,29 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
+using NStore.Persistence;
 
 namespace NStore.Streams
 {
     public static class StreamExtensions
     {
-        public static Task Append(this IStream stream, object payload)
+        public static Task ReadAsync(this IReadOnlyStream stream, StreamDataProcessor fn)
         {
-            return stream.Append(payload, null, CancellationToken.None);
+            return stream.ReadAsync(new LambdaSubscription(fn), 0, int.MaxValue, CancellationToken.None);
         }
 
-        public static Task Append(this IStream stream, object payload, string operationId)
+        public static Task AppendAsync(this IStream stream, object payload)
         {
-            return stream.Append(payload, operationId, CancellationToken.None);
+            return stream.AppendAsync(payload, null, CancellationToken.None);
         }
 
-        public static Task Delete(this IStream stream)
+        public static Task AppendAsync(this IStream stream, object payload, string operationId)
         {
-            return stream.Delete(CancellationToken.None);
+            return stream.AppendAsync(payload, operationId, CancellationToken.None);
+        }
+
+        public static Task DeleteAsync(this IStream stream)
+        {
+            return stream.DeleteAsync(CancellationToken.None);
         }
     }
 }

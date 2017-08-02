@@ -85,7 +85,7 @@ Task("Build")
 });
 
 Task("TestMsSql")
-    .IsDependentOn("RunLibraryTests")
+    .IsDependentOn("TestLibrary")
     .Does(()=>
 {
     var dropdb = @"USE master
@@ -117,7 +117,7 @@ Task("TestMsSql")
 });
 
 Task("TestMongoDb")
-    .IsDependentOn("RunLibraryTests")
+    .IsDependentOn("TestLibrary")
     .Does(() =>
 {
     var env = new Dictionary<string, string>{
@@ -128,7 +128,7 @@ Task("TestMongoDb")
 });
 
 Task("TestInMemory")
-    .IsDependentOn("RunLibraryTests")
+    .IsDependentOn("TestLibrary")
     .Does(() =>
 {
     var env = new Dictionary<string, string>{
@@ -140,7 +140,7 @@ Task("TestInMemory")
 
 
 Task("TestSample")
-    .IsDependentOn("RunLibraryTests")
+    .IsDependentOn("TestLibrary")
     .Does(() =>
 {
     var env = new Dictionary<string, string>{
@@ -150,8 +150,9 @@ Task("TestSample")
     RunTest("NStore.Sample.Tests",env);
 });
 
-Task("RunLibraryTests")
-    .IsDependentOn("Build")
+Task("TestLibrary")
+    .IsDependentOn("restore-packages")
+//    .IsDependentOn("Build")
     .Does(() =>
 {
     var env = new Dictionary<string, string>{

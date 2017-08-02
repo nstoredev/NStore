@@ -75,10 +75,10 @@ namespace NStore.Persistence
                 )).ConfigureAwait(false);
         }
 
-        public Task<IChunk> ReadLast(string partitionId, int upToIndexInclusive, CancellationToken cancellationToken)
+        public Task<IChunk> ReadLast(string partitionId, int toUpperIndexInclusive, CancellationToken cancellationToken)
         {
             return PeekCounter.CaptureAsync(() =>
-                _store.ReadLast(partitionId, upToIndexInclusive, cancellationToken)
+                _store.ReadLast(partitionId, toUpperIndexInclusive, cancellationToken)
             );
         }
 
@@ -94,10 +94,10 @@ namespace NStore.Persistence
             ).ConfigureAwait(false);
         }
 
-        public Task<IChunk> PersistAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
+        public Task<IChunk> AppendAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
         {
             return PersistCounter.CaptureAsync(() =>
-                _store.PersistAsync(partitionId, index, payload, operationId, cancellationToken)
+                _store.AppendAsync(partitionId, index, payload, operationId, cancellationToken)
             );
         }
 

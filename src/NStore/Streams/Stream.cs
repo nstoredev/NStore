@@ -17,7 +17,7 @@ namespace NStore.Streams
             this.Persistence = persistence;
         }
 
-        public Task Read(ISubscription subscription, int fromIndexInclusive, int toIndexInclusive, CancellationToken cancellationToken)
+        public Task ReadAsync(ISubscription subscription, int fromIndexInclusive, int toIndexInclusive, CancellationToken cancellationToken)
         {
             return Persistence.ReadPartitionForward(
                 Id,
@@ -29,12 +29,12 @@ namespace NStore.Streams
             );
         }
 
-        public virtual Task Append(object payload, string operationId, CancellationToken cancellation)
+        public virtual Task AppendAsync(object payload, string operationId, CancellationToken cancellation)
         {
-            return Persistence.PersistAsync(this.Id, -1, payload, operationId, cancellation);
+            return Persistence.AppendAsync(this.Id, -1, payload, operationId, cancellation);
         }
 
-        public virtual Task Delete(CancellationToken cancellation)
+        public virtual Task DeleteAsync(CancellationToken cancellation)
         {
             return Persistence.DeleteAsync(this.Id, 0, long.MaxValue, cancellation);
         }

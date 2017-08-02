@@ -20,7 +20,7 @@ namespace NStore.Streams
             this.Persistence = persistence;
         }
 
-        public Task Read(
+        public Task ReadAsync(
             ISubscription subscription,
             int fromIndexInclusive,
             int toIndexInclusive,
@@ -47,7 +47,7 @@ namespace NStore.Streams
             );
         }
 
-        public async Task Append(object payload, string operationId, CancellationToken cancellation)
+        public async Task AppendAsync(object payload, string operationId, CancellationToken cancellation)
         {
             if (Version == -1)
                 throw new AppendFailedException(this.Id,
@@ -56,11 +56,11 @@ Append can be called only after a Read operation.
 If you don't need to read use {typeof(Stream).Name} instead of {GetType().Name}.")
                     ;
             long desiredVersion = this.Version + 1;
-            await Persistence.PersistAsync(this.Id, desiredVersion, payload, operationId, cancellation).ConfigureAwait(false);
+            await Persistence.AppendAsync(this.Id, desiredVersion, payload, operationId, cancellation).ConfigureAwait(false);
             this.Version = desiredVersion;
         }
 
-        public Task Delete(CancellationToken cancellation)
+        public Task DeleteAsync(CancellationToken cancellation)
         {
             return Persistence.DeleteAsync(this.Id, 0, long.MaxValue, cancellation);
         }

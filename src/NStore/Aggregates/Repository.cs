@@ -71,7 +71,7 @@ namespace NStore.Aggregates
             // we use aggregate.Version because snapshot could be rejected
             // Starting point is inclusive, so almost one changeset should be loaded
             // aggregate will ignore because ApplyChanges is idempotent
-            await stream.Read(consumer, aggregate.Version, version, cancellationToken)
+            await stream.ReadAsync(consumer, aggregate.Version, version, cancellationToken)
                 .ConfigureAwait(false);
 
             // no data from stream, we cannot validate the aggregate
@@ -123,7 +123,7 @@ namespace NStore.Aggregates
 
             headers?.Invoke(changeSet);
 
-            await stream.Append(changeSet, operationId, cancellationToken).ConfigureAwait(false);
+            await stream.AppendAsync(changeSet, operationId, cancellationToken).ConfigureAwait(false);
             persister.ChangesPersisted(changeSet);
 
             //we need to await, it's responsibility of the snapshot provider to clone & store state (sync or async)
