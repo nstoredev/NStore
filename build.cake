@@ -4,6 +4,7 @@
 // ARGUMENTS
 //////////////////////////////////////////////////////////////////////
 var target = Argument("target", "Default");
+var testOutput = Argument("testoutput", "");
 var configuration = Argument("configuration", "Release");
 
 //////////////////////////////////////////////////////////////////////
@@ -39,10 +40,12 @@ private string RemoveQuotes(string cstring)
 private void RunTest(string testProject, IDictionary<string,string> env = null)
 {
     var projectDir = "./src/"+ testProject + "/";
+    var output = testOutput == "" ? "" :  "-xml " + testOutput + "/" + testProject + ".xml";
+
     var settings = new ProcessSettings
     {
 //        Arguments = "xunit -parallel none",
-        Arguments = "xunit",
+        Arguments = "xunit " + output,
         WorkingDirectory = projectDir,
         EnvironmentVariables = env
     };
@@ -72,17 +75,6 @@ Task("restore-packages")
    // NuGetRestore(solution);
 });
 
-Task("Build")
-    .IsDependentOn("restore-packages")
-    .Does(() =>
-{
-    var settings = new DotNetCoreBuildSettings
-	{
-		Configuration = configuration
-	};
-
-	DotNetCoreBuild(solution, settings);
-});
 
 Task("TestMsSql")
     .IsDependentOn("TestLibrary")
@@ -162,8 +154,7 @@ Task("TestLibrary")
     RunTest("NStore.Tests",env);
 });
 
-
-Task("RunTests")
+Task("TestAll")
     .IsDependentOn("TestInMemory")
     .IsDependentOn("TestMongoDb")
     .IsDependentOn("TestMsSql")
@@ -172,13 +163,25 @@ Task("RunTests")
 {
 });
 
+Task("ReleaseBuild")
+    .IsDependentOn("TestAll")
+    .Does(() =>
+{
+    var settings = new DotNetCoreBuildSettings
+	{
+		Configuration = configuration
+	};
+
+	DotNetCoreBuild(solution, settings);
+});
+
 
 //////////////////////////////////////////////////////////////////////
 // TASK TARGETS
 //////////////////////////////////////////////////////////////////////
 
 Task("Default")
-    .IsDependentOn("RunTests");
+    .IsDependentOn("TestAll");
 
 //////////////////////////////////////////////////////////////////////
 // EXECUTION

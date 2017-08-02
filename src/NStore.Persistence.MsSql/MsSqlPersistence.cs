@@ -162,9 +162,11 @@ namespace NStore.Persistence.MsSql
             {
                 while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
                 {
+                    position = reader.GetInt64(0);
+
                     var chunk = new MsSqlChunk
                     {
-                        Position = position = reader.GetInt64(0),
+                        Position = position ,
                         PartitionId = reader.GetString(1),
                         Index = reader.GetInt64(2),
                         Payload = _options.Serializer.Deserialize(reader.GetString(3)),
@@ -293,7 +295,7 @@ namespace NStore.Persistence.MsSql
                 {
                     command.Parameters.AddWithValue("@fromPositionInclusive", fromSequenceIdInclusive);
 
-                    await PushToSubscriber(command, fromSequenceIdInclusive, subscription, cancellationToken);
+                    await PushToSubscriber(command, fromSequenceIdInclusive, subscription, cancellationToken).ConfigureAwait(false);
                 }
             }
         }
@@ -308,7 +310,6 @@ namespace NStore.Persistence.MsSql
             if (index == -1)
                 index = Interlocked.Increment(ref USE_SEQUENCE_INSTEAD);
 
-            //@@TODO remove and pass only Position back to caller
             var chunk = new MsSqlChunk()
             {
                 PartitionId = partitionId,
