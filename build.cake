@@ -4,7 +4,6 @@
 // ARGUMENTS
 //////////////////////////////////////////////////////////////////////
 var target = Argument("target", "Default");
-var testOutput = Argument("testoutput", "");
 var configuration = Argument("configuration", "Release");
 
 //////////////////////////////////////////////////////////////////////
@@ -12,15 +11,17 @@ var configuration = Argument("configuration", "Release");
 //////////////////////////////////////////////////////////////////////
 var msSqlServerConnectionString = RemoveQuotes(GetVariable("NSTORE_MSSQL_INSTANCE")) ?? "Server=localhost,1433;User Id=sa;Password=NStoreD0ck3r";
 var msSqlDatabaseConnectionString  = msSqlServerConnectionString +";Database=NStore";
+var testOutput = GetVariable("testoutput");
 
 private string GetVariable(string key)
 {
     var variable = Argument<string>(key, "___");
-    Information("Variable "+key+" is " + variable);
-    if(variable != "___")
-        return variable;
-    
-    return EnvironmentVariable(key);
+    if(variable == "___")
+    {
+        variable = EnvironmentVariable(key);
+    }
+    Information("Variable "+key+" is <" + (variable == null ? "null" : variable) + ">");
+    return variable;
 }
 
 private string RemoveQuotes(string cstring)
@@ -40,7 +41,8 @@ private string RemoveQuotes(string cstring)
 private void RunTest(string testProject, IDictionary<string,string> env = null)
 {
     var projectDir = "./src/"+ testProject + "/";
-    var output = testOutput == "" ? "" :  "-xml " + testOutput + "/" + testProject + ".xml";
+    var to = GetVariable("testoutput");
+    var output = to == null ? "" :  "-xml " + to + "/" + testProject + ".xml";
 
     var settings = new ProcessSettings
     {
@@ -66,7 +68,7 @@ Task("Clean")
 {
     CleanDirectory(artifactsDir);
 
-    if( testOutput != "" )
+    if( testOutput != null )
     {
         CleanDirectory(testOutput);
         EnsureDirectoryExists(testOutput);
