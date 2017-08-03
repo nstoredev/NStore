@@ -70,7 +70,7 @@ namespace NStore.Sample
 
             _appProjections = new AppProjections(network, quiet);
 
-            _poller = new PollingClient(_storeProfile, _appProjections, this._loggerFactory);
+            _poller = new PollingClient(_storeProfile, 0, _appProjections, this._loggerFactory);
 
             if (useSnapshots)
             {

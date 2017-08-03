@@ -450,7 +450,7 @@ namespace NStore.Persistence.Tests
             await Store.DeleteAsync("a", missing, missing).ConfigureAwait(false);
 
             var recored = new AllPartitionsRecorder();
-            var poller = new PollingClient(Store, recored, this.LoggerFactory)
+            var poller = new PollingClient(Store, 0, recored, this.LoggerFactory)
             {
                 HoleDetectionTimeout = 100
             };
@@ -498,6 +498,29 @@ namespace NStore.Persistence.Tests
         }
     }
 
+    public class polling_client_tests : BasePersistenceTest
+    {
+        [Theory]
+        [InlineData(0, 3)]
+        [InlineData(1, 2)]
+        [InlineData(2, 1)]
+        [InlineData(3, 0)]
+        [InlineData(4, 0)]
+        public async Task should_read_from_position(long start, long expected)
+        {
+            await Store.AppendAsync("a", 1, "1").ConfigureAwait(false);
+            await Store.AppendAsync("a", 2, "2").ConfigureAwait(false);
+            await Store.AppendAsync("a", 3, "3").ConfigureAwait(false);
+
+            var recorder = new AllPartitionsRecorder();
+            var client = new PollingClient(Store, start, recorder, LoggerFactory);
+
+            await client.Poll(5000).ConfigureAwait(false);
+
+            Assert.Equal(expected, recorder.Length);
+        }
+    }
+
     public class concurrency_test : BasePersistenceTest
     {
         [Theory]
@@ -510,7 +533,7 @@ namespace NStore.Persistence.Tests
             _logger.LogDebug("Starting with {Parallelism} workers and Autopolling {Autopolling}", parallelism, autopolling);
 
             var sequenceChecker = new StrictSequenceChecker($"Workers {parallelism} autopolling {autopolling}");
-            var poller = new PollingClient(Store, sequenceChecker, this.LoggerFactory)
+            var poller = new PollingClient(Store, 0, sequenceChecker, this.LoggerFactory)
             {
                 PollingIntervalMilliseconds = 0,
                 HoleDetectionTimeout = 1000

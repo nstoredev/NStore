@@ -16,8 +16,9 @@ namespace NStore.Persistence
             public long Processed { get; private set; }
             public int RetriesOnHole { get; private set; }
             private bool _stopOnHole = true;
-            public Reader(ISubscription subscription, ILogger logger)
+            public Reader(long lastPosition, ISubscription subscription, ILogger logger)
             {
+                Position = lastPosition;
                 _subscription = subscription;
                 _logger = logger;
             }
@@ -87,11 +88,11 @@ namespace NStore.Persistence
         private readonly Reader _reader;
         private readonly ILogger _logger;
 
-        public PollingClient(IPersistence store, ISubscription subscription, ILoggerFactory loggerFactory)
+        public PollingClient(IPersistence store, long lastPosition, ISubscription subscription, ILoggerFactory loggerFactory)
         {
             this._logger = loggerFactory.CreateLogger(GetType());
 
-            _reader = new Reader(subscription, _logger);
+            _reader = new Reader(lastPosition, subscription, _logger);
             _store = store;
             PollingIntervalMilliseconds = 200;
             HoleDetectionTimeout = 2000;
@@ -116,6 +117,12 @@ namespace NStore.Persistence
                     await Task.Delay(PollingIntervalMilliseconds, token).ConfigureAwait(false);
                 }
             }, token).ConfigureAwait(false);
+        }
+
+        public Task Poll(int timeoutInMilliseconds)
+        {
+            var timeout = new CancellationTokenSource(timeoutInMilliseconds);
+            return Poll(timeout.Token);
         }
 
         public Task Poll()
