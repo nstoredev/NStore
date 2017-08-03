@@ -52,7 +52,7 @@ namespace NStore.Persistence
                 Position = position - 1;
                 Processed = 0;
                 _stopOnHole = RetriesOnHole < 5;
-                return Task.CompletedTask;
+                return _subscription.OnStart(position);
             }
 
             public Task Completed(long position)
@@ -64,18 +64,18 @@ namespace NStore.Persistence
                     Position = position;
                 }
 
-                return Task.CompletedTask;
+                return _subscription.Completed(position);
             }
 
             public Task Stopped(long position)
             {
                 _logger.LogDebug("Stopped({Position})", position);
-                return Task.CompletedTask;
+                return _subscription.Stopped(position);
             }
 
             public Task OnError(long position, Exception ex)
             {
-                return Task.CompletedTask;
+                return _subscription.OnError(position, ex);
             }
         }
 

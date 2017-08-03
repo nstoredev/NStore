@@ -10,6 +10,6 @@ namespace NStore.Persistence.Mongo
         public string PartitionId { get; set; }
         public long Index { get; set; }
         public object Payload { get; set; }
-        public string OpId { get; set; }
+        public string OperationId { get; set; }
     }
 }

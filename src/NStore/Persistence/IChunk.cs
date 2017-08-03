@@ -6,5 +6,6 @@
         string PartitionId { get; }
         long Index { get; }
         object Payload { get; }
+        string OperationId { get; }
     }
 }

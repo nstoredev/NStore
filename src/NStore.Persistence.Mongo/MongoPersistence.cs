@@ -192,7 +192,7 @@ namespace NStore.Persistence.Mongo
                 PartitionId = partitionId,
                 Index = index < 0 ? id : index,
                 Payload = _serializer.Serialize(partitionId, payload),
-                OpId = operationId ?? Guid.NewGuid().ToString()
+                OperationId = operationId ?? Guid.NewGuid().ToString()
             };
 
             await InternalPersistAsync(chunk, cancellationToken).ConfigureAwait(false);
@@ -250,7 +250,7 @@ namespace NStore.Persistence.Mongo
                     PartitionId = "::empty",
                     Index = chunk.Position,
                     Payload = null,
-                    OpId = "_" + chunk.Position
+                    OperationId = "_" + chunk.Position
                 };
             }
             await InternalPersistAsync(empty, cancellationToken).ConfigureAwait(false);
@@ -324,7 +324,7 @@ namespace NStore.Persistence.Mongo
             await _chunks.Indexes.CreateOneAsync(
                     Builders<Chunk>.IndexKeys
                         .Ascending(x => x.PartitionId)
-                        .Ascending(x => x.OpId),
+                        .Ascending(x => x.OperationId),
                     new CreateIndexOptions()
                     {
                         Unique = true,

@@ -115,7 +115,7 @@ namespace NStore.InMemory
             {
                 Position = source.Position,
                 Index = source.Index,
-                OpId = source.OpId,
+                OperationId = source.OperationId,
                 PartitionId = source.PartitionId,
                 Payload = _cloneFunc(source.Payload)
             };
@@ -191,7 +191,7 @@ namespace NStore.InMemory
             {
                 Position = id,
                 Index = index >= 0 ? index : id,
-                OpId = operationId ?? Guid.NewGuid().ToString(),
+                OperationId = operationId ?? Guid.NewGuid().ToString(),
                 PartitionId = partitionId,
                 Payload = _cloneFunc(payload)
             };
@@ -212,7 +212,7 @@ namespace NStore.InMemory
                 // keep same id to avoid holes in the stream
                 chunk.PartitionId = "::empty";
                 chunk.Index = chunk.Position;
-                chunk.OpId = chunk.Position.ToString();
+                chunk.OperationId = chunk.Position.ToString();
                 chunk.Payload = null;
                 _emptyInMemoryPartition.Write(chunk);
                 SetChunk(chunk);

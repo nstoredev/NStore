@@ -8,7 +8,7 @@ namespace NStore.InMemory
         public string PartitionId { get; set; }
         public long Index { get; set; }
         public object Payload { get; set; }
-        public string OpId { get; set; }
+        public string OperationId { get; set; }
         public bool Deleted { get; set; }
     }
 }

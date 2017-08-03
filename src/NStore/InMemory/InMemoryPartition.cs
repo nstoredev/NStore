@@ -118,7 +118,7 @@ namespace NStore.InMemory
             _lockSlim.EnterWriteLock();
             try
             {
-                if (_operations.ContainsKey(chunk.OpId))
+                if (_operations.ContainsKey(chunk.OperationId))
                     return;
 
                 if (_sortedChunks.ContainsKey(chunk.Index))
@@ -126,7 +126,7 @@ namespace NStore.InMemory
                     throw new DuplicateStreamIndexException(this.Id, chunk.Index);
                 }
 
-                _operations.TryAdd(chunk.OpId,1);
+                _operations.TryAdd(chunk.OperationId,1);
                 _sortedChunks.Add(chunk.Index, chunk);
             }
             finally
@@ -145,7 +145,7 @@ namespace NStore.InMemory
             foreach (var chunk in toDelete)
             {
                 this._sortedChunks.Remove(chunk.Index);
-                this._operations.TryRemove(chunk.OpId, out byte b);
+                this._operations.TryRemove(chunk.OperationId, out byte b);
             }
             _lockSlim.ExitWriteLock();
 
