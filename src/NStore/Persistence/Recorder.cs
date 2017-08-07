@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,7 +22,7 @@ namespace NStore.Persistence
 
         private readonly IList<Element> _data = new List<Element>();
         private readonly IDictionary<long, object> _map = new Dictionary<long, object>();
-        public IEnumerable<object> Data => _data;
+        public IEnumerable<object> Data => _data.Select(x=>x?.Payload);
         public int Length => _data.Count;
         public bool ReadCompleted { get; private set; }
 
