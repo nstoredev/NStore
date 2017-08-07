@@ -68,6 +68,14 @@ namespace NStore.Persistence
             _logger.LogDebug("end ReadAllAsync(from:{from}, limit:{limit})", fromSequenceIdInclusive, limit);
         }
 
+        public async Task<long> ReadLastPositionAsync(CancellationToken cancellationToken)
+        {
+            _logger.LogDebug("Start ReadLastPosition()");
+            var result = await _persistence.ReadLastPositionAsync(cancellationToken);
+            _logger.LogDebug("end ReadLastPosition()");
+            return result;
+        }
+
         public async Task<IChunk> AppendAsync(
             string partitionId,
             long index,

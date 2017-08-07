@@ -183,6 +183,23 @@ namespace NStore.Persistence.Mongo
             await PushToSubscriber(fromSequenceIdInclusive, subscription, options, filter, cancellationToken).ConfigureAwait(false);
         }
 
+        public async Task<long> ReadLastPositionAsync(CancellationToken cancellationToken)
+        {
+            var filter = Builders<Chunk>.Filter.Empty;
+            var options = new FindOptions<Chunk>()
+            {
+                Sort = Builders<Chunk>.Sort.Descending(x => x.Position),
+                Limit = 1
+            };
+
+            //TODO: project on position
+            using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
+            {
+                var lastPosition = await cursor.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return lastPosition?.Position ?? 0;
+            }
+        }
+
         public async Task<IChunk> AppendAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
         {
             long id = await GetNextId(cancellationToken).ConfigureAwait(false);

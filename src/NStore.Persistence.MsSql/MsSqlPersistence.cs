@@ -300,6 +300,29 @@ namespace NStore.Persistence.MsSql
             }
         }
 
+        public async Task<long> ReadLastPositionAsync(CancellationToken cancellationToken)
+        {
+            var sql = $@"SELECT TOP 1
+                        [Position]
+                      FROM 
+                        [{_options.StreamsTableName}] 
+                      ORDER BY 
+                          [Position] DESC";
+
+            using (var connection = Connect())
+            {
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+                using (var command = new SqlCommand(sql, connection))
+                {
+                    var result = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+                    if (result == null)
+                        return 0;
+
+                    return (long) result;
+                }
+            }
+        }
+
         public async Task<IChunk> AppendAsync(
             string partitionId,
             long index,

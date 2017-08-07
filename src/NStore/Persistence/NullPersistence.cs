@@ -15,6 +15,11 @@ namespace NStore.Persistence
             return Task.CompletedTask;
         }
 
+        public Task<long> ReadLastPositionAsync(CancellationToken cancellationToken)
+        {
+            return Task.FromResult(0L);
+        }
+
         public Task<IChunk> AppendAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
         {
             return Task.FromResult<IChunk>(null);

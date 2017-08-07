@@ -230,6 +230,24 @@ namespace NStore.Persistence.Tests
         }
     }
 
+    public class read_last_position : BasePersistenceTest
+    {
+        [Fact]
+        public async Task on_empty_store_should_be_equal_zero()
+        {
+            var last = await Store.ReadLastPositionAsync(CancellationToken.None);
+            Assert.Equal(0L, last);
+        }
+
+        [Fact]
+        public async Task on_empty_store_should_be_equal_zero_()
+        {
+            await Store.AppendAsync("a", -1, "last");
+            var last = await Store.ReadLastPositionAsync(CancellationToken.None);
+            Assert.Equal(1L, last);
+        }
+    }
+
     public class ByteArrayPersistenceTest : BasePersistenceTest
     {
         [Fact]

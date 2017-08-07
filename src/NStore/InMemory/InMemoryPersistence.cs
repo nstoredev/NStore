@@ -184,6 +184,22 @@ namespace NStore.InMemory
             }
         }
 
+        public Task<long> ReadLastPositionAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                _lockSlim.EnterReadLock();
+                if (_lastWrittenPosition == -1)
+                    return Task.FromResult(0L);
+
+                return Task.FromResult(_chunks[_lastWrittenPosition].Position);
+            }
+            finally
+            {
+                _lockSlim.ExitReadLock();
+            }
+        }
+
         public async Task<IChunk> AppendAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
         {
             var id = Interlocked.Increment(ref _sequence);

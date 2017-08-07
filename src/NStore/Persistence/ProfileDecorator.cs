@@ -15,6 +15,7 @@ namespace NStore.Persistence
             PartitionReadBackwardCounter = new TaskProfilingInfo("Partition read backward", "chunks read");
             DeleteCounter = new TaskProfilingInfo("Delete");
             StoreScanCounter = new TaskProfilingInfo("Store Scan", "chunks read");
+            ReadLastCounter = new TaskProfilingInfo("Read last position", "lastposition");
             PeekCounter = new TaskProfilingInfo("Peek");
         }
 
@@ -22,6 +23,7 @@ namespace NStore.Persistence
         public TaskProfilingInfo PeekCounter { get; }
         public TaskProfilingInfo DeleteCounter { get; }
         public TaskProfilingInfo StoreScanCounter { get; }
+        public TaskProfilingInfo ReadLastCounter { get; }
         public TaskProfilingInfo PartitionReadForwardCounter { get; }
         public TaskProfilingInfo PartitionReadBackwardCounter { get; }
 
@@ -91,6 +93,13 @@ namespace NStore.Persistence
 
             await StoreScanCounter.CaptureAsync(() =>
                 _store.ReadAllAsync(fromSequenceIdInclusive, wrapper, limit, cancellationToken)
+            ).ConfigureAwait(false);
+        }
+
+        public async Task<long> ReadLastPositionAsync(CancellationToken cancellationToken)
+        {
+            return await ReadLastCounter.CaptureAsync(()=>
+                _store.ReadLastPositionAsync(cancellationToken)
             ).ConfigureAwait(false);
         }
 

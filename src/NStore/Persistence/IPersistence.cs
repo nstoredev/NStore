@@ -39,6 +39,8 @@ namespace NStore.Persistence
             CancellationToken cancellationToken
         );
 
+        Task<long> ReadLastPositionAsync(CancellationToken cancellationToken);
+
         /// <summary>
         /// Appends a chunk in the global store
         /// </summary>

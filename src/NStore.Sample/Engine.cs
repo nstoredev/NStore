@@ -320,6 +320,7 @@ namespace NStore.Sample
             this._reporter.Report($"  {_storeProfile.PeekCounter}");
             this._reporter.Report($"  {_storeProfile.DeleteCounter}");
             this._reporter.Report($"  {_storeProfile.StoreScanCounter}");
+            this._reporter.Report($"  {_storeProfile.ReadLastCounter}");
 
             if (_snapshotProfile != null)
             {
