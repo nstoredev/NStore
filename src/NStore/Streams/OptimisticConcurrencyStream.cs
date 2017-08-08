@@ -29,7 +29,7 @@ namespace NStore.Streams
                 Version = 0;
                 readConsumer = new SubscriptionWrapper(subscription)
                 {
-                    BeforeOnNext = data => Version = data.Index
+                    BeforeOnNext = (data) => { Version = data.Index; }
                 };
             }
 
