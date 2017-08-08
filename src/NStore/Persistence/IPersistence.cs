@@ -27,8 +27,8 @@ namespace NStore.Persistence
         );
 
         Task<IChunk> ReadLast(
-            string partitionId,
-            int toUpperIndexInclusive,
+            string partitionId, 
+            long toUpperIndexInclusive, 
             CancellationToken cancellationToken
         );
 

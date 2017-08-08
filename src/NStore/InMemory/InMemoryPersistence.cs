@@ -95,7 +95,7 @@ namespace NStore.InMemory
             );
         }
 
-        public Task<IChunk> ReadLast(string partitionId, int toUpperIndexInclusive, CancellationToken cancellationToken)
+        public Task<IChunk> ReadLast(string partitionId, long toUpperIndexInclusive, CancellationToken cancellationToken)
         {
             InMemoryPartition inMemoryPartition;
             if (!_partitions.TryGetValue(partitionId, out inMemoryPartition))

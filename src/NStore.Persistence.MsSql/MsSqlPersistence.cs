@@ -238,7 +238,7 @@ namespace NStore.Persistence.MsSql
             }
         }
 
-        public async Task<IChunk> ReadLast(string partitionId, int toUpperIndexInclusive, CancellationToken cancellationToken)
+        public async Task<IChunk> ReadLast(string partitionId, long toUpperIndexInclusive, CancellationToken cancellationToken)
         {
             using (var connection = Connect())
             {

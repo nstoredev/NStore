@@ -50,7 +50,7 @@ namespace NStore.Persistence
             return Task.CompletedTask;
         }
 
-        public Task<IChunk> ReadLast(string partitionId, int toUpperIndexInclusive, CancellationToken cancellationToken)
+        public Task<IChunk> ReadLast(string partitionId, long toUpperIndexInclusive, CancellationToken cancellationToken)
         {
             return Task.FromResult<IChunk>(null);
         }

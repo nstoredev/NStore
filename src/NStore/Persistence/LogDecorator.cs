@@ -46,10 +46,7 @@ namespace NStore.Persistence
             _logger.LogDebug("End ReadPartitionBackward(Partition {ParitionId}, from: {from})", partitionId, fromUpperIndexInclusive);
         }
 
-        public async Task<IChunk> ReadLast(
-            string partitionId,
-            int toUpperIndexInclusive,
-            CancellationToken cancellationToken)
+        public async Task<IChunk> ReadLast(string partitionId, long toUpperIndexInclusive, CancellationToken cancellationToken)
         {
             _logger.LogDebug("Start ReadLast(partitionId:{partitionId}, to:{to})", partitionId, toUpperIndexInclusive);
             var result = await _persistence.ReadLast(partitionId, toUpperIndexInclusive, cancellationToken).ConfigureAwait(false);

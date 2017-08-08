@@ -77,7 +77,7 @@ namespace NStore.Persistence
                 )).ConfigureAwait(false);
         }
 
-        public Task<IChunk> ReadLast(string partitionId, int toUpperIndexInclusive, CancellationToken cancellationToken)
+        public Task<IChunk> ReadLast(string partitionId, long toUpperIndexInclusive, CancellationToken cancellationToken)
         {
             return PeekCounter.CaptureAsync(() =>
                 _store.ReadLast(partitionId, toUpperIndexInclusive, cancellationToken)

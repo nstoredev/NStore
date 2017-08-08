@@ -150,8 +150,11 @@ namespace NStore.Persistence.Mongo
             await PushToSubscriber(fromUpperIndexInclusive, subscription, options, filter, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<IChunk> ReadLast(string partitionId, int toUpperIndexInclusive, CancellationToken cancellationToken)
-        {
+        public async Task<IChunk> ReadLast(
+            string partitionId, 
+            long toUpperIndexInclusive, 
+            CancellationToken cancellationToken
+        ){
             var filter = Builders<Chunk>.Filter.And(
                 Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId),
                 Builders<Chunk>.Filter.Lte(x => x.Index, toUpperIndexInclusive)

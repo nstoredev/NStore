@@ -67,7 +67,7 @@ namespace NStore.InMemory
             return StartProducer(subscription, result, cancellationToken);
         }
 
-        public Task<IChunk> Peek(int maxValue, CancellationToken cancellationToken)
+        public Task<IChunk> Peek(long maxValue, CancellationToken cancellationToken)
         {
             _lockSlim.EnterReadLock();
 
