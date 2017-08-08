@@ -25,7 +25,7 @@ namespace NStore.Persistence.Tests
             await Store.ReadPartitionForward("stream_1", 0, acc);
 
             Assert.Equal(1, acc.Length);
-            Assert.Equal("payload", acc[0]);
+            Assert.Equal("payload", acc[0].Payload);
         }
 
         [Fact]
@@ -38,7 +38,7 @@ namespace NStore.Persistence.Tests
             await stream.Read(acc);
 
             Assert.Equal(1, acc.Length);
-            Assert.Equal("payload", acc[0]);
+            Assert.Equal("payload", acc[0].Payload);
         }
 
         [Fact]
@@ -84,7 +84,7 @@ namespace NStore.Persistence.Tests
             await stream.Read(acc).ConfigureAwait(false);
 
             Assert.Equal(1, acc.Length);
-            Assert.Equal("payload", acc[0]);
+            Assert.Equal("payload", acc[0].Payload);
         }
 
         [Fact]
@@ -97,8 +97,8 @@ namespace NStore.Persistence.Tests
             await Store.ReadPartitionForward("stream_1", 0, tape).ConfigureAwait(false);
 
             Assert.Equal(1, tape.Length);
-            Assert.Equal("payload", tape[0]);
-            Assert.Equal("payload", tape.ByIndex(1));
+            Assert.Equal("payload", tape[0].Payload);
+            Assert.Equal("payload", tape.ByIndex(1).Payload);
         }
 
         [Fact]
@@ -112,10 +112,10 @@ namespace NStore.Persistence.Tests
             await Store.ReadPartitionForward("stream_1", 0, tape).ConfigureAwait(false);
 
             Assert.Equal(2, tape.Length);
-            Assert.Equal("a", tape[0]);
-            Assert.Equal("a", tape.ByIndex(1));
-            Assert.Equal("b", tape[1]);
-            Assert.Equal("b", tape.ByIndex(2));
+            Assert.Equal("a", tape[0].Payload);
+            Assert.Equal("a", tape.ByIndex(1).Payload);
+            Assert.Equal("b", tape[1].Payload);
+            Assert.Equal("b", tape.ByIndex(2).Payload);
         }
 
         [Fact]
@@ -171,7 +171,7 @@ namespace NStore.Persistence.Tests
             await stream.Read(acc).ConfigureAwait(false);
 
             Assert.Equal(1, acc.Length);
-            Assert.Equal("payload", acc[0]);
+            Assert.Equal("payload", acc[0].Payload);
         }
 
         [Fact]

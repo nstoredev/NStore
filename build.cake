@@ -44,6 +44,7 @@ private void RunTest(string testProject, IDictionary<string,string> env = null)
     var to = GetVariable("testoutput");
     var output = to == null ? "" :  "-xml " + to + "/" + testProject + ".xml";
 
+/*
     var settings = new ProcessSettings
     {
 //        Arguments = "xunit -parallel none",
@@ -51,8 +52,14 @@ private void RunTest(string testProject, IDictionary<string,string> env = null)
         WorkingDirectory = projectDir,
         EnvironmentVariables = env
     };
+//    var result = StartProcess("dotnet", settings);
+*/
+    var settings = new DotNetCoreToolSettings {
+        WorkingDirectory = projectDir,
+        EnvironmentVariables = env
+    };
 
-    StartProcess("dotnet", settings);
+    DotNetCoreTool(projectDir +"/"+ testProject, "xunit", output, settings);
 }
 
 // Define Settings.
@@ -85,6 +92,7 @@ Task("restore-packages")
 
 
 Task("TestMsSql")
+    .ContinueOnError()
     .IsDependentOn("TestLibrary")
     .Does(()=>
 {
@@ -117,6 +125,7 @@ Task("TestMsSql")
 });
 
 Task("TestMongoDb")
+    .ContinueOnError()
     .IsDependentOn("TestLibrary")
     .Does(() =>
 {
@@ -129,17 +138,16 @@ Task("TestMongoDb")
 
 Task("TestInMemory")
     .IsDependentOn("TestLibrary")
+    .ContinueOnError()
     .Does(() =>
 {
-    var env = new Dictionary<string, string>{
-        { "xx", "val"},
-    };
-
+    var env = new Dictionary<string, string>{};
     RunTest("NStore.Persistence.Tests",env);
 });
 
 
 Task("TestSample")
+    .ContinueOnError()
     .IsDependentOn("TestLibrary")
     .Does(() =>
 {
@@ -151,13 +159,11 @@ Task("TestSample")
 });
 
 Task("TestLibrary")
+    .ContinueOnError()
     .IsDependentOn("restore-packages")
-//    .IsDependentOn("Build")
     .Does(() =>
 {
-    var env = new Dictionary<string, string>{
-        { "xx", "yy"},
-    };
+    var env = new Dictionary<string, string>{};
 
     RunTest("NStore.Tests",env);
 });

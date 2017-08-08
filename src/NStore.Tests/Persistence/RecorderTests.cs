@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using NStore.Persistence;
 using Xunit;
 
@@ -7,7 +8,7 @@ namespace NStore.Tests.Persistence
 {
     public class RecorderTests
     {
-        public class Data : IChunk
+        private class RecorderChunk : IChunk
         {
             public long Position { get; set; }
             public string PartitionId { get; set; }
@@ -25,29 +26,30 @@ namespace NStore.Tests.Persistence
         }
 
         [Fact]
-        public void record()
+        public async Task record()
         {
             var recorder = new Recorder();
 
-            recorder.OnNext(new Data { Index = 1, Payload = "a" });
+            await recorder.OnNext(new RecorderChunk { Index = 1, Payload = "a" });
 
             Assert.False(recorder.IsEmpty);
             Assert.Equal(1, recorder.Length);
-            Assert.Equal("a", recorder[0]);
+            Assert.Equal("a", recorder[0].Payload);
         }
 
         [Fact]
-        public void replay()
+        public async Task replay()
         {
             var recorder = new Recorder();
+            var chunk = new RecorderChunk {Index = 1, Payload = "a"};
 
-            recorder.OnNext(new Data { Index = 1, Payload = "a" });
+            await recorder.OnNext(chunk);
 
-            var list = new List<object>();
+            var list = new List<IChunk>();
             recorder.Replay(list.Add);
 
             Assert.Equal(1, list.Count);
-            Assert.Equal("a", list[0]);
+            Assert.Same(chunk, list[0]);
         }
     }
 }

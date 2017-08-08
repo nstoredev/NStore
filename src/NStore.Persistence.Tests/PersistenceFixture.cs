@@ -50,7 +50,7 @@ namespace NStore.Persistence.Tests
 
             var tape = new Recorder();
             await Store.ReadPartitionForward("Stream_Neg", 0, tape);
-            Assert.Equal("payload", tape.ByIndex(1));
+            Assert.Equal("payload", tape.ByIndex(1).Payload);
         }
     }
 
@@ -147,8 +147,8 @@ namespace NStore.Persistence.Tests
             ).ConfigureAwait(false);
 
             Assert.Equal(2, recorder.Length);
-            Assert.Equal("a", recorder[0]);
-            Assert.Equal("b", recorder[1]);
+            Assert.Equal("a", recorder[0].Payload);
+            Assert.Equal("b", recorder[1].Payload);
         }
 
         [Fact]
@@ -189,8 +189,8 @@ namespace NStore.Persistence.Tests
             ).ConfigureAwait(false);
 
             Assert.Equal(2, tape.Length);
-            Assert.Equal("c", tape[0]);
-            Assert.Equal("b", tape[1]);
+            Assert.Equal("c", tape[0].Payload);
+            Assert.Equal("b", tape[1].Payload);
         }
 
         [Fact]
@@ -385,8 +385,8 @@ namespace NStore.Persistence.Tests
 
             _logger.LogDebug("checking assertions");
             Assert.Equal(2, acc.Length);
-            Assert.True((string)acc[0] == "2");
-            Assert.True((string)acc[1] == "3");
+            Assert.True((string)acc[0].Payload == "2");
+            Assert.True((string)acc[1].Payload == "3");
             _logger.LogDebug("done");
         }
     }
@@ -401,8 +401,8 @@ namespace NStore.Persistence.Tests
             await Store.ReadPartitionForward("delete_4", 0, acc).ConfigureAwait(false);
 
             Assert.Equal(2, acc.Length);
-            Assert.True((string)acc[0] == "1");
-            Assert.True((string)acc[1] == "2");
+            Assert.True((string)acc[0].Payload == "1");
+            Assert.True((string)acc[1].Payload == "2");
         }
     }
 
@@ -417,8 +417,8 @@ namespace NStore.Persistence.Tests
             await Store.ReadPartitionForward("delete_5", 0, acc).ConfigureAwait(false);
 
             Assert.Equal(2, acc.Length);
-            Assert.True((string)acc[0] == "1");
-            Assert.True((string)acc[1] == "3");
+            Assert.True((string)acc[0].Payload == "1");
+            Assert.True((string)acc[1].Payload == "3");
         }
     }
 

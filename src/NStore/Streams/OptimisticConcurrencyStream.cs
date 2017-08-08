@@ -20,11 +20,7 @@ namespace NStore.Streams
             this.Persistence = persistence;
         }
 
-        public Task ReadAsync(
-            ISubscription subscription,
-            int fromIndexInclusive,
-            int toIndexInclusive,
-            CancellationToken cancellationToken)
+        public Task ReadAsync(ISubscription subscription, long fromIndexInclusive, long toIndexInclusive, CancellationToken cancellationToken)
         {
             // @@REVIEW: micro optimization for reading only last index? (fromIndexInclusive == toIndexInclusive == Int32.MaxValue)
             var readConsumer = subscription;

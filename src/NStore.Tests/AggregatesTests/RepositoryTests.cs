@@ -63,7 +63,7 @@ namespace NStore.Tests.AggregatesTests
             await stream.Read(tape,0);
 
             Assert.Equal(1, tape.Length);
-            Assert.IsType<Changeset>(tape[0]);
+            Assert.IsType<Changeset>(tape[0].Payload);
         }
 
         [Fact]
@@ -78,7 +78,7 @@ namespace NStore.Tests.AggregatesTests
             var tape = new Recorder();
             await stream.Read(tape,0);
 
-            var changeSet = (Changeset)tape[0];
+            var changeSet = (Changeset)tape[0].Payload;
             Assert.True(changeSet.Headers.ContainsKey("a"));
             Assert.Equal("b", changeSet.Headers["a"]);
         }

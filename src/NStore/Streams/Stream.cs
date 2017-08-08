@@ -17,7 +17,7 @@ namespace NStore.Streams
             this.Persistence = persistence;
         }
 
-        public Task ReadAsync(ISubscription subscription, int fromIndexInclusive, int toIndexInclusive, CancellationToken cancellationToken)
+        public Task ReadAsync(ISubscription subscription, long fromIndexInclusive, long toIndexInclusive, CancellationToken cancellationToken)
         {
             return Persistence.ReadPartitionForward(
                 Id,
