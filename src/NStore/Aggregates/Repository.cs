@@ -130,7 +130,7 @@ namespace NStore.Aggregates
             await _snapshots.Add(aggregate.Id, persister.GetSnapshot(), cancellationToken).ConfigureAwait(false);
         }
 
-        private IStream OpenStream(IAggregate aggregate, bool isPartialLoad)
+        protected virtual IStream OpenStream(IAggregate aggregate, bool isPartialLoad)
         {
             var stream = isPartialLoad
                 ? _streams.OpenReadOnly(aggregate.Id)
