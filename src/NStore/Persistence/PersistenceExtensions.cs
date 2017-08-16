@@ -95,6 +95,11 @@ namespace NStore.Persistence
             return store.ReadAllAsync(sequenceStart, subscription, limit, CancellationToken.None);
         }
 
+        public static Task<IChunk> ReadLast(this IPersistence store, string partitionId)
+        {
+            return store.ReadLast(partitionId, long.MaxValue, CancellationToken.None);
+        }
+
         public static Task<IChunk> AppendAsync(
             this IPersistence store,
             string partitionId,

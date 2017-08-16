@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using NStore.Aggregates;
 using NStore.InMemory;
 using NStore.Persistence;
@@ -40,7 +42,7 @@ namespace NStore.Tests.AggregatesTests
     public class with_empty_store : BaseRepositoryTest
     {
         [Fact]
-        public async void loading_an_aggregate_from_an_empty_stream_should_return_a_new_aggregate()
+        public async Task loading_an_aggregate_from_an_empty_stream_should_return_a_new_aggregate()
         {
             var ticket = await Repository.GetById<Ticket>("Ticket_1");
 
@@ -49,7 +51,7 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async void saving_an_aggregate_should_persist_stream()
+        public async Task saving_an_aggregate_should_persist_stream()
         {
             var ticket = await Repository.GetById<Ticket>("Ticket_1");
 
@@ -60,14 +62,14 @@ namespace NStore.Tests.AggregatesTests
             // load stream
             var stream = Streams.Open("Ticket_1");
             var tape = new Recorder();
-            await stream.Read(tape,0);
+            await stream.Read(tape, 0);
 
             Assert.Equal(1, tape.Length);
             Assert.IsType<Changeset>(tape[0].Payload);
         }
 
         [Fact]
-        public async void save_can_add_custom_info_in_headers()
+        public async Task save_can_add_custom_info_in_headers()
         {
             var ticket = await Repository.GetById<Ticket>("Ticket_1");
             ticket.Sale();
@@ -76,7 +78,7 @@ namespace NStore.Tests.AggregatesTests
             // load stream
             var stream = Streams.Open("Ticket_1");
             var tape = new Recorder();
-            await stream.Read(tape,0);
+            await stream.Read(tape, 0);
 
             var changeSet = (Changeset)tape[0].Payload;
             Assert.True(changeSet.Headers.ContainsKey("a"));
@@ -84,7 +86,7 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async void saving_twice_an_aggregate_should_persist_events_only_once()
+        public async Task saving_twice_an_aggregate_should_persist_events_only_once()
         {
             var ticket = await Repository.GetById<Ticket>("Ticket_1");
             ticket.Sale();
@@ -94,7 +96,7 @@ namespace NStore.Tests.AggregatesTests
             // load stream
             var stream = Streams.Open("Ticket_1");
             var tape = new Recorder();
-            await stream.Read(tape,0);
+            await stream.Read(tape, 0);
             Assert.Equal(1, tape.Length);
         }
     }
@@ -108,7 +110,7 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async void can_load_ticket_at_version_1()
+        public async Task can_load_ticket_at_version_1()
         {
             var ticket = await Repository.GetById<Ticket>("Ticket_1", 1);
             Assert.True(ticket.IsInitialized);
@@ -116,7 +118,7 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async void can_load_ticket_at_latest_version()
+        public async Task can_load_ticket_at_latest_version()
         {
             var ticket = await Repository.GetById<Ticket>("Ticket_1");
             Assert.True(ticket.IsInitialized);
@@ -124,7 +126,7 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async void cannot_save_aggregate_loaded_by_another_repository()
+        public async Task cannot_save_aggregate_loaded_by_another_repository()
         {
             var ticket = await Repository.GetById<Ticket>("Ticket_1");
             ticket.Refund();
@@ -137,7 +139,7 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async void loading_aggregate_twice_from_repository_should_return_different_istance()
+        public async Task loading_aggregate_twice_from_repository_should_return_different_istance()
         {
             var ticket1 = await Repository.GetById<Ticket>("Ticket_1");
             var ticket2 = await Repository.GetById<Ticket>("Ticket_1");
@@ -146,9 +148,9 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async void loading_aggregate_twice_from_identity_map_should_return_same_istance()
+        public async Task loading_aggregate_twice_from_identity_map_should_return_same_istance()
         {
-            var repository = new  IdentityMapRepositoryDecorator(Repository);
+            var repository = new IdentityMapRepositoryDecorator(Repository);
             var ticket1 = await repository.GetById<Ticket>("Ticket_1");
             var ticket2 = await repository.GetById<Ticket>("Ticket_1");
 
@@ -156,7 +158,7 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async void loading_aggregate_twice_at_different_version_from_repository_should_return_different_istances()
+        public async Task loading_aggregate_twice_at_different_version_from_repository_should_return_different_istances()
         {
             var ticket1 = await Repository.GetById<Ticket>("Ticket_1", 1);
             var ticket2 = await Repository.GetById<Ticket>("Ticket_1", 2);
@@ -165,7 +167,7 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async void loading_an_old_version_should_return_different_instance()
+        public async Task loading_an_old_version_should_return_different_instance()
         {
             var ticket_at_v2 = await Repository.GetById<Ticket>("Ticket_1", 2);
             var ticket_latest = await Repository.GetById<Ticket>("Ticket_1");
@@ -175,7 +177,7 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async void cannot_save_a_partially_loaded_aggregate()
+        public async Task cannot_save_a_partially_loaded_aggregate()
         {
             var ticket = await Repository.GetById<Ticket>("Ticket_1", 1);
             ticket.Refund();
@@ -196,14 +198,14 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async void can_load_without_snapshot_present()
+        public async Task can_load_without_snapshot_present()
         {
             var ticket = await Repository.GetById<Ticket>("Ticket_1", 2);
             Assert.Equal(2, ticket.Version);
         }
 
         [Fact]
-        public async void saving_should_create_snapshot()
+        public async Task saving_should_create_snapshot()
         {
             var ticket = await Repository.GetById<Ticket>("Ticket_1");
             ticket.Refund();
@@ -217,7 +219,7 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async void saving_new_aggregate_should_create_snapshot()
+        public async Task saving_new_aggregate_should_create_snapshot()
         {
             var ticket = await Repository.GetById<Ticket>("new_ticket");
             ticket.Sale();
@@ -239,7 +241,7 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async void with_snapshot_but_without_stream_should_throw_stale_aggregate_exception()
+        public async Task with_snapshot_but_without_stream_should_throw_stale_aggregate_exception()
         {
             var ticketState = new TicketState();
             var snapshot = new SnapshotInfo("Ticket_1", 2, ticketState, 1);
@@ -253,4 +255,37 @@ namespace NStore.Tests.AggregatesTests
             Assert.Equal(2, ex.AggregateVersion);
         }
     }
+
+    public class repository_should_not_persist_empty_changeset : BaseRepositoryTest
+    {
+        [Fact]
+        public async Task with_snapshot_but_without_stream_should_throw_stale_aggregate_exception()
+        {
+            var ticket = await Repository.GetById<Ticket>("Ticket_1");
+            await Repository.Save(ticket, "empty");
+
+            var chunk = await Persistence.ReadLast("Ticket_1");
+
+            Assert.Null(chunk);
+        }
+    }
+
+    public class repository_should_persist_empty_changeset : BaseRepositoryTest
+    {
+        [Fact]
+        public async Task with_snapshot_but_without_stream_should_throw_stale_aggregate_exception()
+        {
+            ((Repository) Repository).PersistEmptyChangeset = true;
+            var ticket = await Repository.GetById<Ticket>("Ticket_1");
+            await Repository.Save(ticket, "empty");
+
+            var chunk = await Persistence.ReadLast("Ticket_1");
+
+            Assert.NotNull(chunk);
+            Assert.IsType<Changeset>(chunk.Payload);
+            Assert.True(((Changeset) chunk.Payload).IsEmpty);
+            Assert.Equal("empty", chunk.OperationId);
+        }
+    }
+
 }

@@ -14,6 +14,7 @@ namespace NStore.Aggregates
         private readonly IStreamsFactory _streams;
         private readonly IDictionary<IAggregate, IStream> _openedStreams = new Dictionary<IAggregate, IStream>();
         private readonly ISnapshotStore _snapshots;
+        public bool PersistEmptyChangeset { get; set; } = false;
 
         public Repository(IAggregateFactory factory, IStreamsFactory streams)
             : this(factory, streams, null)
@@ -112,7 +113,7 @@ namespace NStore.Aggregates
         {
             var persister = (IEventSourcedAggregate)aggregate;
             var changeSet = persister.GetChangeSet();
-            if (changeSet.IsEmpty)
+            if (changeSet.IsEmpty && !PersistEmptyChangeset)
                 return;
 
             var stream = GetStream(aggregate);
