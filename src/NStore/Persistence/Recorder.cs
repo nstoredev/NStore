@@ -68,6 +68,11 @@ namespace NStore.Persistence
             }
         }
 
+        public T[] ToArray<T>()
+        {
+            return _data.Select(x => x.Payload).Cast<T>().ToArray();
+        }
+
         public bool IsEmpty => _data.Count == 0;
         public IChunk this[int position] => _data[position];
 

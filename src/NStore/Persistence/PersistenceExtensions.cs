@@ -8,6 +8,22 @@ namespace NStore.Persistence
         public static Task ReadPartitionForward(
             this IPersistence store,
             string partitionId,
+            ISubscription subscription
+        )
+        {
+            return store.ReadPartitionForward(
+                partitionId,
+                0,
+                subscription,
+                long.MaxValue,
+                int.MaxValue,
+                CancellationToken.None
+            );
+        }
+        
+        public static Task ReadPartitionForward(
+            this IPersistence store,
+            string partitionId,
             long fromLowerIndexInclusive,
             ISubscription subscription
         )
