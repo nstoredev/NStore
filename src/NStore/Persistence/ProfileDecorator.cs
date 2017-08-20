@@ -29,7 +29,7 @@ namespace NStore.Persistence
 
         public bool SupportsFillers => _store.SupportsFillers;
 
-        public async Task ReadPartitionForward(
+        public async Task ReadForwardAsync(
             string partitionId,
             long fromLowerIndexInclusive,
             ISubscription subscription,
@@ -43,7 +43,7 @@ namespace NStore.Persistence
             };
 
             await PartitionReadForwardCounter.CaptureAsync(() =>
-                _store.ReadPartitionForward(
+                _store.ReadForwardAsync(
                     partitionId,
                     fromLowerIndexInclusive,
                     counter,
@@ -53,7 +53,7 @@ namespace NStore.Persistence
                 )).ConfigureAwait(false);
         }
 
-        public async Task ReadPartitionBackward(
+        public async Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,
             ISubscription subscription,
@@ -67,7 +67,7 @@ namespace NStore.Persistence
             };
 
             await PartitionReadBackwardCounter.CaptureAsync(() =>
-                _store.ReadPartitionBackward(
+                _store.ReadBackwardAsync(
                     partitionId,
                     fromUpperIndexInclusive,
                     counter,
@@ -77,10 +77,10 @@ namespace NStore.Persistence
                 )).ConfigureAwait(false);
         }
 
-        public Task<IChunk> ReadLast(string partitionId, long toUpperIndexInclusive, CancellationToken cancellationToken)
+        public Task<IChunk> ReadSingleBackwardAsync(string partitionId, long fromUpperIndexInclusive, CancellationToken cancellationToken)
         {
             return PeekCounter.CaptureAsync(() =>
-                _store.ReadLast(partitionId, toUpperIndexInclusive, cancellationToken)
+                _store.ReadSingleBackwardAsync(partitionId, fromUpperIndexInclusive, cancellationToken)
             );
         }
 

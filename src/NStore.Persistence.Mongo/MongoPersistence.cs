@@ -74,7 +74,7 @@ namespace NStore.Persistence.Mongo
                 .ConfigureAwait(false);
         }
 
-        public async Task ReadPartitionForward(
+        public async Task ReadForwardAsync(
             string partitionId,
             long fromLowerIndexInclusive,
             ISubscription subscription,
@@ -125,7 +125,7 @@ namespace NStore.Persistence.Mongo
             await subscription.Completed(position).ConfigureAwait(false);
         }
 
-        public async Task ReadPartitionBackward(
+        public async Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,
             ISubscription subscription,
@@ -150,14 +150,14 @@ namespace NStore.Persistence.Mongo
             await PushToSubscriber(fromUpperIndexInclusive, subscription, options, filter, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<IChunk> ReadLast(
+        public async Task<IChunk> ReadSingleBackwardAsync(
             string partitionId, 
-            long toUpperIndexInclusive, 
+            long fromUpperIndexInclusive, 
             CancellationToken cancellationToken
         ){
             var filter = Builders<Chunk>.Filter.And(
                 Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId),
-                Builders<Chunk>.Filter.Lte(x => x.Index, toUpperIndexInclusive)
+                Builders<Chunk>.Filter.Lte(x => x.Index, fromUpperIndexInclusive)
             );
 
             var sort = Builders<Chunk>.Sort.Descending(x => x.Index);

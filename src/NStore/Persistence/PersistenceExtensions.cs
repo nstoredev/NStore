@@ -11,7 +11,7 @@ namespace NStore.Persistence
             ISubscription subscription
         )
         {
-            return store.ReadPartitionForward(
+            return store.ReadForwardAsync(
                 partitionId,
                 0,
                 subscription,
@@ -28,7 +28,7 @@ namespace NStore.Persistence
             ISubscription subscription
         )
         {
-            return store.ReadPartitionForward(
+            return store.ReadForwardAsync(
                 partitionId,
                 fromLowerIndexInclusive,
                 subscription,
@@ -46,7 +46,7 @@ namespace NStore.Persistence
             long toUpperIndexInclusive
         )
         {
-            return store.ReadPartitionForward(
+            return store.ReadForwardAsync(
                 partitionId,
                 fromLowerIndexInclusive,
                 subscription,
@@ -64,7 +64,7 @@ namespace NStore.Persistence
             ISubscription subscription
         )
         {
-            return store.ReadPartitionBackward(
+            return store.ReadBackwardAsync(
                 partitionId,
                 fromUpperIndexInclusive,
                 subscription,
@@ -82,7 +82,7 @@ namespace NStore.Persistence
             long toLowerIndexInclusive
         )
         {
-            return store.ReadPartitionBackward(
+            return store.ReadBackwardAsync(
                 partitionId,
                 fromUpperIndexInclusive,
                 subscription,
@@ -113,7 +113,7 @@ namespace NStore.Persistence
 
         public static Task<IChunk> ReadLast(this IPersistence store, string partitionId)
         {
-            return store.ReadLast(partitionId, long.MaxValue, CancellationToken.None);
+            return store.ReadSingleBackwardAsync(partitionId, long.MaxValue, CancellationToken.None);
         }
 
         public static Task<IChunk> AppendAsync(

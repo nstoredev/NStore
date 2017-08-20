@@ -19,7 +19,7 @@ namespace NStore.Streams
 
         public Task ReadAsync(ISubscription subscription, long fromIndexInclusive, long toIndexInclusive, CancellationToken cancellationToken)
         {
-            return Persistence.ReadPartitionForward(
+            return Persistence.ReadForwardAsync(
                 Id,
                 fromIndexInclusive,
                 subscription,

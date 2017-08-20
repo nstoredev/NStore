@@ -449,7 +449,7 @@ namespace NStore.Persistence.Tests
 
             await Store.DeleteAsync("a", 2, 2).ConfigureAwait(false);
 
-            var chunk = await Store.ReadLast("a", 100, CancellationToken.None).ConfigureAwait(false);
+            var chunk = await Store.ReadSingleBackwardAsync("a", 100, CancellationToken.None).ConfigureAwait(false);
 
             Assert.NotNull(chunk);
             Assert.Equal("first", chunk.Payload);

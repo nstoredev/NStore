@@ -21,7 +21,7 @@ namespace NStore.SnapshotStore
             int version,
             CancellationToken cancellationToken)
         {
-            var data = await _store.ReadLast(aggregateId, version, cancellationToken).ConfigureAwait(false);
+            var data = await _store.ReadSingleBackwardAsync(aggregateId, version, cancellationToken).ConfigureAwait(false);
             return (SnapshotInfo) data?.Payload;
         }
 

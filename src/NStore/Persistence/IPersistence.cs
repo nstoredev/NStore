@@ -8,7 +8,7 @@ namespace NStore.Persistence
     {
         bool SupportsFillers { get;  }
 
-        Task ReadPartitionForward(
+        Task ReadForwardAsync(
             string partitionId,
             long fromLowerIndexInclusive,
             ISubscription subscription,
@@ -17,7 +17,7 @@ namespace NStore.Persistence
             CancellationToken cancellationToken
         );
 
-        Task ReadPartitionBackward(
+        Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,
             ISubscription subscription,
@@ -26,9 +26,9 @@ namespace NStore.Persistence
             CancellationToken cancellationToken
         );
 
-        Task<IChunk> ReadLast(
+        Task<IChunk> ReadSingleBackwardAsync(
             string partitionId, 
-            long toUpperIndexInclusive, 
+            long fromUpperIndexInclusive, 
             CancellationToken cancellationToken
         );
 
@@ -39,7 +39,9 @@ namespace NStore.Persistence
             CancellationToken cancellationToken
         );
 
-        Task<long> ReadLastPositionAsync(CancellationToken cancellationToken);
+        Task<long> ReadLastPositionAsync(
+            CancellationToken cancellationToken
+        );
 
         /// <summary>
         /// Appends a chunk in the global store

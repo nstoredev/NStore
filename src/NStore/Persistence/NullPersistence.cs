@@ -27,7 +27,7 @@ namespace NStore.Persistence
 
         public bool SupportsFillers => false;
 
-        public Task ReadPartitionForward(
+        public Task ReadForwardAsync(
             string partitionId,
             long fromLowerIndexInclusive,
             ISubscription subscription,
@@ -39,7 +39,7 @@ namespace NStore.Persistence
             return Task.CompletedTask;
         }
 
-        public Task ReadPartitionBackward(
+        public Task ReadBackwardAsync(
             string partitionId, 
             long fromUpperIndexInclusive, 
             ISubscription subscription,
@@ -50,7 +50,7 @@ namespace NStore.Persistence
             return Task.CompletedTask;
         }
 
-        public Task<IChunk> ReadLast(string partitionId, long toUpperIndexInclusive, CancellationToken cancellationToken)
+        public Task<IChunk> ReadSingleBackwardAsync(string partitionId, long fromUpperIndexInclusive, CancellationToken cancellationToken)
         {
             return Task.FromResult<IChunk>(null);
         }

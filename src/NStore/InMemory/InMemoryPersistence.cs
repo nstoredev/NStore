@@ -47,7 +47,7 @@ namespace NStore.InMemory
             _partitions.TryAdd(_emptyInMemoryPartition.Id, _emptyInMemoryPartition);
         }
 
-        public Task ReadPartitionForward(
+        public Task ReadForwardAsync(
             string partitionId,
             long fromLowerIndexInclusive,
             ISubscription subscription,
@@ -71,7 +71,7 @@ namespace NStore.InMemory
             );
         }
 
-        public Task ReadPartitionBackward(
+        public Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,
             ISubscription subscription,
@@ -95,7 +95,7 @@ namespace NStore.InMemory
             );
         }
 
-        public Task<IChunk> ReadLast(string partitionId, long toUpperIndexInclusive, CancellationToken cancellationToken)
+        public Task<IChunk> ReadSingleBackwardAsync(string partitionId, long fromUpperIndexInclusive, CancellationToken cancellationToken)
         {
             InMemoryPartition inMemoryPartition;
             if (!_partitions.TryGetValue(partitionId, out inMemoryPartition))
@@ -103,7 +103,7 @@ namespace NStore.InMemory
                 return Task.FromResult<IChunk>(null);
             }
 
-            return inMemoryPartition.Peek(toUpperIndexInclusive, cancellationToken);
+            return inMemoryPartition.Peek(fromUpperIndexInclusive, cancellationToken);
         }
 
         private Chunk Clone(Chunk source)

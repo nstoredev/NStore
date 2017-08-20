@@ -33,7 +33,7 @@ namespace NStore.Streams
                 };
             }
 
-            return Persistence.ReadPartitionForward(
+            return Persistence.ReadForwardAsync(
                 Id,
                 fromIndexInclusive,
                 readConsumer,

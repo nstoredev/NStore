@@ -20,7 +20,7 @@ namespace NStore.Persistence
 
         public bool SupportsFillers => _persistence.SupportsFillers;
 
-        public async Task ReadPartitionForward(
+        public async Task ReadForwardAsync(
             string partitionId,
             long fromLowerIndexInclusive,
             ISubscription subscription,
@@ -29,11 +29,11 @@ namespace NStore.Persistence
             CancellationToken cancellationToken)
         {
             _logger.LogDebug("Start ReadPartitionForward(Partition {ParitionId}, from: {from})", partitionId, fromLowerIndexInclusive);
-            await _persistence.ReadPartitionForward(partitionId, fromLowerIndexInclusive, subscription, toUpperIndexInclusive, limit, cancellationToken).ConfigureAwait(false);
+            await _persistence.ReadForwardAsync(partitionId, fromLowerIndexInclusive, subscription, toUpperIndexInclusive, limit, cancellationToken).ConfigureAwait(false);
             _logger.LogDebug("End ReadPartitionForward(Partition {ParitionId}, from: {from})", partitionId, fromLowerIndexInclusive);
         }
 
-        public async Task ReadPartitionBackward(
+        public async Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,
             ISubscription subscription,
@@ -42,15 +42,15 @@ namespace NStore.Persistence
             CancellationToken cancellationToken)
         {
             _logger.LogDebug("Start ReadPartitionBackward(Partition {ParitionId}, from: {from})", partitionId, fromUpperIndexInclusive);
-            await _persistence.ReadPartitionBackward(partitionId, fromUpperIndexInclusive, subscription, toLowerIndexInclusive, limit, cancellationToken).ConfigureAwait(false);
+            await _persistence.ReadBackwardAsync(partitionId, fromUpperIndexInclusive, subscription, toLowerIndexInclusive, limit, cancellationToken).ConfigureAwait(false);
             _logger.LogDebug("End ReadPartitionBackward(Partition {ParitionId}, from: {from})", partitionId, fromUpperIndexInclusive);
         }
 
-        public async Task<IChunk> ReadLast(string partitionId, long toUpperIndexInclusive, CancellationToken cancellationToken)
+        public async Task<IChunk> ReadSingleBackwardAsync(string partitionId, long fromUpperIndexInclusive, CancellationToken cancellationToken)
         {
-            _logger.LogDebug("Start ReadLast(partitionId:{partitionId}, to:{to})", partitionId, toUpperIndexInclusive);
-            var result = await _persistence.ReadLast(partitionId, toUpperIndexInclusive, cancellationToken).ConfigureAwait(false);
-            _logger.LogDebug("End ReadLast(partitionId:{partitionId}, to:{to})", partitionId, toUpperIndexInclusive);
+            _logger.LogDebug("Start ReadLast(partitionId:{partitionId}, to:{to})", partitionId, fromUpperIndexInclusive);
+            var result = await _persistence.ReadSingleBackwardAsync(partitionId, fromUpperIndexInclusive, cancellationToken).ConfigureAwait(false);
+            _logger.LogDebug("End ReadLast(partitionId:{partitionId}, to:{to})", partitionId, fromUpperIndexInclusive);
             return result;
         }
 

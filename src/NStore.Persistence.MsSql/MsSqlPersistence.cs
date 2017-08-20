@@ -100,7 +100,7 @@ namespace NStore.Persistence.MsSql
             }
         }
 
-        public async Task ReadPartitionForward(
+        public async Task ReadForwardAsync(
             string partitionId,
             long fromLowerIndexInclusive,
             ISubscription subscription,
@@ -185,7 +185,7 @@ namespace NStore.Persistence.MsSql
             await subscription.Completed(position).ConfigureAwait(false);
         }
 
-        public async Task ReadPartitionBackward(
+        public async Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,
             ISubscription subscription,
@@ -238,7 +238,7 @@ namespace NStore.Persistence.MsSql
             }
         }
 
-        public async Task<IChunk> ReadLast(string partitionId, long toUpperIndexInclusive, CancellationToken cancellationToken)
+        public async Task<IChunk> ReadSingleBackwardAsync(string partitionId, long fromUpperIndexInclusive, CancellationToken cancellationToken)
         {
             using (var connection = Connect())
             {
@@ -247,7 +247,7 @@ namespace NStore.Persistence.MsSql
                 using (var command = new SqlCommand(_options.GetLastChunkScript(), connection))
                 {
                     command.Parameters.AddWithValue("@PartitionId", partitionId);
-                    command.Parameters.AddWithValue("@toUpperIndexInclusive", toUpperIndexInclusive);
+                    command.Parameters.AddWithValue("@toUpperIndexInclusive", fromUpperIndexInclusive);
 
                     using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
                     {
