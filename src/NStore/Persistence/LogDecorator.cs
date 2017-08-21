@@ -68,7 +68,7 @@ namespace NStore.Persistence
         public async Task<long> ReadLastPositionAsync(CancellationToken cancellationToken)
         {
             _logger.LogDebug("Start ReadLastPosition()");
-            var result = await _persistence.ReadLastPositionAsync(cancellationToken);
+            var result = await _persistence.ReadLastPositionAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogDebug("end ReadLastPosition()");
             return result;
         }
