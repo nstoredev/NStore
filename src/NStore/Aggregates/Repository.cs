@@ -30,17 +30,17 @@ namespace NStore.Aggregates
 
         public Task<T> GetById<T>(string id) where T : IAggregate
         {
-            return this.GetById<T>(id, int.MaxValue);
+            return this.GetById<T>(id, long.MaxValue);
         }
 
         public Task<T> GetById<T>(string id, CancellationToken cancellationToken) where T : IAggregate
         {
-            return this.GetById<T>(id, int.MaxValue, cancellationToken);
+            return this.GetById<T>(id, long.MaxValue, cancellationToken);
         }
 
         public async Task<T> GetById<T>(
             string id,
-            int version,
+            long version,
             CancellationToken cancellationToken
         ) where T : IAggregate
         {
@@ -59,7 +59,7 @@ namespace NStore.Aggregates
                 aggregate.Init(id);
             }
 
-            var stream = OpenStream(aggregate, version != Int32.MaxValue);
+            var stream = OpenStream(aggregate, version != long.MaxValue);
 
             int readCount = 0;
             var consumer = ConfigureConsumer(new LambdaSubscription(data =>
@@ -89,7 +89,7 @@ namespace NStore.Aggregates
             return consumer;
         }
 
-        public Task<T> GetById<T>(string id, int version) where T : IAggregate
+        public Task<T> GetById<T>(string id, long version) where T : IAggregate
         {
             return this.GetById<T>(id, version, default(CancellationToken));
         }

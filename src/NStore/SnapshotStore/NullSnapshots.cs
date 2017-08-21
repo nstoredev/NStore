@@ -7,8 +7,8 @@ namespace NStore.SnapshotStore
     public class NullSnapshots : ISnapshotStore
     {
         public Task<SnapshotInfo> Get(
-            string aggregateId, 
-            int version, 
+            string aggregateId,
+            long version, 
             CancellationToken cancellationToken)
         {
             return Task.FromResult((SnapshotInfo)null);
@@ -23,9 +23,9 @@ namespace NStore.SnapshotStore
         }
 
         public Task Remove(
-            string aggregateId, 
-            int fromVersionInclusive, 
-            int toVersionInclusive,
+            string aggregateId,
+            long fromVersionInclusive,
+            long toVersionInclusive,
             CancellationToken cancellationToken 
         )
         {

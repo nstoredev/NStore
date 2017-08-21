@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using NStore.Persistence;
 using NStore.Streams;
 using Xunit;
 
@@ -16,7 +15,7 @@ namespace NStore.Persistence.Tests
         }
 
         [Fact]
-        public async void create_stream()
+        public async Task create_stream()
         {
             var stream = _streams.Open("stream_1");
             await stream.AppendAsync("payload");
@@ -29,27 +28,27 @@ namespace NStore.Persistence.Tests
         }
 
         [Fact]
-        public async void read_stream()
+        public async Task read_stream()
         {
             await Store.AppendAsync("stream_2", 1, "payload");
 
             var stream = _streams.Open("stream_2");
             var acc = new Recorder();
-            await stream.Read(acc);
+            await ReadOnlyStreamExtensions.ReadAsync(stream, acc);
 
             Assert.Equal(1, acc.Length);
             Assert.Equal("payload", acc[0].Payload);
         }
 
         [Fact]
-        public async void delete_stream()
+        public async Task delete_stream()
         {
             await Store.AppendAsync("stream_3", 1, "payload");
             var stream = _streams.Open("stream_3");
             await stream.DeleteAsync();
 
             var acc = new Recorder();
-            await stream.Read(acc);
+            await ReadOnlyStreamExtensions.ReadAsync(stream, acc);
 
             Assert.True(acc.IsEmpty);
         }
@@ -69,26 +68,26 @@ namespace NStore.Persistence.Tests
             var stream = _streams.OpenOptimisticConcurrency(id);
             if (readToEnd)
             {
-                await stream.Read(NullSubscription.Instance).ConfigureAwait(false);
+                await ReadOnlyStreamExtensions.ReadAsync(stream, NullSubscription.Instance).ConfigureAwait(false);
             }
             return stream;
         }
 
         [Fact]
-        public async void read_stream()
+        public async Task read_stream()
         {
             await Store.AppendAsync("stream_2", 1, "payload").ConfigureAwait(false);
 
             var stream = await Open("stream_2").ConfigureAwait(false);
             var acc = new Recorder();
-            await stream.Read(acc).ConfigureAwait(false);
+            await ReadOnlyStreamExtensions.ReadAsync(stream, acc).ConfigureAwait(false);
 
             Assert.Equal(1, acc.Length);
             Assert.Equal("payload", acc[0].Payload);
         }
 
         [Fact]
-        public async void appending_first_chunk()
+        public async Task appending_first_chunk()
         {
             var stream = await Open("stream_1").ConfigureAwait(false);
 
@@ -102,7 +101,7 @@ namespace NStore.Persistence.Tests
         }
 
         [Fact]
-        public async void appending_two_chunks_sequentially()
+        public async Task appending_two_chunks_sequentially()
         {
             var stream = await Open("stream_1").ConfigureAwait(false);
             await stream.AppendAsync("a").ConfigureAwait(false);
@@ -119,7 +118,7 @@ namespace NStore.Persistence.Tests
         }
 
         [Fact]
-        public async void appending_two_chunks_at_same_version_should_throw_concurrency_exception()
+        public async Task appending_two_chunks_at_same_version_should_throw_concurrency_exception()
         {
             var streama = await Open("stream_1").ConfigureAwait(false);
             var streamb = await Open("stream_1").ConfigureAwait(false);
@@ -133,7 +132,7 @@ namespace NStore.Persistence.Tests
         }
 
         [Fact]
-        public async void appending_on_a_stream_without_reading_to_end_should_throw()
+        public async Task appending_on_a_stream_without_reading_to_end_should_throw()
         {
             var stream = await Open("stream_1", false).ConfigureAwait(false);
             var ex = await Assert.ThrowsAnyAsync<AppendFailedException>(() =>
@@ -142,10 +141,10 @@ namespace NStore.Persistence.Tests
         }
 
         [Fact]
-        public async void appending_on_a_partially_loaded_stream_should_throw()
+        public async Task appending_on_a_partially_loaded_stream_should_throw()
         {
             var stream = await Open("stream_1", false).ConfigureAwait(false);
-            await stream.Read(NullSubscription.Instance, 0, 10).ConfigureAwait(false);
+            await stream.ReadAsync(NullSubscription.Instance, 0, 10).ConfigureAwait(false);
             var ex = await Assert.ThrowsAnyAsync<AppendFailedException>(() =>
                 stream.AppendAsync("b")
             ).ConfigureAwait(false);
@@ -162,20 +161,20 @@ namespace NStore.Persistence.Tests
         }
 
         [Fact]
-        public async void read_stream()
+        public async Task read_stream()
         {
             await Store.AppendAsync("stream_2", 1, "payload").ConfigureAwait(false);
 
             var stream = _streams.OpenReadOnly("stream_2");
             var acc = new Recorder();
-            await stream.Read(acc).ConfigureAwait(false);
+            await ReadOnlyStreamExtensions.ReadAsync(stream, acc).ConfigureAwait(false);
 
             Assert.Equal(1, acc.Length);
             Assert.Equal("payload", acc[0].Payload);
         }
 
         [Fact]
-        public async void delete_should_throw_exception()
+        public async Task delete_should_throw_exception()
         {
             var stream = _streams.OpenReadOnly("stream_2");
             var ex = await Assert.ThrowsAsync<StreamReadOnlyException>(() =>
@@ -184,7 +183,7 @@ namespace NStore.Persistence.Tests
         }
 
         [Fact]
-        public async void append_should_throw_exception()
+        public async Task append_should_throw_exception()
         {
             var stream = _streams.OpenReadOnly("stream_2");
             var ex = await Assert.ThrowsAsync<StreamReadOnlyException>(() =>

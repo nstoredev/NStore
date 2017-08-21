@@ -18,7 +18,7 @@ namespace NStore.SnapshotStore
 
         public async Task<SnapshotInfo> Get(
             string aggregateId,
-            int version,
+            long version,
             CancellationToken cancellationToken)
         {
             var data = await _store.ReadSingleBackwardAsync(aggregateId, version, cancellationToken).ConfigureAwait(false);
@@ -45,8 +45,8 @@ namespace NStore.SnapshotStore
 
         public Task Remove(
             string aggregateId,
-            int fromVersionInclusive,
-            int toVersionInclusive,
+            long fromVersionInclusive,
+            long toVersionInclusive,
             CancellationToken cancellationToken)
         {
             return _store.DeleteAsync(aggregateId, fromVersionInclusive, toVersionInclusive, cancellationToken);

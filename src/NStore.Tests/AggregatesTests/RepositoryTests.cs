@@ -62,7 +62,7 @@ namespace NStore.Tests.AggregatesTests
             // load stream
             var stream = Streams.Open("Ticket_1");
             var tape = new Recorder();
-            await stream.Read(tape, 0);
+            await stream.ReadAsync(tape, 0);
 
             Assert.Equal(1, tape.Length);
             Assert.IsType<Changeset>(tape[0].Payload);
@@ -78,7 +78,7 @@ namespace NStore.Tests.AggregatesTests
             // load stream
             var stream = Streams.Open("Ticket_1");
             var tape = new Recorder();
-            await stream.Read(tape, 0);
+            await stream.ReadAsync(tape, 0);
 
             var changeSet = (Changeset)tape[0].Payload;
             Assert.True(changeSet.Headers.ContainsKey("a"));
@@ -96,7 +96,7 @@ namespace NStore.Tests.AggregatesTests
             // load stream
             var stream = Streams.Open("Ticket_1");
             var tape = new Recorder();
-            await stream.Read(tape, 0);
+            await stream.ReadAsync(tape, 0);
             Assert.Equal(1, tape.Length);
         }
     }

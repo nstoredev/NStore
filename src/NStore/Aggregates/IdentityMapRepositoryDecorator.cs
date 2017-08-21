@@ -25,7 +25,7 @@ namespace NStore.Aggregates
             return GetById<T>(id, int.MaxValue,cancellationToken);
         }
 
-        public async Task<T> GetById<T>(string id, int version, CancellationToken cancellationToken) where T : IAggregate
+        public async Task<T> GetById<T>(string id, long version, CancellationToken cancellationToken) where T : IAggregate
         {
             string mapid = id + "@" + version;
             if (_identityMap.ContainsKey(mapid))
@@ -39,7 +39,7 @@ namespace NStore.Aggregates
             return aggregate;
         }
 
-        public Task<T> GetById<T>(string id, int version) where T : IAggregate
+        public Task<T> GetById<T>(string id, long version) where T : IAggregate
         {
             return GetById<T>(id, version, default(CancellationToken));
         }

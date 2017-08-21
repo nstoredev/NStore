@@ -8,7 +8,12 @@ namespace NStore.Streams
     {
         public static Task ReadAsync(this IReadOnlyStream stream, StreamDataProcessor fn)
         {
-            return stream.ReadAsync(new LambdaSubscription(fn), 0, int.MaxValue, CancellationToken.None);
+            return stream.ReadAsync(new LambdaSubscription(fn), 0, long.MaxValue, CancellationToken.None);
+        }
+
+        public static Task ReadAsync(this IReadOnlyStream stream, ISubscription subscription)
+        {
+            return stream.ReadAsync(subscription, 0, long.MaxValue, CancellationToken.None);
         }
 
         public static Task AppendAsync(this IStream stream, object payload)

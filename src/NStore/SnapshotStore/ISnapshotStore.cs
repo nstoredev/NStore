@@ -8,7 +8,7 @@ namespace NStore.SnapshotStore
     {
         Task<SnapshotInfo> Get(
             string aggregateId,
-            int version,
+            long version,
             CancellationToken cancellationToken
         );
 
@@ -20,8 +20,8 @@ namespace NStore.SnapshotStore
 
         Task Remove(
             string aggregateId,
-            int fromVersionInclusive,
-            int toVersionInclusive,
+            long fromVersionInclusive,
+            long toVersionInclusive,
             CancellationToken cancellationToken
         );
     }
@@ -31,7 +31,7 @@ namespace NStore.SnapshotStore
         public static Task<SnapshotInfo> Get(
             this ISnapshotStore snapshots,
             string aggregateId,
-            int version
+            long version
         )
         {
             return snapshots.Get(aggregateId, version, CancellationToken.None);
@@ -51,14 +51,14 @@ namespace NStore.SnapshotStore
             string aggregateId
         )
         {
-            return snapshots.Remove(aggregateId, 0, int.MaxValue, CancellationToken.None);
+            return snapshots.Remove(aggregateId, 0, long.MaxValue, CancellationToken.None);
         }
 
         public static Task Remove(
             this ISnapshotStore snapshots,
             string aggregateId,
-            int fromVersionInclusive,
-            int toVersionInclusive
+            long fromVersionInclusive,
+            long toVersionInclusive
         )
         {
             return snapshots.Remove(aggregateId, fromVersionInclusive, toVersionInclusive, CancellationToken.None);

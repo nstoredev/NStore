@@ -24,7 +24,7 @@ namespace NStore.Streams
         {
             // @@REVIEW: micro optimization for reading only last index? (fromIndexInclusive == toIndexInclusive == Int32.MaxValue)
             var readConsumer = subscription;
-            if (toIndexInclusive == Int32.MaxValue)
+            if (toIndexInclusive == long.MaxValue)
             {
                 Version = 0;
                 readConsumer = new SubscriptionWrapper(subscription)
