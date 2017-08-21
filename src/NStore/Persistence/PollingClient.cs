@@ -1,13 +1,21 @@
 ﻿using System;
+using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 namespace NStore.Persistence
 {
+    public class PollingException : Exception
+    {
+        public PollingException(string message) : base(message)
+        {
+        }
+    }
+
     public class PollingClient
     {
-        private class Reader : ISubscription
+        private class Sequencer : ISubscription
         {
             private readonly ISubscription _subscription;
             private readonly ILogger _logger;
@@ -16,7 +24,7 @@ namespace NStore.Persistence
             public long Processed { get; private set; }
             public int RetriesOnHole { get; private set; }
             private bool _stopOnHole = true;
-            public Reader(long lastPosition, ISubscription subscription, ILogger logger)
+            public Sequencer(long lastPosition, ISubscription subscription, ILogger logger)
             {
                 Position = lastPosition;
                 _subscription = subscription;
@@ -83,39 +91,56 @@ namespace NStore.Persistence
         private readonly IPersistence _store;
         public int PollingIntervalMilliseconds { get; set; }
         public int HoleDetectionTimeout { get; set; }
-        public long Position => _reader.Position;
+        public long Position => _sequencer.Position;
 
-        private readonly Reader _reader;
+        private readonly Sequencer _sequencer;
         private readonly ILogger _logger;
-
+        private int _isPolling = 0;
+        private bool _stopped = false;
         public PollingClient(IPersistence store, long lastPosition, ISubscription subscription, ILoggerFactory loggerFactory)
         {
             this._logger = loggerFactory.CreateLogger(GetType());
 
-            _reader = new Reader(lastPosition, subscription, _logger);
+            _sequencer = new Sequencer(lastPosition, subscription, _logger);
             _store = store;
             PollingIntervalMilliseconds = 200;
             HoleDetectionTimeout = 2000;
         }
 
-        public void Stop()
+        public async Task Stop()
         {
             _source.Cancel();
             _source = null;
+
+            while (_stopped == false)
+            {
+                await Task.Delay(100).ConfigureAwait(false);
+            }
         }
 
         public void Start()
         {
             _source = new CancellationTokenSource();
             var token = _source.Token;
-
+            _stopped = false;
             Task.Run(async () =>
             {
-                while (!token.IsCancellationRequested)
+                try
                 {
-                    await Poll(token).ConfigureAwait(false);
-                    await Task.Delay(PollingIntervalMilliseconds, token).ConfigureAwait(false);
+                    while (!token.IsCancellationRequested)
+                    {
+                        await Poll(token).ConfigureAwait(false);
+                        if (!token.IsCancellationRequested)
+                        {
+                            await Task.Delay(PollingIntervalMilliseconds, token).ConfigureAwait(false);
+                        }
+                    }
                 }
+                finally
+                {
+                    _stopped = true;
+                }
+
             }, token).ConfigureAwait(false);
         }
 
@@ -132,28 +157,50 @@ namespace NStore.Persistence
 
         public async Task Poll(CancellationToken token)
         {
+            if (Interlocked.CompareExchange(ref _isPolling, 1, 0) == 0)
+            {
+                try
+                {
+                    await InnerPolling(token);
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _isPolling, 0);
+                }
+            }
+            //else
+            //{
+            //    throw new PollingException("Already polling");
+            //}
+        }
+
+        private async Task InnerPolling(CancellationToken token)
+        {
             do
             {
                 using (_logger.BeginScope("Poll"))
                 {
                     var start = Position + 1;
-                    await this._store.ReadAllAsync(
+                    await _store.ReadAllAsync(
                         start,
-                        _reader,
+                        _sequencer,
                         int.MaxValue,
                         token
                     ).ConfigureAwait(false);
 
-                    if (_reader.RetriesOnHole > 0)
+                    if (_sequencer.RetriesOnHole > 0)
                     {
                         await Task.Delay(HoleDetectionTimeout, token).ConfigureAwait(false);
                     }
 
-                    _logger.LogDebug($"HoleDetected : {_reader.RetriesOnHole}");
-                    _logger.LogDebug($"Polled from {start} to {_reader.Position}, processed {_reader.Processed} chunks");
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug($"HoleDetected : {_sequencer.RetriesOnHole}");
+                        _logger.LogDebug(
+                            $"Polled from {start} to {_sequencer.Position}, processed {_sequencer.Processed} chunks");
+                    }
                 }
-            }
-            while (_reader.RetriesOnHole > 0);
+            } while (_sequencer.RetriesOnHole > 0);
         }
     }
 }

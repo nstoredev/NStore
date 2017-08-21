@@ -567,7 +567,7 @@ namespace NStore.Persistence.Tests
 
             var producer = new ActionBlock<int>(async i =>
             {
-                await Store.AppendAsync("p", -1, "demo").ConfigureAwait(false);
+                await Store.AppendAsync("p", i, "demo", "op#"+i).ConfigureAwait(false);
             }, new ExecutionDataflowBlockOptions()
             {
                 MaxDegreeOfParallelism = parallelism
@@ -577,7 +577,7 @@ namespace NStore.Persistence.Tests
 
             foreach (var i in Enumerable.Range(1, range))
             {
-                await producer.SendAsync(i).ConfigureAwait(false);
+                Assert.True(await producer.SendAsync(i).ConfigureAwait(false));
             }
 
             producer.Complete();
@@ -587,7 +587,7 @@ namespace NStore.Persistence.Tests
             if (autopolling)
             {
                 _logger.LogDebug("Stopping poller");
-                poller.Stop();
+                await poller.Stop();
                 _logger.LogDebug("Poller stopped");
             }
 
@@ -597,8 +597,9 @@ namespace NStore.Persistence.Tests
             await poller.Poll(timeout.Token).ConfigureAwait(false);
             _logger.LogDebug("Polling to end - done");
 
-            Assert.Equal(range, poller.Position);
-            Assert.Equal(range, sequenceChecker.Position);
+            Assert.True(poller.Position == sequenceChecker.Position, "Sequence " + sequenceChecker.Position + " != Position " + poller.Position);
+            Assert.True(range == poller.Position, "Poller @" + poller.Position);
+            Assert.True(range == sequenceChecker.Position, "Sequence @" + sequenceChecker.Position);
         }
     }
 

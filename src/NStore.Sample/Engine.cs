@@ -213,7 +213,7 @@ namespace NStore.Sample
 
         public void Dispose()
         {
-            _poller.Stop();
+            _poller.Stop().GetAwaiter().GetResult();
         }
 
         public void ShowRooms()
