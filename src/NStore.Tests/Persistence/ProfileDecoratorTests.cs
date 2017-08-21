@@ -43,8 +43,8 @@ namespace NStore.Tests.Persistence
             Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
             Assert.Equal(0, _profile.StoreScanCounter.Calls);
-            Assert.Equal(0, _profile.PartitionReadForwardCounter.Calls);
-            Assert.Equal(0, _profile.PartitionReadBackwardCounter.Calls);
+            Assert.Equal(0, _profile.ReadForwardCounter.Calls);
+            Assert.Equal(0, _profile.ReadBackwardCounter.Calls);
             Assert.Equal(0, _profile.PeekCounter.Calls);
         }
 
@@ -55,8 +55,8 @@ namespace NStore.Tests.Persistence
             Assert.Equal(1, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
             Assert.Equal(0, _profile.StoreScanCounter.Calls);
-            Assert.Equal(0, _profile.PartitionReadForwardCounter.Calls);
-            Assert.Equal(0, _profile.PartitionReadBackwardCounter.Calls);
+            Assert.Equal(0, _profile.ReadForwardCounter.Calls);
+            Assert.Equal(0, _profile.ReadBackwardCounter.Calls);
             Assert.Equal(0, _profile.PeekCounter.Calls);
         }
 
@@ -67,8 +67,8 @@ namespace NStore.Tests.Persistence
             Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(1, _profile.DeleteCounter.Calls);
             Assert.Equal(0, _profile.StoreScanCounter.Calls);
-            Assert.Equal(0, _profile.PartitionReadForwardCounter.Calls);
-            Assert.Equal(0, _profile.PartitionReadBackwardCounter.Calls);
+            Assert.Equal(0, _profile.ReadForwardCounter.Calls);
+            Assert.Equal(0, _profile.ReadBackwardCounter.Calls);
             Assert.Equal(0, _profile.PeekCounter.Calls);
         }
 
@@ -79,20 +79,20 @@ namespace NStore.Tests.Persistence
             Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
             Assert.Equal(1, _profile.StoreScanCounter.Calls);
-            Assert.Equal(0, _profile.PartitionReadForwardCounter.Calls);
-            Assert.Equal(0, _profile.PartitionReadBackwardCounter.Calls);
+            Assert.Equal(0, _profile.ReadForwardCounter.Calls);
+            Assert.Equal(0, _profile.ReadBackwardCounter.Calls);
             Assert.Equal(0, _profile.PeekCounter.Calls);
         }
 
         [Fact]
         public async void scan_partition_should_be_recorded()
         {
-            await _store.ReadPartitionForward("empty", 0, new Recorder(), 10);
+            await _store.ReadForwardAsync("empty", 0, new Recorder(), 10);
             Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
             Assert.Equal(0, _profile.StoreScanCounter.Calls);
-            Assert.Equal(1, _profile.PartitionReadForwardCounter.Calls);
-            Assert.Equal(0, _profile.PartitionReadBackwardCounter.Calls);
+            Assert.Equal(1, _profile.ReadForwardCounter.Calls);
+            Assert.Equal(0, _profile.ReadBackwardCounter.Calls);
             Assert.Equal(0, _profile.PeekCounter.Calls);
         }
 
@@ -103,8 +103,8 @@ namespace NStore.Tests.Persistence
             Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
             Assert.Equal(0, _profile.StoreScanCounter.Calls);
-            Assert.Equal(0, _profile.PartitionReadForwardCounter.Calls);
-            Assert.Equal(1, _profile.PartitionReadBackwardCounter.Calls);
+            Assert.Equal(0, _profile.ReadForwardCounter.Calls);
+            Assert.Equal(1, _profile.ReadBackwardCounter.Calls);
             Assert.Equal(0, _profile.PeekCounter.Calls);
         }
 
@@ -115,8 +115,8 @@ namespace NStore.Tests.Persistence
             Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
             Assert.Equal(0, _profile.StoreScanCounter.Calls);
-            Assert.Equal(0, _profile.PartitionReadForwardCounter.Calls);
-            Assert.Equal(0, _profile.PartitionReadBackwardCounter.Calls);
+            Assert.Equal(0, _profile.ReadForwardCounter.Calls);
+            Assert.Equal(0, _profile.ReadBackwardCounter.Calls);
             Assert.Equal(1, _profile.PeekCounter.Calls);
         }
     }

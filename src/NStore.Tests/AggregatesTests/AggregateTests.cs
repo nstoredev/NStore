@@ -183,7 +183,7 @@ namespace NStore.Tests.AggregatesTests
             Assert.NotNull(changeSet);
             Assert.False(changeSet.IsEmpty);
             Assert.Equal(2, changeSet.AggregateVersion);
-            Assert.Equal(1, changeSet.Events.Length);
+            Assert.True(1 == changeSet.Events.Length);
             Assert.IsType<TicketRefunded>(changeSet.Events[0]);
         }
 

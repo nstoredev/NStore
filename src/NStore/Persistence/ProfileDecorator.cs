@@ -11,8 +11,8 @@ namespace NStore.Persistence
         {
             _store = store;
             PersistCounter = new TaskProfilingInfo("Persist");
-            PartitionReadForwardCounter = new TaskProfilingInfo("Partition read forward", "chunks read");
-            PartitionReadBackwardCounter = new TaskProfilingInfo("Partition read backward", "chunks read");
+            ReadForwardCounter = new TaskProfilingInfo("Partition read forward", "chunks read");
+            ReadBackwardCounter = new TaskProfilingInfo("Partition read backward", "chunks read");
             DeleteCounter = new TaskProfilingInfo("Delete");
             StoreScanCounter = new TaskProfilingInfo("Store Scan", "chunks read");
             ReadLastCounter = new TaskProfilingInfo("Read last position", "lastposition");
@@ -24,8 +24,8 @@ namespace NStore.Persistence
         public TaskProfilingInfo DeleteCounter { get; }
         public TaskProfilingInfo StoreScanCounter { get; }
         public TaskProfilingInfo ReadLastCounter { get; }
-        public TaskProfilingInfo PartitionReadForwardCounter { get; }
-        public TaskProfilingInfo PartitionReadBackwardCounter { get; }
+        public TaskProfilingInfo ReadForwardCounter { get; }
+        public TaskProfilingInfo ReadBackwardCounter { get; }
 
         public bool SupportsFillers => _store.SupportsFillers;
 
@@ -39,10 +39,10 @@ namespace NStore.Persistence
         {
             var counter = new SubscriptionWrapper(subscription)
             {
-                BeforeOnNext = data => PartitionReadForwardCounter.IncCounter1()
+                BeforeOnNext = data => ReadForwardCounter.IncCounter1()
             };
 
-            await PartitionReadForwardCounter.CaptureAsync(() =>
+            await ReadForwardCounter.CaptureAsync(() =>
                 _store.ReadForwardAsync(
                     partitionId,
                     fromLowerIndexInclusive,
@@ -63,10 +63,10 @@ namespace NStore.Persistence
         {
             var counter = new SubscriptionWrapper(subscription)
             {
-                BeforeOnNext = data => PartitionReadBackwardCounter.IncCounter1()
+                BeforeOnNext = data => ReadBackwardCounter.IncCounter1()
             };
 
-            await PartitionReadBackwardCounter.CaptureAsync(() =>
+            await ReadBackwardCounter.CaptureAsync(() =>
                 _store.ReadBackwardAsync(
                     partitionId,
                     fromUpperIndexInclusive,

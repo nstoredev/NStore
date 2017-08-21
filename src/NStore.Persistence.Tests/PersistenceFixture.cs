@@ -49,7 +49,7 @@ namespace NStore.Persistence.Tests
             await Store.AppendAsync("Stream_Neg", -1, "payload");
 
             var tape = new Recorder();
-            await Store.ReadPartitionForward("Stream_Neg", 0, tape);
+            await Store.ReadForwardAsync("Stream_Neg", 0, tape);
             Assert.Equal("payload", tape.ByIndex(1).Payload);
         }
     }
@@ -108,7 +108,7 @@ namespace NStore.Persistence.Tests
         {
             object payload = null;
 
-            await Store.ReadPartitionForward(
+            await Store.ReadForwardAsync(
                 "Stream_1", 0, new LambdaSubscription(data =>
                 {
                     payload = data.Payload;
@@ -142,7 +142,7 @@ namespace NStore.Persistence.Tests
         {
             var recorder = new Recorder();
 
-            await Store.ReadPartitionForward(
+            await Store.ReadForwardAsync(
                 "Stream_1", 0, recorder, 2
             ).ConfigureAwait(false);
 
@@ -156,7 +156,7 @@ namespace NStore.Persistence.Tests
         {
             var recorder = new Recorder();
 
-            await Store.ReadPartitionForward(
+            await Store.ReadForwardAsync(
                 "Stream_1", 0, recorder, 2
             ).ConfigureAwait(false);
 
@@ -256,7 +256,7 @@ namespace NStore.Persistence.Tests
             await Store.AppendAsync("BA", 0, System.Text.Encoding.UTF8.GetBytes("this is a test")).ConfigureAwait(false);
 
             byte[] payload = null;
-            await Store.ReadPartitionForward("BA", 0, new LambdaSubscription(data =>
+            await Store.ReadForwardAsync("BA", 0, new LambdaSubscription(data =>
             {
                 payload = (byte[])data.Payload;
                 return Task.FromResult(true);
@@ -276,14 +276,15 @@ namespace NStore.Persistence.Tests
             await Store.AppendAsync("Id_1", 0, new { data = "this is a test" }, opId).ConfigureAwait(false);
             await Store.AppendAsync("Id_1", 1, new { data = "this is a test" }, opId).ConfigureAwait(false);
 
-            var list = new List<object>();
-            await Store.ReadPartitionForward("Id_1", 0, new LambdaSubscription(data =>
+            var list = new List<long>();
+            await Store.ReadForwardAsync("Id_1", 0, new LambdaSubscription(data =>
             {
-                list.Add(data.Payload);
+                list.Add(data.Index);
                 return Task.FromResult(true);
             })).ConfigureAwait(false);
 
-            Assert.Equal(1, list.Count());
+            Assert.True(1 == list.Count());
+            Assert.Equal(0, list[0]);
         }
 
         [Fact]
@@ -294,12 +295,12 @@ namespace NStore.Persistence.Tests
             await Store.AppendAsync("Id_2", 1, "b", opId).ConfigureAwait(false);
 
             var list = new List<object>();
-            await Store.ReadPartitionForward("Id_1", 0, new LambdaSubscription(data =>
+            await Store.ReadForwardAsync("Id_1", 0, new LambdaSubscription(data =>
             {
                 list.Add(data.Payload);
                 return Task.FromResult(true);
             }));
-            await Store.ReadPartitionForward("Id_2", 0, new LambdaSubscription(data =>
+            await Store.ReadForwardAsync("Id_2", 0, new LambdaSubscription(data =>
             {
                 list.Add(data.Payload);
                 return Task.FromResult(true);
@@ -347,7 +348,7 @@ namespace NStore.Persistence.Tests
         {
             await Store.DeleteAsync("delete").ConfigureAwait(false);
             bool almostOneChunk = false;
-            await Store.ReadPartitionForward("delete", 0, new LambdaSubscription(data =>
+            await Store.ReadForwardAsync("delete", 0, new LambdaSubscription(data =>
             {
                 almostOneChunk = true;
                 return Task.FromResult(false);
@@ -381,7 +382,7 @@ namespace NStore.Persistence.Tests
             await Store.DeleteAsync("delete_3", 1, 1).ConfigureAwait(false);
             _logger.LogDebug("recording");
             var acc = new Recorder();
-            await Store.ReadPartitionForward("delete_3", 0, acc).ConfigureAwait(false);
+            await Store.ReadForwardAsync("delete_3", 0, acc).ConfigureAwait(false);
 
             _logger.LogDebug("checking assertions");
             Assert.Equal(2, acc.Length);
@@ -398,7 +399,7 @@ namespace NStore.Persistence.Tests
         {
             await Store.DeleteAsync("delete_4", 3).ConfigureAwait(false);
             var acc = new Recorder();
-            await Store.ReadPartitionForward("delete_4", 0, acc).ConfigureAwait(false);
+            await Store.ReadForwardAsync("delete_4", 0, acc).ConfigureAwait(false);
 
             Assert.Equal(2, acc.Length);
             Assert.True((string)acc[0].Payload == "1");
@@ -414,7 +415,7 @@ namespace NStore.Persistence.Tests
         {
             await Store.DeleteAsync("delete_5", 2, 2).ConfigureAwait(false);
             var acc = new Recorder();
-            await Store.ReadPartitionForward("delete_5", 0, acc).ConfigureAwait(false);
+            await Store.ReadForwardAsync("delete_5", 0, acc).ConfigureAwait(false);
 
             Assert.Equal(2, acc.Length);
             Assert.True((string)acc[0].Payload == "1");
@@ -510,7 +511,7 @@ namespace NStore.Persistence.Tests
 
             Assert.True(exceptions > 0);
             var recorder = new Recorder();
-            await Store.ReadPartitionForward("::empty", 0, recorder).ConfigureAwait(false);
+            await Store.ReadForwardAsync("::empty", 0, recorder).ConfigureAwait(false);
 
             Assert.Equal(exceptions, recorder.Length);
         }

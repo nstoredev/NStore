@@ -320,8 +320,8 @@ namespace NStore.Sample
             this._reporter.Report(string.Empty);
             this._reporter.Report($"Persistence - {_name} provider");
             this._reporter.Report($"  {_storeProfile.PersistCounter}");
-            this._reporter.Report($"  {_storeProfile.PartitionReadForwardCounter}");
-            this._reporter.Report($"  {_storeProfile.PartitionReadBackwardCounter}");
+            this._reporter.Report($"  {_storeProfile.ReadForwardCounter}");
+            this._reporter.Report($"  {_storeProfile.ReadBackwardCounter}");
             this._reporter.Report($"  {_storeProfile.PeekCounter}");
             this._reporter.Report($"  {_storeProfile.DeleteCounter}");
             this._reporter.Report($"  {_storeProfile.StoreScanCounter}");
@@ -333,8 +333,8 @@ namespace NStore.Sample
                 this._reporter.Report($"Snapshots");
                 this._reporter.Report($"  {_cloneProfiler}");
                 this._reporter.Report($"  {_snapshotProfile.PersistCounter}");
-                this._reporter.Report($"  {_snapshotProfile.PartitionReadForwardCounter}");
-                this._reporter.Report($"  {_snapshotProfile.PartitionReadBackwardCounter}");
+                this._reporter.Report($"  {_snapshotProfile.ReadForwardCounter}");
+                this._reporter.Report($"  {_snapshotProfile.ReadBackwardCounter}");
                 this._reporter.Report($"  {_snapshotProfile.PeekCounter}");
                 this._reporter.Report($"  {_snapshotProfile.DeleteCounter}");
                 this._reporter.Report($"  {_snapshotProfile.StoreScanCounter}");

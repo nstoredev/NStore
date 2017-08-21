@@ -48,7 +48,7 @@ namespace NStore.Tests.Persistence
             var list = new List<IChunk>();
             recorder.Replay(list.Add);
 
-            Assert.Equal(1, list.Count);
+            Assert.True(1 == list.Count);
             Assert.Same(chunk, list[0]);
         }
     }

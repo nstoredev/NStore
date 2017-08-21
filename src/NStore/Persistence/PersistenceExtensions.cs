@@ -5,7 +5,7 @@ namespace NStore.Persistence
 {
     public static class PersistenceExtensions
     {
-        public static Task ReadPartitionForward(
+        public static Task ReadForwardAsync(
             this IPersistence store,
             string partitionId,
             ISubscription subscription
@@ -21,7 +21,7 @@ namespace NStore.Persistence
             );
         }
         
-        public static Task ReadPartitionForward(
+        public static Task ReadForwardAsync(
             this IPersistence store,
             string partitionId,
             long fromLowerIndexInclusive,
@@ -38,7 +38,7 @@ namespace NStore.Persistence
             );
         }
 
-        public static Task ReadPartitionForward(
+        public static Task ReadForwardAsync(
             this IPersistence store,
             string partitionId,
             long fromLowerIndexInclusive,
