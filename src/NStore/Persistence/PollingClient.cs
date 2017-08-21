@@ -161,17 +161,19 @@ namespace NStore.Persistence
             {
                 try
                 {
-                    await InnerPolling(token);
+                    await InnerPolling(token).ConfigureAwait(false);
                 }
                 finally
                 {
                     Interlocked.Exchange(ref _isPolling, 0);
                 }
             }
-            //else
-            //{
-            //    throw new PollingException("Already polling");
-            //}
+#if NSTORE_CHECKED_POLLER
+            else
+            {
+                throw new PollingException("Already polling");
+            }
+#endif 
         }
 
         private async Task InnerPolling(CancellationToken token)
