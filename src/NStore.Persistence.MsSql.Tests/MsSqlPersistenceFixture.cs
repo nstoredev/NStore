@@ -23,10 +23,8 @@ namespace NStore.Persistence.Tests
         {
             ConnectionString = Environment.GetEnvironmentVariable("NSTORE_MSSQL");
             if (String.IsNullOrWhiteSpace(ConnectionString))
-                throw new Exception("Please set connection string as NSTORE_MSSQL environment variable");
-            //                "Server=(local)\\SqlExpress;Database=NStore;Trusted_Connection=True;MultipleActiveResultSets=true";
-            // docker
-            //            ConnectionString = "Server=localhost,1433;Database=NStore;User Id=sa;Password=NStoreD0ck3r;MultipleActiveResultSets=true";
+                throw new TestMisconfiguredException("Please set connection string as NSTORE_MSSQL environment variable");
+
             if (ConnectionString.StartsWith("\""))
                 ConnectionString = ConnectionString.Substring(1);
 

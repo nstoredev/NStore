@@ -343,7 +343,7 @@ namespace NStore.Persistence.Tests
     public class DeleteStreamTest_1 : DeleteStreamTest
     {
         [Fact]
-        public async void delete_stream()
+        public async Task delete_stream()
         {
             await Store.DeleteAsync("delete").ConfigureAwait(false);
             bool almostOneChunk = false;
@@ -361,7 +361,7 @@ namespace NStore.Persistence.Tests
     {
 
         [Fact]
-        public async void delete_invalid_stream_should_throw_exception()
+        public async Task delete_invalid_stream_should_throw_exception()
         {
             var ex = await Assert.ThrowsAnyAsync<StreamDeleteException>(() =>
                 Store.DeleteAsync("delete_2")
@@ -375,7 +375,7 @@ namespace NStore.Persistence.Tests
     public class DeleteStreamTest_3 : DeleteStreamTest
     {
         [Fact]
-        public async void should_delete_first()
+        public async Task should_delete_first()
         {
             _logger.LogDebug("deleting first chunk");
             await Store.DeleteAsync("delete_3", 1, 1).ConfigureAwait(false);
@@ -394,7 +394,7 @@ namespace NStore.Persistence.Tests
     public class DeleteStreamTest_4 : DeleteStreamTest
     {
         [Fact]
-        public async void should_delete_last()
+        public async Task should_delete_last()
         {
             await Store.DeleteAsync("delete_4", 3).ConfigureAwait(false);
             var acc = new Recorder();
@@ -410,7 +410,7 @@ namespace NStore.Persistence.Tests
     {
 
         [Fact]
-        public async void should_delete_middle()
+        public async Task should_delete_middle()
         {
             await Store.DeleteAsync("delete_5", 2, 2).ConfigureAwait(false);
             var acc = new Recorder();
@@ -425,7 +425,7 @@ namespace NStore.Persistence.Tests
     public class deleted_chunks_management : BasePersistenceTest
     {
         [Fact]
-        public async void deleted_chunks_should_be_hidden_from_scan()
+        public async Task deleted_chunks_should_be_hidden_from_scan()
         {
             await Store.AppendAsync("a", 1, "first").ConfigureAwait(false);
             await Store.AppendAsync("a", 2, "second").ConfigureAwait(false);
@@ -442,7 +442,7 @@ namespace NStore.Persistence.Tests
         }
 
         [Fact]
-        public async void deleted_chunks_should_be_hidden_from_peek()
+        public async Task deleted_chunks_should_be_hidden_from_peek()
         {
             await Store.AppendAsync("a", 1, "first").ConfigureAwait(false);
             await Store.AppendAsync("a", 2, "second").ConfigureAwait(false);
@@ -459,7 +459,7 @@ namespace NStore.Persistence.Tests
         [InlineData(1, 3)]
         [InlineData(2, 3)]
         //		[InlineData(3, 3)] @@TODO enable tombstone!
-        public async void poller_should_skip_missing_chunks(long missing, long expected)
+        public async Task poller_should_skip_missing_chunks(long missing, long expected)
         {
             await Store.AppendAsync("a", 1, "1").ConfigureAwait(false);
             await Store.AppendAsync("a", 2, "2").ConfigureAwait(false);
@@ -485,7 +485,7 @@ namespace NStore.Persistence.Tests
     public class strict_sequence_on_store : BasePersistenceTest
     {
         [Fact]
-        public async void on_concurrency_exception_holes_are_filled_with_empty_chunks()
+        public async Task on_concurrency_exception_holes_are_filled_with_empty_chunks()
         {
             if (!Store.SupportsFillers)
             {
@@ -546,7 +546,7 @@ namespace NStore.Persistence.Tests
         [InlineData(8, false)]
         [InlineData(1, true)]
         [InlineData(8, true)]
-        public async void polling_client_should_not_miss_data(int parallelism, bool autopolling)
+        public async Task polling_client_should_not_miss_data(int parallelism, bool autopolling)
         {
             _logger.LogDebug("Starting with {Parallelism} workers and Autopolling {Autopolling}", parallelism, autopolling);
 

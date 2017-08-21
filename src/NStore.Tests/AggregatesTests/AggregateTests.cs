@@ -1,10 +1,62 @@
 ﻿using System;
+using System.Reflection;
 using NStore.Aggregates;
 using NStore.SnapshotStore;
 using Xunit;
 
 namespace NStore.Tests.AggregatesTests
 {
+    public class EventProjectionTests
+    {
+        public class Signal
+        {
+            
+        }
+
+        public class StateWithPublicMethods : AggregateState
+        {
+            public StateWithPublicMethods()
+            {
+                this.GetMethodFlags = BindingFlags.Public | BindingFlags.Instance;
+            }
+            public bool Signaled { get; private set; }
+
+            public void On(Signal s)
+            {
+                Signaled = true;
+            }
+        }
+
+        public class StateWithPrivateMethods : AggregateState
+        {
+            public bool Signaled { get; private set; }
+
+            private void On(Signal s)
+            {
+                Signaled = true;
+            }
+        }
+
+        [Fact]
+        public void should_route_to_public_method()
+        {
+            var state = new StateWithPublicMethods();
+            state.Project(new Signal());
+
+            Assert.True(state.Signaled);
+        }
+
+        [Fact]
+        public void should_route_to_private_method()
+        {
+            var state = new StateWithPrivateMethods();
+            state.Project(new Signal());
+
+            Assert.True(state.Signaled);
+        }
+        
+    }
+
     public class AggregateTests
     {
         [Fact]

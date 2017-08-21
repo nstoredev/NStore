@@ -5,6 +5,8 @@ namespace NStore.Aggregates
 {
     public abstract class EventsProjector : IEventsProjector
     {
+        protected BindingFlags GetMethodFlags = BindingFlags.NonPublic | BindingFlags.Instance;
+
         public virtual void Project(object @event)
         {
             var mi = GetConsumerOf("On", @event);
@@ -13,13 +15,13 @@ namespace NStore.Aggregates
 
         private MethodInfo GetConsumerOf(string methodName, object @event)
         {
-            //@@TODO: access private methods + cache
-            var mi = GetType().GetTypeInfo()
-                .GetMethod(
-                    methodName,
-                    new Type[] { @event.GetType() }
-                );
-
+            var mi = GetType().GetMethod(
+                methodName,
+                GetMethodFlags,
+                null,
+                new Type[] { @event.GetType() },
+                null
+            );
             return mi;
         }
     }

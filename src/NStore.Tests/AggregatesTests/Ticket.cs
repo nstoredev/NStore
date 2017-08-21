@@ -16,7 +16,7 @@ namespace NStore.Tests.AggregatesTests
     {
         public bool HasBeenSold { get; private set; }
 
-        public void On(TicketSold e)
+        private void On(TicketSold e)
         {
             this.HasBeenSold = true;
         }
