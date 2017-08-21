@@ -264,7 +264,7 @@ namespace NStore.Tests.AggregatesTests
             var ticket = await Repository.GetById<Ticket>("Ticket_1");
             await Repository.Save(ticket, "empty");
 
-            var chunk = await Persistence.ReadLast("Ticket_1");
+            var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1");
 
             Assert.Null(chunk);
         }
@@ -279,7 +279,7 @@ namespace NStore.Tests.AggregatesTests
             var ticket = await Repository.GetById<Ticket>("Ticket_1");
             await Repository.Save(ticket, "empty");
 
-            var chunk = await Persistence.ReadLast("Ticket_1");
+            var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1");
 
             Assert.NotNull(chunk);
             Assert.IsType<Changeset>(chunk.Payload);

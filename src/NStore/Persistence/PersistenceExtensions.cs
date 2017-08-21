@@ -57,7 +57,7 @@ namespace NStore.Persistence
         }
 
 
-        public static Task ReadPartitionBackward(
+        public static Task ReadBackwardAsync(
             this IPersistence store,
             string partitionId,
             long fromUpperIndexInclusive,
@@ -74,7 +74,7 @@ namespace NStore.Persistence
             );
         }
 
-        public static Task ReadPartitionBackward(
+        public static Task ReadBackwardAsync(
             this IPersistence store,
             string partitionId,
             long fromUpperIndexInclusive,
@@ -111,7 +111,7 @@ namespace NStore.Persistence
             return store.ReadAllAsync(sequenceStart, subscription, limit, CancellationToken.None);
         }
 
-        public static Task<IChunk> ReadLast(this IPersistence store, string partitionId)
+        public static Task<IChunk> ReadSingleBackwardAsync(this IPersistence store, string partitionId)
         {
             return store.ReadSingleBackwardAsync(partitionId, long.MaxValue, CancellationToken.None);
         }

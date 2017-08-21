@@ -124,7 +124,7 @@ namespace NStore.Persistence.Tests
         {
             object payload = null;
 
-            await Store.ReadPartitionBackward(
+            await Store.ReadBackwardAsync(
                 "Stream_1",
                 long.MaxValue,
                 new LambdaSubscription(data =>
@@ -168,7 +168,7 @@ namespace NStore.Persistence.Tests
         {
             var recorder = new Recorder();
 
-            await Store.ReadPartitionBackward(
+            await Store.ReadBackwardAsync(
                 "Stream_1", 2, recorder, 0
             ).ConfigureAwait(false);
 
@@ -181,7 +181,7 @@ namespace NStore.Persistence.Tests
         {
             var tape = new Recorder();
 
-            await Store.ReadPartitionBackward(
+            await Store.ReadBackwardAsync(
                 "Stream_1",
                 3,
                 tape,
