@@ -10,37 +10,23 @@ namespace NStore.Persistence.Tests
     {
         private MongoPersistence _mongoPersistence;
         private MongoStoreOptions _options;
-        private static readonly string Mongo;
         private static int _staticId = 1;
         private int _id;
         private const string TestSuitePrefix = "Mongo";
-        static BasePersistenceTest()
-        {
-            Mongo = Environment.GetEnvironmentVariable("NSTORE_MONGODB");
-            if (string.IsNullOrWhiteSpace(Mongo))
-            {
-                throw new Exception("NSTORE_MONGODB environment variable not set");
-            }
-/*
-            if (!string.IsNullOrEmpty(baseConnectionString))
-            {
-                var queryString = Environment.GetEnvironmentVariable("TEST_MONGODB_QUERYSTRING");
-                Mongo = $"{baseConnectionString.TrimEnd('/')}/nstore{queryString}";
-            }
-            else
-            {
-                Mongo = "mongodb://localhost/nstorex";
-            }
-*/
-        }
 
         private IPersistence Create()
         {
+            var mongo = Environment.GetEnvironmentVariable("NSTORE_MONGODB");
+            if (string.IsNullOrWhiteSpace(mongo))
+            {
+                throw new TestMisconfiguredException("NSTORE_MONGODB environment variable not set");
+            }
+
             _id = Interlocked.Increment(ref _staticId);
 
             _options = new MongoStoreOptions
             {
-                PartitionsConnectionString = Mongo,
+                PartitionsConnectionString = mongo,
                 UseLocalSequence = true,
                 PartitionsCollectionName = "partitions_" + GetType().Name + "_" + _id,
                 SequenceCollectionName = "seq_" + _id,
