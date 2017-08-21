@@ -13,6 +13,7 @@ using NStore.Streams;
 using System.Diagnostics;
 using System.Threading.Tasks.Dataflow;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Console;
 using NStore.Persistence.Mongo;
 
@@ -22,16 +23,20 @@ namespace NStore.Sample
     {
         public ILogger CreateLogger(string categoryName)
         {
+            if(categoryName == typeof(PollingClient).FullName)
+                return NullLogger.Instance;
+
             return new ConsoleLogger(categoryName, (s, level) => true, true);
         }
 
         public void AddProvider(ILoggerProvider provider)
         {
-
+            // nothing to do
         }
 
         public void Dispose()
         {
+            // nothing to do
         }
     }
 
