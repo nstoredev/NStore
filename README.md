@@ -31,7 +31,7 @@ Heavily inspired from NEventStore, rewritten from scratch to be simple to learn 
 ### Raw API
 
     var persister = CreateYourStore(); 
-    await persister.Append("Stream_1", new { data = "Hello world!" });
+    await persister.AppendAsync("Stream_1", new { data = "Hello world!" });
 
 
 ---
