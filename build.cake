@@ -12,6 +12,14 @@ var configuration = Argument("configuration", "Release");
 var msSqlServerConnectionString = RemoveQuotes(GetVariable("NSTORE_MSSQL_INSTANCE")) ?? "Server=localhost,1433;User Id=sa;Password=NStoreD0ck3r";
 var msSqlDatabaseConnectionString  = msSqlServerConnectionString +";Database=NStore";
 var testOutput = GetVariable("testoutput");
+var version = Argument("nugetver","0.0.1-localbuild");
+
+// Define Settings.
+var artifactsRoot   = GetVariable("artifactsRoot") ?? "./artifacts";
+var artifactsDir    = Directory(artifactsRoot);
+var nugetDir        = Directory(artifactsRoot + "/nuget");
+var solution        = "./src/NStore.sln";
+
 
 private string GetVariable(string key)
 {
@@ -44,16 +52,6 @@ private void RunTest(string testProject, IDictionary<string,string> env = null)
     var to = GetVariable("testoutput");
     var output = to == null ? "" :  "-xml " + to + "/" + testProject + ".xml";
 
-/*
-    var settings = new ProcessSettings
-    {
-//        Arguments = "xunit -parallel none",
-        Arguments = "xunit " + output,
-        WorkingDirectory = projectDir,
-        EnvironmentVariables = env
-    };
-//    var result = StartProcess("dotnet", settings);
-*/
     var settings = new DotNetCoreToolSettings {
         WorkingDirectory = projectDir,
         EnvironmentVariables = env
@@ -62,9 +60,6 @@ private void RunTest(string testProject, IDictionary<string,string> env = null)
     DotNetCoreTool(projectDir +"/"+ testProject, "xunit", output, settings);
 }
 
-// Define Settings.
-var artifactsDir    = Directory("./artifacts");
-var solution        = "./src/NStore.sln";
 
 //////////////////////////////////////////////////////////////////////
 // TASKS
@@ -190,6 +185,26 @@ Task("ReleaseBuild")
 	DotNetCoreBuild(solution, settings);
 });
 
+Task("pack")
+    .Does(() =>
+{
+    Information("Packing");
+    CleanDirectory(nugetDir);
+
+    var settings = new DotNetCorePackSettings
+    {
+        ArgumentCustomization = args => args.Append("/p:Version=" + version),
+        Configuration = "Release",
+        OutputDirectory = nugetDir,
+        NoBuild = true
+    };
+
+    DotNetCorePack("./src/NStore/", settings);
+    DotNetCorePack("./src/NStore.Tpl/", settings);
+    DotNetCorePack("./src/NStore.Persistence.Mongo/", settings);
+    DotNetCorePack("./src/NStore.Persistence.MsSql/", settings);
+
+});
 
 //////////////////////////////////////////////////////////////////////
 // TASK TARGETS
