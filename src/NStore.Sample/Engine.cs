@@ -15,28 +15,64 @@ using System.Threading.Tasks.Dataflow;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Console;
+using NStore.Logging;
 using NStore.Persistence.Mongo;
 
 namespace NStore.Sample
 {
-    public class ConsoleLoggerFactory : ILoggerFactory
+    public class ConsoleLoggerFactory : INStoreLoggerFactory
     {
-        public ILogger CreateLogger(string categoryName)
+        public INStoreLogger CreateLogger(string categoryName)
         {
-            if(categoryName == typeof(PollingClient).FullName)
-                return NullLogger.Instance;
+            if (categoryName == typeof(PollingClient).FullName)
+                return NStoreNullLogger.Instance;
 
-            return new ConsoleLogger(categoryName, (s, level) => true, true);
+            return new ConsoleLoggerWrapper(
+                new ConsoleLogger(categoryName, (s, level) => true, true)
+            );
+        }
+    }
+
+    public class ConsoleLoggerWrapper : INStoreLogger
+    {
+        private readonly ConsoleLogger _logger;
+
+        public ConsoleLoggerWrapper(ConsoleLogger logger)
+        {
+            _logger = logger;
         }
 
-        public void AddProvider(ILoggerProvider provider)
+        public bool IsDebugEnabled => _logger.IsEnabled(LogLevel.Debug);
+
+        public void LogDebug(string message, params object[] args)
         {
-            // nothing to do
+            _logger.LogDebug(message, args);
         }
 
-        public void Dispose()
+        public bool IsWarningEnabled => _logger.IsEnabled(LogLevel.Warning);
+
+        public void LogWarning(string message, params object[] args)
         {
-            // nothing to do
+            _logger.LogWarning(message, args);
+        }
+
+        public bool IsInformationEnabled => _logger.IsEnabled(LogLevel.Information);
+
+        public void LogInformation(string message, params object[] args)
+        {
+            _logger.LogInformation(message, args);
+
+        }
+
+        public void LogError(string message, params object[] args)
+        {
+            _logger.LogError(message, args);
+
+        }
+
+        public IDisposable BeginScope<TState>(TState state)
+        {
+            return _logger.BeginScope(state);
         }
     }
 
@@ -58,7 +94,8 @@ namespace NStore.Sample
         private readonly TaskProfilingInfo _cloneProfiler;
         private readonly ExecutionDataflowBlockOptions _unboundedOptions;
         private readonly ExecutionDataflowBlockOptions _boundedOptions;
-        private readonly ILoggerFactory _loggerFactory = new ConsoleLoggerFactory();
+        private readonly INStoreLoggerFactory _loggerFactory = new ConsoleLoggerFactory();
+
         public SampleApp(IPersistence store, string name, bool useSnapshots, bool quiet, bool fast)
         {
             _quiet = quiet;
@@ -70,8 +107,8 @@ namespace NStore.Sample
             _aggregateFactory = new DefaultAggregateFactory();
 
             var network = fast
-                ? (INetworkSimulator)new NoNetworkLatencySimulator()
-                : (INetworkSimulator)new ReliableNetworkSimulator(10, 50);
+                ? (INetworkSimulator) new NoNetworkLatencySimulator()
+                : (INetworkSimulator) new ReliableNetworkSimulator(10, 50);
 
             _appProjections = new AppProjections(network, quiet);
 
@@ -89,15 +126,15 @@ namespace NStore.Sample
             {
                 MaxDegreeOfParallelism = DataflowBlockOptions.Unbounded,
                 BoundedCapacity = DataflowBlockOptions.Unbounded,
-                EnsureOrdered =  false,
+                EnsureOrdered = false,
                 MaxMessagesPerTask = DataflowBlockOptions.Unbounded
-            };    
-            
+            };
+
             _boundedOptions = new ExecutionDataflowBlockOptions()
             {
                 MaxDegreeOfParallelism = Environment.ProcessorCount * 8,
                 BoundedCapacity = 500,
-                EnsureOrdered =  true
+                EnsureOrdered = true
             };
 
 
@@ -134,7 +171,7 @@ namespace NStore.Sample
                 await stream.AppendAsync(c, c.ToString()).ConfigureAwait(false);
                 Interlocked.Increment(ref written);
                 // ReSharper disable once AccessToDisposedClosure
-                progress.Report((double)written / writes);
+                progress.Report((double) written / writes);
             }
 
             var worker = new ActionBlock<int>(Write, _unboundedOptions);
@@ -181,7 +218,7 @@ namespace NStore.Sample
                 }
             }
 
-            var worker = new ActionBlock<string>(RoomBuilder,_unboundedOptions);
+            var worker = new ActionBlock<string>(RoomBuilder, _unboundedOptions);
 
             foreach (var i in Enumerable.Range(1, _rooms))
             {
@@ -255,7 +292,7 @@ namespace NStore.Sample
             {
                 if (progress != null)
                 {
-                    var percent = Interlocked.Increment(ref current) / (double)bookings;
+                    var percent = Interlocked.Increment(ref current) / (double) bookings;
                     progress.Report(percent);
                 }
 

@@ -3,19 +3,19 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+using NStore.Logging;
 
 namespace NStore.Persistence
 {
     public class LogDecorator : IPersistence
     {
         private readonly IPersistence _persistence;
-        private readonly ILogger _logger;
+        private readonly INStoreLogger _logger;
 
-        public LogDecorator(IPersistence persistence, ILoggerFactory loggerFactory)
+        public LogDecorator(IPersistence persistence, INStoreLoggerFactory inStoreLoggerFactory)
         {
             _persistence = persistence;
-            _logger = loggerFactory.CreateLogger("Persistence");
+            _logger = inStoreLoggerFactory.CreateLogger("Persistence");
         }
 
         public bool SupportsFillers => _persistence.SupportsFillers;

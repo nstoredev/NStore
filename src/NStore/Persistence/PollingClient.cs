@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+using NStore.Logging;
 
 namespace NStore.Persistence
 {
@@ -18,13 +17,13 @@ namespace NStore.Persistence
         private class Sequencer : ISubscription
         {
             private readonly ISubscription _subscription;
-            private readonly ILogger _logger;
+            private readonly INStoreLogger _logger;
             public long Position { get; private set; } = 0;
 
             public long Processed { get; private set; }
             public int RetriesOnHole { get; private set; }
             private bool _stopOnHole = true;
-            public Sequencer(long lastPosition, ISubscription subscription, ILogger logger)
+            public Sequencer(long lastPosition, ISubscription subscription, INStoreLogger logger)
             {
                 Position = lastPosition;
                 _subscription = subscription;
@@ -94,12 +93,12 @@ namespace NStore.Persistence
         public long Position => _sequencer.Position;
 
         private readonly Sequencer _sequencer;
-        private readonly ILogger _logger;
+        private readonly INStoreLogger _logger;
         private int _isPolling = 0;
         private bool _stopped = false;
-        public PollingClient(IPersistence store, long lastPosition, ISubscription subscription, ILoggerFactory loggerFactory)
+        public PollingClient(IPersistence store, long lastPosition, ISubscription subscription, INStoreLoggerFactory inStoreLoggerFactory)
         {
-            this._logger = loggerFactory.CreateLogger(GetType());
+            this._logger = inStoreLoggerFactory.CreateLogger(GetType().FullName);
 
             _sequencer = new Sequencer(lastPosition, subscription, _logger);
             _store = store;
@@ -195,7 +194,7 @@ namespace NStore.Persistence
                         await Task.Delay(HoleDetectionTimeout, token).ConfigureAwait(false);
                     }
 
-                    if (_logger.IsEnabled(LogLevel.Debug))
+                    if (_logger.IsDebugEnabled)
                     {
                         _logger.LogDebug($"HoleDetected : {_sequencer.RetriesOnHole}");
                         _logger.LogDebug(

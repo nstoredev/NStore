@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using Microsoft.Extensions.Logging;
+using NStore.Logging;
 using Xunit;
 
 // ReSharper disable InconsistentNaming
@@ -14,11 +15,11 @@ namespace NStore.Persistence.Tests
     {
         protected IPersistence Store { get; }
         protected readonly TestLoggerFactory LoggerFactory;
-        protected readonly ILogger _logger;
+        protected readonly INStoreLogger _logger;
         protected BasePersistenceTest()
         {
             LoggerFactory = new TestLoggerFactory(TestSuitePrefix + "::" + GetType().Name);
-            _logger = LoggerFactory.CreateLogger(GetType());
+            _logger = LoggerFactory.CreateLogger(GetType().FullName);
             _logger.LogDebug("Creating store");
             var persistence = Create();
             _logger.LogDebug("Store created");

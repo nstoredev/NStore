@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+using NStore.Logging;
 
 namespace NStore.Persistence.MsSql
 {
@@ -26,12 +25,12 @@ namespace NStore.Persistence.MsSql
 
     public class MsSqlPersistenceOptions
     {
-        public ILoggerFactory LoggerFactory { get; set; }
+        public INStoreLoggerFactory LoggerFactory { get; set; }
         public IMsSqlPayloadSearializer Serializer { get; set; }
         public string ConnectionString { get; set; }
         public string StreamsTableName { get; set; }
 
-        public MsSqlPersistenceOptions(ILoggerFactory loggerFactory)
+        public MsSqlPersistenceOptions(INStoreLoggerFactory loggerFactory)
         {
             LoggerFactory = loggerFactory;
             StreamsTableName = "Streams";
@@ -85,7 +84,7 @@ namespace NStore.Persistence.MsSql
     public class MsSqlPersistence : IPersistence
     {
         private readonly MsSqlPersistenceOptions _options;
-        private readonly ILogger _logger;
+        private readonly INStoreLogger _logger;
 
         public bool SupportsFillers => false;
 
