@@ -52,9 +52,9 @@ namespace NStore.Aggregates
                 return false;
 
             this.InternalInit(
-                processed.AggregateId,
-                processed.AggregateVersion,
-                (TState)processed.Data
+                processed.SourceId,
+                processed.SourceVersion,
+                (TState)processed.Payload
             );
 
             return true;

@@ -2,21 +2,25 @@
 {
     public sealed class SnapshotInfo
     {
-        public SnapshotInfo(string aggregateId, int aggregateVersion, object data, int snapshotVersion)
+        public SnapshotInfo(
+            string sourceId, 
+            int sourceVersion, 
+            object payload, 
+            int schemaVersion)
         {
-            AggregateVersion = aggregateVersion;
-            Data = data;
-            SnapshotVersion = snapshotVersion;
-            AggregateId = aggregateId;
+            SourceId = sourceId;
+            SourceVersion = sourceVersion;
+            Payload = payload;
+            SchemaVersion = schemaVersion;
         }
 
-        public int AggregateVersion { get; private set; }
-        public object Data { get; private set; }
-        public int SnapshotVersion { get; private set; }
-        public string AggregateId { get; private set; }
+        public int SourceVersion { get; private set; }
+        public object Payload { get; private set; }
+        public int SchemaVersion { get; private set; }
+        public string SourceId { get; private set; }
 
-        public bool IsEmpty => this.AggregateId == null ||
-                               this.AggregateVersion == 0 ||
-                               this.Data == null ;
+        public bool IsEmpty => this.SourceId == null ||
+                               this.SourceVersion == 0 ||
+                               this.Payload == null ;
     }
 }

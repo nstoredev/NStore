@@ -211,11 +211,11 @@ namespace NStore.Tests.AggregatesTests
             ticket.Refund();
             await Repository.Save(ticket, "save_snap");
 
-            var snapshot = await Snapshots.Get("Ticket_1", int.MaxValue);
+            var snapshot = await Snapshots.GetAsync("Ticket_1", int.MaxValue);
             Assert.NotNull(snapshot);
-            Assert.Equal(3, snapshot.AggregateVersion);
-            Assert.NotNull(snapshot.Data);
-            Assert.Equal(1, snapshot.SnapshotVersion);
+            Assert.Equal(3, snapshot.SourceVersion);
+            Assert.NotNull(snapshot.Payload);
+            Assert.Equal(1, snapshot.SchemaVersion);
         }
 
         [Fact]
@@ -225,11 +225,11 @@ namespace NStore.Tests.AggregatesTests
             ticket.Sale();
             await Repository.Save(ticket, "save_snap");
 
-            var snapshot = await Snapshots.Get("new_ticket", int.MaxValue);
+            var snapshot = await Snapshots.GetAsync("new_ticket", int.MaxValue);
             Assert.NotNull(snapshot);
-            Assert.Equal(1, snapshot.AggregateVersion);
-            Assert.NotNull(snapshot.Data);
-            Assert.Equal(1, snapshot.SnapshotVersion);
+            Assert.Equal(1, snapshot.SourceVersion);
+            Assert.NotNull(snapshot.Payload);
+            Assert.Equal(1, snapshot.SchemaVersion);
         }
     }
 
@@ -245,7 +245,7 @@ namespace NStore.Tests.AggregatesTests
         {
             var ticketState = new TicketState();
             var snapshot = new SnapshotInfo("Ticket_1", 2, ticketState, 1);
-            await Snapshots.Add("Ticket_1", snapshot);
+            await Snapshots.AddAsync("Ticket_1", snapshot);
 
             var ex = await Assert.ThrowsAsync<StaleSnapshotException>(() =>
                 Repository.GetById<Ticket>("Ticket_1")

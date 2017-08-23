@@ -6,62 +6,62 @@ namespace NStore.SnapshotStore
 {
     public interface ISnapshotStore
     {
-        Task<SnapshotInfo> Get(
-            string aggregateId,
-            long version,
+        Task<SnapshotInfo> GetAsync(
+            string snapshotPartitionId, 
+            long version, 
             CancellationToken cancellationToken
         );
 
-        Task Add(
-            string aggregateId,
-            SnapshotInfo snapshot,
+        Task AddAsync(
+            string snapshotPartitionId, 
+            SnapshotInfo snapshot, 
             CancellationToken cancellationToken
         );
 
-        Task Remove(
-            string aggregateId,
-            long fromVersionInclusive,
-            long toVersionInclusive,
+        Task DeleteAsync(
+            string snapshotPartitionId, 
+            long fromVersionInclusive, 
+            long toVersionInclusive, 
             CancellationToken cancellationToken
         );
     }
 
     public static class SnapshotStoreExtensions
     {
-        public static Task<SnapshotInfo> Get(
+        public static Task<SnapshotInfo> GetAsync(
             this ISnapshotStore snapshots,
-            string aggregateId,
+            string snapshotPartitionId,
             long version
         )
         {
-            return snapshots.Get(aggregateId, version, CancellationToken.None);
+            return snapshots.GetAsync(snapshotPartitionId, version, CancellationToken.None);
         }
 
-        public static Task Add(
+        public static Task AddAsync(
             this ISnapshotStore snapshots,
-            string aggregateId,
+            string snapshotPartitionId,
             SnapshotInfo snapshot
         )
         {
-            return snapshots.Add(aggregateId, snapshot, CancellationToken.None);
+            return snapshots.AddAsync(snapshotPartitionId, snapshot, CancellationToken.None);
         }
 
-        public static Task Remove(
+        public static Task DeleteAsync(
             this ISnapshotStore snapshots,
-            string aggregateId
+            string snapshotPartitionId
         )
         {
-            return snapshots.Remove(aggregateId, 0, long.MaxValue, CancellationToken.None);
+            return snapshots.DeleteAsync(snapshotPartitionId, 0, long.MaxValue, CancellationToken.None);
         }
 
-        public static Task Remove(
+        public static Task DeleteAsync(
             this ISnapshotStore snapshots,
-            string aggregateId,
+            string snapshotPartitionId,
             long fromVersionInclusive,
             long toVersionInclusive
         )
         {
-            return snapshots.Remove(aggregateId, fromVersionInclusive, toVersionInclusive, CancellationToken.None);
+            return snapshots.DeleteAsync(snapshotPartitionId, fromVersionInclusive, toVersionInclusive, CancellationToken.None);
         }
     }
 }

@@ -26,10 +26,10 @@ namespace NStore.Persistence.Tests
             if (source is SnapshotInfo si)
             {
                 return new SnapshotInfo(
-                    si.AggregateId,
-                    si.AggregateVersion,
-                    new State((State) si.Data),
-                    si.SnapshotVersion
+                    si.SourceId,
+                    si.SourceVersion,
+                    new State((State) si.Payload),
+                    si.SchemaVersion
                 );
             }
 

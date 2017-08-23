@@ -16,26 +16,20 @@ namespace NStore.SnapshotStore
             _store = store;
         }
 
-        public async Task<SnapshotInfo> Get(
-            string aggregateId,
-            long version,
-            CancellationToken cancellationToken)
+        public async Task<SnapshotInfo> GetAsync(string snapshotPartitionId, long version, CancellationToken cancellationToken)
         {
-            var data = await _store.ReadSingleBackwardAsync(aggregateId, version, cancellationToken).ConfigureAwait(false);
+            var data = await _store.ReadSingleBackwardAsync(snapshotPartitionId, version, cancellationToken).ConfigureAwait(false);
             return (SnapshotInfo) data?.Payload;
         }
 
-        public async Task Add(
-            string aggregateId,
-            SnapshotInfo snapshot,
-            CancellationToken cancellationToken)
+        public async Task AddAsync(string snapshotPartitionId, SnapshotInfo snapshot, CancellationToken cancellationToken)
         {
             if (snapshot == null || snapshot.IsEmpty)
                 return;
 
             try
             {
-                await _store.AppendAsync(aggregateId, snapshot.AggregateVersion, snapshot, null, cancellationToken).ConfigureAwait(false);
+                await _store.AppendAsync(snapshotPartitionId, snapshot.SourceVersion, snapshot, null, cancellationToken).ConfigureAwait(false);
             }
             catch (DuplicateStreamIndexException)
             {
@@ -43,13 +37,9 @@ namespace NStore.SnapshotStore
             }
         }
 
-        public Task Remove(
-            string aggregateId,
-            long fromVersionInclusive,
-            long toVersionInclusive,
-            CancellationToken cancellationToken)
+        public Task DeleteAsync(string snapshotPartitionId, long fromVersionInclusive, long toVersionInclusive, CancellationToken cancellationToken)
         {
-            return _store.DeleteAsync(aggregateId, fromVersionInclusive, toVersionInclusive, cancellationToken);
+            return _store.DeleteAsync(snapshotPartitionId, fromVersionInclusive, toVersionInclusive, cancellationToken);
         }
     }
 }

@@ -46,7 +46,7 @@ namespace NStore.Aggregates
         {
             var aggregate = _factory.Create<T>();
             var persister = (IEventSourcedAggregate)aggregate;
-            var snapshot = await _snapshots.Get(id, version, cancellationToken).ConfigureAwait(false);
+            var snapshot = await _snapshots.GetAsync(id, version, cancellationToken).ConfigureAwait(false);
 
             if (snapshot != null)
             {
@@ -78,7 +78,7 @@ namespace NStore.Aggregates
             // no data from stream, we cannot validate the aggregate
             if (snapshot != null && readCount == 0)
             {
-                throw new StaleSnapshotException(snapshot.AggregateId, snapshot.AggregateVersion);
+                throw new StaleSnapshotException(snapshot.SourceId, snapshot.SourceVersion);
             }
 
             return aggregate;
@@ -128,7 +128,7 @@ namespace NStore.Aggregates
             persister.ChangesPersisted(changeSet);
 
             //we need to await, it's responsibility of the snapshot provider to clone & store state (sync or async)
-            await _snapshots.Add(aggregate.Id, persister.GetSnapshot(), cancellationToken).ConfigureAwait(false);
+            await _snapshots.AddAsync(aggregate.Id, persister.GetSnapshot(), cancellationToken).ConfigureAwait(false);
         }
 
         protected virtual IStream OpenStream(IAggregate aggregate, bool isPartialLoad)
