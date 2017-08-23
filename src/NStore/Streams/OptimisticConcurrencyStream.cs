@@ -52,7 +52,14 @@ Append can be called only after a Read operation.
 If you don't need to read use {typeof(Stream).Name} instead of {GetType().Name}.")
                     ;
             long desiredVersion = this.Version + 1;
-            await Persistence.AppendAsync(this.Id, desiredVersion, payload, operationId, cancellation).ConfigureAwait(false);
+            try
+            {
+                await Persistence.AppendAsync(this.Id, desiredVersion, payload, operationId, cancellation).ConfigureAwait(false);
+            }
+            catch (DuplicateStreamIndexException e)
+            {
+                throw new ConcurrencyException($"Concurrency exception on StreamId: {this.Id}", e);
+            }
             this.Version = desiredVersion;
         }
 

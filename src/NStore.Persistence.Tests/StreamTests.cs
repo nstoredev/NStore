@@ -80,7 +80,7 @@ namespace NStore.Persistence.Tests
 
             var stream = await Open("stream_2").ConfigureAwait(false);
             var acc = new Recorder();
-            await ReadOnlyStreamExtensions.ReadAsync(stream, acc).ConfigureAwait(false);
+            await stream.ReadAsync(acc).ConfigureAwait(false);
 
             Assert.Equal(1, acc.Length);
             Assert.Equal("payload", acc[0].Payload);
@@ -124,11 +124,12 @@ namespace NStore.Persistence.Tests
             var streamb = await Open("stream_1").ConfigureAwait(false);
             await streama.AppendAsync("a").ConfigureAwait(false);
 
-            var ex = await Assert.ThrowsAnyAsync<DuplicateStreamIndexException>(() =>
+            var ex = await Assert.ThrowsAnyAsync<ConcurrencyException>(() =>
                 streamb.AppendAsync("b")
             ).ConfigureAwait(false);
 
-            Assert.Equal(1, ex.Index);
+            Assert.Equal("Concurrency exception on StreamId: stream_1", ex.Message);
+            Assert.IsType<DuplicateStreamIndexException>(ex.InnerException);
         }
 
         [Fact]
