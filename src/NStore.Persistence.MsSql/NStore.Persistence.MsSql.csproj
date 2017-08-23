@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.0.0" />
@@ -9,5 +10,10 @@
   <ItemGroup>
     <ProjectReference Include="..\NStore\NStore.csproj">
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+		<Compile Include="..\AssemblyInfo.cs">
+			<Link>AssemblyInfo.cs</Link>
+		</Compile>
   </ItemGroup>
 </Project>
