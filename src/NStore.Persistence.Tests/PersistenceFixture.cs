@@ -236,17 +236,26 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task on_empty_store_should_be_equal_zero()
         {
-            var last = await Store.ReadLastPositionAsync(CancellationToken.None);
+            var last = await Store.ReadLastPositionAsync();
             Assert.Equal(0L, last);
         }
 
         [Fact]
-        public async Task on_empty_store_should_be_equal_zero_()
+        public async Task with_only_one_chunk_should_be_equal_to_one()
         {
             await Store.AppendAsync("a", -1, "last");
-            var last = await Store.ReadLastPositionAsync(CancellationToken.None);
+            var last = await Store.ReadLastPositionAsync();
             Assert.Equal(1L, last);
         }
+
+		[Fact]
+		public async Task with_two_streams_of_one_chunk_should_be_two()
+		{
+			await Store.AppendAsync("a", "first");
+			await Store.AppendAsync("b", "second");
+			var last = await Store.ReadLastPositionAsync();
+			Assert.Equal(2L, last);
+		}
     }
 
     public class ByteArrayPersistenceTest : BasePersistenceTest

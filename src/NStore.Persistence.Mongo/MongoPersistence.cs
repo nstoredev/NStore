@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace NStore.Persistence.Mongo
@@ -189,17 +190,25 @@ namespace NStore.Persistence.Mongo
         public async Task<long> ReadLastPositionAsync(CancellationToken cancellationToken)
         {
             var filter = Builders<Chunk>.Filter.Empty;
-            var options = new FindOptions<Chunk>()
+			var projection = Builders<Chunk>.Projection.Include(x => x.Position);
+			
+            var options = new FindOptions<Chunk,BsonDocument>()
             {
                 Sort = Builders<Chunk>.Sort.Descending(x => x.Position),
-                Limit = 1
+                Limit = 1,
+                Projection = projection
             };
 
-            //TODO: project on position
-            using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
-            {
+            using (var cursor = await _chunks
+                   .FindAsync(filter, options, cancellationToken)
+                   .ConfigureAwait(false)
+            ){
                 var lastPosition = await cursor.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-                return lastPosition?.Position ?? 0;
+                if(lastPosition != null)
+                {
+                    return lastPosition[0].AsInt64;
+                }
+                return 0;
             }
         }
 

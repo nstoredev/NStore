@@ -111,7 +111,7 @@ namespace NStore.Persistence
             _source.Cancel();
             _source = null;
 
-            while (_stopped == false)
+            while (!_stopped)
             {
                 await Task.Delay(100).ConfigureAwait(false);
             }
