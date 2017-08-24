@@ -25,7 +25,7 @@ namespace NStore.Aggregates
             this._dispatcher = dispatcher ?? new DefaultEventDispatcher<TState>(() => this.State);
         }
 
-        public void Init(string aggregateId) => InternalInit(aggregateId, 0, null);
+        public void Init(string id) => InternalInit(id, 0, null);
 
         private void InternalInit(string aggregateId, int aggregateVersion, TState state)
         {
@@ -60,6 +60,11 @@ namespace NStore.Aggregates
             return true;
         }
 
+        protected virtual void PostLoadingProcessing()
+        {
+            // entry point for custom logic on load
+        }
+
         /// <summary>
         /// Give chance to upcast state or just drop snapshot with empty default state
         /// </summary>
@@ -80,7 +85,12 @@ namespace NStore.Aggregates
             );
         }
 
-        void IEventSourcedAggregate.ChangesPersisted(Changeset changeset)
+        void IEventSourcedAggregate.Loaded()
+        {
+            PostLoadingProcessing();
+        }
+
+        void IEventSourcedAggregate.Persisted(Changeset changeset)
         {
             this.Version = changeset.AggregateVersion;
             this.PendingChanges.Clear();

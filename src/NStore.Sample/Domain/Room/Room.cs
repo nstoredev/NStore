@@ -13,12 +13,28 @@ namespace NStore.Sample.Domain.Room
         }
     }
 
+    public class BookingsDisabled
+    {
+        public string Id { get; private set; }
+
+        public BookingsDisabled(string id)
+        {
+            this.Id = id;
+        }
+    }
+
     public class Room : Aggregate<RoomState>, IInvariantsChecker
     {
         public void EnableBookings()
         {
             if(!this.State.BookingsEnabled)
                 Emit(new BookingsEnabled(this.Id));
+        }
+
+        public void DisableBookings()
+        {
+            if (this.State.BookingsEnabled)
+                Emit(new BookingsDisabled(this.Id));
         }
 
         public void AddBooking(DateRange dates)
@@ -33,7 +49,7 @@ namespace NStore.Sample.Domain.Room
             }
         }
 
-        public bool CheckInvariants()
+        public InvariantsCheckResult CheckInvariants()
         {
             return State.CheckInvariants();
         }

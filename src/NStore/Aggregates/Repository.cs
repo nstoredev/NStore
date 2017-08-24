@@ -26,7 +26,7 @@ namespace NStore.Aggregates
         {
             _factory = factory;
             _streams = streams;
-            _snapshots = snapshots ?? new NullSnapshots();
+            _snapshots = snapshots;
         }
 
         public Task<T> GetById<T>(string id) where T : IAggregate
@@ -46,12 +46,17 @@ namespace NStore.Aggregates
 
             aggregate = _factory.Create<T>();
             var persister = (IEventSourcedAggregate)aggregate;
-            var snapshot = await _snapshots.GetLastAsync(id, cancellationToken).ConfigureAwait(false);
 
-            if (snapshot != null)
+            SnapshotInfo snapshot = null;
+
+            if (_snapshots != null)
             {
-                //@@REVIEW: invalidate snapshot on false?
-                persister.TryRestore(snapshot);
+                snapshot = await _snapshots.GetLastAsync(id, cancellationToken).ConfigureAwait(false);
+                if (snapshot != null)
+                {
+                    //@@REVIEW: invalidate snapshot on false?
+                    persister.TryRestore(snapshot);
+                }
             }
 
             if (!aggregate.IsInitialized)
@@ -76,6 +81,8 @@ namespace NStore.Aggregates
             // aggregate will ignore because ApplyChanges is idempotent
             await stream.ReadAsync(consumer, aggregate.Version, long.MaxValue, cancellationToken)
                 .ConfigureAwait(false);
+
+            persister.Loaded();
 
             // no data from stream, we cannot validate the aggregate
             if (snapshot != null && readCount == 0)
@@ -113,6 +120,12 @@ namespace NStore.Aggregates
             if (changeSet.IsEmpty && !PersistEmptyChangeset)
                 return;
 
+            if (aggregate is IInvariantsChecker checker)
+            {
+                var check = checker.CheckInvariants();
+                check.ThrowIfInvalid();
+            }
+
             var stream = GetStream(aggregate);
             if (!stream.IsWritable)
             {
@@ -122,10 +135,13 @@ namespace NStore.Aggregates
             headers?.Invoke(changeSet);
 
             await stream.AppendAsync(changeSet, operationId, cancellationToken).ConfigureAwait(false);
-            persister.ChangesPersisted(changeSet);
+            persister.Persisted(changeSet);
 
-            //we need to await, it's responsibility of the snapshot provider to clone & store state (sync or async)
-            await _snapshots.AddAsync(aggregate.Id, persister.GetSnapshot(), cancellationToken).ConfigureAwait(false);
+            if (_snapshots != null)
+            {
+                //we need to await, it's responsibility of the snapshot provider to clone & store state (sync or async)
+                await _snapshots.AddAsync(aggregate.Id, persister.GetSnapshot(), cancellationToken).ConfigureAwait(false);
+            }
         }
 
         protected virtual IStream OpenStream(string streamId)

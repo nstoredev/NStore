@@ -16,6 +16,11 @@ namespace NStore.Sample.Domain.Room
             this.BookingsEnabled = true;
         }
 
+        private void On(BookingsDisabled e)
+        {
+            this.BookingsEnabled = false;
+        }
+
         private void On(RoomBooked e)
         {
             _reservations.Add(e.Dates);
@@ -31,9 +36,14 @@ namespace NStore.Sample.Domain.Room
             return !_reservations.Any(range.Overlaps);
         }
 
-        public bool CheckInvariants()
+        public InvariantsCheckResult CheckInvariants()
         {
-            return !(!BookingsEnabled && _reservations.Any());
+            if (!BookingsEnabled && _reservations.Any())
+            {
+                return InvariantsCheckResult.Invalid("Room has beed disabled with active reservations");
+            }
+
+            return InvariantsCheckResult.Ok;
         }
     }
 }

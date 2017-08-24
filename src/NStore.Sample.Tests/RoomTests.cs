@@ -20,7 +20,7 @@ namespace NStore.Sample.Tests
             var snapshot = new SnapshotInfo("test", 1, this.State, this.State.GetStateVersion());
             ((IEventSourcedAggregate)this.Aggregate).TryRestore(snapshot);
 
-            if(!this.Aggregate.IsInitialized)
+            if (!this.Aggregate.IsInitialized)
                 throw new Exception("something went wrong");
         }
 
@@ -33,7 +33,7 @@ namespace NStore.Sample.Tests
             if (persiter != null)
             {
                 var cs = persiter.GetChangeSet();
-                persiter.ChangesPersisted(cs);
+                persiter.Persisted(cs);
             }
         }
     }
@@ -46,7 +46,7 @@ namespace NStore.Sample.Tests
         public void new_room_is_not_enabled_for_bookings()
         {
             Assert.False(State.BookingsEnabled);
-            Assert.True(Room.CheckInvariants());
+            Assert.False(Room.CheckInvariants().IsInvalid);
         }
 
         [Fact]
@@ -55,7 +55,7 @@ namespace NStore.Sample.Tests
             Room.EnableBookings();
 
             Assert.True(State.BookingsEnabled);
-            Assert.True(Room.CheckInvariants());
+            Assert.False(Room.CheckInvariants().IsInvalid);
         }
 
         [Fact]
@@ -66,7 +66,24 @@ namespace NStore.Sample.Tests
             Room.EnableBookings();
 
             Assert.True(State.BookingsEnabled);
-            Assert.True(Room.CheckInvariants());
+            Assert.False(Room.CheckInvariants().IsInvalid);
+        }
+
+        [Fact]
+        public void rooms_with_active_reservations_should_not_be_disabled()
+        {
+            Setup(() =>
+            {
+                Room.EnableBookings();
+                Room.AddBooking(new DateRange(DateTime.Today, DateTime.Today.AddDays(1)));
+            });
+
+            Room.DisableBookings();
+
+            var result = Room.CheckInvariants();
+
+            Assert.True(result.IsInvalid);
+            Assert.Equal("Room has beed disabled with active reservations", result.Message);
         }
     }
 }
