@@ -8,10 +8,10 @@ using NStore.Streams;
 
 namespace NStore.Processing
 {
-    public class StreamProcessor<TAccumulator> : ISubscription where TAccumulator : IPayloadProcessor, new()
+    public class StreamProcessor<TResult> : ISubscription where TResult : IPayloadProcessor, new()
     {
         private readonly Func<IChunk, bool> _include;
-        public TAccumulator Result { get; private set; }
+        public TResult Result { get; private set; }
 
         public StreamProcessor() : this(null)
         {
@@ -20,7 +20,7 @@ namespace NStore.Processing
         public StreamProcessor(Func<IChunk, bool> include)
         {
             _include = include;
-            Result = new TAccumulator();
+            Result = new TResult();
         }
 
         public Task OnStartAsync(long position)
@@ -53,16 +53,42 @@ namespace NStore.Processing
             throw ex;
         }
 
-        public async Task RunAsync(IStream stream, long fromIndexInclusive)
+        public async Task<TResult> RunAsync(IStream stream, long fromIndexInclusive)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
-            await stream.ReadAsync(this,fromIndexInclusive).ConfigureAwait(false);
+            await stream.ReadAsync(this, fromIndexInclusive).ConfigureAwait(false);
+            return Result;
         }
 
-        public async Task RunAsync(IStream stream)
+        public async Task<TResult> RunAsync(IStream stream)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
             await stream.ReadAsync(this).ConfigureAwait(false);
+            return Result;
+        }
+    }
+
+    public static class ProcessorExtensions
+    {
+        public static Task<TResult> RunAsync<TResult>(this IStream stream)
+            where TResult : IPayloadProcessor, new()
+        {
+            var processor = new StreamProcessor<TResult>();
+            return processor.RunAsync(stream);
+        }
+
+        public static Task<TResult> RunWhereAsync<TResult>(this IStream stream, Func<IChunk, bool> filter)
+            where TResult : IPayloadProcessor, new()
+        {
+            var processor = new StreamProcessor<TResult>(filter);
+            return processor.RunAsync(stream);
+        }
+
+        public static Task<TResult> RunAsync<TResult>(this IStream stream, int fromIndexInclusive)
+            where TResult : IPayloadProcessor, new()
+        {
+            var processor = new StreamProcessor<TResult>();
+            return processor.RunAsync(stream, fromIndexInclusive);
         }
     }
 }
