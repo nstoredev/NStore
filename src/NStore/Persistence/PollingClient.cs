@@ -30,7 +30,7 @@ namespace NStore.Persistence
                 _logger = logger;
             }
 
-            public Task<bool> OnNext(IChunk data)
+            public Task<bool> OnNextAsync(IChunk data)
             {
                 _logger.LogDebug("OnNext {Position}", data.Position);
 
@@ -49,20 +49,20 @@ namespace NStore.Persistence
                 _stopOnHole = true;
                 Position = data.Position;
                 Processed++;
-                return _subscription.OnNext(data);
+                return _subscription.OnNextAsync(data);
             }
 
-            public Task OnStart(long position)
+            public Task OnStartAsync(long position)
             {
                 _logger.LogDebug("OnStart({Position})", position);
 
                 Position = position - 1;
                 Processed = 0;
                 _stopOnHole = RetriesOnHole < 5;
-                return _subscription.OnStart(position);
+                return _subscription.OnStartAsync(position);
             }
 
-            public Task Completed(long position)
+            public Task CompletedAsync(long position)
             {
                 _logger.LogDebug("Completed({Position})", position);
 
@@ -71,18 +71,18 @@ namespace NStore.Persistence
                     Position = position;
                 }
 
-                return _subscription.Completed(position);
+                return _subscription.CompletedAsync(position);
             }
 
-            public Task Stopped(long position)
+            public Task StoppedAsync(long position)
             {
                 _logger.LogDebug("Stopped({Position})", position);
-                return _subscription.Stopped(position);
+                return _subscription.StoppedAsync(position);
             }
 
-            public Task OnError(long position, Exception ex)
+            public Task OnErrorAsync(long position, Exception ex)
             {
-                return _subscription.OnError(position, ex);
+                return _subscription.OnErrorAsync(position, ex);
             }
         }
 

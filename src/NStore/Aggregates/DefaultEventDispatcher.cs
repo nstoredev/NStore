@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Reflection;
+using NStore.Processing;
 
 namespace NStore.Aggregates
 {
-    public class DefaultEventDispatcher<TState> : IEventDispatcher where TState : IEventsProjector
+    public class DefaultEventDispatcher<TState> : IEventDispatcher where TState : IPayloadProcessor
     {
         private readonly Func<TState> _getState;
 
@@ -15,7 +16,7 @@ namespace NStore.Aggregates
         public void Dispatch(object @event)
         {
             var state = _getState();
-            state.Project(@event);
+            state.Process(@event);
         }
     }
 }

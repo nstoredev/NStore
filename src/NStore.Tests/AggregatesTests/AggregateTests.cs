@@ -41,7 +41,7 @@ namespace NStore.Tests.AggregatesTests
         public void should_route_to_public_method()
         {
             var state = new StateWithPublicMethods();
-            state.Project(new Signal());
+            state.Process(new Signal());
 
             Assert.True(state.Signaled);
         }
@@ -50,7 +50,7 @@ namespace NStore.Tests.AggregatesTests
         public void should_route_to_private_method()
         {
             var state = new StateWithPrivateMethods();
-            state.Project(new Signal());
+            state.Process(new Signal());
 
             Assert.True(state.Signaled);
         }

@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Reflection;
 
-namespace NStore.Aggregates
+namespace NStore.Processing
 {
-    public abstract class EventsProjector : IEventsProjector
+    public abstract class PayloadProcessor : IPayloadProcessor
     {
         protected BindingFlags GetMethodFlags = BindingFlags.NonPublic | BindingFlags.Instance;
 
-        public virtual void Project(object @event)
+        public virtual void Process(object payload)
         {
-            var mi = GetConsumerOf("On", @event);
-            mi?.Invoke(this, new object[] { @event });
+            var mi = GetConsumerOf("On", payload);
+            mi?.Invoke(this, new object[] { payload });
         }
 
         private MethodInfo GetConsumerOf(string methodName, object @event)

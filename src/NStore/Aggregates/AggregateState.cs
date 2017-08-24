@@ -1,6 +1,8 @@
-﻿namespace NStore.Aggregates
+﻿using NStore.Processing;
+
+namespace NStore.Aggregates
 {
-    public abstract class AggregateState : EventsProjector
+    public abstract class AggregateState : PayloadProcessor
     {
         public virtual int GetStateVersion() => 1;
     }

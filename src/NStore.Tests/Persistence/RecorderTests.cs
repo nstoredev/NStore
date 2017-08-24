@@ -30,7 +30,7 @@ namespace NStore.Tests.Persistence
         {
             var recorder = new Recorder();
 
-            await recorder.OnNext(new RecorderChunk { Index = 1, Payload = "a" });
+            await recorder.OnNextAsync(new RecorderChunk { Index = 1, Payload = "a" });
 
             Assert.False(recorder.IsEmpty);
             Assert.Equal(1, recorder.Length);
@@ -43,7 +43,7 @@ namespace NStore.Tests.Persistence
             var recorder = new Recorder();
             var chunk = new RecorderChunk {Index = 1, Payload = "a"};
 
-            await recorder.OnNext(chunk);
+            await recorder.OnNextAsync(chunk);
 
             var list = new List<IChunk>();
             recorder.Replay(list.Add);

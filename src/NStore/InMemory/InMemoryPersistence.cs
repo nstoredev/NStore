@@ -123,7 +123,7 @@ namespace NStore.InMemory
 
         public async Task ReadAllAsync(long fromSequenceIdInclusive, ISubscription subscription, int limit, CancellationToken cancellationToken)
         {
-            await subscription.OnStart(fromSequenceIdInclusive).ConfigureAwait(false);
+            await subscription.OnStartAsync(fromSequenceIdInclusive).ConfigureAwait(false);
 
             int start = (int)Math.Max(fromSequenceIdInclusive - 1, 0);
 
@@ -133,14 +133,14 @@ namespace NStore.InMemory
 
             if (start > lastWritten)
             {
-                await subscription.Stopped(fromSequenceIdInclusive).ConfigureAwait(false);
+                await subscription.StoppedAsync(fromSequenceIdInclusive).ConfigureAwait(false);
                 return;
             }
 
             var toRead = Math.Min(limit, lastWritten - start + 1);
             if (toRead <= 0)
             {
-                await subscription.Stopped(fromSequenceIdInclusive).ConfigureAwait(false);
+                await subscription.StoppedAsync(fromSequenceIdInclusive).ConfigureAwait(false);
                 return;
             }
 
@@ -162,25 +162,25 @@ namespace NStore.InMemory
                     await _networkSimulator.Wait().ConfigureAwait(false);
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    if (!await subscription.OnNext(Clone(chunk)).ConfigureAwait(false))
+                    if (!await subscription.OnNextAsync(Clone(chunk)).ConfigureAwait(false))
                     {
-                        await subscription.Stopped(position).ConfigureAwait(false);
+                        await subscription.StoppedAsync(position).ConfigureAwait(false);
                         return;
                     }
                 }
 
                 if (position == 0)
                 {
-                    await subscription.Stopped(fromSequenceIdInclusive).ConfigureAwait(false);
+                    await subscription.StoppedAsync(fromSequenceIdInclusive).ConfigureAwait(false);
                 }
                 else
                 {
-                    await subscription.Completed(position).ConfigureAwait(false);
+                    await subscription.CompletedAsync(position).ConfigureAwait(false);
                 }
             }
             catch (Exception e)
             {
-                await subscription.OnError(position, e).ConfigureAwait(false);
+                await subscription.OnErrorAsync(position, e).ConfigureAwait(false);
             }
         }
 

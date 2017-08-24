@@ -77,7 +77,7 @@ namespace NStore.Sample.Projections
             _reporter.Report($"  Fillers    => {_fillersCount}");
         }
 
-        public async Task<bool> OnNext(IChunk data)
+        public async Task<bool> OnNextAsync(IChunk data)
         {
             if (data.Position != Position + 1)
             {
@@ -132,22 +132,22 @@ namespace NStore.Sample.Projections
             return true;
         }
 
-        public Task Completed(long position)
+        public Task CompletedAsync(long position)
         {
             return Task.CompletedTask;
         }
 
-        public Task Stopped(long position)
+        public Task StoppedAsync(long position)
         {
             return Task.CompletedTask;
         }
 
-        public Task OnStart(long position)
+        public Task OnStartAsync(long position)
         {
             return Task.CompletedTask;
         }
 
-        public Task OnError(long position, Exception ex)
+        public Task OnErrorAsync(long position, Exception ex)
         {
             _reporter.Report($"ERROR on position {position}: {ex.Message}");
             return Task.CompletedTask;

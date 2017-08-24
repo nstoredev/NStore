@@ -103,7 +103,7 @@ namespace NStore.Persistence.Mongo
         private async Task PushToSubscriber(long start, ISubscription subscription, FindOptions<Chunk> options, FilterDefinition<Chunk> filter, CancellationToken cancellationToken)
         {
             long position = 0;
-            await subscription.OnStart(start).ConfigureAwait(false);
+            await subscription.OnStartAsync(start).ConfigureAwait(false);
 
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
             {
@@ -114,16 +114,16 @@ namespace NStore.Persistence.Mongo
                     {
                         position = b.Position;
                         b.Payload = _serializer.Deserialize(b.PartitionId, b.Payload);
-                        if (!await subscription.OnNext(b).ConfigureAwait(false))
+                        if (!await subscription.OnNextAsync(b).ConfigureAwait(false))
                         {
-                            await subscription.Stopped(position).ConfigureAwait(false);
+                            await subscription.StoppedAsync(position).ConfigureAwait(false);
                             return;
                         }
                     }
                 }
             }
 
-            await subscription.Completed(position).ConfigureAwait(false);
+            await subscription.CompletedAsync(position).ConfigureAwait(false);
         }
 
         public async Task ReadBackwardAsync(

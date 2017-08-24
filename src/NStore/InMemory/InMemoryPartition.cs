@@ -96,20 +96,20 @@ namespace NStore.InMemory
                     cancellationToken.ThrowIfCancellationRequested();
 
 
-                    if (!await subscription.OnNext(Clone(chunk)).ConfigureAwait(false))
+                    if (!await subscription.OnNextAsync(Clone(chunk)).ConfigureAwait(false))
                     {
-                        await subscription.Completed(position).ConfigureAwait(false);
+                        await subscription.CompletedAsync(position).ConfigureAwait(false);
                         return;
                     }
                 }
             }
             catch (Exception e)
             {
-                await subscription.OnError(position, e).ConfigureAwait(false);
+                await subscription.OnErrorAsync(position, e).ConfigureAwait(false);
                 return;
             }
 
-            await subscription.Completed(position).ConfigureAwait(false);
+            await subscription.CompletedAsync(position).ConfigureAwait(false);
         }
 
 

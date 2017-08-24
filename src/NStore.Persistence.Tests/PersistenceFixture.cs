@@ -626,12 +626,12 @@ namespace NStore.Persistence.Tests
 
         public int Position => _expectedPosition - 1;
 
-        public Task OnStart(long position)
+        public Task OnStartAsync(long position)
         {
             return Task.CompletedTask;
         }
 
-        public Task<bool> OnNext(IChunk data)
+        public Task<bool> OnNextAsync(IChunk data)
         {
             if (_expectedPosition != data.Position)
             {
@@ -642,17 +642,17 @@ namespace NStore.Persistence.Tests
             return Task.FromResult(true);
         }
 
-        public Task Completed(long position)
+        public Task CompletedAsync(long position)
         {
             return Task.CompletedTask;
         }
 
-        public Task Stopped(long position)
+        public Task StoppedAsync(long position)
         {
             return Task.CompletedTask;
         }
 
-        public Task OnError(long position, Exception ex)
+        public Task OnErrorAsync(long position, Exception ex)
         {
             Console.WriteLine($"Error: {ex.Message}");
             throw ex;

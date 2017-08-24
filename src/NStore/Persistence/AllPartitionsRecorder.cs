@@ -14,7 +14,7 @@ namespace NStore.Persistence
             Replay(action, 0);
         }
 
-        public Task OnStart(long position)
+        public Task OnStartAsync(long position)
         {
             return Task.CompletedTask;
         }
@@ -43,23 +43,23 @@ namespace NStore.Persistence
 
         public object this[int position] => _data[position].Payload;
 
-        public Task<bool> OnNext(IChunk data)
+        public Task<bool> OnNextAsync(IChunk data)
         {
             _data.Add(data);
             return Task.FromResult(true);
         }
 
-        public Task Completed(long position)
+        public Task CompletedAsync(long position)
         {
             return Task.CompletedTask;
         }
 
-        public Task Stopped(long position)
+        public Task StoppedAsync(long position)
         {
             return Task.CompletedTask;
         }
 
-        public Task OnError(long position, Exception ex)
+        public Task OnErrorAsync(long position, Exception ex)
         {
             throw ex;
         }

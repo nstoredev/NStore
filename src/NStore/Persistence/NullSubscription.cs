@@ -12,28 +12,28 @@ namespace NStore.Persistence
         {
         }
 
-        public Task<bool> OnNext(IChunk data)
+        public Task<bool> OnNextAsync(IChunk data)
         {
             // continue
             return Task.FromResult(true);
 		}
 
-        public Task OnStart(long position)
+        public Task OnStartAsync(long position)
         {
             return Task.CompletedTask;
         }
 
-        public Task Completed(long position)
+        public Task CompletedAsync(long position)
         {
             return Task.CompletedTask;
         }
 
-        public Task Stopped(long position)
+        public Task StoppedAsync(long position)
         {
             return Task.CompletedTask;
         }
 
-        public Task OnError(long position, Exception ex )
+        public Task OnErrorAsync(long position, Exception ex )
         {
             return Task.CompletedTask;
         }
