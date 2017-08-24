@@ -6,11 +6,11 @@ namespace NStore.Persistence
 {
     public interface ISubscription
     {
-        Task OnStart(long position);
-        Task<bool> OnNext(IChunk data);
-        Task Completed(long position);
-        Task Stopped(long position);
-        Task OnError(long position, Exception ex);
+        Task OnStartAsync(long position);
+        Task<bool> OnNextAsync(IChunk data);
+        Task CompletedAsync(long position);
+        Task StoppedAsync(long position);
+        Task OnErrorAsync(long position, Exception ex);
     }
 
     public delegate Task<bool> StreamDataProcessor(IChunk data);

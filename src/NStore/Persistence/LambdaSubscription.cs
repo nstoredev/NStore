@@ -17,29 +17,29 @@ namespace NStore.Persistence
             _fn = fn;
         }
 
-        public Task<bool> OnNext(IChunk chunk)
+        public Task<bool> OnNextAsync(IChunk chunk)
         {
             return this._fn(chunk);
         }
 
-        public Task OnStart(long position)
+        public Task OnStartAsync(long position)
         {
             return Task.CompletedTask;
         }
 
-        public Task Completed(long position)
-        {
-            this.ReadCompleted = true;
-            return Task.CompletedTask;
-        }
-
-        public Task Stopped(long position)
+        public Task CompletedAsync(long position)
         {
             this.ReadCompleted = true;
             return Task.CompletedTask;
         }
 
-        public Task OnError(long position, Exception ex)
+        public Task StoppedAsync(long position)
+        {
+            this.ReadCompleted = true;
+            return Task.CompletedTask;
+        }
+
+        public Task OnErrorAsync(long position, Exception ex)
         {
             _failed = ex;
             return Task.CompletedTask;

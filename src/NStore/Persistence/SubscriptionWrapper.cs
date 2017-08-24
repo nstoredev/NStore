@@ -14,30 +14,30 @@ namespace NStore.Persistence
 
         public Action<IChunk> BeforeOnNext { get; set; }
 
-        public async Task<bool> OnNext(IChunk data)
+        public async Task<bool> OnNextAsync(IChunk data)
         {
             BeforeOnNext?.Invoke(data);
-            return await _wrapped.OnNext(data).ConfigureAwait(false);
+            return await _wrapped.OnNextAsync(data).ConfigureAwait(false);
         }
 
-        public async Task Completed(long position)
+        public async Task CompletedAsync(long position)
         {
-            await _wrapped.Completed(position).ConfigureAwait(false);
+            await _wrapped.CompletedAsync(position).ConfigureAwait(false);
         }
 
-        public async Task Stopped(long position)
+        public async Task StoppedAsync(long position)
         {
-            await _wrapped.Stopped(position).ConfigureAwait(false);
+            await _wrapped.StoppedAsync(position).ConfigureAwait(false);
         }
 
-        public async Task OnStart(long position)
+        public async Task OnStartAsync(long position)
         {
-            await _wrapped.OnStart(position).ConfigureAwait(false);
+            await _wrapped.OnStartAsync(position).ConfigureAwait(false);
         }
 
-        public async Task OnError(long position, Exception ex)
+        public async Task OnErrorAsync(long position, Exception ex)
         {
-            await _wrapped.OnError(position, ex).ConfigureAwait(false);
+            await _wrapped.OnErrorAsync(position, ex).ConfigureAwait(false);
         }
     }
 }

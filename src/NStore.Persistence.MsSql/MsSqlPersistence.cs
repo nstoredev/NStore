@@ -155,7 +155,7 @@ namespace NStore.Persistence.MsSql
         private async Task PushToSubscriber(SqlCommand command, long start, ISubscription subscription, CancellationToken cancellationToken)
         {
             long position = 0;
-            await subscription.OnStart(start).ConfigureAwait(false);
+            await subscription.OnStartAsync(start).ConfigureAwait(false);
 
             using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
             {
@@ -173,15 +173,15 @@ namespace NStore.Persistence.MsSql
                         Deleted = reader.GetBoolean(5)
                     };
 
-                    if (!await subscription.OnNext(chunk).ConfigureAwait(false))
+                    if (!await subscription.OnNextAsync(chunk).ConfigureAwait(false))
                     {
-                        await subscription.Stopped(chunk.Position).ConfigureAwait(false);
+                        await subscription.StoppedAsync(chunk.Position).ConfigureAwait(false);
                         return;
                     }
                 }
             }
 
-            await subscription.Completed(position).ConfigureAwait(false);
+            await subscription.CompletedAsync(position).ConfigureAwait(false);
         }
 
         public async Task ReadBackwardAsync(
