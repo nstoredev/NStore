@@ -12,7 +12,8 @@ namespace NStore.Aggregates
     {
         private readonly IAggregateFactory _factory;
         private readonly IStreamsFactory _streams;
-        private readonly IDictionary<IAggregate, IStream> _openedStreams = new Dictionary<IAggregate, IStream>();
+        private readonly IDictionary<string, IStream> _openedStreams = new Dictionary<string, IStream>();
+        private readonly IDictionary<string, IAggregate> _trackingAggregates = new Dictionary<string, IAggregate>();
         private readonly ISnapshotStore _snapshots;
         public bool PersistEmptyChangeset { get; set; } = false;
 
@@ -30,23 +31,22 @@ namespace NStore.Aggregates
 
         public Task<T> GetById<T>(string id) where T : IAggregate
         {
-            return this.GetById<T>(id, long.MaxValue);
-        }
-
-        public Task<T> GetById<T>(string id, CancellationToken cancellationToken) where T : IAggregate
-        {
-            return this.GetById<T>(id, long.MaxValue, cancellationToken);
+            return this.GetById<T>(id, CancellationToken.None);
         }
 
         public async Task<T> GetById<T>(
             string id,
-            long version,
             CancellationToken cancellationToken
         ) where T : IAggregate
         {
-            var aggregate = _factory.Create<T>();
+            if (_trackingAggregates.TryGetValue(id, out IAggregate aggregate))
+            {
+                return (T)aggregate;
+            }
+
+            aggregate = _factory.Create<T>();
             var persister = (IEventSourcedAggregate)aggregate;
-            var snapshot = await _snapshots.GetAsync(id, version, cancellationToken).ConfigureAwait(false);
+            var snapshot = await _snapshots.GetLastAsync(id, cancellationToken).ConfigureAwait(false);
 
             if (snapshot != null)
             {
@@ -59,7 +59,9 @@ namespace NStore.Aggregates
                 aggregate.Init(id);
             }
 
-            var stream = OpenStream(aggregate, version != long.MaxValue);
+            _trackingAggregates.Add(id, aggregate);
+
+            var stream = OpenStream(id);
 
             int readCount = 0;
             var consumer = ConfigureConsumer(new LambdaSubscription(data =>
@@ -72,7 +74,7 @@ namespace NStore.Aggregates
             // we use aggregate.Version because snapshot could be rejected
             // Starting point is inclusive, so almost one changeset should be loaded
             // aggregate will ignore because ApplyChanges is idempotent
-            await stream.ReadAsync(consumer, aggregate.Version, version, cancellationToken)
+            await stream.ReadAsync(consumer, aggregate.Version, long.MaxValue, cancellationToken)
                 .ConfigureAwait(false);
 
             // no data from stream, we cannot validate the aggregate
@@ -81,17 +83,12 @@ namespace NStore.Aggregates
                 throw new StaleSnapshotException(snapshot.SourceId, snapshot.SourceVersion);
             }
 
-            return aggregate;
+            return (T)aggregate;
         }
 
         protected virtual ISubscription ConfigureConsumer(ISubscription consumer, CancellationToken token)
         {
             return consumer;
-        }
-
-        public Task<T> GetById<T>(string id, long version) where T : IAggregate
-        {
-            return this.GetById<T>(id, version, default(CancellationToken));
         }
 
         public Task Save<T>(T aggregate, string operationId) where T : IAggregate
@@ -131,21 +128,29 @@ namespace NStore.Aggregates
             await _snapshots.AddAsync(aggregate.Id, persister.GetSnapshot(), cancellationToken).ConfigureAwait(false);
         }
 
-        protected virtual IStream OpenStream(IAggregate aggregate, bool isPartialLoad)
+        protected virtual IStream OpenStream(string streamId)
         {
-            var stream = isPartialLoad
-                ? _streams.OpenReadOnly(aggregate.Id)
-                : _streams.OpenOptimisticConcurrency(aggregate.Id);
+            if (_openedStreams.TryGetValue(streamId, out IStream stream))
+            {
+                return stream;
+            }
 
-            _openedStreams.Add(aggregate, stream);
+            stream = _streams.OpenOptimisticConcurrency(streamId);
+            _openedStreams.Add(streamId, stream);
             return stream;
         }
 
+
         private IStream GetStream(IAggregate aggregate)
         {
+            if (!_trackingAggregates.Values.Contains(aggregate))
+            {
+                throw new RepositoryMismatchException();
+            }
+
             try
             {
-                return _openedStreams[aggregate];
+                return _openedStreams[aggregate.Id];
             }
             catch (KeyNotFoundException)
             {

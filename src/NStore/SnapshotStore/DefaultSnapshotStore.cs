@@ -16,6 +16,12 @@ namespace NStore.SnapshotStore
             _store = store;
         }
 
+        public async Task<SnapshotInfo> GetLastAsync(string snapshotPartitionId, CancellationToken cancellationToken)
+        {
+            var data = await _store.ReadSingleBackwardAsync(snapshotPartitionId, long.MaxValue, cancellationToken).ConfigureAwait(false);
+            return (SnapshotInfo)data?.Payload;
+        }
+
         public async Task<SnapshotInfo> GetAsync(string snapshotPartitionId, long version, CancellationToken cancellationToken)
         {
             var data = await _store.ReadSingleBackwardAsync(snapshotPartitionId, version, cancellationToken).ConfigureAwait(false);

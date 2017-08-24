@@ -110,14 +110,6 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async Task can_load_ticket_at_version_1()
-        {
-            var ticket = await Repository.GetById<Ticket>("Ticket_1", 1);
-            Assert.True(ticket.IsInitialized);
-            Assert.Equal(1, ticket.Version);
-        }
-
-        [Fact]
         public async Task can_load_ticket_at_latest_version()
         {
             var ticket = await Repository.GetById<Ticket>("Ticket_1");
@@ -139,51 +131,12 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async Task loading_aggregate_twice_from_repository_should_return_different_istance()
+        public async Task loading_aggregate_twice_from_repository_should_return_same_istance()
         {
             var ticket1 = await Repository.GetById<Ticket>("Ticket_1");
             var ticket2 = await Repository.GetById<Ticket>("Ticket_1");
 
-            Assert.NotSame(ticket1, ticket2);
-        }
-
-        [Fact]
-        public async Task loading_aggregate_twice_from_identity_map_should_return_same_istance()
-        {
-            var repository = new IdentityMapRepositoryDecorator(Repository);
-            var ticket1 = await repository.GetById<Ticket>("Ticket_1");
-            var ticket2 = await repository.GetById<Ticket>("Ticket_1");
-
             Assert.Same(ticket1, ticket2);
-        }
-
-        [Fact]
-        public async Task loading_aggregate_twice_at_different_version_from_repository_should_return_different_istances()
-        {
-            var ticket1 = await Repository.GetById<Ticket>("Ticket_1", 1);
-            var ticket2 = await Repository.GetById<Ticket>("Ticket_1", 2);
-
-            Assert.NotSame(ticket1, ticket2);
-        }
-
-        [Fact]
-        public async Task loading_an_old_version_should_return_different_instance()
-        {
-            var ticket_at_v2 = await Repository.GetById<Ticket>("Ticket_1", 2);
-            var ticket_latest = await Repository.GetById<Ticket>("Ticket_1");
-
-            Assert.NotSame(ticket_at_v2, ticket_latest);
-            Assert.Equal(ticket_at_v2.Version, ticket_latest.Version);
-        }
-
-        [Fact]
-        public async Task cannot_save_a_partially_loaded_aggregate()
-        {
-            var ticket = await Repository.GetById<Ticket>("Ticket_1", 1);
-            ticket.Refund();
-            var ex = await Assert.ThrowsAsync<AggregateReadOnlyException>(() =>
-                Repository.Save(ticket, Guid.NewGuid().ToString())
-            );
         }
     }
 
@@ -198,9 +151,9 @@ namespace NStore.Tests.AggregatesTests
         }
 
         [Fact]
-        public async Task can_load_without_snapshot_present()
+        public async Task can_load_without_snapshot()
         {
-            var ticket = await Repository.GetById<Ticket>("Ticket_1", 2);
+            var ticket = await Repository.GetById<Ticket>("Ticket_1");
             Assert.Equal(2, ticket.Version);
         }
 

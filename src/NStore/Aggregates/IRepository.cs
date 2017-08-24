@@ -15,17 +15,6 @@ namespace NStore.Aggregates
             CancellationToken cancellationToken
         ) where T : IAggregate;    
         
-        Task<T> GetById<T>(
-            string id,
-            long version,
-            CancellationToken cancellationToken
-        ) where T : IAggregate;       
-        
-        Task<T> GetById<T>(
-            string id,
-            long version
-        ) where T : IAggregate;
-
         Task Save<T>(
             T aggregate, 
             string operationId

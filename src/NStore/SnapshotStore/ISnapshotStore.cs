@@ -6,6 +6,11 @@ namespace NStore.SnapshotStore
 {
     public interface ISnapshotStore
     {
+        Task<SnapshotInfo> GetLastAsync(
+            string snapshotPartitionId,
+            CancellationToken cancellationToken
+        );
+
         Task<SnapshotInfo> GetAsync(
             string snapshotPartitionId, 
             long version, 
