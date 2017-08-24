@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using NStore.InMemory;
 using NStore.Processing;
+using NStore.SnapshotStore;
 using NStore.Streams;
 using Xunit;
 
@@ -32,6 +33,8 @@ namespace NStore.Tests.Processing
     public class StreamProcessingTests
     {
         readonly StreamsFactory _streams = new StreamsFactory(new InMemoryPersistence());
+        readonly ISnapshotStore _snapshots = new DefaultSnapshotStore(new InMemoryPersistence());
+
         private async Task<IStream> CreateStream(string streamId)
         {
             var stream = _streams.Open(streamId);
@@ -64,6 +67,14 @@ namespace NStore.Tests.Processing
             var sequence = await CreateStream("sequence_1");
             var result = await sequence.RunAsync<Sum>(fromIndexInclusive: 9);
             Assert.Equal(19, result.Total);
+        }
+
+        [Fact(Skip = "Incomplete")]
+        public async Task should_snapshot_values()
+        {
+            var sequence = await CreateStream("sequence_1");
+            var result = await sequence.RunAsync<Sum>();
+            Assert.Equal(55, result.Total);
         }
     }
 }
