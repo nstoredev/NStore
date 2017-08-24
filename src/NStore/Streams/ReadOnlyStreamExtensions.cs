@@ -6,7 +6,7 @@ namespace NStore.Streams
 {
     public static class ReadOnlyStreamExtensions
     {
-        public static Task ReadAsync(this IReadOnlyStream stream, StreamDataProcessor fn)
+        public static Task ReadAsync(this IReadOnlyStream stream, ChunkProcessor fn)
         {
             return stream.ReadAsync(new LambdaSubscription(fn), 0, long.MaxValue, CancellationToken.None);
         }

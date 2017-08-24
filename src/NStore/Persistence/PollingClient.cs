@@ -30,26 +30,26 @@ namespace NStore.Persistence
                 _logger = logger;
             }
 
-            public Task<bool> OnNextAsync(IChunk data)
+            public Task<bool> OnNextAsync(IChunk chunk)
             {
-                _logger.LogDebug("OnNext {Position}", data.Position);
+                _logger.LogDebug("OnNext {Position}", chunk.Position);
 
-                if (data.Position != Position + 1)
+                if (chunk.Position != Position + 1)
                 {
                     if (_stopOnHole)
                     {
                         RetriesOnHole++;
-                        _logger.LogDebug("Hole detected on {Position} - {Retries}", data.Position, RetriesOnHole);
+                        _logger.LogDebug("Hole detected on {Position} - {Retries}", chunk.Position, RetriesOnHole);
                         return Task.FromResult(false);
                     }
-                    _logger.LogWarning("Skipping hole on {Position}", data.Position);
+                    _logger.LogWarning("Skipping hole on {Position}", chunk.Position);
                 }
 
                 RetriesOnHole = 0;
                 _stopOnHole = true;
-                Position = data.Position;
+                Position = chunk.Position;
                 Processed++;
-                return _subscription.OnNextAsync(data);
+                return _subscription.OnNextAsync(chunk);
             }
 
             public Task OnStartAsync(long position)

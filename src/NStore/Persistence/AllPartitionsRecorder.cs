@@ -43,9 +43,9 @@ namespace NStore.Persistence
 
         public object this[int position] => _data[position].Payload;
 
-        public Task<bool> OnNextAsync(IChunk data)
+        public Task<bool> OnNextAsync(IChunk chunk)
         {
-            _data.Add(data);
+            _data.Add(chunk);
             return Task.FromResult(true);
         }
 

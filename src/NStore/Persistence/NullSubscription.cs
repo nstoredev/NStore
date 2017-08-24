@@ -12,7 +12,7 @@ namespace NStore.Persistence
         {
         }
 
-        public Task<bool> OnNextAsync(IChunk data)
+        public Task<bool> OnNextAsync(IChunk chunk)
         {
             // continue
             return Task.FromResult(true);

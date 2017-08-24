@@ -77,9 +77,9 @@ namespace NStore.Sample.Projections
             _reporter.Report($"  Fillers    => {_fillersCount}");
         }
 
-        public async Task<bool> OnNextAsync(IChunk data)
+        public async Task<bool> OnNextAsync(IChunk chunk)
         {
-            if (data.Position != Position + 1)
+            if (chunk.Position != Position + 1)
             {
                 // * * * * * * * * * * * * * * * * * * * * * * * * *
                 // * WARNING: ˌɛsəˈtɛrɪk/ stuff can be done here   *
@@ -92,7 +92,7 @@ namespace NStore.Sample.Projections
                 if (!_catchingUp)
                 {
                     _reporter.Report(
-                        $"!!!!!!!!!!!!!!!! Projection out of sequence {data.Position} => wait next poll !!!!!!!!!!!!!!!!");
+                        $"!!!!!!!!!!!!!!!! Projection out of sequence {chunk.Position} => wait next poll !!!!!!!!!!!!!!!!");
                     _catchingUp = true;
                 }
 
@@ -104,9 +104,9 @@ namespace NStore.Sample.Projections
 
             _catchingUp = false;
 
-            Position = data.Position;
+            Position = chunk.Position;
 
-            Changeset changes = data.Payload as Changeset;
+            Changeset changes = chunk.Payload as Changeset;
             StoreMetrics(changes);
 
             // skip fillers
@@ -126,7 +126,7 @@ namespace NStore.Sample.Projections
 
             if (!_quiet)
             {
-                _reporter.Report($"dispatched changeset #{data.Position} took {sw.ElapsedMilliseconds}ms");
+                _reporter.Report($"dispatched changeset #{chunk.Position} took {sw.ElapsedMilliseconds}ms");
             }
 
             return true;

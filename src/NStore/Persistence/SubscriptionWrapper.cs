@@ -14,10 +14,10 @@ namespace NStore.Persistence
 
         public Action<IChunk> BeforeOnNext { get; set; }
 
-        public async Task<bool> OnNextAsync(IChunk data)
+        public async Task<bool> OnNextAsync(IChunk chunk)
         {
-            BeforeOnNext?.Invoke(data);
-            return await _wrapped.OnNextAsync(data).ConfigureAwait(false);
+            BeforeOnNext?.Invoke(chunk);
+            return await _wrapped.OnNextAsync(chunk).ConfigureAwait(false);
         }
 
         public async Task CompletedAsync(long position)

@@ -39,9 +39,9 @@ namespace NStore.Tpl
             return Task.CompletedTask;
         }
 
-        public async Task<bool> OnNextAsync(IChunk data)
+        public async Task<bool> OnNextAsync(IChunk chunk)
         {
-            await _producer.SendAsync(data).ConfigureAwait(false);
+            await _producer.SendAsync(chunk).ConfigureAwait(false);
             return _isRunning;
         }
 

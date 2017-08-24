@@ -13,10 +13,10 @@ namespace NStore.Persistence
         public int Length => _data.Count;
         public bool ReadCompleted { get; private set; }
 
-        public Task<bool> OnNextAsync(IChunk data)
+        public Task<bool> OnNextAsync(IChunk chunk)
         {
-            _data.Add(data);
-            _map[data.Index] = data;
+            _data.Add(chunk);
+            _map[chunk.Index] = chunk;
             return Task.FromResult(true);
         }
 

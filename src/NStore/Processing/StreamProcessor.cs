@@ -25,14 +25,21 @@ namespace NStore.Processing
                 return Task.CompletedTask;
             }
 
-            public Task<bool> OnNextAsync(IChunk data)
+            public async Task<bool> OnNextAsync(IChunk chunk)
             {
-                if (_filter == null || _filter(data))
+                if (_filter == null || _filter(chunk))
                 {
-                    this.Result.Process(data.Payload);
+                    if (this.Result is IAsyncPayloadProcessor)
+                    {
+                        await ((IAsyncPayloadProcessor) this.Result).ProcessAsync(chunk.Payload).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        this.Result.Process(chunk.Payload);
+                    }
                 }
 
-                return Task.FromResult(true);
+                return true;
             }
 
             public Task CompletedAsync(long position)

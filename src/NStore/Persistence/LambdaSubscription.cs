@@ -6,13 +6,13 @@ namespace NStore.Persistence
 {
     public class LambdaSubscription : ISubscription
     {
-        private readonly StreamDataProcessor _fn;
+        private readonly ChunkProcessor _fn;
         private Exception _failed;
         public bool ReadCompleted { get; private set; }
         public bool Failed => this._failed != null;
         public Exception LastError => _failed;
         
-        public LambdaSubscription(StreamDataProcessor fn)
+        public LambdaSubscription(ChunkProcessor fn)
         {
             _fn = fn;
         }

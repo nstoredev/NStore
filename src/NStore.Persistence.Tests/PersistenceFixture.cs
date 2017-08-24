@@ -631,11 +631,11 @@ namespace NStore.Persistence.Tests
             return Task.CompletedTask;
         }
 
-        public Task<bool> OnNextAsync(IChunk data)
+        public Task<bool> OnNextAsync(IChunk chunk)
         {
-            if (_expectedPosition != data.Position)
+            if (_expectedPosition != chunk.Position)
             {
-                throw new Exception($"Expected position {_expectedPosition} got {data.Position} | {_configMessage}");
+                throw new Exception($"Expected position {_expectedPosition} got {chunk.Position} | {_configMessage}");
             }
 
             _expectedPosition++;
