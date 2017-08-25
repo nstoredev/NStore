@@ -1,16 +1,17 @@
-﻿using System;
+using System;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace NStore.Processing
 {
-    public abstract class PayloadProcessor : IPayloadProcessor
+    public abstract class AsyncPayloadProcessor : IAsyncPayloadProcessor, IPayloadProcessor
     {
         protected BindingFlags GetMethodFlags = BindingFlags.NonPublic | BindingFlags.Instance;
 
-        public virtual void Process(object payload)
+        public virtual Task ProcessAsync(object payload)
         {
             var mi = GetConsumerOf("On", payload);
-            mi?.Invoke(this, new object[] { payload });
+            return (Task) mi?.Invoke(this, new object[] { payload });
         }
 
         private MethodInfo GetConsumerOf(string methodName, object @event)
@@ -23,6 +24,11 @@ namespace NStore.Processing
                 null
             );
             return mi;
+        }
+
+        public void Process(object payload)
+        {
+            throw new NotImplementedException();
         }
     }
 }
