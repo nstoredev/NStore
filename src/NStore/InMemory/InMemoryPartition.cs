@@ -44,7 +44,7 @@ namespace NStore.InMemory
                 .ToArray();
 
             _lockSlim.ExitReadLock();
-            await StartProducer(subscription, result, cancellationToken).ConfigureAwait(false);
+            await PushToSubscriber(fromLowerIndexInclusive, subscription, result, cancellationToken).ConfigureAwait(false);
         }
 
         public Task ReadBackward(
@@ -64,7 +64,7 @@ namespace NStore.InMemory
 
             _lockSlim.ExitReadLock();
 
-            return StartProducer(subscription, result, cancellationToken);
+            return PushToSubscriber(fromUpperIndexInclusive, subscription, result, cancellationToken);
         }
 
         public Task<IChunk> Peek(long maxValue, CancellationToken cancellationToken)
@@ -81,12 +81,16 @@ namespace NStore.InMemory
             return Task.FromResult((IChunk) Clone(chunk));
         }
 
-        private async Task StartProducer(
+        private async Task PushToSubscriber(
+            long start,
             ISubscription subscription,
             IEnumerable<Chunk> chunks,
             CancellationToken cancellationToken)
         {
             long position = 0;
+
+            await subscription.OnStartAsync(start);
+
             try
             {
                 foreach (var chunk in chunks)
@@ -94,7 +98,6 @@ namespace NStore.InMemory
                     position = chunk.Position;
                     await _networkSimulator.WaitFast().ConfigureAwait(false);
                     cancellationToken.ThrowIfCancellationRequested();
-
 
                     if (!await subscription.OnNextAsync(Clone(chunk)).ConfigureAwait(false))
                     {

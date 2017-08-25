@@ -154,7 +154,7 @@ namespace NStore.Persistence.MsSql
 
         private async Task PushToSubscriber(SqlCommand command, long start, ISubscription subscription, CancellationToken cancellationToken)
         {
-            long position = start;
+            long position = 0;
             await subscription.OnStartAsync(start).ConfigureAwait(false);
 
             try

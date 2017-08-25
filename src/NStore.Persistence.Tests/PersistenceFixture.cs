@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using Microsoft.Extensions.Logging;
 using NStore.Logging;
 using Xunit;
 
@@ -497,35 +496,83 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class exceptions_should_be_signaled : BasePersistenceTest
+    public class start_should_be_signaled : BasePersistenceTest
     {
-        private readonly ChunkProcessor _throw = c => throw new TimeoutException();
+        private readonly ChunkProcessor _continueToEnd = c => Task.FromResult(true);
+        private readonly LambdaSubscription _subscription;
+        private long _startedAtIndex = -1;
+
+        public start_should_be_signaled()
+        {
+            Task.WaitAll(
+                Store.AppendAsync("a", "some data"),
+                Store.AppendAsync("a", "some data")
+            );
+
+            _subscription = new LambdaSubscription(_continueToEnd)
+            {
+                OnStart = p =>
+                {
+                    _startedAtIndex = p;
+                    return Task.CompletedTask;
+                }
+            };
+        }
 
         [Fact]
         public async Task on_read_all()
         {
-            await Store.AppendAsync("a", "some data");
-            var subscription = new LambdaSubscription(_throw);
-            await Store.ReadAllAsync(0, subscription);
-            Assert.True(subscription.Failed);
+            await Store.ReadAllAsync(1, _subscription);
+            Assert.Equal(1, _startedAtIndex);
         }
 
         [Fact]
         public async Task on_read_forward()
         {
-            await Store.AppendAsync("a", "some data");
-            var subscription = new LambdaSubscription(_throw);
-            await Store.ReadForwardAsync("a", 0, subscription);
-            Assert.True(subscription.Failed);
+            await Store.ReadForwardAsync("a", 1, _subscription);
+            Assert.Equal(1, _startedAtIndex);
         }
 
         [Fact]
         public async Task on_read_backward()
         {
-            await Store.AppendAsync("a", "some data");
-            var subscription = new LambdaSubscription(_throw);
-            await Store.ReadBackwardAsync("a", 100, subscription);
-            Assert.True(subscription.Failed);
+            await Store.ReadBackwardAsync("a", 100, _subscription);
+            Assert.Equal(100, _startedAtIndex);
+        }
+    }
+
+    public class exceptions_should_be_signaled : BasePersistenceTest
+    {
+        private readonly ChunkProcessor _throw = c => throw new TimeoutException();
+        private readonly LambdaSubscription _subscription;
+
+        public exceptions_should_be_signaled()
+        {
+            Task.WaitAll(
+                Store.AppendAsync("a", "some data")
+            );
+            _subscription = new LambdaSubscription(_throw);
+        }
+
+        [Fact]
+        public async Task on_read_all()
+        {
+            await Store.ReadAllAsync(0, _subscription);
+            Assert.True(_subscription.Failed);
+        }
+
+        [Fact]
+        public async Task on_read_forward()
+        {
+            await Store.ReadForwardAsync("a", 0, _subscription);
+            Assert.True(_subscription.Failed);
+        }
+
+        [Fact]
+        public async Task on_read_backward()
+        {
+            await Store.ReadBackwardAsync("a", 100, _subscription);
+            Assert.True(_subscription.Failed);
         }
     }
 

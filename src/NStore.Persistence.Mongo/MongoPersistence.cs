@@ -6,6 +6,13 @@ using MongoDB.Driver;
 
 namespace NStore.Persistence.Mongo
 {
+    public class MongoPersistenceException : Exception
+    {
+        public MongoPersistenceException(string message) : base(message)
+        {
+        }
+    }
+
     public class MongoPersistence : IPersistence
     {
         private IMongoDatabase _partitionsDb;
@@ -26,7 +33,7 @@ namespace NStore.Persistence.Mongo
         public MongoPersistence(MongoStoreOptions options)
         {
             if (options == null || !options.IsValid())
-                throw new Exception("Invalid options");
+                throw new MongoPersistenceException("Invalid options");
 
             _options = options;
             _serializer = options.Serializer ?? new TypeSystemSerializer();
@@ -102,7 +109,7 @@ namespace NStore.Persistence.Mongo
 
         private async Task PushToSubscriber(long start, ISubscription subscription, FindOptions<Chunk> options, FilterDefinition<Chunk> filter, CancellationToken cancellationToken)
         {
-            long position = start;
+            long position = 0;
             await subscription.OnStartAsync(start).ConfigureAwait(false);
 
             try
