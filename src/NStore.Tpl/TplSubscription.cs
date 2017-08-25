@@ -34,7 +34,7 @@ namespace NStore.Tpl
             }
         }
 
-        public Task OnStartAsync(long position)
+        public Task OnStartAsync(long indexOrPosition)
         {
             return Task.CompletedTask;
         }
@@ -45,21 +45,21 @@ namespace NStore.Tpl
             return _isRunning;
         }
 
-        public async Task CompletedAsync(long position)
+        public async Task CompletedAsync(long indexOrPosition)
         {
             _producer.Complete();
             await _producer.Completion.ConfigureAwait(false);
             _isRunning = false;
         }
 
-        public async Task StoppedAsync(long position)
+        public async Task StoppedAsync(long indexOrPosition)
         {
             _producer.Complete();
             await _producer.Completion.ConfigureAwait(false);
             _isRunning = false;
         }
 
-        public Task OnErrorAsync(long position, Exception ex)
+        public Task OnErrorAsync(long indexOrPosition, Exception ex)
         {
             _isRunning = false;
             return Task.CompletedTask;

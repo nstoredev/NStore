@@ -20,24 +20,24 @@ namespace NStore.Persistence
             return await _wrapped.OnNextAsync(chunk).ConfigureAwait(false);
         }
 
-        public async Task CompletedAsync(long position)
+        public async Task CompletedAsync(long indexOrPosition)
         {
-            await _wrapped.CompletedAsync(position).ConfigureAwait(false);
+            await _wrapped.CompletedAsync(indexOrPosition).ConfigureAwait(false);
         }
 
-        public async Task StoppedAsync(long position)
+        public async Task StoppedAsync(long indexOrPosition)
         {
-            await _wrapped.StoppedAsync(position).ConfigureAwait(false);
+            await _wrapped.StoppedAsync(indexOrPosition).ConfigureAwait(false);
         }
 
-        public async Task OnStartAsync(long position)
+        public async Task OnStartAsync(long indexOrPosition)
         {
-            await _wrapped.OnStartAsync(position).ConfigureAwait(false);
+            await _wrapped.OnStartAsync(indexOrPosition).ConfigureAwait(false);
         }
 
-        public async Task OnErrorAsync(long position, Exception ex)
+        public async Task OnErrorAsync(long indexOrPosition, Exception ex)
         {
-            await _wrapped.OnErrorAsync(position, ex).ConfigureAwait(false);
+            await _wrapped.OnErrorAsync(indexOrPosition, ex).ConfigureAwait(false);
         }
     }
 }

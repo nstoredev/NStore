@@ -94,21 +94,21 @@ namespace NStore.Persistence
 
         public static Task ReadAllAsync(
             this IPersistence persistence,
-            long sequenceStart,
+            long fromPositionInclusive,
             ISubscription subscription
         )
         {
-            return persistence.ReadAllAsync(sequenceStart, subscription, int.MaxValue, CancellationToken.None);
+            return persistence.ReadAllAsync(fromPositionInclusive, subscription, int.MaxValue, CancellationToken.None);
         }
 
         public static Task ReadAllAsync(
             this IPersistence persistence,
-            long sequenceStart,
+            long fromPositionInclusive,
             ISubscription subscription,
             int limit
         )
         {
-            return persistence.ReadAllAsync(sequenceStart, subscription, limit, CancellationToken.None);
+            return persistence.ReadAllAsync(fromPositionInclusive, subscription, limit, CancellationToken.None);
         }
 
         public static Task<IChunk> ReadSingleBackwardAsync(this IPersistence persistence, string partitionId)

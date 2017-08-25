@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
+using Microsoft.Extensions.Logging.Console;
 using NStore.Logging;
 using Xunit;
 
@@ -17,11 +18,16 @@ namespace NStore.Persistence.Tests
     public abstract partial class BasePersistenceTest : IDisposable
 #pragma warning restore S3881 // "IDisposable" should be implemented correctly
     {
+        private static int _staticId = 0;
+        protected readonly int _testRunId;
+
         protected IPersistence Store { get; }
         protected readonly TestLoggerFactory LoggerFactory;
-        protected readonly INStoreLogger _logger;
+        protected INStoreLogger _logger;
         protected BasePersistenceTest()
         {
+            _testRunId = Interlocked.Increment(ref _staticId);
+
             LoggerFactory = new TestLoggerFactory(TestSuitePrefix + "::" + GetType().Name);
             _logger = LoggerFactory.CreateLogger(GetType().FullName);
             _logger.LogDebug("Creating store");
@@ -496,24 +502,32 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class start_should_be_signaled : BasePersistenceTest
+    public class subscription_events_should_be_signaled : BasePersistenceTest
     {
         private readonly ChunkProcessor _continueToEnd = c => Task.FromResult(true);
         private readonly LambdaSubscription _subscription;
-        private long _startedAtIndex = -1;
+        private long _startedAt = -1;
+        private long _completedAt = -1;
 
-        public start_should_be_signaled()
+        public subscription_events_should_be_signaled()
         {
-            Task.WaitAll(
-                Store.AppendAsync("a", "some data"),
-                Store.AppendAsync("a", "some data")
-            );
+            // write stream out of order to have 
+            // position 1 : index 2 
+            // position 2 : index 1
+            //
+            Store.AppendAsync("a", 2, "data b").GetAwaiter().GetResult();
+            Store.AppendAsync("a", 1, "data a").GetAwaiter().GetResult();
 
             _subscription = new LambdaSubscription(_continueToEnd)
             {
                 OnStart = p =>
                 {
-                    _startedAtIndex = p;
+                    _startedAt = p;
+                    return Task.CompletedTask;
+                },
+                OnComplete = p =>
+                {
+                    _completedAt = p;
                     return Task.CompletedTask;
                 }
             };
@@ -522,22 +536,25 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task on_read_all()
         {
-            await Store.ReadAllAsync(1, _subscription);
-            Assert.Equal(1, _startedAtIndex);
+            await Store.ReadAllAsync(fromPositionInclusive: 1, subscription: _subscription);
+            Assert.True(1 == _startedAt, "start position " + _startedAt);
+            Assert.True(2 == _completedAt, "complete position " + _completedAt);
         }
 
         [Fact]
         public async Task on_read_forward()
         {
-            await Store.ReadForwardAsync("a", 1, _subscription);
-            Assert.Equal(1, _startedAtIndex);
+            await Store.ReadForwardAsync("a", fromLowerIndexInclusive: 1, subscription: _subscription);
+            Assert.True(1 == _startedAt, _testRunId+": start position " + _startedAt);
+            Assert.True(2 == _completedAt, _testRunId + ": complete position " + _completedAt);
         }
 
         [Fact]
         public async Task on_read_backward()
         {
-            await Store.ReadBackwardAsync("a", 100, _subscription);
-            Assert.Equal(100, _startedAtIndex);
+            await Store.ReadBackwardAsync("a", fromUpperIndexInclusive: 100, subscription: _subscription);
+            Assert.True(100 == _startedAt, _testRunId + ": start position " + _startedAt);
+            Assert.True(1 == _completedAt, _testRunId + ": complete position " + _completedAt);
         }
     }
 
@@ -548,9 +565,13 @@ namespace NStore.Persistence.Tests
 
         public exceptions_should_be_signaled()
         {
-            Task.WaitAll(
-                Store.AppendAsync("a", "some data")
-            );
+            // write stream out of order to have 
+            // position 1 : index 2 
+            // position 2 : index 1
+            //
+            Store.AppendAsync("a", 2, "data b").GetAwaiter().GetResult();
+            Store.AppendAsync("a", 1, "data a").GetAwaiter().GetResult();
+
             _subscription = new LambdaSubscription(_throw);
         }
 
@@ -710,7 +731,7 @@ namespace NStore.Persistence.Tests
 
         public int Position => _expectedPosition - 1;
 
-        public Task OnStartAsync(long position)
+        public Task OnStartAsync(long indexOrPosition)
         {
             return Task.CompletedTask;
         }
@@ -726,17 +747,17 @@ namespace NStore.Persistence.Tests
             return Task.FromResult(true);
         }
 
-        public Task CompletedAsync(long position)
+        public Task CompletedAsync(long indexOrPosition)
         {
             return Task.CompletedTask;
         }
 
-        public Task StoppedAsync(long position)
+        public Task StoppedAsync(long indexOrPosition)
         {
             return Task.CompletedTask;
         }
 
-        public Task OnErrorAsync(long position, Exception ex)
+        public Task OnErrorAsync(long indexOrPosition, Exception ex)
         {
             Console.WriteLine($"Error: {ex.Message}");
             throw ex;

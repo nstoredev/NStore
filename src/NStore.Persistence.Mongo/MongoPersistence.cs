@@ -104,12 +104,17 @@ namespace NStore.Persistence.Mongo
                 options.Limit = limit;
             }
 
-            await PushToSubscriber(fromLowerIndexInclusive, subscription, options, filter, cancellationToken).ConfigureAwait(false);
+            await PushToSubscriber(
+                fromLowerIndexInclusive,
+                subscription,
+                options,
+                filter,
+                false, cancellationToken).ConfigureAwait(false);
         }
 
-        private async Task PushToSubscriber(long start, ISubscription subscription, FindOptions<Chunk> options, FilterDefinition<Chunk> filter, CancellationToken cancellationToken)
+        private async Task PushToSubscriber(long start, ISubscription subscription, FindOptions<Chunk> options, FilterDefinition<Chunk> filter, bool broadcastPosition, CancellationToken cancellationToken)
         {
-            long position = 0;
+            long positionOrIndex = 0;
             await subscription.OnStartAsync(start).ConfigureAwait(false);
 
             try
@@ -121,22 +126,22 @@ namespace NStore.Persistence.Mongo
                         var batch = cursor.Current;
                         foreach (var b in batch)
                         {
-                            position = b.Position;
+                            positionOrIndex = broadcastPosition ? b.Position : b.Index;
                             b.Payload = _serializer.Deserialize(b.PartitionId, b.Payload);
                             if (!await subscription.OnNextAsync(b).ConfigureAwait(false))
                             {
-                                await subscription.StoppedAsync(position).ConfigureAwait(false);
+                                await subscription.StoppedAsync(positionOrIndex).ConfigureAwait(false);
                                 return;
                             }
                         }
                     }
                 }
 
-                await subscription.CompletedAsync(position).ConfigureAwait(false);
+                await subscription.CompletedAsync(positionOrIndex).ConfigureAwait(false);
             }
             catch (Exception e)
             {
-                await subscription.OnErrorAsync(position, e).ConfigureAwait(false);
+                await subscription.OnErrorAsync(positionOrIndex, e).ConfigureAwait(false);
             }
         }
 
@@ -162,14 +167,22 @@ namespace NStore.Persistence.Mongo
                 options.Limit = limit;
             }
 
-            await PushToSubscriber(fromUpperIndexInclusive, subscription, options, filter, cancellationToken).ConfigureAwait(false);
+            await PushToSubscriber(
+                fromUpperIndexInclusive, 
+                subscription, 
+                options, 
+                filter,
+                false, 
+                cancellationToken
+            ).ConfigureAwait(false);
         }
 
         public async Task<IChunk> ReadSingleBackwardAsync(
-            string partitionId, 
-            long fromUpperIndexInclusive, 
+            string partitionId,
+            long fromUpperIndexInclusive,
             CancellationToken cancellationToken
-        ){
+        )
+        {
             var filter = Builders<Chunk>.Filter.And(
                 Builders<Chunk>.Filter.Eq(x => x.PartitionId, partitionId),
                 Builders<Chunk>.Filter.Lte(x => x.Index, fromUpperIndexInclusive)
@@ -184,9 +197,9 @@ namespace NStore.Persistence.Mongo
             }
         }
 
-        public async Task ReadAllAsync(long fromSequenceIdInclusive, ISubscription subscription, int limit, CancellationToken cancellationToken)
+        public async Task ReadAllAsync(long fromPositionInclusive, ISubscription subscription, int limit, CancellationToken cancellationToken)
         {
-            var filter = Builders<Chunk>.Filter.Gte(x => x.Position, fromSequenceIdInclusive);
+            var filter = Builders<Chunk>.Filter.Gte(x => x.Position, fromPositionInclusive);
 
             var options = new FindOptions<Chunk>()
             {
@@ -198,15 +211,15 @@ namespace NStore.Persistence.Mongo
                 options.Limit = limit;
             }
 
-            await PushToSubscriber(fromSequenceIdInclusive, subscription, options, filter, cancellationToken).ConfigureAwait(false);
+            await PushToSubscriber(fromPositionInclusive, subscription, options, filter, true, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<long> ReadLastPositionAsync(CancellationToken cancellationToken)
         {
             var filter = Builders<Chunk>.Filter.Empty;
-			var projection = Builders<Chunk>.Projection.Include(x => x.Position);
-			
-            var options = new FindOptions<Chunk,BsonDocument>()
+            var projection = Builders<Chunk>.Projection.Include(x => x.Position);
+
+            var options = new FindOptions<Chunk, BsonDocument>()
             {
                 Sort = Builders<Chunk>.Sort.Descending(x => x.Position),
                 Limit = 1,
@@ -216,9 +229,10 @@ namespace NStore.Persistence.Mongo
             using (var cursor = await _chunks
                    .FindAsync(filter, options, cancellationToken)
                    .ConfigureAwait(false)
-            ){
+            )
+            {
                 var lastPosition = await cursor.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-                if(lastPosition != null)
+                if (lastPosition != null)
                 {
                     return lastPosition[0].AsInt64;
                 }

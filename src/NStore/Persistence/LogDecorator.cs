@@ -55,14 +55,14 @@ namespace NStore.Persistence
         }
 
         public async Task ReadAllAsync(
-            long fromSequenceIdInclusive,
+            long fromPositionInclusive,
             ISubscription subscription,
             int limit,
             CancellationToken cancellationToken)
         {
-            _logger.LogDebug("Start ReadAllAsync(from:{from}, limit:{limit})", fromSequenceIdInclusive, limit);
-            await _persistence.ReadAllAsync(fromSequenceIdInclusive, subscription, limit, cancellationToken).ConfigureAwait(false);
-            _logger.LogDebug("end ReadAllAsync(from:{from}, limit:{limit})", fromSequenceIdInclusive, limit);
+            _logger.LogDebug("Start ReadAllAsync(from:{from}, limit:{limit})", fromPositionInclusive, limit);
+            await _persistence.ReadAllAsync(fromPositionInclusive, subscription, limit, cancellationToken).ConfigureAwait(false);
+            _logger.LogDebug("end ReadAllAsync(from:{from}, limit:{limit})", fromPositionInclusive, limit);
         }
 
         public async Task<long> ReadLastPositionAsync(CancellationToken cancellationToken)

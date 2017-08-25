@@ -52,37 +52,37 @@ namespace NStore.Persistence
                 return _subscription.OnNextAsync(chunk);
             }
 
-            public Task OnStartAsync(long position)
+            public Task OnStartAsync(long indexOrPosition)
             {
-                _logger.LogDebug("OnStart({Position})", position);
+                _logger.LogDebug("OnStart({Position})", indexOrPosition);
 
-                Position = position - 1;
+                Position = indexOrPosition - 1;
                 Processed = 0;
                 _stopOnHole = RetriesOnHole < 5;
-                return _subscription.OnStartAsync(position);
+                return _subscription.OnStartAsync(indexOrPosition);
             }
 
-            public Task CompletedAsync(long position)
+            public Task CompletedAsync(long indexOrPosition)
             {
-                _logger.LogDebug("Completed({Position})", position);
+                _logger.LogDebug("Completed({Position})", indexOrPosition);
 
                 if (Processed > 0)
                 {
-                    Position = position;
+                    Position = indexOrPosition;
                 }
 
-                return _subscription.CompletedAsync(position);
+                return _subscription.CompletedAsync(indexOrPosition);
             }
 
-            public Task StoppedAsync(long position)
+            public Task StoppedAsync(long indexOrPosition)
             {
-                _logger.LogDebug("Stopped({Position})", position);
-                return _subscription.StoppedAsync(position);
+                _logger.LogDebug("Stopped({Position})", indexOrPosition);
+                return _subscription.StoppedAsync(indexOrPosition);
             }
 
-            public Task OnErrorAsync(long position, Exception ex)
+            public Task OnErrorAsync(long indexOrPosition, Exception ex)
             {
-                return _subscription.OnErrorAsync(position, ex);
+                return _subscription.OnErrorAsync(indexOrPosition, ex);
             }
         }
 

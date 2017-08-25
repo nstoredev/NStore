@@ -39,37 +39,37 @@ namespace NStore.Persistence
             return this._fn(chunk);
         }
 
-        public Task OnStartAsync(long position)
+        public Task OnStartAsync(long indexOrPosition)
         {
             return OnStart != null
-                ? OnStart(position)
+                ? OnStart(indexOrPosition)
                 : Task.CompletedTask;
         }
 
-        public Task CompletedAsync(long position)
+        public Task CompletedAsync(long indexOrPosition)
         {
             this.ReadCompleted = true;
 
             return OnComplete!= null
-                ? OnComplete(position)
+                ? OnComplete(indexOrPosition)
                 : Task.CompletedTask;
         }
 
-        public Task StoppedAsync(long position)
+        public Task StoppedAsync(long indexOrPosition)
         {
             this.ReadCompleted = true;
             return OnStop != null
-                ? OnStop(position)
+                ? OnStop(indexOrPosition)
                 : Task.CompletedTask;
         }
 
-        public Task OnErrorAsync(long position, Exception ex)
+        public Task OnErrorAsync(long indexOrPosition, Exception ex)
         {
             _failed = ex;
-            _failedPosition = position;
+            _failedPosition = indexOrPosition;
 
             return OnError != null
-                ? OnError(position, ex)
+                ? OnError(indexOrPosition, ex)
                 : Task.CompletedTask;
         }
     }

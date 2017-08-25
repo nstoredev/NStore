@@ -7,6 +7,13 @@ using NStore.Logging;
 
 namespace NStore.Persistence.MsSql
 {
+    public class MsSqlPersistenceException : Exception
+    {
+        public MsSqlPersistenceException(string message) : base(message)
+        {
+        }
+    }
+
     public sealed class MsSqlChunk : IChunk
     {
         public long Position { get; set; }
@@ -95,7 +102,7 @@ namespace NStore.Persistence.MsSql
 
             if (_options.Serializer == null)
             {
-                throw new Exception("MsSqlOptions should provide a custom Serializer");
+                throw new MsSqlPersistenceException("MsSqlOptions should provide a custom Serializer");
             }
         }
 
@@ -147,14 +154,14 @@ namespace NStore.Persistence.MsSql
                         command.Parameters.AddWithValue("@toUpperIndexInclusive", toUpperIndexInclusive);
                     }
 
-                    await PushToSubscriber(command, fromLowerIndexInclusive, subscription, cancellationToken).ConfigureAwait(false);
+                    await PushToSubscriber(command, fromLowerIndexInclusive, subscription, false, cancellationToken).ConfigureAwait(false);
                 }
             }
         }
 
-        private async Task PushToSubscriber(SqlCommand command, long start, ISubscription subscription, CancellationToken cancellationToken)
+        private async Task PushToSubscriber(SqlCommand command, long start, ISubscription subscription, bool broadcastPosition,  CancellationToken cancellationToken)
         {
-            long position = 0;
+            long indexOrPosition = 0;
             await subscription.OnStartAsync(start).ConfigureAwait(false);
 
             try
@@ -163,17 +170,19 @@ namespace NStore.Persistence.MsSql
                 {
                     while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
                     {
-                        position = reader.GetInt64(0);
-
                         var chunk = new MsSqlChunk
                         {
-                            Position = position,
+                            Position = reader.GetInt64(0),
                             PartitionId = reader.GetString(1),
                             Index = reader.GetInt64(2),
-                            Payload = _options.Serializer.Deserialize(reader.GetString(3)),
                             OperationId = reader.GetString(4),
                             Deleted = reader.GetBoolean(5)
                         };
+
+                        indexOrPosition = broadcastPosition ? chunk.Position : chunk.Index;
+                        
+                        // to handle exceptions with correct position
+                        chunk.Payload = _options.Serializer.Deserialize(reader.GetString(3));
 
                         if (!await subscription.OnNextAsync(chunk).ConfigureAwait(false))
                         {
@@ -183,11 +192,11 @@ namespace NStore.Persistence.MsSql
                     }
                 }
 
-                await subscription.CompletedAsync(position).ConfigureAwait(false);
+                await subscription.CompletedAsync(indexOrPosition).ConfigureAwait(false);
             }
             catch (Exception e)
             {
-                await subscription.OnErrorAsync(position, e).ConfigureAwait(false);
+                await subscription.OnErrorAsync(indexOrPosition, e).ConfigureAwait(false);
             }
         }
 
@@ -239,7 +248,7 @@ namespace NStore.Persistence.MsSql
                         command.Parameters.AddWithValue("@toLowerIndexInclusive", toLowerIndexInclusive);
                     }
 
-                    await PushToSubscriber(command, fromUpperIndexInclusive, subscription, cancellationToken).ConfigureAwait(false);
+                    await PushToSubscriber(command, fromUpperIndexInclusive, subscription, false, cancellationToken).ConfigureAwait(false);
                 }
             }
         }
@@ -278,7 +287,7 @@ namespace NStore.Persistence.MsSql
         }
 
         public async Task ReadAllAsync(
-            long fromSequenceIdInclusive,
+            long fromPositionInclusive,
             ISubscription subscription,
             int limit,
             CancellationToken cancellationToken)
@@ -299,9 +308,9 @@ namespace NStore.Persistence.MsSql
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
                 using (var command = new SqlCommand(sql, connection))
                 {
-                    command.Parameters.AddWithValue("@fromPositionInclusive", fromSequenceIdInclusive);
+                    command.Parameters.AddWithValue("@fromPositionInclusive", fromPositionInclusive);
 
-                    await PushToSubscriber(command, fromSequenceIdInclusive, subscription, cancellationToken).ConfigureAwait(false);
+                    await PushToSubscriber(command, fromPositionInclusive, subscription, true, cancellationToken).ConfigureAwait(false);
                 }
             }
         }
@@ -324,7 +333,7 @@ namespace NStore.Persistence.MsSql
                     if (result == null)
                         return 0;
 
-                    return (long) result;
+                    return (long)result;
                 }
             }
         }
@@ -361,8 +370,7 @@ namespace NStore.Persistence.MsSql
                         command.Parameters.AddWithValue("@OperationId", chunk.OperationId);
                         command.Parameters.AddWithValue("@Payload", textPayload);
 
-                        var position = (long)await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-                        chunk.Position = position;
+                        chunk.Position = (long)await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
                     }
                 }
             }

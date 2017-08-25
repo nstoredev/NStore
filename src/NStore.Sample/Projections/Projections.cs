@@ -132,24 +132,24 @@ namespace NStore.Sample.Projections
             return true;
         }
 
-        public Task CompletedAsync(long position)
+        public Task CompletedAsync(long indexOrPosition)
         {
             return Task.CompletedTask;
         }
 
-        public Task StoppedAsync(long position)
+        public Task StoppedAsync(long indexOrPosition)
         {
             return Task.CompletedTask;
         }
 
-        public Task OnStartAsync(long position)
+        public Task OnStartAsync(long indexOrPosition)
         {
             return Task.CompletedTask;
         }
 
-        public Task OnErrorAsync(long position, Exception ex)
+        public Task OnErrorAsync(long indexOrPosition, Exception ex)
         {
-            _reporter.Report($"ERROR on position {position}: {ex.Message}");
+            _reporter.Report($"ERROR on position {indexOrPosition}: {ex.Message}");
             return Task.CompletedTask;
         }
     }

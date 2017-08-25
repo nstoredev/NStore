@@ -10,8 +10,6 @@ namespace NStore.Persistence.Tests
     {
         private MongoPersistence _mongoPersistence;
         private MongoStoreOptions _options;
-        private static int _staticId = 1;
-        private int _id;
         private const string TestSuitePrefix = "Mongo";
 
         private IPersistence Create()
@@ -22,14 +20,12 @@ namespace NStore.Persistence.Tests
                 throw new TestMisconfiguredException("NSTORE_MONGODB environment variable not set");
             }
 
-            _id = Interlocked.Increment(ref _staticId);
-
             _options = new MongoStoreOptions
             {
                 PartitionsConnectionString = mongo,
                 UseLocalSequence = true,
-                PartitionsCollectionName = "partitions_" + GetType().Name + "_" + _id,
-                SequenceCollectionName = "seq_" + _id,
+                PartitionsCollectionName = "partitions_" + GetType().Name + "_" + _testRunId,
+                SequenceCollectionName = "seq_" + _testRunId,
                 DropOnInit = true
             };
             _mongoPersistence = new MongoPersistence(_options);

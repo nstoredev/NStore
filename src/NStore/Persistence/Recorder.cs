@@ -20,24 +20,24 @@ namespace NStore.Persistence
             return Task.FromResult(true);
         }
 
-        public Task CompletedAsync(long position)
+        public Task CompletedAsync(long indexOrPosition)
         {
             ReadCompleted = true;
             return Task.CompletedTask;
         }
 
-        public Task StoppedAsync(long position)
+        public Task StoppedAsync(long indexOrPosition)
         {
             ReadCompleted = true;
             return Task.CompletedTask;
         }
 
-        public Task OnStartAsync(long position)
+        public Task OnStartAsync(long indexOrPosition)
         {
             return Task.CompletedTask;
         }
 
-        public Task OnErrorAsync(long position, Exception ex)
+        public Task OnErrorAsync(long indexOrPosition, Exception ex)
         {
             throw ex;
         }

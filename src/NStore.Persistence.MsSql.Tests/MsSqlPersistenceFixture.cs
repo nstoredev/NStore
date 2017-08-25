@@ -14,12 +14,10 @@ namespace NStore.Persistence.Tests
     {
         private MsSqlPersistence _sqlPersistence;
         private MsSqlPersistenceOptions _options;
-        private static readonly string ConnectionString;
-        private static int _staticId = 0;
-        private int _id;
+        private string ConnectionString;
         private const string TestSuitePrefix = "Mssql";
 
-        static BasePersistenceTest()
+        protected void Connect()
         {
             ConnectionString = Environment.GetEnvironmentVariable("NSTORE_MSSQL");
             if (String.IsNullOrWhiteSpace(ConnectionString))
@@ -30,34 +28,33 @@ namespace NStore.Persistence.Tests
 
             if (ConnectionString.EndsWith("\""))
                 ConnectionString = ConnectionString.Substring(0, ConnectionString.Length - 1);
-
-            Console.WriteLine($"Connected to {ConnectionString}");
         }
 
         private IPersistence Create()
         {
-            _id = Interlocked.Increment(ref _staticId);
-            _logger.LogInformation("Starting test #{number}", _id);
+            Connect();
+
+            _logger.LogInformation("Starting test #{number}", _testRunId);
 
             _options = new MsSqlPersistenceOptions(LoggerFactory)
             {
                 ConnectionString = ConnectionString,
-                StreamsTableName = "streams_" + _id + "_" + GetType().Name,
+                StreamsTableName = "streams_" + _testRunId + "_" + GetType().Name,
                 Serializer = new JsonMsSqlSerializer()
             };
 
             _sqlPersistence = new MsSqlPersistence(_options);
             _sqlPersistence.DestroyAllAsync(CancellationToken.None).Wait();
             _sqlPersistence.InitAsync(CancellationToken.None).Wait();
-            _logger.LogInformation("Test #{number} started", _id);
+            _logger.LogInformation("Test #{number} started", _testRunId);
             return _sqlPersistence;
         }
 
         private void Clear()
         {
-            _logger.LogInformation("Cleaning up test #{number}", _id);
+            _logger.LogInformation("Cleaning up test #{number}", _testRunId);
             _sqlPersistence.DestroyAllAsync(CancellationToken.None).Wait();
-            _logger.LogInformation("Cleanup test #{number} done", _id);
+            _logger.LogInformation("Cleanup test #{number} done", _testRunId);
         }
     }
 }

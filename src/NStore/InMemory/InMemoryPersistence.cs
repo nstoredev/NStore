@@ -121,11 +121,11 @@ namespace NStore.InMemory
             };
         }
 
-        public async Task ReadAllAsync(long fromSequenceIdInclusive, ISubscription subscription, int limit, CancellationToken cancellationToken)
+        public async Task ReadAllAsync(long fromPositionInclusive, ISubscription subscription, int limit, CancellationToken cancellationToken)
         {
-            await subscription.OnStartAsync(fromSequenceIdInclusive).ConfigureAwait(false);
+            await subscription.OnStartAsync(fromPositionInclusive).ConfigureAwait(false);
 
-            int start = (int)Math.Max(fromSequenceIdInclusive - 1, 0);
+            int start = (int)Math.Max(fromPositionInclusive - 1, 0);
 
             _lockSlim.EnterReadLock();
             int lastWritten = _lastWrittenPosition;
@@ -133,14 +133,14 @@ namespace NStore.InMemory
 
             if (start > lastWritten)
             {
-                await subscription.StoppedAsync(fromSequenceIdInclusive).ConfigureAwait(false);
+                await subscription.StoppedAsync(fromPositionInclusive).ConfigureAwait(false);
                 return;
             }
 
             var toRead = Math.Min(limit, lastWritten - start + 1);
             if (toRead <= 0)
             {
-                await subscription.StoppedAsync(fromSequenceIdInclusive).ConfigureAwait(false);
+                await subscription.StoppedAsync(fromPositionInclusive).ConfigureAwait(false);
                 return;
             }
 
@@ -171,7 +171,7 @@ namespace NStore.InMemory
 
                 if (position == 0)
                 {
-                    await subscription.StoppedAsync(fromSequenceIdInclusive).ConfigureAwait(false);
+                    await subscription.StoppedAsync(fromPositionInclusive).ConfigureAwait(false);
                 }
                 else
                 {

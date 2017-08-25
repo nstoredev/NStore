@@ -87,7 +87,7 @@ namespace NStore.InMemory
             IEnumerable<Chunk> chunks,
             CancellationToken cancellationToken)
         {
-            long position = 0;
+            long index = 0;
 
             await subscription.OnStartAsync(start);
 
@@ -95,24 +95,24 @@ namespace NStore.InMemory
             {
                 foreach (var chunk in chunks)
                 {
-                    position = chunk.Position;
+                    index = chunk.Index;
                     await _networkSimulator.WaitFast().ConfigureAwait(false);
                     cancellationToken.ThrowIfCancellationRequested();
 
                     if (!await subscription.OnNextAsync(Clone(chunk)).ConfigureAwait(false))
                     {
-                        await subscription.CompletedAsync(position).ConfigureAwait(false);
+                        await subscription.CompletedAsync(index).ConfigureAwait(false);
                         return;
                     }
                 }
             }
             catch (Exception e)
             {
-                await subscription.OnErrorAsync(position, e).ConfigureAwait(false);
+                await subscription.OnErrorAsync(index, e).ConfigureAwait(false);
                 return;
             }
 
-            await subscription.CompletedAsync(position).ConfigureAwait(false);
+            await subscription.CompletedAsync(index).ConfigureAwait(false);
         }
 
 

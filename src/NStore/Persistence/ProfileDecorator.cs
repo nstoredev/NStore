@@ -84,7 +84,7 @@ namespace NStore.Persistence
             );
         }
 
-        public async Task ReadAllAsync(long fromSequenceIdInclusive, ISubscription subscription, int limit, CancellationToken cancellationToken)
+        public async Task ReadAllAsync(long fromPositionInclusive, ISubscription subscription, int limit, CancellationToken cancellationToken)
         {
             var wrapper = new SubscriptionWrapper(subscription)
             {
@@ -92,7 +92,7 @@ namespace NStore.Persistence
             };
 
             await StoreScanCounter.CaptureAsync(() =>
-                _store.ReadAllAsync(fromSequenceIdInclusive, wrapper, limit, cancellationToken)
+                _store.ReadAllAsync(fromPositionInclusive, wrapper, limit, cancellationToken)
             ).ConfigureAwait(false);
         }
 
