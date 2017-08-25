@@ -42,14 +42,12 @@ namespace NStore.Persistence.Mongo
 
         private void Connect()
         {
-            var partitionsUrl = new MongoUrl(_options.PartitionsConnectionString);
-            MongoClientSettings partitionSettings = GetClientSettings(partitionsUrl);
+            var partitionsBuild = new MongoUrlBuilder(_options.PartitionsConnectionString);
+            _options.CustomizePartitionSettings(partitionsBuild);
 
-            _options.CustomizePartitionSettings(partitionSettings);
+            var partitionsClient = new MongoClient(partitionsBuild.ToMongoUrl());
 
-            var partitionsClient = new MongoClient(partitionSettings);
-
-            this._partitionsDb = partitionsClient.GetDatabase(partitionsUrl.DatabaseName);
+            this._partitionsDb = partitionsClient.GetDatabase(partitionsBuild.DatabaseName);
 
             if (_options.SequenceConnectionString == null)
             {
@@ -57,38 +55,12 @@ namespace NStore.Persistence.Mongo
             }
             else
             {
-                var countersUrl = new MongoUrl(_options.SequenceConnectionString);
-                var countersSettings = new MongoClientSettings()
-                {
-                    Server = countersUrl.Server
-                };
-                _options.CustomizeSquenceSettings(countersSettings);
+                var countersUrlBuilder = new MongoUrlBuilder(_options.SequenceConnectionString);
+                _options.CustomizeSquenceSettings(countersUrlBuilder);
 
-                var countersClient = new MongoClient(countersSettings);
-                this._countersDb = countersClient.GetDatabase(countersUrl.DatabaseName);
+                var countersClient = new MongoClient(countersUrlBuilder.ToMongoUrl());
+                this._countersDb = countersClient.GetDatabase(countersUrlBuilder.DatabaseName);
             }
-        }
-
-        /// <summary>
-        /// Extract a <see cref="MongoClientSettings"/> instance from the 
-        /// <see cref="MongoUrl"/> generated from the Raw connection string.
-        /// </summary>
-        /// <param name="partitionsUrl"></param>
-        /// <returns></returns>
-        private static MongoClientSettings GetClientSettings(MongoUrl partitionsUrl)
-        {
-            var partitionSettings = new MongoClientSettings()
-            {
-                Server = partitionsUrl.Server
-            };
-
-            var credentials = partitionsUrl.GetCredential();
-            if (credentials != null)
-            {
-                partitionSettings.Credentials = new[] { credentials };
-            }
-
-            return partitionSettings;
         }
 
         public async Task Drop(CancellationToken cancellationToken)

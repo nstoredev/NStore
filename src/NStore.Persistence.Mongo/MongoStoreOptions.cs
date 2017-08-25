@@ -16,8 +16,8 @@ namespace NStore.Persistence.Mongo
 
         public ISerializer Serializer { get; set; }
 
-        public Action<MongoClientSettings> CustomizePartitionSettings { get; set; }
-        public Action<MongoClientSettings> CustomizeSquenceSettings { get; set; }
+        public Action<MongoUrlBuilder> CustomizePartitionSettings { get; set; }
+        public Action<MongoUrlBuilder> CustomizeSquenceSettings { get; set; }
 
         public bool IsValid()
         {
