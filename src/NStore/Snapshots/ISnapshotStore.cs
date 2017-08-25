@@ -1,8 +1,7 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 
-namespace NStore.SnapshotStore
+namespace NStore.Snapshots
 {
     public interface ISnapshotStore
     {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using NStore.Aggregates;
-using NStore.SnapshotStore;
+using NStore.Snapshots;
 using Xunit;
 
 namespace NStore.Tests.AggregatesTests
@@ -211,11 +211,11 @@ namespace NStore.Tests.AggregatesTests
         public void restoring_null_snapshot_should_throw()
         {
             var ticket = TicketTestFactory.ForTest();
-            var persister = (IEventSourcedAggregate)ticket;
+            var snaphottable = (ISnaphottable)ticket;
 
             Assert.Throws<ArgumentNullException>(() =>
             {
-                persister.TryRestore(null);
+                snaphottable.TryRestore(null);
             });
         }
 
@@ -223,9 +223,9 @@ namespace NStore.Tests.AggregatesTests
         public void restoring_empty_snapshot_should_return_false()
         {
             var ticket = TicketTestFactory.ForTest();
-            var persister = (IEventSourcedAggregate)ticket;
+            var snaphottable = (ISnaphottable)ticket;
             var snapshot = new SnapshotInfo(null, 0, null, 0);
-            var restored = persister.TryRestore(snapshot);
+            var restored = snaphottable.TryRestore(snapshot);
 
             Assert.False(restored);
         }
@@ -234,9 +234,9 @@ namespace NStore.Tests.AggregatesTests
         public void restoring_incompatible_snapshot_should_return_false()
         {
             var ticket = TicketTestFactory.ForTest();
-            var persister = (IEventSourcedAggregate)ticket;
+            var snaphottable = (ISnaphottable)ticket;
             var snapshot = new SnapshotInfo(ticket.Id, 2, null, 0);
-            var restored = persister.TryRestore(snapshot);
+            var restored = snaphottable.TryRestore(snapshot);
 
             Assert.False(restored);
         }

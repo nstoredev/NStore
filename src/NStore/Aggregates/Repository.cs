@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using NStore.Persistence;
-using NStore.SnapshotStore;
+using NStore.Snapshots;
 using NStore.Streams;
 
 namespace NStore.Aggregates
@@ -49,13 +49,14 @@ namespace NStore.Aggregates
 
             SnapshotInfo snapshot = null;
 
-            if (_snapshots != null)
+            if (_snapshots != null && aggregate is ISnaphottable snaphottable)
+
             {
                 snapshot = await _snapshots.GetLastAsync(id, cancellationToken).ConfigureAwait(false);
                 if (snapshot != null)
                 {
                     //@@REVIEW: invalidate snapshot on false?
-                    persister.TryRestore(snapshot);
+                    snaphottable.TryRestore(snapshot);
                 }
             }
 
@@ -137,10 +138,10 @@ namespace NStore.Aggregates
             await stream.AppendAsync(changeSet, operationId, cancellationToken).ConfigureAwait(false);
             persister.Persisted(changeSet);
 
-            if (_snapshots != null)
+            if (_snapshots != null && aggregate is ISnaphottable snaphottable)
             {
                 //we need to await, it's responsibility of the snapshot provider to clone & store state (sync or async)
-                await _snapshots.AddAsync(aggregate.Id, persister.GetSnapshot(), cancellationToken).ConfigureAwait(false);
+                await _snapshots.AddAsync(aggregate.Id, snaphottable.GetSnapshot(), cancellationToken).ConfigureAwait(false);
             }
         }
 

@@ -1,4 +1,4 @@
-﻿namespace NStore.SnapshotStore
+﻿namespace NStore.Snapshots
 {
     public sealed class SnapshotInfo
     {

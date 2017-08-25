@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NStore.SnapshotStore
+namespace NStore.Snapshots
 {
     public class StaleSnapshotException : Exception
     {

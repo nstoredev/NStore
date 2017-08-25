@@ -1,6 +1,4 @@
-﻿using NStore.SnapshotStore;
-
-namespace NStore.Aggregates
+﻿namespace NStore.Aggregates
 {
     public interface IEventSourcedAggregate
     {
@@ -9,8 +7,5 @@ namespace NStore.Aggregates
 
         void Loaded();
         void Persisted(Changeset changeset);
-
-        SnapshotInfo GetSnapshot();
-        bool TryRestore(SnapshotInfo snapshotInfo);
     }
 }

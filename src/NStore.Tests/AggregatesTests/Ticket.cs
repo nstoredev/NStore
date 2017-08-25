@@ -1,6 +1,6 @@
 ﻿using System;
 using NStore.Aggregates;
-using NStore.SnapshotStore;
+using NStore.Snapshots;
 
 namespace NStore.Tests.AggregatesTests
 {

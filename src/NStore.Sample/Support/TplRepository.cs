@@ -4,7 +4,7 @@ using System.Text;
 using System.Threading;
 using NStore.Aggregates;
 using NStore.Persistence;
-using NStore.SnapshotStore;
+using NStore.Snapshots;
 using NStore.Streams;
 using NStore.Tpl;
 

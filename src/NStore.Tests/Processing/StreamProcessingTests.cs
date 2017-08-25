@@ -4,7 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using NStore.InMemory;
 using NStore.Processing;
-using NStore.SnapshotStore;
+using NStore.Snapshots;
 using NStore.Streams;
 using Xunit;
 

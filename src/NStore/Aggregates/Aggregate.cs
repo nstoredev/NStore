@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using NStore.SnapshotStore;
+using NStore.Snapshots;
 
 namespace NStore.Aggregates
 {
     public abstract class Aggregate<TState> :
         IEventSourcedAggregate,
+        ISnaphottable,
         IAggregate
         where TState : AggregateState, new()
     {
@@ -42,7 +43,7 @@ namespace NStore.Aggregates
             this.Version = aggregateVersion;
         }
 
-        bool IEventSourcedAggregate.TryRestore(SnapshotInfo snapshotInfo)
+        bool ISnaphottable.TryRestore(SnapshotInfo snapshotInfo)
         {
             if (snapshotInfo == null) throw new ArgumentNullException(nameof(snapshotInfo));
 
@@ -75,7 +76,7 @@ namespace NStore.Aggregates
             return snapshotInfo;
         }
 
-        SnapshotInfo IEventSourcedAggregate.GetSnapshot()
+        SnapshotInfo ISnaphottable.GetSnapshot()
         {
             return new SnapshotInfo(
                 this.Id,

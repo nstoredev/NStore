@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using NStore.Persistence;
-using NStore.SnapshotStore;
+using NStore.Snapshots;
 using Xunit;
 
 namespace NStore.Persistence.Tests

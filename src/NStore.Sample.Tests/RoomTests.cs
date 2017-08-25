@@ -1,7 +1,7 @@
 ﻿using System;
 using NStore.Aggregates;
 using NStore.Sample.Domain.Room;
-using NStore.SnapshotStore;
+using NStore.Snapshots;
 using Xunit;
 
 namespace NStore.Sample.Tests
@@ -18,7 +18,7 @@ namespace NStore.Sample.Tests
             this.Aggregate = _defaultFactory.Create<TAggregate>();
             this.State = new TState();
             var snapshot = new SnapshotInfo("test", 1, this.State, this.State.GetStateVersion());
-            ((IEventSourcedAggregate)this.Aggregate).TryRestore(snapshot);
+            ((ISnaphottable)this.Aggregate).TryRestore(snapshot);
 
             if (!this.Aggregate.IsInitialized)
                 throw new Exception("something went wrong");
