@@ -102,28 +102,35 @@ namespace NStore.Persistence.Mongo
 
         private async Task PushToSubscriber(long start, ISubscription subscription, FindOptions<Chunk> options, FilterDefinition<Chunk> filter, CancellationToken cancellationToken)
         {
-            long position = 0;
+            long position = start;
             await subscription.OnStartAsync(start).ConfigureAwait(false);
 
-            using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
+            try
             {
-                while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
+                using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
                 {
-                    var batch = cursor.Current;
-                    foreach (var b in batch)
+                    while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
                     {
-                        position = b.Position;
-                        b.Payload = _serializer.Deserialize(b.PartitionId, b.Payload);
-                        if (!await subscription.OnNextAsync(b).ConfigureAwait(false))
+                        var batch = cursor.Current;
+                        foreach (var b in batch)
                         {
-                            await subscription.StoppedAsync(position).ConfigureAwait(false);
-                            return;
+                            position = b.Position;
+                            b.Payload = _serializer.Deserialize(b.PartitionId, b.Payload);
+                            if (!await subscription.OnNextAsync(b).ConfigureAwait(false))
+                            {
+                                await subscription.StoppedAsync(position).ConfigureAwait(false);
+                                return;
+                            }
                         }
                     }
                 }
-            }
 
-            await subscription.CompletedAsync(position).ConfigureAwait(false);
+                await subscription.CompletedAsync(position).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                await subscription.OnErrorAsync(position, e).ConfigureAwait(false);
+            }
         }
 
         public async Task ReadBackwardAsync(

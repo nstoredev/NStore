@@ -8,10 +8,15 @@ using Microsoft.Extensions.Logging;
 using NStore.Logging;
 using Xunit;
 
+#pragma warning disable S101 // Types should be named in camel case
+#pragma warning disable IDE1006 // Naming Styles
+
 // ReSharper disable InconsistentNaming
 namespace NStore.Persistence.Tests
 {
+#pragma warning disable S3881 // "IDisposable" should be implemented correctly
     public abstract partial class BasePersistenceTest : IDisposable
+#pragma warning restore S3881 // "IDisposable" should be implemented correctly
     {
         protected IPersistence Store { get; }
         protected readonly TestLoggerFactory LoggerFactory;
@@ -248,14 +253,14 @@ namespace NStore.Persistence.Tests
             Assert.Equal(1L, last);
         }
 
-		[Fact]
-		public async Task with_two_streams_of_one_chunk_should_be_two()
-		{
-			await Store.AppendAsync("a", "first");
-			await Store.AppendAsync("b", "second");
-			var last = await Store.ReadLastPositionAsync();
-			Assert.Equal(2L, last);
-		}
+        [Fact]
+        public async Task with_two_streams_of_one_chunk_should_be_two()
+        {
+            await Store.AppendAsync("a", "first");
+            await Store.AppendAsync("b", "second");
+            var last = await Store.ReadLastPositionAsync();
+            Assert.Equal(2L, last);
+        }
     }
 
     public class ByteArrayPersistenceTest : BasePersistenceTest
@@ -492,6 +497,38 @@ namespace NStore.Persistence.Tests
         }
     }
 
+    public class exceptions_should_be_signaled : BasePersistenceTest
+    {
+        private readonly ChunkProcessor _throw = c => throw new TimeoutException();
+
+        [Fact]
+        public async Task on_read_all()
+        {
+            await Store.AppendAsync("a", "some data");
+            var subscription = new LambdaSubscription(_throw);
+            await Store.ReadAllAsync(0, subscription);
+            Assert.True(subscription.Failed);
+        }
+
+        [Fact]
+        public async Task on_read_forward()
+        {
+            await Store.AppendAsync("a", "some data");
+            var subscription = new LambdaSubscription(_throw);
+            await Store.ReadForwardAsync("a", 0, subscription);
+            Assert.True(subscription.Failed);
+        }
+
+        [Fact]
+        public async Task on_read_backward()
+        {
+            await Store.AppendAsync("a", "some data");
+            var subscription = new LambdaSubscription(_throw);
+            await Store.ReadBackwardAsync("a", 100, subscription);
+            Assert.True(subscription.Failed);
+        }
+    }
+
 
     public class strict_sequence_on_store : BasePersistenceTest
     {
@@ -578,7 +615,7 @@ namespace NStore.Persistence.Tests
 
             var producer = new ActionBlock<int>(async i =>
             {
-                await Store.AppendAsync("p", i, "demo", "op#"+i).ConfigureAwait(false);
+                await Store.AppendAsync("p", i, "demo", "op#" + i).ConfigureAwait(false);
             }, new ExecutionDataflowBlockOptions()
             {
                 MaxDegreeOfParallelism = parallelism

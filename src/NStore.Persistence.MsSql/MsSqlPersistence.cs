@@ -154,34 +154,41 @@ namespace NStore.Persistence.MsSql
 
         private async Task PushToSubscriber(SqlCommand command, long start, ISubscription subscription, CancellationToken cancellationToken)
         {
-            long position = 0;
+            long position = start;
             await subscription.OnStartAsync(start).ConfigureAwait(false);
 
-            using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
+            try
             {
-                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
                 {
-                    position = reader.GetInt64(0);
-
-                    var chunk = new MsSqlChunk
+                    while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
                     {
-                        Position = position ,
-                        PartitionId = reader.GetString(1),
-                        Index = reader.GetInt64(2),
-                        Payload = _options.Serializer.Deserialize(reader.GetString(3)),
-                        OperationId = reader.GetString(4),
-                        Deleted = reader.GetBoolean(5)
-                    };
+                        position = reader.GetInt64(0);
 
-                    if (!await subscription.OnNextAsync(chunk).ConfigureAwait(false))
-                    {
-                        await subscription.StoppedAsync(chunk.Position).ConfigureAwait(false);
-                        return;
+                        var chunk = new MsSqlChunk
+                        {
+                            Position = position,
+                            PartitionId = reader.GetString(1),
+                            Index = reader.GetInt64(2),
+                            Payload = _options.Serializer.Deserialize(reader.GetString(3)),
+                            OperationId = reader.GetString(4),
+                            Deleted = reader.GetBoolean(5)
+                        };
+
+                        if (!await subscription.OnNextAsync(chunk).ConfigureAwait(false))
+                        {
+                            await subscription.StoppedAsync(chunk.Position).ConfigureAwait(false);
+                            return;
+                        }
                     }
                 }
-            }
 
-            await subscription.CompletedAsync(position).ConfigureAwait(false);
+                await subscription.CompletedAsync(position).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                await subscription.OnErrorAsync(position, e).ConfigureAwait(false);
+            }
         }
 
         public async Task ReadBackwardAsync(
