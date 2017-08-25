@@ -7,7 +7,7 @@ namespace NStore.Aggregates
     {
         public Object[] Events { get; private set; }
         public int AggregateVersion { get; private set; }
-        public IDictionary<string, object> Headers { get; private set; }
+        public Dictionary<string, object> Headers { get; private set; }
         public bool IsEmpty => Events.Length == 0;
 
         private Changeset()

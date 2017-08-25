@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using MongoDB.Driver;
 
 namespace NStore.Persistence.Mongo
 {
-    public class MongoStoreOptions
+    public class MongoPersistenceOptions
     {
         public string PartitionsConnectionString { get; set; }
         public string PartitionsCollectionName { get; set; } = "chunks";
@@ -24,7 +25,7 @@ namespace NStore.Persistence.Mongo
             return !String.IsNullOrWhiteSpace(PartitionsConnectionString);
         }
 
-        public MongoStoreOptions()
+        public MongoPersistenceOptions()
         {
             this.CustomizePartitionSettings = settings => { };
             this.CustomizeSquenceSettings = settings => { };

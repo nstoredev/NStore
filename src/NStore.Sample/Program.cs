@@ -98,7 +98,7 @@ namespace NStore.Sample
 
                 case "mongo":
                 {
-                    var options = new MongoStoreOptions
+                    var options = new MongoPersistenceOptions
                     {
                         PartitionsConnectionString = Mongo,
                         UseLocalSequence = true,

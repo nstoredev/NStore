@@ -83,11 +83,11 @@ namespace NStore.Benchmarks
         }
 
 
-        private static MongoStoreOptions BuildMongoConnectionOptions()
+        private static MongoPersistenceOptions BuildMongoConnectionOptions()
         {
             var id = Interlocked.Increment(ref Id);
 
-            var options = new MongoStoreOptions
+            var options = new MongoPersistenceOptions
             {
                 PartitionsConnectionString = Mongo,
                 UseLocalSequence = true,

@@ -1,5 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Reflection;
 using System.Threading;
+using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Options;
+using MongoDB.Bson.Serialization.Serializers;
+using MongoDB.Driver;
+using NStore.Aggregates;
 using NStore.Persistence.Mongo;
 using NStore.Persistence;
 
@@ -8,9 +15,23 @@ namespace NStore.Persistence.Tests
 {
     public partial class BasePersistenceTest
     {
-        private MongoPersistence _mongoPersistence;
-        private MongoStoreOptions _options;
+        private IMongoPersistence _mongoPersistence;
+        private MongoPersistenceOptions _options;
         private const string TestSuitePrefix = "Mongo";
+
+        static BasePersistenceTest()
+        {
+            // enable support for dots in key names
+            BsonClassMap.RegisterClassMap<Changeset>(map =>
+            {
+                map.AutoMap();
+                map.MapProperty(x => x.Headers).SetSerializer(
+                    new DictionaryInterfaceImplementerSerializer<
+                        Dictionary<String, Object>
+                    >(DictionaryRepresentation.ArrayOfArrays)
+                );
+            });
+        }
 
         private IPersistence Create()
         {
@@ -20,7 +41,7 @@ namespace NStore.Persistence.Tests
                 throw new TestMisconfiguredException("NSTORE_MONGODB environment variable not set");
             }
 
-            _options = new MongoStoreOptions
+            _options = new MongoPersistenceOptions
             {
                 PartitionsConnectionString = mongo,
                 UseLocalSequence = true,
@@ -28,11 +49,25 @@ namespace NStore.Persistence.Tests
                 SequenceCollectionName = "seq_" + _testRunId,
                 DropOnInit = true
             };
-            _mongoPersistence = new MongoPersistence(_options);
+            _mongoPersistence = CreatePersistence(_options);
 
             _mongoPersistence.InitAsync(CancellationToken.None).Wait();
 
             return _mongoPersistence;
+        }
+
+        protected IMongoCollection<TChunk> GetCollection<TChunk>()
+        {
+            var fieldInfo = _mongoPersistence.GetType()
+                .GetField("_chunks", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            var collection = (IMongoCollection<TChunk>)fieldInfo.GetValue(_mongoPersistence);
+            return collection;
+        }
+
+        protected virtual IMongoPersistence CreatePersistence(MongoPersistenceOptions options)
+        {
+            return new MongoPersistence(options);
         }
 
         private void Clear()
