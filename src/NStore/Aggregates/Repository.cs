@@ -50,7 +50,6 @@ namespace NStore.Aggregates
             SnapshotInfo snapshot = null;
 
             if (_snapshots != null && aggregate is ISnaphottable snaphottable)
-
             {
                 snapshot = await _snapshots.GetLastAsync(id, cancellationToken).ConfigureAwait(false);
                 if (snapshot != null)
@@ -66,7 +65,6 @@ namespace NStore.Aggregates
             }
 
             _trackingAggregates.Add(id, aggregate);
-
             var stream = OpenStream(id);
 
             int readCount = 0;
@@ -162,17 +160,10 @@ namespace NStore.Aggregates
         {
             if (!_trackingAggregates.Values.Contains(aggregate))
             {
-                throw new RepositoryMismatchException();
+                throw new RepositoryMismatchException($"Aggregate {aggregate.Id} was not loaded by this repository");
             }
 
-            try
-            {
-                return _openedStreams[aggregate.Id];
-            }
-            catch (KeyNotFoundException)
-            {
-                throw new RepositoryMismatchException();
-            }
+            return _openedStreams[aggregate.Id];
         }
     }
 }
