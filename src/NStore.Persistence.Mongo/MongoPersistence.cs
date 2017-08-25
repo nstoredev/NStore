@@ -43,10 +43,8 @@ namespace NStore.Persistence.Mongo
         private void Connect()
         {
             var partitionsUrl = new MongoUrl(_options.PartitionsConnectionString);
-            var partitionSettings = new MongoClientSettings()
-            {
-                Server = partitionsUrl.Server
-            };
+            MongoClientSettings partitionSettings = GetClientSettings(partitionsUrl);
+
             _options.CustomizePartitionSettings(partitionSettings);
 
             var partitionsClient = new MongoClient(partitionSettings);
@@ -69,6 +67,28 @@ namespace NStore.Persistence.Mongo
                 var countersClient = new MongoClient(countersSettings);
                 this._countersDb = countersClient.GetDatabase(countersUrl.DatabaseName);
             }
+        }
+
+        /// <summary>
+        /// Extract a <see cref="MongoClientSettings"/> instance from the 
+        /// <see cref="MongoUrl"/> generated from the Raw connection string.
+        /// </summary>
+        /// <param name="partitionsUrl"></param>
+        /// <returns></returns>
+        private static MongoClientSettings GetClientSettings(MongoUrl partitionsUrl)
+        {
+            var partitionSettings = new MongoClientSettings()
+            {
+                Server = partitionsUrl.Server
+            };
+
+            var credentials = partitionsUrl.GetCredential();
+            if (credentials != null)
+            {
+                partitionSettings.Credentials = new[] { credentials };
+            }
+
+            return partitionSettings;
         }
 
         public async Task Drop(CancellationToken cancellationToken)
