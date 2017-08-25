@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using Microsoft.Extensions.Logging.Console;
 using NStore.Logging;
 using Xunit;
 
@@ -88,7 +87,7 @@ namespace NStore.Persistence.Tests
 
             Assert.Equal("Duplicated index 1 on stream dup", ex.Message);
             Assert.Equal("dup", ex.StreamId);
-            Assert.Equal(1, ex.Index);
+            Assert.Equal(1, ex.StreamIndex);
         }
     }
 

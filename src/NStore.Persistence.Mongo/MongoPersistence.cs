@@ -6,13 +6,6 @@ using MongoDB.Driver;
 
 namespace NStore.Persistence.Mongo
 {
-    public class MongoPersistenceException : Exception
-    {
-        public MongoPersistenceException(string message) : base(message)
-        {
-        }
-    }
-
     public class MongoPersistence : IPersistence
     {
         private IMongoDatabase _partitionsDb;
