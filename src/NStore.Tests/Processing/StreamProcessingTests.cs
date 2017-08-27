@@ -12,7 +12,7 @@ namespace NStore.Tests.Processing
 {
     public class Sum : PayloadProcessor
     {
-        public int Total { get; private set; }
+        public int Total { get; set; }
 
         private void On(ValueCollected data)
         {
@@ -61,7 +61,7 @@ namespace NStore.Tests.Processing
         public async Task should_sum_all_values()
         {
             var sequence = await CreateStream("sequence_1");
-            var result = await sequence.RunAsync<Sum>();
+            var result = await sequence.Fold<Sum>().RunAsync();
             Assert.Equal(55, result.Total);
         }
 
@@ -69,33 +69,41 @@ namespace NStore.Tests.Processing
         public async Task should_sum_all_values_async()
         {
             var sequence = await CreateStream("sequence_1");
-            var result = await sequence.RunAsync<SumAsync>();
+            var result = await sequence.Fold<SumAsync>().RunAsync();
             Assert.Equal(55, result.Total);
         }
 
-
         [Fact]
-        public async Task should_sum_only_values_with_odd_index_in_stream()
+        public async Task should_sum_fist_two_values()
         {
             var sequence = await CreateStream("sequence_1");
-            var result = await sequence.RunWhereAsync<Sum>(c => c.Index % 2 == 1);
-            Assert.Equal(25, result.Total);
+            var result = await sequence
+                .Fold<Sum>()
+                .ToIndex(2)
+                .RunAsync();
+            Assert.Equal(3, result.Total);
         }
 
         [Fact]
-        public async Task should_sum_last_two_values()
-        {
-            var sequence = await CreateStream("sequence_1");
-            var result = await sequence.RunAsync<Sum>(fromIndexInclusive: 9);
-            Assert.Equal(19, result.Total);
-        }
-
-        [Fact(Skip = "Incomplete")]
         public async Task should_snapshot_values()
         {
+            await _snapshots.AddAsync("sequence_1/Sum", new SnapshotInfo(
+                "sequence_1",
+                9,
+                new Sum
+                {
+                    Total=1
+                },
+                1
+            ));
+            
             var sequence = await CreateStream("sequence_1");
-            var result = await sequence.RunAsync<Sum>();
-            Assert.Equal(55, result.Total);
+            var result = await sequence
+                .Fold<Sum>()
+                .WithCache(_snapshots)
+                .RunAsync();
+            
+            Assert.Equal(20, result.Total);
         }
     }
 }

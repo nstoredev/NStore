@@ -1,23 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using NStore.Persistence;
+using NStore.Snapshots;
 using NStore.Streams;
 
 namespace NStore.Processing
 {
     public class StreamProcessor<TResult> where TResult : IPayloadProcessor, new()
     {
-        private class Reducer: ISubscription 
+        private class Reducer : ISubscription
         {
-            public TResult Result { get; private set; }
-            private readonly Func<IChunk, bool> _filter;
+            private readonly TResult _state;
 
-            public Reducer(Func<IChunk, bool> filter)
+            public Reducer(TResult state)
             {
-                this.Result = new TResult();
-                _filter = filter;
+                _state = state;
             }
 
             public Task OnStartAsync(long indexOrPosition)
@@ -27,16 +27,13 @@ namespace NStore.Processing
 
             public async Task<bool> OnNextAsync(IChunk chunk)
             {
-                if (_filter == null || _filter(chunk))
+                if (this._state is IAsyncPayloadProcessor)
                 {
-                    if (this.Result is IAsyncPayloadProcessor)
-                    {
-                        await ((IAsyncPayloadProcessor) this.Result).ProcessAsync(chunk.Payload).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        this.Result.Process(chunk.Payload);
-                    }
+                    await ((IAsyncPayloadProcessor) this._state).ProcessAsync(chunk.Payload).ConfigureAwait(false);
+                }
+                else
+                {
+                    this._state.Process(chunk.Payload);
                 }
 
                 return true;
@@ -58,29 +55,70 @@ namespace NStore.Processing
             }
         }
 
-        private readonly Reducer _reducer;
+        private readonly IStream _source;
+        private ISnapshotStore _snapshots;
+        private long? _upToIndex;
 
-        public StreamProcessor() : this(null)
+        public StreamProcessor(IStream source)
         {
+            _source = source ?? throw new ArgumentNullException(nameof(source));
         }
 
-        public StreamProcessor(Func<IChunk, bool> filter)
+        public Task<TResult> RunAsync()
         {
-            this._reducer = new Reducer(filter);
+            return RunAsync(default(CancellationToken));
         }
 
-        public async Task<TResult> RunAsync(IStream stream, long fromIndexInclusive)
+        public async Task<TResult> RunAsync(CancellationToken cancellationToken)
         {
-            if (stream == null) throw new ArgumentNullException(nameof(stream));
-            await stream.ReadAsync(this._reducer, fromIndexInclusive).ConfigureAwait(false);
-            return this._reducer.Result;
+            var startIndex = 0;
+            TResult state = default(TResult);
+            
+            if (_snapshots != null)
+            {
+                SnapshotInfo si = null;
+                string snapshotId = this._source.Id + "/" + typeof(TResult).Name;
+                if (_upToIndex.HasValue)
+                {
+                    si = await _snapshots.GetAsync(snapshotId, _upToIndex.Value, cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    si = await _snapshots.GetLastAsync(snapshotId, cancellationToken).ConfigureAwait(false);
+                }
+
+                if (si != null)
+                {
+                    state = (TResult) si.Payload;
+                    if (_upToIndex.HasValue && si.SourceVersion == _upToIndex.Value)
+                    {
+                        return state;
+                    }
+                    
+                    startIndex = si.SourceVersion;
+                }
+            }
+
+            if (state == null)
+            {
+                state = new TResult();
+            }
+
+            var reducer = new Reducer(state);
+            await _source.ReadAsync(reducer, startIndex, _upToIndex ?? long.MaxValue, cancellationToken).ConfigureAwait(false);
+            return state;
         }
 
-        public async Task<TResult> RunAsync(IStream stream)
+        public StreamProcessor<TResult> WithCache(ISnapshotStore snapshots)
         {
-            if (stream == null) throw new ArgumentNullException(nameof(stream));
-            await stream.ReadAsync(this._reducer).ConfigureAwait(false);
-            return this._reducer.Result;
+            this._snapshots = snapshots;
+            return this;
+        }
+
+        public StreamProcessor<TResult> ToIndex(int upToIndex)
+        {
+            this._upToIndex = upToIndex;
+            return this;
         }
     }
 }

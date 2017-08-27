@@ -21,6 +21,11 @@ namespace NStore.Streams
             return stream.ReadAsync(subscription, fromIndexInclusive, long.MaxValue, CancellationToken.None);
         }
 
+        public static Task ReadAsync(this IReadOnlyStream stream, ISubscription subscription, long fromIndexInclusive, CancellationToken cancellationToken)
+        {
+            return stream.ReadAsync(subscription, fromIndexInclusive, long.MaxValue, cancellationToken);
+        }
+
         public static Task ReadAsync(this IReadOnlyStream stream, ISubscription subscription, long fromIndexInclusive, long toIndexInclusive)
         {
             return stream.ReadAsync(subscription, fromIndexInclusive, toIndexInclusive, CancellationToken.None);
