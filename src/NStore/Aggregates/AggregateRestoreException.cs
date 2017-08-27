@@ -6,10 +6,10 @@ namespace NStore.Aggregates
 {
     public class AggregateRestoreException : Exception
     {
-        public int RestoreVersion { get; }
-        public int ExpectedVersion { get; }
+        public long RestoreVersion { get; }
+        public long ExpectedVersion { get; }
 
-        public AggregateRestoreException(int expectedVersion, int restoreVersion)
+        public AggregateRestoreException(long expectedVersion, long restoreVersion)
         {
             ExpectedVersion = expectedVersion;
             RestoreVersion = restoreVersion;

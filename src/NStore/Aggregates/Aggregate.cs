@@ -12,7 +12,7 @@ namespace NStore.Aggregates
         where TState : AggregateState, new()
     {
         public string Id { get; private set; }
-        public int Version { get; private set; }
+        public long Version { get; private set; }
         public bool IsInitialized { get; private set; }
 
         private IList<object> PendingChanges { get; } = new List<object>();
@@ -28,7 +28,7 @@ namespace NStore.Aggregates
 
         public void Init(string id) => InternalInit(id, 0, null);
 
-        private void InternalInit(string aggregateId, int aggregateVersion, TState state)
+        private void InternalInit(string aggregateId, long aggregateVersion, TState state)
         {
             if (String.IsNullOrEmpty(aggregateId))
                 throw new ArgumentNullException(nameof(aggregateId));

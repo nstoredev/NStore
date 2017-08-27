@@ -7,10 +7,9 @@ namespace NStore.Processing
 {
     public static class ProcessorExtensions
     {
-        public static StreamProcessor<TResult> Fold<TResult>(this IStream stream)
-            where TResult : IPayloadProcessor, new()
+        public static StreamProcessor Fold(this IStream stream)
         {
-            var processor = new StreamProcessor<TResult>(stream);
+            var processor = new StreamProcessor(stream);
             return processor;
         }
     }

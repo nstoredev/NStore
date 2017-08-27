@@ -5,9 +5,9 @@ namespace NStore.Snapshots
     public class StaleSnapshotException : Exception
     {
         public string AggregateId { get; }
-        public int AggregateVersion { get; }
+        public long AggregateVersion { get; }
 
-        public StaleSnapshotException(string aggregateId, int aggregateVersion)
+        public StaleSnapshotException(string aggregateId, long aggregateVersion)
         {
             AggregateId = aggregateId;
             AggregateVersion = aggregateVersion;

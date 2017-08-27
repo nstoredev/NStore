@@ -4,7 +4,7 @@
     {
         public SnapshotInfo(
             string sourceId, 
-            int sourceVersion, 
+            long sourceVersion, 
             object payload, 
             int schemaVersion)
         {
@@ -14,7 +14,7 @@
             SchemaVersion = schemaVersion;
         }
 
-        public int SourceVersion { get; private set; }
+        public long SourceVersion { get; private set; }
         public object Payload { get; private set; }
         public int SchemaVersion { get; private set; }
         public string SourceId { get; private set; }

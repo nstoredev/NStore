@@ -9,11 +9,12 @@ using NStore.Streams;
 
 namespace NStore.Processing
 {
-    public class StreamProcessor<TResult> where TResult : IPayloadProcessor, new()
+    public class StreamProcessor
     {
-        private class Reducer : ISubscription
+        private class Reducer<TResult> : ISubscription where TResult : IPayloadProcessor
         {
             private readonly TResult _state;
+            public long LastIndex { get; private set; }
 
             public Reducer(TResult state)
             {
@@ -41,6 +42,7 @@ namespace NStore.Processing
 
             public Task CompletedAsync(long indexOrPosition)
             {
+                LastIndex = indexOrPosition;
                 return Task.CompletedTask;
             }
 
@@ -64,27 +66,29 @@ namespace NStore.Processing
             _source = source ?? throw new ArgumentNullException(nameof(source));
         }
 
-        public Task<TResult> RunAsync()
+        public Task<TResult> RunAsync<TResult>() where TResult : IPayloadProcessor, new()
         {
-            return RunAsync(default(CancellationToken));
+            return RunAsync<TResult>(default(CancellationToken));
         }
 
-        public async Task<TResult> RunAsync(CancellationToken cancellationToken)
+        public async Task<TResult> RunAsync<TResult>(CancellationToken cancellationToken) where TResult : IPayloadProcessor, new()
         {
-            var startIndex = 0;
+            long startIndex = 0;
             TResult state = default(TResult);
+            string snapshotId = this._source.Id + "/" + typeof(TResult).Name;
             
             if (_snapshots != null)
             {
                 SnapshotInfo si = null;
-                string snapshotId = this._source.Id + "/" + typeof(TResult).Name;
                 if (_upToIndex.HasValue)
                 {
-                    si = await _snapshots.GetAsync(snapshotId, _upToIndex.Value, cancellationToken).ConfigureAwait(false);
+                    si = await _snapshots.GetAsync(snapshotId, _upToIndex.Value, cancellationToken)
+                        .ConfigureAwait(false);
                 }
                 else
                 {
-                    si = await _snapshots.GetLastAsync(snapshotId, cancellationToken).ConfigureAwait(false);
+                    si = await _snapshots.GetLastAsync(snapshotId, cancellationToken)
+                        .ConfigureAwait(false);
                 }
 
                 if (si != null)
@@ -104,18 +108,31 @@ namespace NStore.Processing
                 state = new TResult();
             }
 
-            var reducer = new Reducer(state);
-            await _source.ReadAsync(reducer, startIndex, _upToIndex ?? long.MaxValue, cancellationToken).ConfigureAwait(false);
+            var reducer = new Reducer<TResult>(state);
+            await _source.ReadAsync(reducer, startIndex, _upToIndex ?? long.MaxValue, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (_snapshots != null && reducer.LastIndex > 0)
+            {
+                await _snapshots.AddAsync(snapshotId, new SnapshotInfo(
+                    _source.Id,
+                    reducer.LastIndex,
+                    state,
+                    1
+                )).ConfigureAwait(false);
+
+            }
+
             return state;
         }
 
-        public StreamProcessor<TResult> WithCache(ISnapshotStore snapshots)
+        public StreamProcessor WithCache(ISnapshotStore snapshots)
         {
             this._snapshots = snapshots;
             return this;
         }
 
-        public StreamProcessor<TResult> ToIndex(int upToIndex)
+        public StreamProcessor ToIndex(int upToIndex)
         {
             this._upToIndex = upToIndex;
             return this;

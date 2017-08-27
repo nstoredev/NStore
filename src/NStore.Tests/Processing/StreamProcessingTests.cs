@@ -61,7 +61,7 @@ namespace NStore.Tests.Processing
         public async Task should_sum_all_values()
         {
             var sequence = await CreateStream("sequence_1");
-            var result = await sequence.Fold<Sum>().RunAsync();
+            var result = await sequence.Fold().RunAsync<Sum>();
             Assert.Equal(55, result.Total);
         }
 
@@ -69,7 +69,7 @@ namespace NStore.Tests.Processing
         public async Task should_sum_all_values_async()
         {
             var sequence = await CreateStream("sequence_1");
-            var result = await sequence.Fold<SumAsync>().RunAsync();
+            var result = await sequence.Fold().RunAsync<Sum>();
             Assert.Equal(55, result.Total);
         }
 
@@ -78,9 +78,9 @@ namespace NStore.Tests.Processing
         {
             var sequence = await CreateStream("sequence_1");
             var result = await sequence
-                .Fold<Sum>()
+                .Fold()
                 .ToIndex(2)
-                .RunAsync();
+                .RunAsync<Sum>();
             Assert.Equal(3, result.Total);
         }
 
@@ -99,9 +99,9 @@ namespace NStore.Tests.Processing
             
             var sequence = await CreateStream("sequence_1");
             var result = await sequence
-                .Fold<Sum>()
+                .Fold()
                 .WithCache(_snapshots)
-                .RunAsync();
+                .RunAsync<Sum>();
             
             Assert.Equal(20, result.Total);
         }

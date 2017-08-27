@@ -6,7 +6,7 @@ namespace NStore.Aggregates
     public interface IAggregate
     {
         string Id { get; }
-        int Version { get; }
+        long Version { get; }
 
         bool IsInitialized { get; }
         bool IsDirty { get; }
