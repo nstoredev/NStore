@@ -53,7 +53,7 @@ namespace NStore.Tests.AggregatesTests
 
         protected override SnapshotInfo PreprocessSnapshot(SnapshotInfo snapshotInfo)
         {
-            if (snapshotInfo.SchemaVersion != 1)
+            if (snapshotInfo.SchemaVersion != "1")
                 return null;
 
             return snapshotInfo;

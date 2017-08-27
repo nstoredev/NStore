@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using NStore.Processing;
 using NStore.Snapshots;
 
 namespace NStore.Aggregates
@@ -16,16 +17,16 @@ namespace NStore.Aggregates
         public bool IsInitialized { get; private set; }
 
         private IList<object> PendingChanges { get; } = new List<object>();
-        private readonly IEventDispatcher _dispatcher;
         protected TState State { get; private set; }
         public bool IsDirty => this.PendingChanges.Any();
         public bool IsNew => this.Version == 0;
-
-        protected Aggregate(IEventDispatcher dispatcher = null)
+        
+        protected Aggregate()
         {
-            this._dispatcher = dispatcher ?? new DefaultEventDispatcher<TState>(() => this.State);
         }
 
+        protected virtual string StateSignature => "1";
+        
         public void Init(string id) => InternalInit(id, 0, null);
 
         private void InternalInit(string aggregateId, long aggregateVersion, TState state)
@@ -82,7 +83,7 @@ namespace NStore.Aggregates
                 this.Id,
                 this.Version,
                 this.State,
-                this.State.GetStateVersion()
+                this.StateSignature
             );
         }
 
@@ -121,9 +122,9 @@ namespace NStore.Aggregates
             );
         }
 
-        private void Dispatch(object @event)
+        protected virtual void Dispatch(object @event)
         {
-            this._dispatcher.Dispatch(@event);
+            this.State.CallNonPublicIfExists("On", @event);
         }
 
         protected void Emit(object @event)

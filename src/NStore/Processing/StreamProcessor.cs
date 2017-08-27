@@ -11,14 +11,15 @@ namespace NStore.Processing
 {
     public class StreamProcessor
     {
-        private class Reducer<TResult> : ISubscription where TResult : IPayloadProcessor
+        private class Reducer<TResult> : ISubscription  
         {
             private readonly TResult _state;
             public long LastIndex { get; private set; }
-
+            private readonly IPayloadProcessor _processor;
             public Reducer(TResult state)
             {
                 _state = state;
+                _processor = new DelegateToPrivateEventHandlers(_state);
             }
 
             public Task OnStartAsync(long indexOrPosition)
@@ -28,13 +29,14 @@ namespace NStore.Processing
 
             public async Task<bool> OnNextAsync(IChunk chunk)
             {
+                //@@TODO -> change type
                 if (this._state is IAsyncPayloadProcessor)
                 {
                     await ((IAsyncPayloadProcessor) this._state).ProcessAsync(chunk.Payload).ConfigureAwait(false);
                 }
                 else
                 {
-                    this._state.Process(chunk.Payload);
+                    this._processor.Process(chunk.Payload);
                 }
 
                 return true;
@@ -66,12 +68,12 @@ namespace NStore.Processing
             _source = source ?? throw new ArgumentNullException(nameof(source));
         }
 
-        public Task<TResult> RunAsync<TResult>() where TResult : IPayloadProcessor, new()
+        public Task<TResult> RunAsync<TResult>() where TResult: new()
         {
             return RunAsync<TResult>(default(CancellationToken));
         }
 
-        public async Task<TResult> RunAsync<TResult>(CancellationToken cancellationToken) where TResult : IPayloadProcessor, new()
+        public async Task<TResult> RunAsync<TResult>(CancellationToken cancellationToken) where TResult :  new()
         {
             long startIndex = 0;
             TResult state = default(TResult);
@@ -118,7 +120,7 @@ namespace NStore.Processing
                     _source.Id,
                     reducer.LastIndex,
                     state,
-                    1
+                    "1"
                 )).ConfigureAwait(false);
 
             }

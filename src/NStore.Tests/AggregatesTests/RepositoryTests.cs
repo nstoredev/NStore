@@ -168,7 +168,7 @@ namespace NStore.Tests.AggregatesTests
             Assert.NotNull(snapshot);
             Assert.Equal(3, snapshot.SourceVersion);
             Assert.NotNull(snapshot.Payload);
-            Assert.Equal(1, snapshot.SchemaVersion);
+            Assert.Equal("1", snapshot.SchemaVersion);
         }
 
         [Fact]
@@ -182,7 +182,7 @@ namespace NStore.Tests.AggregatesTests
             Assert.NotNull(snapshot);
             Assert.Equal(1, snapshot.SourceVersion);
             Assert.NotNull(snapshot.Payload);
-            Assert.Equal(1, snapshot.SchemaVersion);
+            Assert.Equal("1", snapshot.SchemaVersion);
         }
     }
 
@@ -197,7 +197,7 @@ namespace NStore.Tests.AggregatesTests
         public async Task with_snapshot_but_without_stream_should_throw_stale_aggregate_exception()
         {
             var ticketState = new TicketState();
-            var snapshot = new SnapshotInfo("Ticket_1", 2, ticketState, 1);
+            var snapshot = new SnapshotInfo("Ticket_1", 2, ticketState, "1");
             await Snapshots.AddAsync("Ticket_1", snapshot);
 
             var ex = await Assert.ThrowsAsync<StaleSnapshotException>(() =>

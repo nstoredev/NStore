@@ -103,14 +103,14 @@ namespace NStore.Benchmarks
             return options;
         }
 
-        [Setup]
+        [GlobalSetup]
         public void Setup()
         {
             _iterations = Enumerable.Range(0, Writes);
             _mongoPersistence = new List<MongoPersistence>();
         }
 
-        [Cleanup]
+        [GlobalCleanup]
         public void Cleanup()
         {
             _inmemoryStore = null;

@@ -10,7 +10,7 @@ using Xunit;
 
 namespace NStore.Tests.Processing
 {
-    public class Sum : PayloadProcessor
+    public class Sum
     {
         public int Total { get; set; }
 
@@ -94,7 +94,7 @@ namespace NStore.Tests.Processing
                 {
                     Total=1
                 },
-                1
+                "1"
             ));
             
             var sequence = await CreateStream("sequence_1");

@@ -36,7 +36,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task empty_snapshot_is_not_persisted()
         {
-            var nullSnapshot = new SnapshotInfo("empty", 0, null, 0);
+            var nullSnapshot = new SnapshotInfo("empty", 0, null, string.Empty);
             await _snapshots.AddAsync("empty", nullSnapshot);
 
             var tape = new Recorder();
@@ -48,7 +48,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task snapshot_data_should_be_different_across_write_and_reads()
         {
-            var input = new SnapshotInfo("Aggregate_1", 1, new State(), 1);
+            var input = new SnapshotInfo("Aggregate_1", 1, new State(), string.Empty);
 
             await _snapshots.AddAsync("Aggregate_1", input);
             var output = await _snapshots.GetAsync("Aggregate_1", Int32.MaxValue);
@@ -59,7 +59,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task snapshots_can_be_deleted()
         {
-            var input = new SnapshotInfo("Aggregate_1", 1, new State(), 1);
+            var input = new SnapshotInfo("Aggregate_1", 1, new State(), string.Empty);
             await _snapshots.AddAsync("Aggregate_1", input);
 
             await _snapshots.DeleteAsync("Aggregate_1");

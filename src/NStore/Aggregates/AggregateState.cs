@@ -2,8 +2,7 @@
 
 namespace NStore.Aggregates
 {
-    public abstract class AggregateState : PayloadProcessor
+    public abstract class AggregateState 
     {
-        public virtual int GetStateVersion() => 1;
     }
 }

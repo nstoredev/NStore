@@ -3,26 +3,65 @@ using System.Reflection;
 
 namespace NStore.Processing
 {
-    public abstract class PayloadProcessor : IPayloadProcessor
+    public static class MethodInvoker
     {
-        protected BindingFlags GetMethodFlags = BindingFlags.NonPublic | BindingFlags.Instance;
+        static BindingFlags NonPublic = BindingFlags.NonPublic | BindingFlags.Instance;
+        static BindingFlags Public = BindingFlags.Public | BindingFlags.Instance;
 
-        public virtual void Process(object payload)
+        public static void CallNonPublicIfExists(this object instance, string methodName, object @parameter)
         {
-            var mi = GetConsumerOf("On", payload);
-            mi?.Invoke(this, new object[] { payload });
-        }
-
-        private MethodInfo GetConsumerOf(string methodName, object @event)
-        {
-            var mi = GetType().GetMethod(
+            var mi = instance.GetType().GetMethod(
                 methodName,
-                GetMethodFlags,
+                NonPublic,
                 null,
-                new Type[] { @event.GetType() },
+                new Type[] { @parameter.GetType() },
                 null
             );
-            return mi;
+
+            mi?.Invoke(instance, new object[] {parameter});
+        }
+        
+        public static void CallPublicIfExists(this object instance, string methodName, object @parameter)
+        {
+            var mi = instance.GetType().GetMethod(
+                methodName,
+                Public,
+                null,
+                new Type[] { @parameter.GetType() },
+                null
+            );
+
+            mi?.Invoke(instance, new object[] {parameter});
+        }
+    }
+
+    public class DelegateToPrivateEventHandlers : IPayloadProcessor
+    {
+        private readonly Object _instance;
+
+        public DelegateToPrivateEventHandlers(Object instance)
+        {
+            _instance = instance;
+        }
+
+        public void Process(object payload)
+        {
+            _instance.CallNonPublicIfExists("On",payload);
+        }
+    }
+    
+    public class DelegateToPublicEventHandlers : IPayloadProcessor
+    {
+        private readonly Object _instance;
+
+        public DelegateToPublicEventHandlers(Object instance)
+        {
+            _instance = instance;
+        }
+
+        public void Process(object payload)
+        {
+            _instance.CallPublicIfExists("On",payload);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using NStore.Aggregates;
+using NStore.Processing;
 using NStore.Snapshots;
 using Xunit;
 
@@ -10,15 +11,10 @@ namespace NStore.Tests.AggregatesTests
     {
         public class Signal
         {
-            
         }
 
         public class StateWithPublicMethods : AggregateState
         {
-            public StateWithPublicMethods()
-            {
-                this.GetMethodFlags = BindingFlags.Public | BindingFlags.Instance;
-            }
             public bool Signaled { get; private set; }
 
             public void On(Signal s)
@@ -41,7 +37,8 @@ namespace NStore.Tests.AggregatesTests
         public void should_route_to_public_method()
         {
             var state = new StateWithPublicMethods();
-            state.Process(new Signal());
+            var consumer = new DelegateToPublicEventHandlers(state);
+            consumer.Process(new Signal());
 
             Assert.True(state.Signaled);
         }
@@ -50,7 +47,8 @@ namespace NStore.Tests.AggregatesTests
         public void should_route_to_private_method()
         {
             var state = new StateWithPrivateMethods();
-            state.Process(new Signal());
+            var consumer = new DelegateToPrivateEventHandlers(state);
+            consumer.Process(new Signal());
 
             Assert.True(state.Signaled);
         }
@@ -224,7 +222,7 @@ namespace NStore.Tests.AggregatesTests
         {
             var ticket = TicketTestFactory.ForTest();
             var snaphottable = (ISnaphottable)ticket;
-            var snapshot = new SnapshotInfo(null, 0, null, 0);
+            var snapshot = new SnapshotInfo(null, 0, null, null);
             var restored = snaphottable.TryRestore(snapshot);
 
             Assert.False(restored);
@@ -235,7 +233,7 @@ namespace NStore.Tests.AggregatesTests
         {
             var ticket = TicketTestFactory.ForTest();
             var snaphottable = (ISnaphottable)ticket;
-            var snapshot = new SnapshotInfo(ticket.Id, 2, null, 0);
+            var snapshot = new SnapshotInfo(ticket.Id, 2, null, null);
             var restored = snaphottable.TryRestore(snapshot);
 
             Assert.False(restored);
