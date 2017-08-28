@@ -1,4 +1,6 @@
-﻿namespace NStore.Persistence.Mongo
+﻿using NStore.Core.Persistence;
+
+namespace NStore.Persistence.Mongo
 {
     public interface IMongoChunk : IChunk
     {

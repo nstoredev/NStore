@@ -5,9 +5,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\NStore.Persistence.Mongo\NStore.Persistence.Mongo.csproj">
 		</ProjectReference>
-		<ProjectReference Include="..\NStore.Tests\NStore.Tests.csproj" />
-		<ProjectReference Include="..\NStore\NStore.csproj">
-		</ProjectReference>
+		<ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Include="..\NStore.Persistence.Tests\DefaultSnapshotStoreTests.cs">

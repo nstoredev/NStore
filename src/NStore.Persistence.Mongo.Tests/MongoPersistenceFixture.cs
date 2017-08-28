@@ -2,13 +2,15 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
+using MongoDB.Driver;
+using NStore.Core.Persistence;
+using NStore.Persistence.Mongo;
+using NStore.Persistence;
+#if MAP_DOMAIN
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Options;
 using MongoDB.Bson.Serialization.Serializers;
-using MongoDB.Driver;
-using NStore.Aggregates;
-using NStore.Persistence.Mongo;
-using NStore.Persistence;
+#endif
 
 // ReSharper disable CheckNamespace
 namespace NStore.Persistence.Tests
@@ -19,6 +21,7 @@ namespace NStore.Persistence.Tests
         private MongoPersistenceOptions _options;
         private const string TestSuitePrefix = "Mongo";
 
+#if MAP_DOMAIN
         static BasePersistenceTest()
         {
             // enable support for dots in key names
@@ -32,7 +35,7 @@ namespace NStore.Persistence.Tests
                 );
             });
         }
-
+#endif
         private IPersistence Create()
         {
             var mongo = Environment.GetEnvironmentVariable("NSTORE_MONGODB");

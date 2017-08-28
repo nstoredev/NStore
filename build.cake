@@ -20,7 +20,6 @@ var artifactsDir    = Directory(artifactsRoot);
 var nugetDir        = Directory(artifactsRoot + "/nuget");
 var solution        = "./src/NStore.sln";
 
-
 private string GetVariable(string key)
 {
     var variable = Argument<string>(key, "___");
@@ -140,7 +139,6 @@ Task("TestInMemory")
     RunTest("NStore.Persistence.Tests",env);
 });
 
-
 Task("TestSample")
     .ContinueOnError()
     .IsDependentOn("TestLibrary")
@@ -160,10 +158,21 @@ Task("TestLibrary")
 {
     var env = new Dictionary<string, string>{};
 
-    RunTest("NStore.Tests",env);
+    RunTest("NStore.Core.Tests",env);
+});
+
+
+Task("TestDomain")
+    .ContinueOnError()
+    .IsDependentOn("TestLibrary")
+    .Does(() =>
+{
+    var env = new Dictionary<string, string>{};
+    RunTest("NStore.Domain.Tests",env);
 });
 
 Task("TestAll")
+    .IsDependentOn("TestDomain")
     .IsDependentOn("TestInMemory")
     .IsDependentOn("TestMongoDb")
     .IsDependentOn("TestMsSql")
@@ -199,7 +208,8 @@ Task("pack")
         NoBuild = true
     };
 
-    DotNetCorePack("./src/NStore/", settings);
+    DotNetCorePack("./src/NStore.Core/", settings);
+    DotNetCorePack("./src/NStore.Domain/", settings);
     DotNetCorePack("./src/NStore.Tpl/", settings);
     DotNetCorePack("./src/NStore.Persistence.Mongo/", settings);
     DotNetCorePack("./src/NStore.Persistence.MsSql/", settings);

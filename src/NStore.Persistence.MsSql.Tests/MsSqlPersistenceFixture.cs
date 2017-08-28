@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using Microsoft.Extensions.Logging;
+using NStore.Core.Persistence;
 using NStore.Persistence.MsSql;
 using NStore.Persistence.MsSql.Tests;
 

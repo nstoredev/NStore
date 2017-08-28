@@ -1,7 +1,7 @@
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
-using NStore.Aggregates;
+using NStore.Domain;
 
 namespace NStore.Sample.Projections
 {

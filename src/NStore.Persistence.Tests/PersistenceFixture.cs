@@ -4,7 +4,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using NStore.Logging;
+using NStore.Core.Logging;
+using NStore.Core.Persistence;
 using Xunit;
 
 #pragma warning disable S101 // Types should be named in camel case
@@ -13,6 +14,13 @@ using Xunit;
 // ReSharper disable InconsistentNaming
 namespace NStore.Persistence.Tests
 {
+    public class TestMisconfiguredException : Exception
+    {
+        public TestMisconfiguredException(string message) : base(message)
+        {
+        }
+    }
+
 #pragma warning disable S3881 // "IDisposable" should be implemented correctly
     public abstract partial class BasePersistenceTest : IDisposable
 #pragma warning restore S3881 // "IDisposable" should be implemented correctly

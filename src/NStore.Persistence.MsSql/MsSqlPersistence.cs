@@ -3,7 +3,8 @@ using System.Data.SqlClient;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using NStore.Logging;
+using NStore.Core.Logging;
+using NStore.Core.Persistence;
 
 namespace NStore.Persistence.MsSql
 {

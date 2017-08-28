@@ -1,4 +1,4 @@
-﻿using NStore.Aggregates;
+﻿using NStore.Domain;
 
 namespace NStore.Sample.Domain.ReservationRequest
 {

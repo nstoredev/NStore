@@ -13,12 +13,11 @@
     <PackageReference Include="System.Data.SqlClient" Version="4.4.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\NStore\NStore.csproj">
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <Compile Include="..\AssemblyInfo.cs">
       <Link>AssemblyInfo.cs</Link>
     </Compile>
+  </ItemGroup>
+  <ItemGroup>
+		<ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
   </ItemGroup>
 </Project>

@@ -1,7 +1,7 @@
 ﻿using System;
-using NStore.Aggregates;
+using NStore.Core.Snapshots;
+using NStore.Domain;
 using NStore.Sample.Domain.Room;
-using NStore.Snapshots;
 using Xunit;
 
 namespace NStore.Sample.Tests

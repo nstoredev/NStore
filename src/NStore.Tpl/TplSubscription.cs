@@ -4,7 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using NStore.Persistence;
+using NStore.Core.Persistence;
 
 namespace NStore.Tpl
 {

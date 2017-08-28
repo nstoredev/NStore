@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Threading;
 using Microsoft.Extensions.CommandLineUtils;
-using NStore.InMemory;
+using NStore.Core.InMemory;
+using NStore.Core.Persistence;
 using NStore.Persistence.Mongo;
 using NStore.Persistence;
 using NStore.Sample.Support;

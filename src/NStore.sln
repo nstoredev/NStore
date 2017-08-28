@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26730.3
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore", "NStore\NStore.csproj", "{0AAD1793-0A61-42E6-9EBC-6729058EBE70}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Core", "NStore.Core\NStore.Core.csproj", "{0AAD1793-0A61-42E6-9EBC-6729058EBE70}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Tests", "NStore.Tests\NStore.Tests.csproj", "{378A1E2D-A319-48E2-B5B1-7C9A2F8E5DE4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Core.Tests", "NStore.Core.Tests\NStore.Core.Tests.csproj", "{378A1E2D-A319-48E2-B5B1-7C9A2F8E5DE4}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Persistence.Tests", "NStore.Persistence.Tests\NStore.Persistence.Tests.csproj", "{97D57D73-D908-4ECC-88A8-440C29C92CE6}"
 EndProject
@@ -37,6 +37,13 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Persistence.MsSql.Tests", "NStore.Persistence.MsSql.Tests\NStore.Persistence.MsSql.Tests.csproj", "{7F1E1496-49F5-4C2B-A047-CA6534A3689C}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Quickstart", "NStore.Quickstart\NStore.Quickstart.csproj", "{FFF50043-AC34-4859-A93D-817786169B82}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Domain", "NStore.Domain\NStore.Domain.csproj", "{F306031E-42F4-4206-B6EF-40087465ACEF}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0AAD1793-0A61-42E6-9EBC-6729058EBE70} = {0AAD1793-0A61-42E6-9EBC-6729058EBE70}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Domain.Tests", "NStore.Domain.Tests\NStore.Domain.Tests.csproj", "{CFAB2CE9-2BC7-4421-AF2A-E961F65E8A38}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -92,6 +99,14 @@ Global
 		{FFF50043-AC34-4859-A93D-817786169B82}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FFF50043-AC34-4859-A93D-817786169B82}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FFF50043-AC34-4859-A93D-817786169B82}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F306031E-42F4-4206-B6EF-40087465ACEF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F306031E-42F4-4206-B6EF-40087465ACEF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F306031E-42F4-4206-B6EF-40087465ACEF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F306031E-42F4-4206-B6EF-40087465ACEF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CFAB2CE9-2BC7-4421-AF2A-E961F65E8A38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CFAB2CE9-2BC7-4421-AF2A-E961F65E8A38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CFAB2CE9-2BC7-4421-AF2A-E961F65E8A38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CFAB2CE9-2BC7-4421-AF2A-E961F65E8A38}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -109,6 +124,8 @@ Global
 		{DADB7A00-6F22-4AB0-8921-D72FF5199E8C} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
 		{7F1E1496-49F5-4C2B-A047-CA6534A3689C} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
 		{FFF50043-AC34-4859-A93D-817786169B82} = {D3212016-BB8D-4E16-94C4-2D0990B2C14A}
+		{F306031E-42F4-4206-B6EF-40087465ACEF} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
+		{CFAB2CE9-2BC7-4421-AF2A-E961F65E8A38} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {75AC1D4E-4023-436E-8BD5-B34CD115EA76}

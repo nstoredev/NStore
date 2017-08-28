@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.Options;
 using MongoDB.Driver;
+using NStore.Core.Persistence;
 using NStore.Persistence.Tests;
 using Xunit;
 

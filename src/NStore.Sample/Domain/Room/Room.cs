@@ -1,5 +1,5 @@
 ﻿using System.Resources;
-using NStore.Aggregates;
+using NStore.Domain;
 
 namespace NStore.Sample.Domain.Room
 {

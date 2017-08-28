@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using NStore.Aggregates;
+using NStore.Domain;
 
 namespace NStore.Sample.Domain.Room
 {

@@ -2,21 +2,22 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using NStore.Aggregates;
-using NStore.InMemory;
 using NStore.Persistence;
 using NStore.Sample.Domain.Room;
 using NStore.Sample.Projections;
 using NStore.Sample.Support;
-using NStore.Streams;
 using System.Diagnostics;
 using System.Threading.Tasks.Dataflow;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Console;
-using NStore.Logging;
+using NStore.Core.InMemory;
+using NStore.Core.Logging;
+using NStore.Core.Persistence;
+using NStore.Core.Snapshots;
+using NStore.Core.Streams;
+using NStore.Domain;
 using NStore.Persistence.Mongo;
-using NStore.Snapshots;
 
 namespace NStore.Sample
 {

@@ -4,11 +4,11 @@
 		<TargetFramework>netcoreapp2.0</TargetFramework>
 	</PropertyGroup>
 	<ItemGroup>
+		<ProjectReference Include="..\NStore.Domain\NStore.Domain.csproj" />
 		<ProjectReference Include="..\NStore.Persistence.Mongo\NStore.Persistence.Mongo.csproj">
 		</ProjectReference>
 		<ProjectReference Include="..\NStore.Tpl\NStore.Tpl.csproj" />
-		<ProjectReference Include="..\NStore\NStore.csproj">
-		</ProjectReference>
+		<ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.0.0" />

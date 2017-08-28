@@ -5,8 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\NStore.Sample\NStore.Sample.csproj" />
-    <ProjectReference Include="..\NStore\NStore.csproj">
-    </ProjectReference>
+		<ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.5.0-preview-20170810-02" />

@@ -1,6 +1,7 @@
-﻿using NStore.InMemory;
+﻿using NStore.Core.InMemory;
+using NStore.Core.Persistence;
+using NStore.Core.Snapshots;
 using NStore.Persistence;
-using NStore.Snapshots;
 
 namespace NStore.Persistence.Tests
 {

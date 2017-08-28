@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using NStore.InMemory;
-using NStore.Persistence;
-using NStore.Streams;
+using NStore.Core.InMemory;
+using NStore.Core.Persistence;
+using NStore.Core.Streams;
 
 namespace NStore.Quickstart
 {

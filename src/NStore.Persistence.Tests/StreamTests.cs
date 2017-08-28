@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
-using NStore.Streams;
+using NStore.Core.Persistence;
+using NStore.Core.Streams;
 using Xunit;
 
 namespace NStore.Persistence.Tests

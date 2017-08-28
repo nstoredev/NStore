@@ -10,15 +10,15 @@
     <RepositoryType>Git</RepositoryType>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\NStore\NStore.csproj">
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="MongoDB.Driver" Version="2.4.4" />
   </ItemGroup>
   <ItemGroup>
 		<Compile Include="..\AssemblyInfo.cs">
 			<Link>AssemblyInfo.cs</Link>
 		</Compile>
+  </ItemGroup>
+  <ItemGroup>
+	  <ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
+
   </ItemGroup>
 </Project>

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using NStore.InMemory;
+using NStore.Core.InMemory;
 using NStore.Sample.Domain.Room;
 using NStore.Sample.Support;
 

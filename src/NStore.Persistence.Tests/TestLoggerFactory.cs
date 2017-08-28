@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
-using NStore.Logging;
+using NStore.Core.Logging;
+using NStore.Core.Persistence;
 
 namespace NStore.Persistence.Tests
 {

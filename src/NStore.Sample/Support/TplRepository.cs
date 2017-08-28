@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
-using NStore.Aggregates;
+using NStore.Core.Persistence;
+using NStore.Core.Snapshots;
+using NStore.Core.Streams;
+using NStore.Domain;
 using NStore.Persistence;
-using NStore.Snapshots;
-using NStore.Streams;
 using NStore.Tpl;
 
 namespace NStore.Sample.Support

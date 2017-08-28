@@ -5,7 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Attributes.Jobs;
-using NStore.InMemory;
+using NStore.Core.InMemory;
+using NStore.Core.Persistence;
 using NStore.Persistence.Mongo;
 using NStore.Persistence;
 

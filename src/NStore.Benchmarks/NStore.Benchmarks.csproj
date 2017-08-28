@@ -10,8 +10,8 @@
   <ItemGroup>
     <ProjectReference Include="..\NStore.Persistence.Mongo\NStore.Persistence.Mongo.csproj">
     </ProjectReference>
-    <ProjectReference Include="..\NStore\NStore.csproj">
-    </ProjectReference>
+	  <ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
+
   </ItemGroup>
   <ItemGroup>
     <Folder Include="BenchmarkDotNet.Artifacts" />
