@@ -115,7 +115,7 @@ namespace NStore.Tests.Processing
         /// </summary>
         /// <returns></returns>
         [Fact]
-        public async Task shoud_return_snapshotted_value_on_empty_stream()
+        public async Task should_return_snapshotted_value_on_empty_stream()
         {
             await _snapshots.AddAsync("sequence_1/Sum", new SnapshotInfo(
                 "sequence_1", 11, new Sum { Total = 1 }, "1"
@@ -131,7 +131,7 @@ namespace NStore.Tests.Processing
         }
 
         [Fact]
-        public async Task shoud_ignore_snapshotted_value_ahead_of_requested_version()
+        public async Task should_ignore_snapshotted_value_ahead_of_requested_version()
         {
             await _snapshots.AddAsync("sequence_1/Sum", new SnapshotInfo(
                 "sequence_1", 11, new Sum { Total = 1 }, "1"
@@ -145,6 +145,20 @@ namespace NStore.Tests.Processing
                 .RunAsync<Sum>();
 
             Assert.Equal(0, result.Total);
+        }
+
+        [Fact]
+        public async Task should_add_snapshot()
+        {
+            var sequence = await CreateStream("sequence_1");
+            var result = await sequence
+                .Fold()
+                .WithCache(_snapshots)
+                .RunAsync<Sum>();
+
+            var snapshotted = await _snapshots.GetLastAsync("sequence_1/Sum");
+            Assert.NotNull(snapshotted);
+            Assert.Equal(result.Total, ((Sum)snapshotted.Payload).Total);
         }
 
         [Fact]
@@ -166,8 +180,9 @@ namespace NStore.Tests.Processing
         public async Task should_signal_holes()
         {
             var sequence = await CreateStream("sequence_1");
-            await _persistence.DeleteAsync(sequence.Id, 2, 3);
-            await _persistence.DeleteAsync(sequence.Id, 5, 7);
+            await _persistence.DeleteAsync(sequence.Id, 1, 1);
+            await _persistence.DeleteAsync(sequence.Id, 3, 4);
+            await _persistence.DeleteAsync(sequence.Id, 6, 7);
 
             var missing = new List<Tuple<long, long>>();
 
@@ -182,10 +197,11 @@ namespace NStore.Tests.Processing
                 .WithCache(_snapshots)
                 .RunAsync<Sum>();
 
-            Assert.Equal(1 + 4 + 8 + 9 + 10, result.Total);
+            Assert.Equal(2 + 5 + 8 + 9 + 10, result.Total);
             Assert.Collection(missing,
-                l => Assert.Equal(new Tuple<long, long>(2, 3), l),
-                l => Assert.Equal(new Tuple<long, long>(5, 7), l)
+                l => Assert.Equal(new Tuple<long, long>(1, 1), l),
+                l => Assert.Equal(new Tuple<long, long>(3, 4), l),
+                l => Assert.Equal(new Tuple<long, long>(6, 7), l)
             );
         }
     }

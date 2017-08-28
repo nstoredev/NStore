@@ -5,6 +5,14 @@ namespace NStore.Snapshots
 {
     public static class SnapshotStoreExtensions
     {
+        public static Task<SnapshotInfo> GetLastAsync(
+            this ISnapshotStore snapshots, 
+            string snapshotPartitionId
+        )
+        {
+            return snapshots.GetLastAsync(snapshotPartitionId, CancellationToken.None);
+        }
+
         public static Task<SnapshotInfo> GetAsync(
             this ISnapshotStore snapshots,
             string snapshotPartitionId,
