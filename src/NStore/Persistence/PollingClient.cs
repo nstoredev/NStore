@@ -5,13 +5,6 @@ using NStore.Logging;
 
 namespace NStore.Persistence
 {
-    public class PollingException : Exception
-    {
-        public PollingException(string message) : base(message)
-        {
-        }
-    }
-
     public class PollingClient
     {
         private class Sequencer : ISubscription

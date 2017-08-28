@@ -5,7 +5,7 @@ using NStore.Streams;
 
 namespace NStore.Processing
 {
-    public static class ProcessorExtensions
+    public static class StreamProcessorExtensions
     {
         public static StreamProcessor Fold(this IStream stream)
         {
