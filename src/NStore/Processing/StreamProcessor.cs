@@ -19,7 +19,7 @@ namespace NStore.Processing
             public Reducer(TResult state)
             {
                 _state = state;
-                _processor = new DelegateToPrivateEventHandlers(_state);
+                _processor = DelegateToPrivateEventHandlers.Instance;
             }
 
             public Task OnStartAsync(long indexOrPosition)
@@ -29,14 +29,11 @@ namespace NStore.Processing
 
             public async Task<bool> OnNextAsync(IChunk chunk)
             {
-                //@@TODO -> change type
-                if (this._state is IAsyncPayloadProcessor)
+                var result = this._processor.Process(_state, chunk.Payload);
+
+                if (result is Task task)
                 {
-                    await ((IAsyncPayloadProcessor) this._state).ProcessAsync(chunk.Payload).ConfigureAwait(false);
-                }
-                else
-                {
-                    this._processor.Process(chunk.Payload);
+                    await task.ConfigureAwait(false);
                 }
 
                 return true;

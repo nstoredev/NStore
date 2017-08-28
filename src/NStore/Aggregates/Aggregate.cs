@@ -20,9 +20,16 @@ namespace NStore.Aggregates
         protected TState State { get; private set; }
         public bool IsDirty => this.PendingChanges.Any();
         public bool IsNew => this.Version == 0;
-        
-        protected Aggregate()
+        private readonly IPayloadProcessor _processor;
+
+        protected Aggregate() : this(null)
         {
+            
+        }
+
+        protected Aggregate(IPayloadProcessor processor)
+        {
+            _processor = processor ?? DelegateToPrivateEventHandlers.Instance;
         }
 
         protected virtual string StateSignature => "1";
@@ -108,10 +115,7 @@ namespace NStore.Aggregates
                 throw new AggregateRestoreException(this.Version + 1, changeset.AggregateVersion);
 
             this.Version = changeset.AggregateVersion;
-            foreach (var @event in changeset.Events)
-            {
-                this.Dispatch(@event);
-            }
+            this._processor.FoldEach(this.State, changeset.Events);
         }
 
         Changeset IEventSourcedAggregate.GetChangeSet()
@@ -122,15 +126,10 @@ namespace NStore.Aggregates
             );
         }
 
-        protected virtual void Dispatch(object @event)
-        {
-            this.State.CallNonPublicIfExists("On", @event);
-        }
-
         protected void Emit(object @event)
         {
             this.PendingChanges.Add(@event);
-            this.Dispatch(@event);
+            this._processor.Process(this.State, @event);
         }
     }
 }

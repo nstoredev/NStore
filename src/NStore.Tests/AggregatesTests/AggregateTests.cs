@@ -37,8 +37,7 @@ namespace NStore.Tests.AggregatesTests
         public void should_route_to_public_method()
         {
             var state = new StateWithPublicMethods();
-            var consumer = new DelegateToPublicEventHandlers(state);
-            consumer.Process(new Signal());
+            DelegateToPublicEventHandlers.Instance.Process(state, new Signal());
 
             Assert.True(state.Signaled);
         }
@@ -47,8 +46,7 @@ namespace NStore.Tests.AggregatesTests
         public void should_route_to_private_method()
         {
             var state = new StateWithPrivateMethods();
-            var consumer = new DelegateToPrivateEventHandlers(state);
-            consumer.Process(new Signal());
+            DelegateToPrivateEventHandlers.Instance.Process(state, new Signal());
 
             Assert.True(state.Signaled);
         }

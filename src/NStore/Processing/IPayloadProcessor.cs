@@ -2,6 +2,6 @@
 {
     public interface IPayloadProcessor
     {
-        void Process(object payload);
+        object Process(object state, object payload);
     }
 }

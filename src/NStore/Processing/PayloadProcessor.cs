@@ -8,7 +8,7 @@ namespace NStore.Processing
         static BindingFlags NonPublic = BindingFlags.NonPublic | BindingFlags.Instance;
         static BindingFlags Public = BindingFlags.Public | BindingFlags.Instance;
 
-        public static void CallNonPublicIfExists(this object instance, string methodName, object @parameter)
+        public static object CallNonPublicIfExists(this object instance, string methodName, object @parameter)
         {
             var mi = instance.GetType().GetMethod(
                 methodName,
@@ -18,10 +18,10 @@ namespace NStore.Processing
                 null
             );
 
-            mi?.Invoke(instance, new object[] {parameter});
+            return mi?.Invoke(instance, new object[] { parameter });
         }
-        
-        public static void CallPublicIfExists(this object instance, string methodName, object @parameter)
+
+        public static object CallPublicIfExists(this object instance, string methodName, object @parameter)
         {
             var mi = instance.GetType().GetMethod(
                 methodName,
@@ -31,37 +31,46 @@ namespace NStore.Processing
                 null
             );
 
-            mi?.Invoke(instance, new object[] {parameter});
+            return mi?.Invoke(instance, new object[] { parameter });
         }
     }
 
-    public class DelegateToPrivateEventHandlers : IPayloadProcessor
+    public sealed class DelegateToPrivateEventHandlers : IPayloadProcessor
     {
-        private readonly Object _instance;
+        public static readonly IPayloadProcessor Instance = new DelegateToPrivateEventHandlers();
 
-        public DelegateToPrivateEventHandlers(Object instance)
+        private DelegateToPrivateEventHandlers()
         {
-            _instance = instance;
         }
 
-        public void Process(object payload)
+        public object Process(object state, object payload)
         {
-            _instance.CallNonPublicIfExists("On",payload);
+            return state.CallNonPublicIfExists("On", payload);
         }
     }
-    
-    public class DelegateToPublicEventHandlers : IPayloadProcessor
-    {
-        private readonly Object _instance;
 
-        public DelegateToPublicEventHandlers(Object instance)
+    public sealed class DelegateToPublicEventHandlers : IPayloadProcessor
+    {
+        public static readonly IPayloadProcessor Instance = new DelegateToPublicEventHandlers();
+
+        private DelegateToPublicEventHandlers()
         {
-            _instance = instance;
         }
 
-        public void Process(object payload)
+        public object Process(object state, object payload)
         {
-            _instance.CallPublicIfExists("On",payload);
+            return state.CallPublicIfExists("On", payload);
+        }
+    }
+
+    public static class PayloadProcessorExtensions
+    {
+        public static void FoldEach(this IPayloadProcessor processor, object state, object[] payloads)
+        {
+            foreach (var payload in payloads)
+            {
+                processor.Process(state, payload);
+            }
         }
     }
 }

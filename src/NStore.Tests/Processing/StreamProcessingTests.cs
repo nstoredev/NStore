@@ -20,14 +20,14 @@ namespace NStore.Tests.Processing
         }
     }
 
-    public class SumAsync : AsyncPayloadProcessor
+    public class SumAsync 
     {
         public int Total { get; private set; }
 
-        private Task On(ValueCollected data)
+        private async Task On(ValueCollected data)
         {
+            await Task.Delay(10);
             this.Total += data.Value;
-            return Task.CompletedTask;
         }
     }
 
@@ -69,7 +69,7 @@ namespace NStore.Tests.Processing
         public async Task should_sum_all_values_async()
         {
             var sequence = await CreateStream("sequence_1");
-            var result = await sequence.Fold().RunAsync<Sum>();
+            var result = await sequence.Fold().RunAsync<SumAsync>();
             Assert.Equal(55, result.Total);
         }
 
