@@ -12,7 +12,7 @@ namespace NStore.Tests.AggregatesTests
     {
     }
 
-    public class TicketState : AggregateState
+    public class TicketState
     {
         public bool HasBeenSold { get; private set; }
 

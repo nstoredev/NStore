@@ -7,7 +7,7 @@ using Xunit;
 namespace NStore.Sample.Tests
 {
     public abstract class AbstractAggregateTest<TAggregate, TState>
-        where TAggregate : IAggregate where TState : AggregateState, new()
+        where TAggregate : IAggregate where TState : class, new()
     {
         private readonly IAggregateFactory _defaultFactory = new DefaultAggregateFactory();
         protected TState State { get; private set; }

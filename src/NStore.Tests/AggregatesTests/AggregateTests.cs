@@ -13,7 +13,7 @@ namespace NStore.Tests.AggregatesTests
         {
         }
 
-        public class StateWithPublicMethods : AggregateState
+        public class StateWithPublicMethods
         {
             public bool Signaled { get; private set; }
 
@@ -23,7 +23,7 @@ namespace NStore.Tests.AggregatesTests
             }
         }
 
-        public class StateWithPrivateMethods : AggregateState
+        public class StateWithPrivateMethods
         {
             public bool Signaled { get; private set; }
 

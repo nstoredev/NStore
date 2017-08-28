@@ -5,7 +5,7 @@ using NStore.Aggregates;
 
 namespace NStore.Sample.Domain.Room
 {
-    public class RoomState : AggregateState, IInvariantsChecker
+    public class RoomState : IInvariantsChecker
     {
         private readonly IList<DateRange> _reservations = new List<DateRange>();
         public bool BookingsEnabled { get; private set; }

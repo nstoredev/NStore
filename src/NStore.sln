@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.14
+VisualStudioVersion = 15.0.26730.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore", "NStore\NStore.csproj", "{0AAD1793-0A61-42E6-9EBC-6729058EBE70}"
 EndProject
@@ -109,5 +109,8 @@ Global
 		{DADB7A00-6F22-4AB0-8921-D72FF5199E8C} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
 		{7F1E1496-49F5-4C2B-A047-CA6534A3689C} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
 		{FFF50043-AC34-4859-A93D-817786169B82} = {D3212016-BB8D-4E16-94C4-2D0990B2C14A}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {75AC1D4E-4023-436E-8BD5-B34CD115EA76}
 	EndGlobalSection
 EndGlobal

@@ -10,7 +10,7 @@ namespace NStore.Aggregates
         IEventSourcedAggregate,
         ISnaphottable,
         IAggregate
-        where TState : AggregateState, new()
+        where TState : class, new()
     {
         public string Id { get; private set; }
         public long Version { get; private set; }
