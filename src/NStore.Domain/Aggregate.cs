@@ -18,13 +18,13 @@ namespace NStore.Domain
 
         private IList<object> PendingChanges { get; } = new List<object>();
         protected TState State { get; private set; }
-        public bool IsDirty => Enumerable.Any<object>(this.PendingChanges);
+        public bool IsDirty => this.PendingChanges.Any();
         public bool IsNew => this.Version == 0;
         private readonly IPayloadProcessor _processor;
 
-        protected Aggregate() : this((IPayloadProcessor) null)
+        protected Aggregate() : this((IPayloadProcessor)null)
         {
-            
+
         }
 
         protected Aggregate(IPayloadProcessor processor)
@@ -33,7 +33,7 @@ namespace NStore.Domain
         }
 
         protected virtual string StateSignature => "1";
-        
+
         public void Init(string id) => InternalInit(id, 0, null);
 
         private void InternalInit(string aggregateId, long aggregateVersion, TState state)
@@ -115,21 +115,35 @@ namespace NStore.Domain
                 throw new AggregateRestoreException(this.Version + 1, changeset.AggregateVersion);
 
             this.Version = changeset.AggregateVersion;
-            this._processor.FoldEach(this.State, changeset.Events);
+
+            foreach (var @event in PreprocessEvents(changeset.Events))
+            {
+                this._processor.Process(this.State, @event);
+            }
         }
 
         Changeset IEventSourcedAggregate.GetChangeSet()
         {
             return new Changeset(
                 this.Version + 1,
-                Enumerable.ToArray<object>(this.PendingChanges)
+                this.PendingChanges.ToArray()
             );
+        }
+
+        protected virtual void Track(object @event, object outcome)
+        {
+            this.PendingChanges.Add(@event);
+        }
+
+        protected virtual IEnumerable<object> PreprocessEvents(object[] events)
+        {
+            return events;
         }
 
         protected void Emit(object @event)
         {
-            this.PendingChanges.Add(@event);
-            this._processor.Process(this.State, @event);
+            var outcome = this._processor.Process(this.State, @event);
+            Track(@event, outcome);
         }
     }
 }

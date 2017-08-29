@@ -12,6 +12,7 @@
 		<DotNetCliToolReference Include="Microsoft.DotNet.Watcher.Tools" Version="1.0.0" />
 	</ItemGroup>
 	<ItemGroup>
+	  <ProjectReference Include="..\NStore.Core.Tests\NStore.Core.Tests.csproj" />
 	  <ProjectReference Include="..\NStore.Domain\NStore.Domain.csproj" />
 	  <ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
 	</ItemGroup>
