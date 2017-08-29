@@ -26,7 +26,7 @@ namespace NStore.Persistence.Mongo
 
         private IMongoCollection<TChunk> _chunks;
         private IMongoCollection<Counter> _counters;
-        private readonly ISerializer _serializer;
+        private readonly IMongoPayloadSerializer _mongoPayloadSerializer;
         private readonly MongoPersistenceOptions _options;
 
         private long _sequence = 0;
@@ -42,7 +42,7 @@ namespace NStore.Persistence.Mongo
                 throw new MongoPersistenceException("Invalid options");
 
             _options = options;
-            _serializer = options.Serializer ?? new TypeSystemSerializer();
+            _mongoPayloadSerializer = options.MongoPayloadSerializer ?? new TypeSystemMongoPayloadSerializer();
             Connect();
         }
 
@@ -125,7 +125,7 @@ namespace NStore.Persistence.Mongo
                         foreach (var b in batch)
                         {
                             positionOrIndex = broadcastPosition ? b.Position : b.Index;
-                            b.ReplacePayload(_serializer.Deserialize(b.PartitionId, b.Payload));
+                            b.ReplacePayload(_mongoPayloadSerializer.Deserialize(b.Payload));
                             if (!await subscription.OnNextAsync(b).ConfigureAwait(false))
                             {
                                 await subscription.StoppedAsync(positionOrIndex).ConfigureAwait(false);
@@ -246,7 +246,7 @@ namespace NStore.Persistence.Mongo
                 id,
                 partitionId,
                 index < 0 ? id : index,
-                _serializer.Serialize(partitionId, payload),
+                _mongoPayloadSerializer.Serialize(payload),
                 operationId ?? Guid.NewGuid().ToString()
             );
             await InternalPersistAsync(chunk, cancellationToken).ConfigureAwait(false);
@@ -303,7 +303,7 @@ namespace NStore.Persistence.Mongo
                     chunk.Position,
                     "::empty",
                     chunk.Position,
-                    null,
+                    _mongoPayloadSerializer.Serialize(null),
                     "_" + chunk.Position
                 );
             }

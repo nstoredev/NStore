@@ -15,7 +15,7 @@ namespace NStore.Persistence.Mongo
         public bool UseLocalSequence { get; set; } = false;
         public bool DropOnInit { get; set; } = false;
 
-        public ISerializer Serializer { get; set; }
+        public IMongoPayloadSerializer MongoPayloadSerializer { get; set; }
 
         public Action<MongoUrlBuilder> CustomizePartitionSettings { get; set; }
         public Action<MongoUrlBuilder> CustomizeSquenceSettings { get; set; }

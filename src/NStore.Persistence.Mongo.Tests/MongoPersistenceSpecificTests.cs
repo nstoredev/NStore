@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.Options;
@@ -51,6 +52,51 @@ namespace NStore.Persistence.Mongo.Tests
 
             Assert.Equal("a", read.CustomHeaders["test.1"]);
             Assert.Equal(persisted.CreateAt, read.CreateAt);
+        }
+    }
+
+    public class empty_payload_serialization : BasePersistenceTest
+    {
+        public class SerializerSpy : IMongoPayloadSerializer
+        {
+            public int SerializeCount { get; private set; }
+            public int DeserializeCount { get; private set; }
+
+            public object Serialize(object payload)
+            {
+                SerializeCount++;
+                return payload;
+            }
+
+            public object Deserialize(object payload)
+            {
+                DeserializeCount++;
+                return payload;
+            }
+        }
+
+        private SerializerSpy _serializer;
+
+        protected override IMongoPersistence CreatePersistence(MongoPersistenceOptions options)
+        {
+            _serializer = new SerializerSpy();
+            options.MongoPayloadSerializer = _serializer;
+            return new MongoPersistence(options);
+        }
+
+        [Fact]
+        public async Task empty_payload_should_be_serialized()
+        {
+            await Store.AppendAsync("a", 1, "payload");
+            await Assert.ThrowsAsync<DuplicateStreamIndexException>(() =>
+                Store.AppendAsync("a", 1, "payload")
+            );
+
+            // Counter progression
+            // 1 first ok
+            // 2 second ko
+            // 3 empty 
+            Assert.Equal(3, _serializer.SerializeCount);
         }
     }
 }

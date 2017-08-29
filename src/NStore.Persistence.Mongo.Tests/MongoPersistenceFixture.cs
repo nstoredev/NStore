@@ -58,7 +58,6 @@ namespace NStore.Persistence.Tests
 
             return _mongoPersistence;
         }
-
         protected IMongoCollection<TChunk> GetCollection<TChunk>()
         {
             var fieldInfo = _mongoPersistence.GetType()

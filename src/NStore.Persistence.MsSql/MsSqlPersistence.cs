@@ -8,87 +8,6 @@ using NStore.Core.Persistence;
 
 namespace NStore.Persistence.MsSql
 {
-    public class MsSqlPersistenceException : Exception
-    {
-        public MsSqlPersistenceException(string message) : base(message)
-        {
-        }
-    }
-
-    public sealed class MsSqlChunk : IChunk
-    {
-        public long Position { get; set; }
-        public string PartitionId { get; set; }
-        public long Index { get; set; }
-        public object Payload { get; set; }
-        public string OperationId { get; set; }
-        public bool Deleted { get; set; }
-    }
-
-    public interface IMsSqlPayloadSearializer
-    {
-        string Serialize(object payload);
-        object Deserialize(string serialized);
-    }
-
-    public class MsSqlPersistenceOptions
-    {
-        public INStoreLoggerFactory LoggerFactory { get; set; }
-        public IMsSqlPayloadSearializer Serializer { get; set; }
-        public string ConnectionString { get; set; }
-        public string StreamsTableName { get; set; }
-
-        public MsSqlPersistenceOptions(INStoreLoggerFactory loggerFactory)
-        {
-            LoggerFactory = loggerFactory;
-            StreamsTableName = "Streams";
-        }
-
-        public virtual string GetCreateTableScript()
-        {
-            return $@"CREATE TABLE [{StreamsTableName}](
-                [Position] BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-                [PartitionId] NVARCHAR(255) NOT NULL,
-                [OperationId] NVARCHAR(255) NOT NULL,
-                [Index] BIGINT NOT NULL,
-                [Deleted] BIT NOT NULL,
-                [Payload] NVARCHAR(MAX)
-            )
-
-            CREATE UNIQUE INDEX IX_{StreamsTableName}_OPID on dbo.{StreamsTableName} (PartitionId, OperationId)
-            CREATE UNIQUE INDEX IX_{StreamsTableName}_IDX on dbo.{StreamsTableName} (PartitionId, [Index])
-";
-        }
-
-        public virtual string GetPersistScript()
-        {
-            return $@"INSERT INTO [{StreamsTableName}]
-                      ([PartitionId], [Index], [Payload], [OperationId], [Deleted])
-                      OUTPUT INSERTED.[Position] 
-                      VALUES (@PartitionId, @Index, @Payload, @OperationId, 0)";
-        }
-
-        public virtual string GetDeleteStreamScript()
-        {
-            return $@"DELETE FROM [{StreamsTableName}] WHERE 
-                          [PartitionId] = @PartitionId 
-                      AND [Index] BETWEEN @fromLowerIndexInclusive AND @toUpperIndexInclusive";
-        }
-
-        public virtual string GetLastChunkScript()
-        {
-            return $@"SELECT TOP 1 
-                        [Position], [PartitionId], [Index], [Payload], [OperationId], [Deleted]
-                      FROM 
-                        [{StreamsTableName}] 
-                      WHERE 
-                          [PartitionId] = @PartitionId 
-                      AND [Index] <= @toUpperIndexInclusive 
-                      ORDER BY 
-                          [Position] DESC";
-        }
-    }
-
     public class MsSqlPersistence : IPersistence
     {
         private readonly MsSqlPersistenceOptions _options;
@@ -160,7 +79,7 @@ namespace NStore.Persistence.MsSql
             }
         }
 
-        private async Task PushToSubscriber(SqlCommand command, long start, ISubscription subscription, bool broadcastPosition,  CancellationToken cancellationToken)
+        private async Task PushToSubscriber(SqlCommand command, long start, ISubscription subscription, bool broadcastPosition, CancellationToken cancellationToken)
         {
             long indexOrPosition = 0;
             await subscription.OnStartAsync(start).ConfigureAwait(false);
@@ -181,7 +100,7 @@ namespace NStore.Persistence.MsSql
                         };
 
                         indexOrPosition = broadcastPosition ? chunk.Position : chunk.Index;
-                        
+
                         // to handle exceptions with correct position
                         chunk.Payload = _options.Serializer.Deserialize(reader.GetString(3));
 
@@ -276,10 +195,11 @@ namespace NStore.Persistence.MsSql
                             Position = reader.GetInt64(0),
                             PartitionId = reader.GetString(1),
                             Index = reader.GetInt64(2),
-                            Payload = _options.Serializer.Deserialize(reader.GetString(3)),
                             OperationId = reader.GetString(4),
                             Deleted = reader.GetBoolean(5)
                         };
+
+                        chunk.Payload = _options.Serializer.Deserialize(reader.GetString(3));
 
                         return chunk;
                     }

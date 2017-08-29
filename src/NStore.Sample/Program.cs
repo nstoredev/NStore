@@ -106,7 +106,7 @@ namespace NStore.Sample
                         PartitionsCollectionName = "partitions",
                         SequenceCollectionName = "seq",
                         DropOnInit = true,
-                        Serializer = new MongoCustomSerializer(),
+                        MongoPayloadSerializer = new DiagnosticSerializerWrapper(new MongoCustomMongoPayloadSerializer()),
                         CustomizePartitionSettings = settings =>
                         {
                             settings.MaxConnectionPoolSize = 5000;

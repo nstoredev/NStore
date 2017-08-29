@@ -31,6 +31,7 @@ namespace NStore.Persistence.Tests
         protected IPersistence Store { get; }
         protected readonly TestLoggerFactory LoggerFactory;
         protected INStoreLogger _logger;
+
         protected BasePersistenceTest()
         {
             _testRunId = Interlocked.Increment(ref _staticId);

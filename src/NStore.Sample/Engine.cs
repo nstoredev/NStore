@@ -322,6 +322,23 @@ namespace NStore.Sample
                             Console.WriteLine($"Concurrency exception on {id} => retry");
                         }
                     }
+                    catch (ConcurrencyException)
+                    {
+                        Interlocked.Increment(ref exceptions);
+                        if (!_quiet)
+                        {
+                            Console.WriteLine($"Concurrency exception on {id} => retry");
+                        }
+                    }
+                    catch (InvariantCheckFailedException)
+                    {
+                        Interlocked.Increment(ref exceptions);
+                        if (!_quiet)
+                        {
+                            Console.WriteLine($"Invariant exception on {id} => skip");
+                        }
+                        return;
+                    }
                     catch (Exception e)
                     {
                         Console.WriteLine(e);

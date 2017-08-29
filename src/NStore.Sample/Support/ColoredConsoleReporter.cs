@@ -1,29 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System;
 
 namespace NStore.Sample.Support
 {
-    public interface IReporter
-    {
-        void Report(string message);
-    }
-
-    public class NullReporter : IReporter
-    {
-        public static readonly IReporter Instance = new NullReporter();
-
-        private NullReporter()
-        {
-            
-        }
-
-        public void Report(string message)
-        {
-            // nothing to do here...
-        }
-    }
-
     public class ColoredConsoleReporter : IReporter
     {
         private static readonly object Lock = new object();
