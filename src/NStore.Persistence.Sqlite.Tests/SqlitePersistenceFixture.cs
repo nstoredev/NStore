@@ -17,7 +17,7 @@ namespace NStore.Persistence.Tests
         private SqlitePersistence _sqlPersistence;
         private SqlitePersistenceOptions _options;
         private string ConnectionString;
-        private const string TestSuitePrefix = "Mssql";
+        private const string TestSuitePrefix = "Sqlite";
 
         protected void Connect()
         {
