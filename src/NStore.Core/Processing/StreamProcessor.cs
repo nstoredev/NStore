@@ -31,12 +31,12 @@ namespace NStore.Core.Processing
 
             public async Task<bool> OnNextAsync(IChunk chunk)
             {
-                if (chunk.Index != _nextExpectedIndex && _onMissing != null)
+                if (chunk.Index != _nextExpectedIndex
+                    && _onMissing != null
+                    && !_onMissing(_nextExpectedIndex, chunk.Index - 1)
+                )
                 {
-                    if (!_onMissing(_nextExpectedIndex, chunk.Index - 1))
-                    {
-                        return false;
-                    }
+                    return false;
                 }
 
                 var result = this._processor.Process(_state, chunk.Payload);
@@ -91,7 +91,7 @@ namespace NStore.Core.Processing
 
             if (_snapshots != null)
             {
-                var si = await LoadSnapshot(snapshotId, cancellationToken);
+                var si = await LoadSnapshot(snapshotId, cancellationToken).ConfigureAwait(false);
 
                 if (si != null)
                 {

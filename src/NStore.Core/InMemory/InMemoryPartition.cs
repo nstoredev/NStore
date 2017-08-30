@@ -89,7 +89,7 @@ namespace NStore.Core.InMemory
         {
             long index = 0;
 
-            await subscription.OnStartAsync(start);
+            await subscription.OnStartAsync(start).ConfigureAwait(false);
 
             try
             {
