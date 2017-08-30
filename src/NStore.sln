@@ -39,9 +39,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Quickstart", "NStore.Quickstart\NStore.Quickstart.csproj", "{FFF50043-AC34-4859-A93D-817786169B82}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Domain", "NStore.Domain\NStore.Domain.csproj", "{F306031E-42F4-4206-B6EF-40087465ACEF}"
-	ProjectSection(ProjectDependencies) = postProject
-		{0AAD1793-0A61-42E6-9EBC-6729058EBE70} = {0AAD1793-0A61-42E6-9EBC-6729058EBE70}
-	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Domain.Tests", "NStore.Domain.Tests\NStore.Domain.Tests.csproj", "{CFAB2CE9-2BC7-4421-AF2A-E961F65E8A38}"
 EndProject
