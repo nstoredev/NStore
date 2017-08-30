@@ -118,6 +118,18 @@ Task("TestMsSql")
     ExecuteSqlQuery(dropdb, settings);
 });
 
+Task("TestSqlite")
+    .ContinueOnError()
+    .IsDependentOn("TestLibrary")
+    .Does(() =>
+{
+    var env = new Dictionary<string, string>{
+        { "NSTORE_SQLITE", "TODO"},
+    };
+
+    RunTest("NStore.Persistence.Sqlite.Tests",env);
+});
+
 Task("TestMongoDb")
     .ContinueOnError()
     .IsDependentOn("TestLibrary")
@@ -176,6 +188,7 @@ Task("TestAll")
     .IsDependentOn("TestInMemory")
     .IsDependentOn("TestMongoDb")
     .IsDependentOn("TestMsSql")
+    .IsDependentOn("TestSqlite")
     .IsDependentOn("TestSample")
     .Does(() =>
 {
@@ -213,7 +226,7 @@ Task("pack")
     DotNetCorePack("./src/NStore.Tpl/", settings);
     DotNetCorePack("./src/NStore.Persistence.Mongo/", settings);
     DotNetCorePack("./src/NStore.Persistence.MsSql/", settings);
-
+    DotNetCorePack("./src/NStore.Persistence.Sqlite/", settings);
 });
 
 //////////////////////////////////////////////////////////////////////
