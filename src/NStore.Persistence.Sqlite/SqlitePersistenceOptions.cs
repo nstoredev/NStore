@@ -21,7 +21,7 @@ namespace NStore.Persistence.Sqlite
             StreamsTableName = "Streams";
         }
 
-        public virtual string GetCreateTableScript()
+        public virtual string GetCreateTableScript(string StreamsTableName)
         {
             return $@"CREATE TABLE [{StreamsTableName}](
                 [Position] BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
@@ -29,20 +29,22 @@ namespace NStore.Persistence.Sqlite
                 [OperationId] NVARCHAR(255) NOT NULL,
                 [Index] BIGINT NOT NULL,
                 [Deleted] BIT NOT NULL,
-                [Payload] NVARCHAR(MAX)
-            )
+                [Payload] NVARCHAR(10000)
+            );
 
-            CREATE UNIQUE INDEX IX_{StreamsTableName}_OPID on dbo.{StreamsTableName} (PartitionId, OperationId)
-            CREATE UNIQUE INDEX IX_{StreamsTableName}_IDX on dbo.{StreamsTableName} (PartitionId, [Index])
+            CREATE UNIQUE INDEX IX_{StreamsTableName}_OPID on {StreamsTableName} (PartitionId, OperationId);
+            CREATE UNIQUE INDEX IX_{StreamsTableName}_IDX on {StreamsTableName} (PartitionId, [Index]);
 ";
         }
 
-        public virtual string GetPersistScript()
+        public virtual string GetPersistScript(string StreamsTableName)
         {
             return $@"INSERT INTO [{StreamsTableName}]
                       ([PartitionId], [Index], [Payload], [OperationId], [Deleted])
-                      OUTPUT INSERTED.[Position] 
-                      VALUES (@PartitionId, @Index, @Payload, @OperationId, 0)";
+                      VALUES (@PartitionId, @Index, @Payload, @OperationId, 0);
+
+                      SELECT last_insert_rowid();
+";
         }
 
         public virtual string GetDeleteStreamScript()

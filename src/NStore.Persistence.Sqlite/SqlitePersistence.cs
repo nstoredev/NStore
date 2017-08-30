@@ -284,7 +284,7 @@ namespace NStore.Persistence.Sqlite
                 using (var connection = Connect())
                 {
                     await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-                    using (var command = new SqliteCommand(_options.GetPersistScript(), connection))
+                    using (var command = new SqliteCommand(_options.GetPersistScript(_options.StreamsTableName), connection))
                     {
                         command.Parameters.AddWithValue("@PartitionId", partitionId);
                         command.Parameters.AddWithValue("@Index", index);
@@ -351,18 +351,19 @@ namespace NStore.Persistence.Sqlite
             await EnsureTable(_options.StreamsTableName, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task DestroyAllAsync(CancellationToken cancellationToken)
+        public Task DestroyAllAsync(CancellationToken cancellationToken)
         {
-            using (var conn = Connect())
-            {
-                await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
-                var sql = $"if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = '{_options.StreamsTableName}' AND TABLE_SCHEMA = 'dbo') " +
-                          $"DROP TABLE {_options.StreamsTableName}";
-                using (var cmd = new SqliteCommand(sql, conn))
-                {
-                    await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-                }
-            }
+            return Task.CompletedTask;
+//            using (var conn = Connect())
+//            {
+//                await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
+//                var sql = //$"if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = '{_options.StreamsTableName}' AND TABLE_SCHEMA = 'dbo') " +
+//                          $"DROP TABLE {_options.StreamsTableName}";
+//                using (var cmd = new SqliteCommand(sql, conn))
+//                {
+//                    await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+//                }
+//            }
         }
 
         private async Task EnsureTable(string tableName, CancellationToken cancellationToken)
@@ -370,16 +371,19 @@ namespace NStore.Persistence.Sqlite
             using (var conn = Connect())
             {
                 await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
-                var sql = GetCreateTableIfMissingSql(tableName, _options.GetCreateTableScript());
+                var sql = _options.GetCreateTableScript(tableName);
                 using (var cmd = new SqliteCommand(sql, conn))
                 {
-                    await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+                    var result = await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+                    Console.WriteLine($"{sql} => {result}");
                 }
             }
         }
 
         private string GetCreateTableIfMissingSql(string tableName, string sql)
         {
+            return $@"{sql}";
+            
             return $@"
 if not exists (select * from dbo.sysobjects where id = object_id(N'{tableName}') and OBJECTPROPERTY(id, N'IsUserTable') = 1) 
 BEGIN
