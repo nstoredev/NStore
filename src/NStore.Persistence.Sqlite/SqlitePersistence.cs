@@ -35,10 +35,7 @@ namespace NStore.Persistence.Sqlite
             CancellationToken cancellationToken)
         {
             var sb = new StringBuilder("SELECT ");
-            if (limit > 0 && limit != int.MaxValue)
-            {
-                sb.Append($"TOP {limit} ");
-            }
+
 
             sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId], [Deleted] ");
             sb.Append($"FROM {_options.StreamsTableName} ");
@@ -53,7 +50,12 @@ namespace NStore.Persistence.Sqlite
             }
 
             sb.Append("ORDER BY [Index]");
-
+            
+            if (limit > 0 && limit != int.MaxValue)
+            {
+                sb.Append($" LIMIT {limit} ");
+            }
+            
             var sql = sb.ToString();
 
             _logger.LogDebug($"Executing {sql}");
@@ -129,10 +131,6 @@ namespace NStore.Persistence.Sqlite
             CancellationToken cancellationToken)
         {
             var sb = new StringBuilder("SELECT ");
-            if (limit > 0 && limit != int.MaxValue)
-            {
-                sb.Append($"TOP {limit} ");
-            }
 
             sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId], [Deleted] ");
             sb.Append($"FROM {_options.StreamsTableName} ");
@@ -148,6 +146,11 @@ namespace NStore.Persistence.Sqlite
                 sb.Append("AND [Index] >= @toLowerIndexInclusive ");
             }
             sb.Append("ORDER BY [Index] DESC");
+
+            if (limit > 0 && limit != int.MaxValue)
+            {
+                sb.Append($" LIMIT {limit} ");
+            }
 
             var sql = sb.ToString();
 
@@ -213,16 +216,16 @@ namespace NStore.Persistence.Sqlite
             int limit,
             CancellationToken cancellationToken)
         {
-            var top = limit != Int32.MaxValue ? $"TOP {limit}" : "";
+            var top = limit != Int32.MaxValue ? $"LIMIT {limit}" : "";
 
-            var sql = $@"SELECT {top} 
+            var sql = $@"SELECT  
                         [Position], [PartitionId], [Index], [Payload], [OperationId], [Deleted]
                       FROM 
                         [{_options.StreamsTableName}] 
                       WHERE 
                           [Position] >= @fromPositionInclusive 
                       ORDER BY 
-                          [Position]";
+                          [Position] {top}";
 
             using (var connection = Connect())
             {
@@ -238,12 +241,13 @@ namespace NStore.Persistence.Sqlite
 
         public async Task<long> ReadLastPositionAsync(CancellationToken cancellationToken)
         {
-            var sql = $@"SELECT TOP 1
+            var sql = $@"SELECT 
                         [Position]
                       FROM 
                         [{_options.StreamsTableName}] 
                       ORDER BY 
-                          [Position] DESC";
+                          [Position] DESC
+                      LIMIT 1";
 
             using (var connection = Connect())
             {
@@ -297,19 +301,21 @@ namespace NStore.Persistence.Sqlite
             }
             catch (SqliteException ex)
             {
-//                if (ex.Number == DUPLICATED_INDEX_EXCEPTION)
-//                {
-//                    if (ex.Message.Contains("_IDX"))
-//                    {
-//                        throw new DuplicateStreamIndexException(partitionId, index);
-//                    }
-//
-//                    if (ex.Message.Contains("_OPID"))
-//                    {
-//                        _logger.LogInformation($"Skipped duplicated chunk on '{partitionId}' by operation id '{operationId}'");
-//                        return null;
-//                    }
-//                }
+                if(ex.SqliteErrorCode == DUPLICATED_INDEX_EXCEPTION)
+                {
+                    if (ex.Message.Contains(".PartitionId") && ex.Message.Contains(".Index"))
+                    {
+                        throw new DuplicateStreamIndexException(partitionId, index);
+                    }
+
+                    if (ex.Message.Contains(".PartitionId") && ex.Message.Contains(".OperationId"))
+                    {
+                        _logger.LogInformation($"Skipped duplicated chunk on '{partitionId}' by operation id '{operationId}'");
+                        return null;
+                    }
+                }
+                
+                Console.WriteLine(_options.Serializer.Serialize(ex));
 
                 _logger.LogError(ex.Message);
                 throw;
@@ -318,7 +324,7 @@ namespace NStore.Persistence.Sqlite
             return chunk;
         }
 
-        private const int DUPLICATED_INDEX_EXCEPTION = 2601;
+        private const int DUPLICATED_INDEX_EXCEPTION = 19;
 
         private int USE_SEQUENCE_INSTEAD = 0;
 
@@ -375,7 +381,6 @@ namespace NStore.Persistence.Sqlite
                 using (var cmd = new SqliteCommand(sql, conn))
                 {
                     var result = await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-                    Console.WriteLine($"{sql} => {result}");
                 }
             }
         }

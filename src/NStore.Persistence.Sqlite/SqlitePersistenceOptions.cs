@@ -21,10 +21,10 @@ namespace NStore.Persistence.Sqlite
             StreamsTableName = "Streams";
         }
 
-        public virtual string GetCreateTableScript(string StreamsTableName)
+        public virtual string GetCreateTableScript(string streamsTableName)
         {
-            return $@"CREATE TABLE [{StreamsTableName}](
-                [Position] BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+            return $@"CREATE TABLE [{streamsTableName}](
+                [Position] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                 [PartitionId] NVARCHAR(255) NOT NULL,
                 [OperationId] NVARCHAR(255) NOT NULL,
                 [Index] BIGINT NOT NULL,
@@ -32,14 +32,14 @@ namespace NStore.Persistence.Sqlite
                 [Payload] NVARCHAR(10000)
             );
 
-            CREATE UNIQUE INDEX IX_{StreamsTableName}_OPID on {StreamsTableName} (PartitionId, OperationId);
-            CREATE UNIQUE INDEX IX_{StreamsTableName}_IDX on {StreamsTableName} (PartitionId, [Index]);
+            CREATE UNIQUE INDEX IX_{streamsTableName}_OPID on {streamsTableName} (PartitionId, OperationId);
+            CREATE UNIQUE INDEX IX_{streamsTableName}_IDX on {streamsTableName} (PartitionId, [Index]);
 ";
         }
 
-        public virtual string GetPersistScript(string StreamsTableName)
+        public virtual string GetPersistScript(string streamsTableName)
         {
-            return $@"INSERT INTO [{StreamsTableName}]
+            return $@"INSERT INTO [{streamsTableName}]
                       ([PartitionId], [Index], [Payload], [OperationId], [Deleted])
                       VALUES (@PartitionId, @Index, @Payload, @OperationId, 0);
 
@@ -56,7 +56,7 @@ namespace NStore.Persistence.Sqlite
 
         public virtual string GetLastChunkScript()
         {
-            return $@"SELECT TOP 1 
+            return $@"SELECT  
                         [Position], [PartitionId], [Index], [Payload], [OperationId], [Deleted]
                       FROM 
                         [{StreamsTableName}] 
@@ -64,7 +64,8 @@ namespace NStore.Persistence.Sqlite
                           [PartitionId] = @PartitionId 
                       AND [Index] <= @toUpperIndexInclusive 
                       ORDER BY 
-                          [Position] DESC";
+                          [Position] DESC
+                      LIMIT 1";
         }
     }
 }
