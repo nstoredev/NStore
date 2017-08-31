@@ -236,7 +236,7 @@ namespace NStore.Domain.Tests
 
             Assert.NotNull(chunk);
             Assert.IsType<Changeset>(chunk.Payload);
-            Assert.True(((Changeset) chunk.Payload).IsEmpty);
+            Assert.True(((Changeset) chunk.Payload).IsEmpty());
             Assert.Equal("empty", chunk.OperationId);
         }
     }

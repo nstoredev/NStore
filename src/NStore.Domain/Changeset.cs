@@ -8,7 +8,6 @@ namespace NStore.Domain
         public Object[] Events { get; private set; }
         public long AggregateVersion { get; private set; }
         public Dictionary<string, object> Headers { get; private set; }
-        public bool IsEmpty => Events.Length == 0;
 
         private Changeset()
         {
@@ -26,5 +25,7 @@ namespace NStore.Domain
             this.Headers.Add(key, value);
             return this;
         }
+
+        public bool IsEmpty() => Events.Length == 0;
     }
 }

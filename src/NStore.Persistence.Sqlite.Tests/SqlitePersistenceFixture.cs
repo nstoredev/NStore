@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using NStore.Core.Persistence;
 using NStore.Persistence.Sqlite;
@@ -21,23 +22,23 @@ namespace NStore.Persistence.Tests
 
         protected void Connect()
         {
-//            ConnectionString = "Data Source=:memory:";
+            //            ConnectionString = "Data Source= :memory: ; Cache = shared";
+
             var pathToFile = $"{_testRunId}.db";
             ConnectionString = $"Data Source={pathToFile}";
-            
-            if(File.Exists(pathToFile))
+
+            if (File.Exists(pathToFile))
                 File.Delete(pathToFile);
-            
-            
-//            ConnectionString = Environment.GetEnvironmentVariable("NSTORE_SQLITE");
-//            if (String.IsNullOrWhiteSpace(ConnectionString))
-//                throw new TestMisconfiguredException("Please set connection string as NSTORE_SQLITE environment variable");
-//
-//            if (ConnectionString.StartsWith("\""))
-//                ConnectionString = ConnectionString.Substring(1);
-//
-//            if (ConnectionString.EndsWith("\""))
-//                ConnectionString = ConnectionString.Substring(0, ConnectionString.Length - 1);
+
+            //            ConnectionString = Environment.GetEnvironmentVariable("NSTORE_SQLITE");
+            //            if (String.IsNullOrWhiteSpace(ConnectionString))
+            //                throw new TestMisconfiguredException("Please set connection string as NSTORE_SQLITE environment variable");
+            //
+            //            if (ConnectionString.StartsWith("\""))
+            //                ConnectionString = ConnectionString.Substring(1);
+            //
+            //            if (ConnectionString.EndsWith("\""))
+            //                ConnectionString = ConnectionString.Substring(0, ConnectionString.Length - 1);
         }
 
         private IPersistence Create()

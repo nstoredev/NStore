@@ -2,12 +2,6 @@ using NStore.Core.Logging;
 
 namespace NStore.Persistence.Sqlite
 {
-    public interface ISqlitePayloadSerializer
-    {
-        string Serialize(object payload);
-        object Deserialize(string serialized);
-    }
-    
     public class SqlitePersistenceOptions
     {
         public INStoreLoggerFactory LoggerFactory { get; set; }

@@ -116,7 +116,7 @@ namespace NStore.Domain
         {
             var persister = (IEventSourcedAggregate)aggregate;
             var changeSet = persister.GetChangeSet();
-            if (changeSet.IsEmpty && !PersistEmptyChangeset)
+            if (changeSet.IsEmpty() && !PersistEmptyChangeset)
                 return;
 
             if (aggregate is IInvariantsChecker checker)

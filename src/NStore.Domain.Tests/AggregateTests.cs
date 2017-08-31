@@ -146,7 +146,7 @@ namespace NStore.Domain.Tests
             var changeSet = persister.GetChangeSet();
 
             Assert.NotNull(changeSet);
-            Assert.True(changeSet.IsEmpty);
+            Assert.True(changeSet.IsEmpty());
         }
 
         [Fact]
@@ -157,7 +157,7 @@ namespace NStore.Domain.Tests
             var changeSet = persister.GetChangeSet();
 
             Assert.NotNull(changeSet);
-            Assert.False(changeSet.IsEmpty);
+            Assert.False(changeSet.IsEmpty());
             Assert.Equal(1, changeSet.AggregateVersion);
         }
 
@@ -175,7 +175,7 @@ namespace NStore.Domain.Tests
             changeSet = persister.GetChangeSet();
 
             Assert.NotNull(changeSet);
-            Assert.False(changeSet.IsEmpty);
+            Assert.False(changeSet.IsEmpty());
             Assert.Equal(2, changeSet.AggregateVersion);
             Assert.True(1 == changeSet.Events.Length);
             Assert.IsType<TicketRefunded>(changeSet.Events[0]);

@@ -357,44 +357,31 @@ namespace NStore.Persistence.Sqlite
             await EnsureTable(_options.StreamsTableName, cancellationToken).ConfigureAwait(false);
         }
 
-        public Task DestroyAllAsync(CancellationToken cancellationToken)
-        {
-            return Task.CompletedTask;
-//            using (var conn = Connect())
-//            {
-//                await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
-//                var sql = //$"if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = '{_options.StreamsTableName}' AND TABLE_SCHEMA = 'dbo') " +
-//                          $"DROP TABLE {_options.StreamsTableName}";
-//                using (var cmd = new SqliteCommand(sql, conn))
-//                {
-//                    await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-//                }
-//            }
-        }
-
-        private async Task EnsureTable(string tableName, CancellationToken cancellationToken)
+        public async Task DestroyAllAsync(CancellationToken cancellationToken)
         {
             using (var conn = Connect())
             {
                 await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
-                var sql = _options.GetCreateTableScript(tableName);
+                var sql = $"DROP TABLE IF EXISTS {_options.StreamsTableName} ";
+                using (var cmd = new SqliteCommand(sql, conn))
+                {
+                    await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+                }
+            }
+        }
+
+        private async Task EnsureTable(string tableName, CancellationToken cancellationToken)
+        {
+            var sql = _options.GetCreateTableScript(tableName);
+
+            using (var conn = Connect())
+            {
+                await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
                 using (var cmd = new SqliteCommand(sql, conn))
                 {
                     var result = await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                 }
             }
-        }
-
-        private string GetCreateTableIfMissingSql(string tableName, string sql)
-        {
-            return $@"{sql}";
-            
-            return $@"
-if not exists (select * from dbo.sysobjects where id = object_id(N'{tableName}') and OBJECTPROPERTY(id, N'IsUserTable') = 1) 
-BEGIN
-{sql}
-END
-";
         }
 
         private SqliteConnection Connect()
