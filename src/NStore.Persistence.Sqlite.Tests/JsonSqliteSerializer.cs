@@ -2,7 +2,7 @@ using Newtonsoft.Json;
 
 namespace NStore.Persistence.Sqlite.Tests
 {
-    public class JsonMsSqlSerializer : ISqlitePayloadSearializer
+    public class JsonMsSqlSerializer : ISqlitePayloadSerializer
     {
         JsonSerializerSettings Settings { get; set; }
 

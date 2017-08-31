@@ -2,7 +2,7 @@ using NStore.Core.Logging;
 
 namespace NStore.Persistence.Sqlite
 {
-    public interface ISqlitePayloadSearializer
+    public interface ISqlitePayloadSerializer
     {
         string Serialize(object payload);
         object Deserialize(string serialized);
@@ -11,7 +11,7 @@ namespace NStore.Persistence.Sqlite
     public class SqlitePersistenceOptions
     {
         public INStoreLoggerFactory LoggerFactory { get; set; }
-        public ISqlitePayloadSearializer Serializer { get; set; }
+        public ISqlitePayloadSerializer Serializer { get; set; }
         public string ConnectionString { get; set; }
         public string StreamsTableName { get; set; }
 
