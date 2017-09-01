@@ -14,5 +14,7 @@ namespace NStore.Core.Streams
             long toIndexInclusive, 
             CancellationToken cancellationToken
         );
+
+        Task<bool> IsEmpty(CancellationToken cancellationToken);
     }
 }

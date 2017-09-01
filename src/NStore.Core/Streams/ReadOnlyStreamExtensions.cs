@@ -30,5 +30,10 @@ namespace NStore.Core.Streams
         {
             return stream.ReadAsync(subscription, fromIndexInclusive, toIndexInclusive, CancellationToken.None);
         }
+
+        public static Task<bool> IsEmpty(this IReadOnlyStream stream)
+        {
+            return stream.IsEmpty(CancellationToken.None);
+        }
     }
 }

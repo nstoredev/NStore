@@ -43,6 +43,12 @@ namespace NStore.Core.Streams
             );
         }
 
+        public async Task<bool> IsEmpty(CancellationToken cancellationToken)
+        {
+            // @@REVIEW: check version to avoid db rountrip
+            return await Persistence.ReadSingleBackwardAsync(this.Id).ConfigureAwait(false) != null;
+        }
+
         public async Task AppendAsync(object payload, string operationId, CancellationToken cancellation)
         {
             if (Version == -1)

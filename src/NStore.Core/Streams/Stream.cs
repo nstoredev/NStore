@@ -36,5 +36,10 @@ namespace NStore.Core.Streams
         {
             return Persistence.DeleteAsync(this.Id, 0, long.MaxValue, cancellation);
         }
+
+        public async Task<bool> IsEmpty(CancellationToken cancellationToken)
+        {
+            return await Persistence.ReadSingleBackwardAsync(this.Id, cancellationToken).ConfigureAwait(false) == null;
+        }
     }
 }

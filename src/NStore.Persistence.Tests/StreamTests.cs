@@ -53,6 +53,16 @@ namespace NStore.Persistence.Tests
 
             Assert.True(acc.IsEmpty);
         }
+
+        [Fact]
+        public async Task is_empty()
+        {
+            var stream = _streams.Open("brand_new_stream");
+            Assert.True(await stream.IsEmpty());
+
+            await stream.AppendAsync("a");
+            Assert.False(await stream.IsEmpty());
+        }
     }
 
     public class OptimisticConcurrencyStreamTests : BasePersistenceTest
@@ -151,6 +161,16 @@ namespace NStore.Persistence.Tests
                 stream.AppendAsync("b")
             ).ConfigureAwait(false);
         }
+
+        [Fact]
+        public async Task is_empty()
+        {
+            var stream = _streams.Open("brand_new_stream");
+            Assert.True(await stream.IsEmpty());
+
+            await stream.AppendAsync("a");
+            Assert.False(await stream.IsEmpty());
+        }
     }
 
     public class ReadOnlyStreamTests : BasePersistenceTest
@@ -169,7 +189,7 @@ namespace NStore.Persistence.Tests
 
             var stream = _streams.OpenReadOnly("stream_2");
             var acc = new Recorder();
-            await ReadOnlyStreamExtensions.ReadAsync(stream, acc).ConfigureAwait(false);
+            await stream.ReadAsync(acc).ConfigureAwait(false);
 
             Assert.Equal(1, acc.Length);
             Assert.Equal("payload", acc[0].Payload);
@@ -192,5 +212,15 @@ namespace NStore.Persistence.Tests
                 stream.AppendAsync("a")
             ).ConfigureAwait(false);
         }
+
+        [Fact]
+        public async Task is_empty()
+        {
+            await Store.AppendAsync("stream_2", 1, "payload").ConfigureAwait(false);
+
+            var stream = _streams.OpenReadOnly("stream_2");
+            Assert.False(await stream.IsEmpty());
+        }
+
     }
 }

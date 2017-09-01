@@ -111,10 +111,23 @@ namespace NStore.Core.Persistence
             return persistence.ReadAllAsync(fromPositionInclusive, subscription, limit, CancellationToken.None);
         }
 
-        public static Task<IChunk> ReadSingleBackwardAsync(this IPersistence persistence, string partitionId)
+        public static Task<IChunk> ReadSingleBackwardAsync(
+            this IPersistence persistence, 
+            string partitionId
+        )
         {
             return persistence.ReadSingleBackwardAsync(partitionId, long.MaxValue, CancellationToken.None);
         }
+
+        public static Task<IChunk> ReadSingleBackwardAsync(
+            this IPersistence persistence,
+            string partitionId,
+            CancellationToken cancellationToken
+        )
+        {
+            return persistence.ReadSingleBackwardAsync(partitionId, long.MaxValue, cancellationToken);
+        }
+
 
         public static Task<IChunk> AppendAsync(
             this IPersistence persistence,
