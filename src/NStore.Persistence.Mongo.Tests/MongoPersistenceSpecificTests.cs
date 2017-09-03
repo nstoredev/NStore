@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.Options;
@@ -16,7 +17,8 @@ namespace NStore.Persistence.Mongo.Tests
         public DateTime CreateAt { get; private set; }
 
         [BsonDictionaryOptions(DictionaryRepresentation.ArrayOfArrays)]
-        public IDictionary<string, string> CustomHeaders { get; set; } = new Dictionary<string, string>();
+        public IDictionary<string, string> CustomHeaders { get; set; } = 
+            new Dictionary<string, string>();
 
         public CustomChunk()
         {
@@ -97,6 +99,27 @@ namespace NStore.Persistence.Mongo.Tests
             // 2 second ko
             // 3 empty 
             Assert.Equal(3, _serializer.SerializeCount);
+        }
+    }
+
+
+    public class batch_writes_test : BasePersistenceTest
+    {
+        private IEnhancedPersistence Batcher => (IEnhancedPersistence)_mongoPersistence;
+
+        [Fact]
+        public async Task should_add_many()
+        {
+            var jobs = new[]
+            {
+                new WriteJob("a", 1, "first", null),
+                new WriteJob("a", 2, "second", null),
+            };
+            
+            await Batcher.AppendBatchAsync(jobs, CancellationToken.None);
+            
+            Assert.InRange(jobs[0].Position, 1,2);
+            Assert.InRange(jobs[1].Position, 1,2);
         }
     }
 }
