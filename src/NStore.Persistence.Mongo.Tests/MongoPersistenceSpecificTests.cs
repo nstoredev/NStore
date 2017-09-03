@@ -121,5 +121,35 @@ namespace NStore.Persistence.Mongo.Tests
             Assert.InRange(jobs[0].Position, 1,2);
             Assert.InRange(jobs[1].Position, 1,2);
         }
+        
+        [Fact]
+        public async Task should_add_many_in_random_order()
+        {
+            var jobs = new[]
+            {
+                new WriteJob("a", -1, "first", null),
+                new WriteJob("a", -1, "second", null),
+            };
+            
+            await Batcher.AppendBatchAsync(jobs, CancellationToken.None);
+            
+            Assert.InRange(jobs[0].Position, 1,2);
+            Assert.InRange(jobs[1].Position, 1,2);
+        }
+        
+        [Fact]
+        public async Task should_fail_on_adding_many()
+        {
+            var jobs = new[]
+            {
+                new WriteJob("a", 1, "first", null),
+                new WriteJob("a", 1, "second", null),
+            };
+            
+            await Batcher.AppendBatchAsync(jobs, CancellationToken.None);
+            
+            Assert.InRange(jobs[0].Position, 1,2);
+            Assert.InRange(jobs[1].Position, 1,2);
+        }        
     }
 }

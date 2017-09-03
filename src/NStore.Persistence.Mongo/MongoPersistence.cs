@@ -476,9 +476,15 @@ namespace NStore.Persistence.Mongo
                     .ConfigureAwait(false);
 
             }
-            catch (MongoBulkWriteException e)
+            catch (MongoBulkWriteException<TChunk> e)
             {
-                Console.WriteLine(e);
+                foreach (var r in e.Result.ProcessedRequests)
+                {
+                    Console.WriteLine($"Processed : {r.ToBsonDocument()} ");
+                }
+
+                Console.WriteLine(e.Result.ToBsonDocument());
+
                 throw;
             }
         }
