@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 using NStore.Core.Persistence;
 
 namespace NStore.Tpl
@@ -10,13 +11,35 @@ namespace NStore.Tpl
     public class PersistenceBatcher : IPersistence
     {
         private readonly IPersistence _persistence;
-
+        private readonly BatchBlock<AsyncWriteJob> _batch;
         public PersistenceBatcher(IPersistence persistence)
         {
+            var batcher = (IEnhancedPersistence)persistence;
+            _batch = new BatchBlock<AsyncWriteJob>(64, new GroupingDataflowBlockOptions()
+            {
+                BoundedCapacity = 1024,
+            });
+
+            var processor = new ActionBlock<AsyncWriteJob[]>
+            (
+                queue => batcher.AppendBatchAsync(queue, CancellationToken.None), new ExecutionDataflowBlockOptions()
+                {
+                    MaxDegreeOfParallelism = Environment.ProcessorCount,
+                    BoundedCapacity = Environment.ProcessorCount * 2
+                }
+            );
+
+            _batch.LinkTo(processor, new DataflowLinkOptions() { PropagateCompletion = true});
+
             _persistence = persistence;
         }
 
         public bool SupportsFillers => _persistence.SupportsFillers;
+
+        public void Flush()
+        {
+            _batch.TriggerBatch();
+        }
 
         public Task ReadForwardAsync(string partitionId, long fromLowerIndexInclusive, ISubscription subscription,
             long toUpperIndexInclusive, int limit, CancellationToken cancellationToken)
@@ -46,10 +69,14 @@ namespace NStore.Tpl
             return _persistence.ReadLastPositionAsync(cancellationToken);
         }
 
-        public Task<IChunk> AppendAsync(string partitionId, long index, object payload, string operationId,
+        public async Task<IChunk> AppendAsync(string partitionId, long index, object payload, string operationId,
             CancellationToken cancellationToken)
         {
-            return _persistence.AppendAsync(partitionId, index, payload, operationId, cancellationToken);
+            var job = new AsyncWriteJob(partitionId, index, payload, operationId);
+
+            await _batch.SendAsync(job, cancellationToken).ConfigureAwait(false);
+            return await job.Task;
+            //            return _persistence.AppendAsync(partitionId, index, payload, operationId, cancellationToken);
         }
 
         public Task DeleteAsync(string partitionId, long fromLowerIndexInclusive, long toUpperIndexInclusive,

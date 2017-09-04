@@ -19,7 +19,7 @@ namespace NStore.Persistence.Mongo.Tests
         public DateTime CreateAt { get; private set; }
 
         [BsonDictionaryOptions(DictionaryRepresentation.ArrayOfArrays)]
-        public IDictionary<string, string> CustomHeaders { get; set; } = 
+        public IDictionary<string, string> CustomHeaders { get; set; } =
             new Dictionary<string, string>();
 
         public CustomChunk()
@@ -117,13 +117,13 @@ namespace NStore.Persistence.Mongo.Tests
                 new WriteJob("a", 1, "first", null),
                 new WriteJob("a", 2, "second", null),
             };
-            
+
             await Batcher.AppendBatchAsync(jobs, CancellationToken.None);
-            
-            Assert.InRange(jobs[0].Position, 1,2);
-            Assert.InRange(jobs[1].Position, 1,2);
+
+            Assert.InRange(jobs[0].Position, 1, 2);
+            Assert.InRange(jobs[1].Position, 1, 2);
         }
-        
+
         [Fact]
         public async Task should_add_many_in_random_order()
         {
@@ -132,49 +132,54 @@ namespace NStore.Persistence.Mongo.Tests
                 new WriteJob("a", -1, "first", null),
                 new WriteJob("a", -1, "second", null),
             };
-            
+
             await Batcher.AppendBatchAsync(jobs, CancellationToken.None);
-            
-            Assert.InRange(jobs[0].Position, 1,2);
-            Assert.InRange(jobs[1].Position, 1,2);
+
+            Assert.InRange(jobs[0].Position, 1, 2);
+            Assert.InRange(jobs[1].Position, 1, 2);
         }
-        
+
         [Fact]
         public async Task should_fail_on_adding_many()
         {
             var jobs = new[]
             {
-                new WriteJob("a", 1, "first", null),
-                new WriteJob("a", 1, "fail here", null),
-                new WriteJob("a", 2, "second", "fail"),
-                new WriteJob("a", 3, "fail here too", "fail"),
+                new WriteJob("a", 1, "call me maybe", null),
+                new WriteJob("a", 1, "call me maybe", null),
+                new WriteJob("a", 2, "me too", "fail"),
+                new WriteJob("a", 3, "me too", "fail"),
             };
-            
+
             await Batcher.AppendBatchAsync(jobs, CancellationToken.None);
-            
+
             Assert.Equal(1, jobs[0].Position);
             Assert.Equal(2, jobs[1].Position);
             Assert.Equal(3, jobs[2].Position);
             Assert.Equal(4, jobs[3].Position);
 
-            Assert.Equal(WriteJob.WriteResult.Committed, jobs[0].Result);
-            Assert.Equal(WriteJob.WriteResult.DuplicatedIndex, jobs[1].Result);
-            Assert.Equal(WriteJob.WriteResult.Committed, jobs[2].Result);
-            Assert.Equal(WriteJob.WriteResult.DuplicatedOperation, jobs[3].Result);
+            var firstIndexResults = new[] { jobs[0].Result, jobs[1].Result };
 
-            var a1 = await Store.ReadSingleBackwardAsync("a", 1,CancellationToken.None);
-            var a2 = await Store.ReadSingleBackwardAsync("a", 2,CancellationToken.None);
+            Assert.Contains(firstIndexResults, result => result == WriteJob.WriteResult.Committed);
+            Assert.Contains(firstIndexResults, result => result == WriteJob.WriteResult.DuplicatedIndex);
+
+            var secondIndexResults = new[] { jobs[2].Result, jobs[3].Result };
+            Assert.Contains(secondIndexResults, result => result == WriteJob.WriteResult.Committed);
+            Assert.Contains(secondIndexResults, result => result == WriteJob.WriteResult.DuplicatedOperation);
+
+            var a1 = await Store.ReadSingleBackwardAsync("a", 1, CancellationToken.None);
+            var a2 = await Store.ReadSingleBackwardAsync("a", 2, CancellationToken.None);
 
             Assert.NotNull(a1);
             Assert.NotNull(a2);
 
-            Assert.Equal("first", a1.Payload);
-            Assert.Equal("second", a2.Payload);
+            Assert.Equal("call me maybe", a1.Payload);
+            Assert.Equal("me too", a2.Payload);
         }
 
         [Fact]
         public async Task async_write_jobs()
         {
+            // note: insert order is not guaranteed, failures can append odd rows
             var jobs = new[]
             {
                 new AsyncWriteJob("a", 1, "first", null),
@@ -193,6 +198,15 @@ namespace NStore.Persistence.Mongo.Tests
             Assert.Null(written[1]);
             Assert.NotNull(written[2]);
             Assert.Null(written[3]);
+        }
+
+        [Fact]
+        public async Task write_with_batcher()
+        {
+            var batcher = new PersistenceBatcher(Store);
+
+            await batcher.AppendAsync("a", 1, "first");
+            await Assert.ThrowsAsync<DuplicateStreamIndexException>(() => batcher.AppendAsync("a", 1, "fail here"));
         }
     }
 }
