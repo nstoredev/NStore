@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Threading;
@@ -8,6 +9,7 @@ using MongoDB.Bson.Serialization.Options;
 using MongoDB.Driver;
 using NStore.Core.Persistence;
 using NStore.Persistence.Tests;
+using NStore.Tpl;
 using Xunit;
 
 namespace NStore.Persistence.Mongo.Tests
@@ -168,6 +170,26 @@ namespace NStore.Persistence.Mongo.Tests
 
             Assert.Equal("first", a1.Payload);
             Assert.Equal("second", a2.Payload);
-        }        
+        }
+
+        [Fact]
+        public async Task async_write_jobs()
+        {
+            var jobs = new[]
+            {
+                new AsyncWriteJob("a", 1, "first", null),
+                new AsyncWriteJob("a", 1, "fail here", null),
+                new AsyncWriteJob("a", 2, "second", "fail"),
+                new AsyncWriteJob("a", 3, "fail here too", "fail"),
+            };
+
+            Batcher.AppendBatchAsync(jobs, CancellationToken.None);
+
+            var allTasks = jobs.Select(x => x.Task).ToArray();
+            var written = await Task.WhenAll(allTasks);
+
+            Assert.True(4 == written.Length);
+            Assert.NotNull(written[0]);
+        }
     }
 }

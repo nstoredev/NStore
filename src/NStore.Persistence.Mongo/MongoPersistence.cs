@@ -483,23 +483,26 @@ namespace NStore.Persistence.Mongo
                     {
                         if (err.Message.Contains(PartitionIndexIdx))
                         {
-                            queue[err.Index].SetResult(WriteJob.WriteResult.DuplicatedIndex);
+                            queue[err.Index].Failed(WriteJob.WriteResult.DuplicatedIndex);
                             continue;
                         }
 
                         if (err.Message.Contains(PartitionOperationIdx))
                         {
-                            queue[err.Index].SetResult(WriteJob.WriteResult.DuplicatedOperation);
+                            queue[err.Index].Failed(WriteJob.WriteResult.DuplicatedOperation);
                             continue;
                         }
                     }
                 }
             }
 
-            foreach (var writeJob in queue)
+            for (var index = 0; index < queue.Length; index++)
             {
+                var writeJob = queue[index];
                 if (writeJob.Result == WriteJob.WriteResult.None)
-                    writeJob.SetResult(WriteJob.WriteResult.Committed);
+                {
+                    writeJob.Succeeded(chunks[index]);
+                }
             }
         }
     }

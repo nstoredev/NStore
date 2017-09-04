@@ -3,9 +3,9 @@
 		<TargetFramework>netcoreapp2.0</TargetFramework>
 	</PropertyGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\NStore.Persistence.Mongo\NStore.Persistence.Mongo.csproj">
-		</ProjectReference>
+		<ProjectReference Include="..\NStore.Persistence.Mongo\NStore.Persistence.Mongo.csproj" />
 		<ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
+		<ProjectReference Include="..\NStore.Tpl\NStore.Tpl.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Include="..\NStore.Persistence.Tests\DefaultSnapshotStoreTests.cs">
