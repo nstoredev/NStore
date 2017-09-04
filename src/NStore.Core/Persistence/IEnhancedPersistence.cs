@@ -6,6 +6,15 @@ namespace NStore.Core.Persistence
 {
     public sealed class WriteJob : IChunk
     {
+        public enum WriteResult
+        {
+            None,
+            Committed,
+            DuplicatedIndex,
+            DuplicatedOperation,
+            DuplicatedPosition
+        }
+
         // in
         public string PartitionId { get; private set; }
         public long Index { get; private set; }
@@ -14,8 +23,8 @@ namespace NStore.Core.Persistence
 
         // out
         public long Position { get; private set; }
-        public Exception Exception  { get; private set; }
-        
+        public WriteResult Result { get; private set; }
+
         public WriteJob(string partitionId, long index, object payload, string operationId)
         {
             PartitionId = partitionId;
@@ -24,14 +33,14 @@ namespace NStore.Core.Persistence
             OperationId = operationId;
         }
 
-        public void Succeded(long position)
+        public void AssignPosition(long position)
         {
             this.Position = position;
         }
 
-        public void Failed(Exception ex)
+        public void SetResult(WriteResult result )
         {
-            this.Exception = ex;
+            this.Result = result;
         }
     }
 

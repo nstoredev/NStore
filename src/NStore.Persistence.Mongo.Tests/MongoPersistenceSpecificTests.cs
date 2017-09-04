@@ -143,13 +143,31 @@ namespace NStore.Persistence.Mongo.Tests
             var jobs = new[]
             {
                 new WriteJob("a", 1, "first", null),
-                new WriteJob("a", 1, "second", null),
+                new WriteJob("a", 1, "fail here", null),
+                new WriteJob("a", 2, "second", "fail"),
+                new WriteJob("a", 3, "fail here too", "fail"),
             };
             
             await Batcher.AppendBatchAsync(jobs, CancellationToken.None);
             
-            Assert.InRange(jobs[0].Position, 1,2);
-            Assert.InRange(jobs[1].Position, 1,2);
+            Assert.Equal(1, jobs[0].Position);
+            Assert.Equal(2, jobs[1].Position);
+            Assert.Equal(3, jobs[2].Position);
+            Assert.Equal(4, jobs[3].Position);
+
+            Assert.Equal(WriteJob.WriteResult.Committed, jobs[0].Result);
+            Assert.Equal(WriteJob.WriteResult.DuplicatedIndex, jobs[1].Result);
+            Assert.Equal(WriteJob.WriteResult.Committed, jobs[2].Result);
+            Assert.Equal(WriteJob.WriteResult.DuplicatedOperation, jobs[3].Result);
+
+            var a1 = await Store.ReadSingleBackwardAsync("a", 1,CancellationToken.None);
+            var a2 = await Store.ReadSingleBackwardAsync("a", 2,CancellationToken.None);
+
+            Assert.NotNull(a1);
+            Assert.NotNull(a2);
+
+            Assert.Equal("first", a1.Payload);
+            Assert.Equal("second", a2.Payload);
         }        
     }
 }

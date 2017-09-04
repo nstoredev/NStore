@@ -32,8 +32,8 @@ namespace NStore.Persistence.Mongo
 
         private long _sequence = 0;
 
-        private const string SequenceIdx = "partition_sequence";
-        private const string OperationIdx = "partition_operation";
+        private const string PartitionIndexIdx = "partition_index";
+        private const string PartitionOperationIdx = "partition_operation";
 
         public bool SupportsFillers => true;
 
@@ -97,7 +97,7 @@ namespace NStore.Persistence.Mongo
             );
 
             var sort = Builders<TChunk>.Sort.Ascending(x => x.Index);
-            var options = new FindOptions<TChunk>() {Sort = sort};
+            var options = new FindOptions<TChunk>() { Sort = sort };
             if (limit != int.MaxValue)
             {
                 options.Limit = limit;
@@ -161,7 +161,7 @@ namespace NStore.Persistence.Mongo
             );
 
             var sort = Builders<TChunk>.Sort.Descending(x => x.Index);
-            var options = new FindOptions<TChunk>() {Sort = sort};
+            var options = new FindOptions<TChunk>() { Sort = sort };
             if (limit != int.MaxValue)
             {
                 options.Limit = limit;
@@ -189,7 +189,7 @@ namespace NStore.Persistence.Mongo
             );
 
             var sort = Builders<TChunk>.Sort.Descending(x => x.Index);
-            var options = new FindOptions<TChunk>() {Sort = sort, Limit = 1};
+            var options = new FindOptions<TChunk>() { Sort = sort, Limit = 1 };
 
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
             {
@@ -314,13 +314,13 @@ namespace NStore.Persistence.Mongo
                 {
                     if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
                     {
-                        if (ex.Message.Contains(SequenceIdx))
+                        if (ex.Message.Contains(PartitionIndexIdx))
                         {
                             await PersistAsEmptyAsync(chunk, cancellationToken).ConfigureAwait(false);
                             throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
                         }
 
-                        if (ex.Message.Contains(OperationIdx))
+                        if (ex.Message.Contains(PartitionOperationIdx))
                         {
                             await PersistAsEmptyAsync(chunk, cancellationToken).ConfigureAwait(false);
                             return;
@@ -359,7 +359,7 @@ namespace NStore.Persistence.Mongo
                     new CreateIndexOptions()
                     {
                         Unique = true,
-                        Name = SequenceIdx
+                        Name = PartitionIndexIdx
                     }, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -370,7 +370,7 @@ namespace NStore.Persistence.Mongo
                     new CreateIndexOptions()
                     {
                         Unique = true,
-                        Name = OperationIdx
+                        Name = PartitionOperationIdx
                     }, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -441,7 +441,7 @@ namespace NStore.Persistence.Mongo
             var insertCount = queue.Length;
             var lastId = await GetNextId(insertCount, cancellationToken)
                 .ConfigureAwait(false);
-            
+
             var firstId = lastId - insertCount + 1;
 
             var chunks = new TChunk[insertCount];
@@ -460,7 +460,7 @@ namespace NStore.Persistence.Mongo
                     current.OperationId ?? Guid.NewGuid().ToString()
                 );
 
-                current.Succeded(id);
+                current.AssignPosition(id);
                 chunks[currentIdx] = chunk;
             }
 
@@ -474,18 +474,32 @@ namespace NStore.Persistence.Mongo
                 await _chunks
                     .InsertManyAsync(chunks, options, cancellationToken)
                     .ConfigureAwait(false);
-
             }
             catch (MongoBulkWriteException<TChunk> e)
             {
-                foreach (var r in e.Result.ProcessedRequests)
+                foreach (var err in e.WriteErrors)
                 {
-                    Console.WriteLine($"Processed : {r.ToBsonDocument()} ");
+                    if (err.Category == ServerErrorCategory.DuplicateKey)
+                    {
+                        if (err.Message.Contains(PartitionIndexIdx))
+                        {
+                            queue[err.Index].SetResult(WriteJob.WriteResult.DuplicatedIndex);
+                            continue;
+                        }
+
+                        if (err.Message.Contains(PartitionOperationIdx))
+                        {
+                            queue[err.Index].SetResult(WriteJob.WriteResult.DuplicatedOperation);
+                            continue;
+                        }
+                    }
                 }
+            }
 
-                Console.WriteLine(e.Result.ToBsonDocument());
-
-                throw;
+            foreach (var writeJob in queue)
+            {
+                if (writeJob.Result == WriteJob.WriteResult.None)
+                    writeJob.SetResult(WriteJob.WriteResult.Committed);
             }
         }
     }
