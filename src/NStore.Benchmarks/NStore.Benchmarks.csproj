@@ -11,6 +11,7 @@
     <ProjectReference Include="..\NStore.Persistence.Mongo\NStore.Persistence.Mongo.csproj">
     </ProjectReference>
 	  <ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
+	  <ProjectReference Include="..\NStore.Tpl\NStore.Tpl.csproj" />
 
   </ItemGroup>
   <ItemGroup>

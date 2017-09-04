@@ -4,11 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Attributes.Jobs;
 using BenchmarkDotNet.Engines;
 using NStore.Core.Persistence;
 using NStore.Persistence.Mongo;
+using NStore.Tpl;
 
 namespace NStore.Benchmarks
 {
@@ -25,8 +27,7 @@ namespace NStore.Benchmarks
         [Params(10_000)]
         public int Writes { get; set; }
 
-        //[Params(8, 16)]
-        //public int Workers { get; set; }
+        public int Workers { get; set; } = Environment.ProcessorCount;
 
         [Benchmark]
         public void load_mongo_async()
@@ -36,16 +37,37 @@ namespace NStore.Benchmarks
             _mongoStore = new MongoPersistence(options);
             _mongoStore.InitAsync(CancellationToken.None).Wait();
 
-            async_worker(_mongoStore);
+            async_worker(_mongoStore).GetAwaiter().GetResult();
         }
 
-        private void async_worker(IPersistence store)
+        [Benchmark]
+        public void load_mongo_batcher()
         {
-            var all = _iterations.Select(i =>
-                store.AppendAsync("Stream_1", i, new { data = "this is a test" })
-            );
+            var options = BuildMongoConnectionOptions();
 
-            Task.WhenAll(all).GetAwaiter().GetResult();
+            _mongoStore = new MongoPersistence(options);
+            _mongoStore.InitAsync(CancellationToken.None).Wait();
+
+            async_worker(new PersistenceBatcher(_mongoStore)).GetAwaiter().GetResult();
+        }
+
+        private async Task async_worker(IPersistence store)
+        {
+            var publish = new ActionBlock<long>(async i =>
+            {
+                await store.AppendAsync("Stream_1", i, new { data = "this is a test" });
+            }, new ExecutionDataflowBlockOptions()
+            {
+                MaxDegreeOfParallelism = Workers
+            });
+
+            foreach (var iteration in _iterations)
+            {
+                await publish.SendAsync(iteration);
+            }
+
+            publish.Complete();
+            await publish.Completion;
         }
 
         private static MongoPersistenceOptions BuildMongoConnectionOptions()

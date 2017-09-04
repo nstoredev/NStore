@@ -190,6 +190,9 @@ namespace NStore.Persistence.Mongo.Tests
 
             Assert.True(4 == written.Length);
             Assert.NotNull(written[0]);
+            Assert.Null(written[1]);
+            Assert.NotNull(written[2]);
+            Assert.Null(written[3]);
         }
     }
 }
