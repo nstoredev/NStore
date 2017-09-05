@@ -90,13 +90,14 @@ namespace NStore.Persistence.Tests
             Assert.Equal<object>("me too", a2.Payload);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Await.Warning", "CS4014:Await.Warning")]
         [Fact]
         public async Task async_write_jobs()
         {
             if (Batcher == null)
                 return;
 
-            // note: insert order is not guaranteed, failures can append odd rows
+            // note: insert order is not guaranteed, failures can appen on odd rows
             var jobs = new[]
             {
                 new AsyncWriteJob("a", 1, "first", null),
@@ -105,7 +106,7 @@ namespace NStore.Persistence.Tests
                 new AsyncWriteJob("a", 3, "fail here too", "fail"),
             };
 
-            Batcher.AppendBatchAsync(jobs, CancellationToken.None);
+            var forget = Batcher.AppendBatchAsync(jobs, CancellationToken.None);
 
             var allTasks = jobs.Select(x => x.Task).ToArray();
             var written = await Task.WhenAll(allTasks);
