@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.Options;
@@ -16,7 +15,8 @@ namespace NStore.Persistence.Mongo.Tests
         public DateTime CreateAt { get; private set; }
 
         [BsonDictionaryOptions(DictionaryRepresentation.ArrayOfArrays)]
-        public IDictionary<string, string> CustomHeaders { get; set; } = new Dictionary<string, string>();
+        public IDictionary<string, string> CustomHeaders { get; set; } =
+            new Dictionary<string, string>();
 
         public CustomChunk()
         {

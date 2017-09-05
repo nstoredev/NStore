@@ -19,7 +19,8 @@ namespace NStore.Persistence.Mongo
         }
     }
 
-    public class MongoPersistence<TChunk> : IMongoPersistence where TChunk : IMongoChunk, new()
+    public class MongoPersistence<TChunk> : IMongoPersistence, IEnhancedPersistence
+        where TChunk : IMongoChunk, new()
     {
         private IMongoDatabase _partitionsDb;
         private IMongoDatabase _countersDb;
@@ -31,8 +32,8 @@ namespace NStore.Persistence.Mongo
 
         private long _sequence = 0;
 
-        private const string SequenceIdx = "partition_sequence";
-        private const string OperationIdx = "partition_operation";
+        private const string PartitionIndexIdx = "partition_index";
+        private const string PartitionOperationIdx = "partition_operation";
 
         public bool SupportsFillers => true;
 
@@ -110,7 +111,8 @@ namespace NStore.Persistence.Mongo
                 false, cancellationToken).ConfigureAwait(false);
         }
 
-        private async Task PushToSubscriber(long start, ISubscription subscription, FindOptions<TChunk> options, FilterDefinition<TChunk> filter, bool broadcastPosition, CancellationToken cancellationToken)
+        private async Task PushToSubscriber(long start, ISubscription subscription, FindOptions<TChunk> options,
+            FilterDefinition<TChunk> filter, bool broadcastPosition, CancellationToken cancellationToken)
         {
             long positionOrIndex = 0;
             await subscription.OnStartAsync(start).ConfigureAwait(false);
@@ -195,7 +197,8 @@ namespace NStore.Persistence.Mongo
             }
         }
 
-        public async Task ReadAllAsync(long fromPositionInclusive, ISubscription subscription, int limit, CancellationToken cancellationToken)
+        public async Task ReadAllAsync(long fromPositionInclusive, ISubscription subscription, int limit,
+            CancellationToken cancellationToken)
         {
             var filter = Builders<TChunk>.Filter.Gte(x => x.Position, fromPositionInclusive);
 
@@ -209,7 +212,8 @@ namespace NStore.Persistence.Mongo
                 options.Limit = limit;
             }
 
-            await PushToSubscriber(fromPositionInclusive, subscription, options, filter, true, cancellationToken).ConfigureAwait(false);
+            await PushToSubscriber(fromPositionInclusive, subscription, options, filter, true, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         public async Task<long> ReadLastPositionAsync(CancellationToken cancellationToken)
@@ -225,8 +229,8 @@ namespace NStore.Persistence.Mongo
             };
 
             using (var cursor = await _chunks
-                   .FindAsync(filter, options, cancellationToken)
-                   .ConfigureAwait(false)
+                .FindAsync(filter, options, cancellationToken)
+                .ConfigureAwait(false)
             )
             {
                 var lastPosition = await cursor.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
@@ -236,22 +240,6 @@ namespace NStore.Persistence.Mongo
                 }
                 return 0;
             }
-        }
-
-        public async Task<IChunk> AppendAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
-        {
-            long id = await GetNextId(cancellationToken).ConfigureAwait(false);
-            var chunk = new TChunk();
-            chunk.Init(
-                id,
-                partitionId,
-                index < 0 ? id : index,
-                _mongoPayloadSerializer.Serialize(payload),
-                operationId ?? Guid.NewGuid().ToString()
-            );
-            await InternalPersistAsync(chunk, cancellationToken).ConfigureAwait(false);
-
-            return chunk;
         }
 
         public async Task DeleteAsync(
@@ -326,13 +314,13 @@ namespace NStore.Persistence.Mongo
                 {
                     if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
                     {
-                        if (ex.Message.Contains(SequenceIdx))
+                        if (ex.Message.Contains(PartitionIndexIdx))
                         {
                             await PersistAsEmptyAsync(chunk, cancellationToken).ConfigureAwait(false);
                             throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
                         }
 
-                        if (ex.Message.Contains(OperationIdx))
+                        if (ex.Message.Contains(PartitionOperationIdx))
                         {
                             await PersistAsEmptyAsync(chunk, cancellationToken).ConfigureAwait(false);
                             return;
@@ -343,7 +331,7 @@ namespace NStore.Persistence.Mongo
                             Console.WriteLine(
                                 $"Error writing chunk #{chunk.Position} => {ex.Message} - {ex.GetType().FullName} ");
                             await ReloadSequence(cancellationToken).ConfigureAwait(false);
-                            chunk.RewritePosition(await GetNextId(cancellationToken).ConfigureAwait(false));
+                            chunk.RewritePosition(await GetNextId(1, cancellationToken).ConfigureAwait(false));
                             continue;
                         }
                     }
@@ -371,7 +359,7 @@ namespace NStore.Persistence.Mongo
                     new CreateIndexOptions()
                     {
                         Unique = true,
-                        Name = SequenceIdx
+                        Name = PartitionIndexIdx
                     }, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -382,7 +370,7 @@ namespace NStore.Persistence.Mongo
                     new CreateIndexOptions()
                     {
                         Unique = true,
-                        Name = OperationIdx
+                        Name = PartitionOperationIdx
                     }, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -406,14 +394,14 @@ namespace NStore.Persistence.Mongo
             this._sequence = lastSequenceNumber;
         }
 
-        private async Task<long> GetNextId(CancellationToken cancellationToken = default(CancellationToken))
+        private async Task<long> GetNextId(int size, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (_options.UseLocalSequence)
-                return Interlocked.Increment(ref _sequence);
+                return Interlocked.Add(ref _sequence, size);
 
             // server side sequence
             var filter = Builders<Counter>.Filter.Eq(x => x.Id, _options.SequenceId);
-            var update = Builders<Counter>.Update.Inc(x => x.LastValue, 1);
+            var update = Builders<Counter>.Update.Inc(x => x.LastValue, size);
             var options = new FindOneAndUpdateOptions<Counter>()
             {
                 IsUpsert = true,
@@ -429,6 +417,93 @@ namespace NStore.Persistence.Mongo
                 .ConfigureAwait(false);
 
             return updateResult.LastValue;
+        }
+
+        public async Task<IChunk> AppendAsync(string partitionId, long index, object payload, string operationId,
+            CancellationToken cancellationToken)
+        {
+            long id = await GetNextId(1, cancellationToken).ConfigureAwait(false);
+            var chunk = new TChunk();
+            chunk.Init(
+                id,
+                partitionId,
+                index < 0 ? id : index,
+                _mongoPayloadSerializer.Serialize(payload),
+                operationId ?? Guid.NewGuid().ToString()
+            );
+            await InternalPersistAsync(chunk, cancellationToken).ConfigureAwait(false);
+
+            return chunk;
+        }
+
+        public async Task AppendBatchAsync(WriteJob[] queue, CancellationToken cancellationToken)
+        {
+            var insertCount = queue.Length;
+            var lastId = await GetNextId(insertCount, cancellationToken)
+                .ConfigureAwait(false);
+
+            var firstId = lastId - insertCount + 1;
+
+            var chunks = new TChunk[insertCount];
+
+            for (var currentIdx = 0; currentIdx < insertCount; currentIdx++)
+            {
+                var current = queue[currentIdx];
+                long id = firstId + currentIdx;
+
+                var chunk = new TChunk();
+                chunk.Init(
+                    id,
+                    current.PartitionId,
+                    current.Index < 0 ? id : current.Index,
+                    _mongoPayloadSerializer.Serialize(current.Payload),
+                    current.OperationId ?? Guid.NewGuid().ToString()
+                );
+
+//                current.AssignPosition(id);
+                chunks[currentIdx] = chunk;
+            }
+
+            var options = new InsertManyOptions()
+            {
+                IsOrdered = false,
+            };
+
+            try
+            {
+                await _chunks
+                    .InsertManyAsync(chunks, options, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (MongoBulkWriteException<TChunk> e)
+            {
+                foreach (var err in e.WriteErrors)
+                {
+                    if (err.Category == ServerErrorCategory.DuplicateKey)
+                    {
+                        if (err.Message.Contains(PartitionIndexIdx))
+                        {
+                            queue[err.Index].Failed(WriteJob.WriteResult.DuplicatedIndex);
+                            continue;
+                        }
+
+                        if (err.Message.Contains(PartitionOperationIdx))
+                        {
+                            queue[err.Index].Failed(WriteJob.WriteResult.DuplicatedOperation);
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            for (var index = 0; index < queue.Length; index++)
+            {
+                var writeJob = queue[index];
+                if (writeJob.Result == WriteJob.WriteResult.None)
+                {
+                    writeJob.Succeeded(chunks[index]);
+                }
+            }
         }
     }
 }

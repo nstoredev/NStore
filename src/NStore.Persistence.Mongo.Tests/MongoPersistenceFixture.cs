@@ -17,7 +17,7 @@ namespace NStore.Persistence.Tests
 {
     public partial class BasePersistenceTest
     {
-        private IMongoPersistence _mongoPersistence;
+        protected IMongoPersistence _mongoPersistence;
         private MongoPersistenceOptions _options;
         private const string TestSuitePrefix = "Mongo";
 
