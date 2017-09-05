@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Data.Sqlite;
 using System.Text;
@@ -75,12 +76,42 @@ namespace NStore.Persistence.Sqlite
                         command.Parameters.AddWithValue("@toUpperIndexInclusive", toUpperIndexInclusive);
                     }
 
-                    await PushToSubscriber(command, fromLowerIndexInclusive, subscription, false, cancellationToken).ConfigureAwait(false);
+                    await PushToSubscriber(command, fromLowerIndexInclusive, subscription, false, cancellationToken)
+                        .ConfigureAwait(false);
                 }
             }
         }
 
-        private async Task PushToSubscriber(SqliteCommand command, long start, ISubscription subscription, bool broadcastPosition, CancellationToken cancellationToken)
+        private async Task<IList<SqliteChunk>> Load(SqliteCommand command, CancellationToken cancellationToken)
+        {
+            var list = new List<SqliteChunk>();
+            using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
+            {
+                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    var chunk = new SqliteChunk
+                    {
+                        Position = reader.GetInt64(0),
+                        PartitionId = reader.GetString(1),
+                        Index = reader.GetInt64(2),
+                        OperationId = reader.GetString(4),
+                        Deleted = reader.GetBoolean(5),
+                        Payload = _options.Serializer.Deserialize(reader.GetString(3))
+                    };
+
+                    list.Add(chunk);
+                }
+            }
+
+            return list;
+        }
+
+        private async Task PushToSubscriber(
+            SqliteCommand command,
+            long start,
+            ISubscription subscription,
+            bool broadcastPosition,
+            CancellationToken cancellationToken)
         {
             long indexOrPosition = 0;
             await subscription.OnStartAsync(start).ConfigureAwait(false);
@@ -170,12 +201,14 @@ namespace NStore.Persistence.Sqlite
                         command.Parameters.AddWithValue("@toLowerIndexInclusive", toLowerIndexInclusive);
                     }
 
-                    await PushToSubscriber(command, fromUpperIndexInclusive, subscription, false, cancellationToken).ConfigureAwait(false);
+                    await PushToSubscriber(command, fromUpperIndexInclusive, subscription, false, cancellationToken)
+                        .ConfigureAwait(false);
                 }
             }
         }
 
-        public async Task<IChunk> ReadSingleBackwardAsync(string partitionId, long fromUpperIndexInclusive, CancellationToken cancellationToken)
+        public async Task<IChunk> ReadSingleBackwardAsync(string partitionId, long fromUpperIndexInclusive,
+            CancellationToken cancellationToken)
         {
             using (var connection = Connect())
             {
@@ -215,7 +248,7 @@ namespace NStore.Persistence.Sqlite
             int limit,
             CancellationToken cancellationToken)
         {
-            var top = limit != Int32.MaxValue ? $"LIMIT {limit}" : "";
+            var top = Math.Min(limit, 200);
 
             var sql = $@"SELECT  
                         [Position], [PartitionId], [Index], [Payload], [OperationId], [Deleted]
@@ -224,17 +257,58 @@ namespace NStore.Persistence.Sqlite
                       WHERE 
                           [Position] >= @fromPositionInclusive 
                       ORDER BY 
-                          [Position] {top}";
+                          [Position] LIMIT {top}";
 
-            using (var connection = Connect())
+            await subscription.OnStartAsync(fromPositionInclusive).ConfigureAwait(false);
+            var lastPosition = fromPositionInclusive;
+            int readcount = 0;
+
+            try
             {
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-                using (var command = new SqliteCommand(sql, connection))
+                while (true)
                 {
-                    command.Parameters.AddWithValue("@fromPositionInclusive", fromPositionInclusive);
+                    IList<SqliteChunk> buffer = null;
 
-                    await PushToSubscriber(command, fromPositionInclusive, subscription, true, cancellationToken).ConfigureAwait(false);
+                    using (var connection = Connect())
+                    {
+                        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+                        using (var command = new SqliteCommand(sql, connection))
+                        {
+                            command.Parameters.AddWithValue("@fromPositionInclusive", fromPositionInclusive);
+                            buffer = await Load(command, cancellationToken).ConfigureAwait(false);
+                        }
+                    }
+
+                    if (buffer.Count == 0)
+                    {
+                        await subscription.CompletedAsync(lastPosition).ConfigureAwait(false);
+                        return;
+                    }
+
+                    foreach (var chunk in buffer)
+                    {
+                        readcount++;
+
+                        lastPosition = chunk.Position;
+                        if (!await subscription.OnNextAsync(chunk).ConfigureAwait(false))
+                        {
+                            await subscription.StoppedAsync(chunk.Position).ConfigureAwait(false);
+                            return;
+                        }
+
+                        if (readcount == limit)
+                        {
+                            await subscription.CompletedAsync(lastPosition).ConfigureAwait(false);
+                            return;
+                        }
+                    }
+
+                    fromPositionInclusive = lastPosition + 1;
                 }
+            }
+            catch (Exception e)
+            {
+                await subscription.OnErrorAsync(lastPosition, e).ConfigureAwait(false);
             }
         }
 
@@ -257,7 +331,7 @@ namespace NStore.Persistence.Sqlite
                     if (result == null)
                         return 0;
 
-                    return (long)result;
+                    return (long) result;
                 }
             }
         }
@@ -287,14 +361,16 @@ namespace NStore.Persistence.Sqlite
                 using (var connection = Connect())
                 {
                     await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-                    using (var command = new SqliteCommand(_options.GetPersistScript(_options.StreamsTableName), connection))
+                    using (var command =
+                        new SqliteCommand(_options.GetPersistScript(_options.StreamsTableName), connection))
                     {
                         command.Parameters.AddWithValue("@PartitionId", partitionId);
                         command.Parameters.AddWithValue("@Index", index);
                         command.Parameters.AddWithValue("@OperationId", chunk.OperationId);
                         command.Parameters.AddWithValue("@Payload", textPayload);
 
-                        chunk.Position = (long)await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+                        chunk.Position =
+                            (long) await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
                     }
                 }
             }
@@ -309,7 +385,8 @@ namespace NStore.Persistence.Sqlite
 
                     if (ex.Message.Contains(".PartitionId") && ex.Message.Contains(".OperationId"))
                     {
-                        _logger.LogInformation($"Skipped duplicated chunk on '{partitionId}' by operation id '{operationId}'");
+                        _logger.LogInformation(
+                            $"Skipped duplicated chunk on '{partitionId}' by operation id '{operationId}'");
                         return null;
                     }
                 }
@@ -343,7 +420,7 @@ namespace NStore.Persistence.Sqlite
                     command.Parameters.AddWithValue("@fromLowerIndexInclusive", fromLowerIndexInclusive);
                     command.Parameters.AddWithValue("@toUpperIndexInclusive", toUpperIndexInclusive);
 
-                    var deleted = (long)await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+                    var deleted = (long) await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
 
                     if (deleted == 0)
                         throw new StreamDeleteException(partitionId);
