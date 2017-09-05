@@ -14,12 +14,11 @@ using NStore.Tpl;
 
 namespace NStore.Benchmarks
 {
-    [SimpleJob(launchCount: 3, warmupCount: 1, targetCount: 3, invocationCount: 3, id: "append_job")]
+    [SimpleJob(launchCount: 3, warmupCount: 1, targetCount: 1, invocationCount: 3, id: "append_job")]
     [Config("columns=Mean,StdError,StdDev,OperationPerSecond,Min,Max")]
     public class BatchWriteBenchmark
     {
-        private MongoPersistence _mongoStore;
-        private const string Mongo = "mongodb://localhost/nstore";
+        private const string Mongo = "mongodb://localhost/NStore";
         private static int Id = 0;
         private IList<MongoPersistence> _mongoPersistence;
         private IEnumerable<int> _iterations;
@@ -27,17 +26,18 @@ namespace NStore.Benchmarks
         [Params(10_000)]
         public int Writes { get; set; }
 
-        public int Workers { get; set; } = Environment.ProcessorCount;
+        public int Workers { get; set; } = Environment.ProcessorCount * 100;
 
         [Benchmark]
         public void load_mongo_async()
         {
             var options = BuildMongoConnectionOptions();
 
-            _mongoStore = new MongoPersistence(options);
-            _mongoStore.InitAsync(CancellationToken.None).Wait();
+            var store  = new MongoPersistence(options);
+            _mongoPersistence.Add(store);
+            store.InitAsync(CancellationToken.None).Wait();
 
-            async_worker(_mongoStore).GetAwaiter().GetResult();
+            async_worker(store).GetAwaiter().GetResult();
         }
 
         [Benchmark]
@@ -45,10 +45,13 @@ namespace NStore.Benchmarks
         {
             var options = BuildMongoConnectionOptions();
 
-            _mongoStore = new MongoPersistence(options);
-            _mongoStore.InitAsync(CancellationToken.None).Wait();
+            var store = new MongoPersistence(options);
+            _mongoPersistence.Add(store);
+            store.InitAsync(CancellationToken.None).Wait();
 
-            async_worker(new PersistenceBatcher(_mongoStore)).GetAwaiter().GetResult();
+            var persistenceBatcher = new PersistenceBatcher(store);
+            async_worker2(persistenceBatcher).GetAwaiter().GetResult();
+            persistenceBatcher.Dispose();
         }
 
         private async Task async_worker(IPersistence store)
@@ -58,7 +61,7 @@ namespace NStore.Benchmarks
                 await store.AppendAsync("Stream_1", i, new { data = "this is a test" });
             }, new ExecutionDataflowBlockOptions()
             {
-                MaxDegreeOfParallelism = Workers
+                MaxDegreeOfParallelism = Environment.ProcessorCount
             });
 
             foreach (var iteration in _iterations)
@@ -68,6 +71,18 @@ namespace NStore.Benchmarks
 
             publish.Complete();
             await publish.Completion;
+        }
+        
+        private  Task async_worker2(IPersistence store)
+        {
+            var list = new List<Task>();
+            
+            foreach (var iteration in _iterations)
+            {
+                list.Add(store.AppendAsync("Stream_1", iteration, new { data = "this is a test" }));
+            }
+
+            return Task.WhenAll(list.ToArray());
         }
 
         private static MongoPersistenceOptions BuildMongoConnectionOptions()
@@ -100,9 +115,9 @@ namespace NStore.Benchmarks
         [GlobalCleanup]
         public void Cleanup()
         {
-            Task.WaitAll(
-                _mongoPersistence.Select(x => x.Drop(CancellationToken.None)).ToArray()
-            );
+//            Task.WaitAll(
+//                _mongoPersistence.Select(x => x.Drop(CancellationToken.None)).ToArray()
+//            );
         }
     }
 }

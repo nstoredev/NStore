@@ -203,10 +203,16 @@ namespace NStore.Persistence.Mongo.Tests
         [Fact]
         public async Task write_with_batcher()
         {
-            var batcher = new PersistenceBatcher(Store);
+            var cts = new CancellationTokenSource(10_000);
+            var batcher = new PersistenceBatcher(_mongoPersistence);
+            batcher.Cancel(10_000);
+            
+            await batcher.AppendAsync("a", 1, "first",null, cts.Token);
+//            await Assert.ThrowsAsync<DuplicateStreamIndexException>(() => batcher.AppendAsync("a", 1, "fail here"));
 
-            await batcher.AppendAsync("a", 1, "first");
-            await Assert.ThrowsAsync<DuplicateStreamIndexException>(() => batcher.AppendAsync("a", 1, "fail here"));
+            var lastPos = await Store.ReadLastPositionAsync();
+            
+            Assert.Equal(1, lastPos);
         }
     }
 }
