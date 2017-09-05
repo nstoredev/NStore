@@ -460,7 +460,7 @@ namespace NStore.Persistence.Mongo
                     current.OperationId ?? Guid.NewGuid().ToString()
                 );
 
-                current.AssignPosition(id);
+//                current.AssignPosition(id);
                 chunks[currentIdx] = chunk;
             }
 

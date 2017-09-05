@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Attributes.Jobs;
-using NStore.Core.Persistence;
 using NStore.Persistence.Mongo;
 using NStore.Tpl;
 
@@ -16,7 +15,7 @@ namespace NStore.Benchmarks
     [SimpleJob(launchCount: 3, warmupCount: 1, targetCount: 3, invocationCount: 20, id: "batcher")]
     [MemoryDiagnoser]
     [Config("columns=Mean,StdError,StdDev,OperationPerSecond,Min,Max")]
-    public class BatchWriteBenchmark
+    public class MongoBatchWriteBenchmark
     {
         private const string Mongo = "mongodb://localhost/NStoreBatch";
         private static int Id = 0;
@@ -42,20 +41,8 @@ namespace NStore.Benchmarks
             store.InitAsync(CancellationToken.None).Wait();
 
             var persistenceBatcher = new PersistenceBatcher(store, BatchSize, FlushTimeout);
-            async_worker2(persistenceBatcher).GetAwaiter().GetResult();
+            TaskWorker.Run(persistenceBatcher, _iterations).GetAwaiter().GetResult();
             persistenceBatcher.Dispose();
-        }
-
-        private Task async_worker2(IPersistence store)
-        {
-            var list = new List<Task>();
-
-            foreach (var iteration in _iterations)
-            {
-                list.Add(store.AppendAsync("Stream_1", iteration, new { data = "this is a test" }));
-            }
-
-            return Task.WhenAll(list.ToArray());
         }
 
         private static MongoPersistenceOptions BuildMongoConnectionOptions()

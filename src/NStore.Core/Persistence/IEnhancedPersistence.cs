@@ -35,15 +35,16 @@ namespace NStore.Core.Persistence
             OperationId = operationId;
         }
 
-        public void AssignPosition(long position)
-        {
-            this.Position = position;
-        }
+        //public void AssignPosition(long position)
+        //{
+        //    this.Position = position;
+        //}
 
         public virtual void Succeeded(IChunk chunk)
         {
             this.Result = WriteResult.Committed;
             this.Chunk = chunk;
+            this.Position = chunk.Position;
         }
 
         public virtual void Failed(WriteResult result )
@@ -51,6 +52,8 @@ namespace NStore.Core.Persistence
             this.Result = result;
         }
     }
+
+
 
     public interface IEnhancedPersistence
     {

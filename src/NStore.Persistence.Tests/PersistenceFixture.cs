@@ -31,7 +31,8 @@ namespace NStore.Persistence.Tests
         protected IPersistence Store { get; }
         protected readonly TestLoggerFactory LoggerFactory;
         protected INStoreLogger _logger;
-
+        protected IEnhancedPersistence Batcher => _persistence as IEnhancedPersistence;
+        protected readonly IPersistence _persistence;
         protected BasePersistenceTest()
         {
             _testRunId = Interlocked.Increment(ref _staticId);
@@ -39,9 +40,9 @@ namespace NStore.Persistence.Tests
             LoggerFactory = new TestLoggerFactory(TestSuitePrefix + "::" + GetType().Name);
             _logger = LoggerFactory.CreateLogger(GetType().FullName);
             _logger.LogDebug("Creating store");
-            var persistence = Create();
+            _persistence = Create();
             _logger.LogDebug("Store created");
-            Store = new LogDecorator(persistence, LoggerFactory);
+            Store = new LogDecorator(_persistence, LoggerFactory);
         }
 
         public void Dispose()

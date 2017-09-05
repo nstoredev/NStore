@@ -17,7 +17,7 @@ namespace NStore.Benchmarks
     [SimpleJob(launchCount: 3, warmupCount: 1, targetCount: 3, invocationCount: 20, id: "tpl append async")]
     [MemoryDiagnoser]
     [Config("columns=Mean,StdError,StdDev,OperationPerSecond,Min,Max")]
-    public class TplAppendAsync
+    public class MongoTplAppendAsyncBenchmark
     {
         private const string Mongo = "mongodb://localhost/NStoreTpl";
         private static int Id = 0;

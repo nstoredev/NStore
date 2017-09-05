@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Microsoft.Data.Sqlite;
 using System.Text;
 using System.Threading;
@@ -8,7 +9,7 @@ using NStore.Core.Persistence;
 
 namespace NStore.Persistence.Sqlite
 {
-    public class SqlitePersistence : IPersistence
+    public class SqlitePersistence : IPersistence, IEnhancedPersistence
     {
         private readonly SqlitePersistenceOptions _options;
         private readonly INStoreLogger _logger;
@@ -39,7 +40,7 @@ namespace NStore.Persistence.Sqlite
 
             sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId], [Deleted] ");
             sb.Append($"FROM {_options.StreamsTableName} ");
-            sb.Append($"WHERE [PartitionId] = @PartitionId ");
+            sb.Append("WHERE [PartitionId] = @PartitionId ");
 
             if (fromLowerIndexInclusive > 0)
                 sb.Append("AND [Index] >= @fromLowerIndexInclusive ");
@@ -50,15 +51,13 @@ namespace NStore.Persistence.Sqlite
             }
 
             sb.Append("ORDER BY [Index]");
-            
+
             if (limit > 0 && limit != int.MaxValue)
             {
                 sb.Append($" LIMIT {limit} ");
             }
-            
-            var sql = sb.ToString();
 
-            _logger.LogDebug($"Executing {sql}");
+            var sql = sb.ToString();
 
             using (var connection = Connect())
             {
@@ -301,7 +300,7 @@ namespace NStore.Persistence.Sqlite
             }
             catch (SqliteException ex)
             {
-                if(ex.SqliteErrorCode == DUPLICATED_INDEX_EXCEPTION)
+                if (ex.SqliteErrorCode == DUPLICATED_INDEX_EXCEPTION)
                 {
                     if (ex.Message.Contains(".PartitionId") && ex.Message.Contains(".Index"))
                     {
@@ -314,7 +313,7 @@ namespace NStore.Persistence.Sqlite
                         return null;
                     }
                 }
-                
+
                 Console.WriteLine(_options.Serializer.Serialize(ex));
 
                 _logger.LogError(ex.Message);
@@ -388,6 +387,81 @@ namespace NStore.Persistence.Sqlite
         {
             return new SqliteConnection(_options.ConnectionString);
         }
+
+        public async Task AppendBatchAsync(WriteJob[] queue, CancellationToken cancellationToken)
+        {
+            var chunks = queue.Select(x => new SqliteChunk()
+            {
+                PartitionId = x.PartitionId,
+                Index = x.Index == -1 ? Interlocked.Increment(ref USE_SEQUENCE_INSTEAD) : x.Index,
+                OperationId = x.OperationId ?? Guid.NewGuid().ToString(),
+                Payload = x.Payload,
+                TextPayload = _options.Serializer.Serialize(x.Payload)
+            }).ToArray();
+
+            try
+            {
+                using (var connection = Connect())
+                {
+                    await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+                    using (var transaction = connection.BeginTransaction())
+                    {
+                        for (var index = 0; index < chunks.Length; index++)
+                        {
+                            var chunk = chunks[index];
+                            using (var command = new SqliteCommand(_options.GetPersistScript(_options.StreamsTableName),
+                                connection, transaction))
+                            {
+                                command.Parameters.AddWithValue("@PartitionId", chunk.PartitionId);
+                                command.Parameters.AddWithValue("@Index", chunk.Index);
+                                command.Parameters.AddWithValue("@OperationId", chunk.OperationId);
+                                command.Parameters.AddWithValue("@Payload", chunk.TextPayload);
+
+                                try
+                                {
+                                    chunk.Position = (long) await command.ExecuteScalarAsync(cancellationToken)
+                                        .ConfigureAwait(false);
+                                }
+                                catch (SqliteException ex)
+                                {
+                                    if (ex.SqliteErrorCode == DUPLICATED_INDEX_EXCEPTION)
+                                    {
+                                        if (ex.Message.Contains(".PartitionId") && ex.Message.Contains(".Index"))
+                                        {
+                                            queue[index].Failed(WriteJob.WriteResult.DuplicatedIndex);
+                                            continue;
+                                        }
+
+                                        if (ex.Message.Contains(".PartitionId") && ex.Message.Contains(".OperationId"))
+                                        {
+                                            queue[index].Failed(WriteJob.WriteResult.DuplicatedOperation);
+                                            continue;
+                                        }
+                                    }
+
+                                    Console.WriteLine(_options.Serializer.Serialize(ex));
+                                }
+                            }
+                        }
+                        transaction.Commit();
+                    }
+                }
+            }
+            catch (SqliteException ex)
+            {
+                _logger.LogError(ex.Message);
+                throw;
+            }
+
+            for (var index = 0; index < queue.Length; index++)
+            {
+                var writeJob = queue[index];
+                if (writeJob.Result == WriteJob.WriteResult.None)
+                {
+                    writeJob.Succeeded(chunks[index]);
+                }
+            }
+        }
     }
 
     public sealed class SqliteChunk : IChunk
@@ -398,5 +472,6 @@ namespace NStore.Persistence.Sqlite
         public object Payload { get; set; }
         public string OperationId { get; set; }
         public bool Deleted { get; set; }
+        public string TextPayload { get; set; }
     }
 }
