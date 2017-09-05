@@ -14,13 +14,13 @@ namespace NStore.Tpl
         private readonly BatchBlock<AsyncWriteJob> _batch;
         private readonly CancellationTokenSource _cts;
 
-        public PersistenceBatcher(IPersistence persistence)
+        public PersistenceBatcher(IPersistence persistence, int batchSize, int flushTimeout = 10)
         {
             _cts = new CancellationTokenSource();
             var batcher = (IEnhancedPersistence) persistence;
-            _batch = new BatchBlock<AsyncWriteJob>(64, new GroupingDataflowBlockOptions()
+            _batch = new BatchBlock<AsyncWriteJob>(batchSize, new GroupingDataflowBlockOptions()
             {
-              //  BoundedCapacity = 1024,
+//                BoundedCapacity = 1024,
                 CancellationToken = _cts.Token
             });
 
@@ -28,7 +28,7 @@ namespace NStore.Tpl
             {
                 while (!_cts.IsCancellationRequested)
                 {
-                    await Task.Delay(10).ConfigureAwait(false);
+                    await Task.Delay(flushTimeout).ConfigureAwait(false);
                     _batch.TriggerBatch();
                 }
             });
@@ -37,13 +37,12 @@ namespace NStore.Tpl
             (
                 queue =>
                 {
-                    Console.WriteLine($"batching {queue.Length}");
                     return batcher.AppendBatchAsync(queue, CancellationToken.None);
                 }, 
                 new ExecutionDataflowBlockOptions()
                 {
                     MaxDegreeOfParallelism = Environment.ProcessorCount,
-                    BoundedCapacity = 32,
+                    BoundedCapacity = 1024,
                     CancellationToken = _cts.Token
                 }
             );
@@ -57,11 +56,6 @@ namespace NStore.Tpl
         }
 
         public bool SupportsFillers => _persistence.SupportsFillers;
-
-        public void Flush()
-        {
-            _batch.TriggerBatch();
-        }
 
         public void Cancel(int milliseconds)
         {

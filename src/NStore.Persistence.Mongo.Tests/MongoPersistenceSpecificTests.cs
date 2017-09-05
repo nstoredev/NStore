@@ -204,7 +204,7 @@ namespace NStore.Persistence.Mongo.Tests
         public async Task write_with_batcher()
         {
             var cts = new CancellationTokenSource(10_000);
-            var batcher = new PersistenceBatcher(_mongoPersistence);
+            var batcher = new PersistenceBatcher(_mongoPersistence, 512);
             batcher.Cancel(10_000);
             
             await batcher.AppendAsync("a", 1, "first",null, cts.Token);
