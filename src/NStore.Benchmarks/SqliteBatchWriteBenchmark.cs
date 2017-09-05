@@ -62,7 +62,7 @@ namespace NStore.Benchmarks
             _persistence.Add(store);
             store.InitAsync(CancellationToken.None).Wait();
 
-            var persistenceBatcher = new PersistenceBatcher(store, BatchSize, FlushTimeout);
+            var persistenceBatcher = new PersistenceBatchAppendDecorator(store, BatchSize, FlushTimeout);
             TaskWorker.Run(persistenceBatcher, _iterations).GetAwaiter().GetResult();
             persistenceBatcher.Dispose();
         }

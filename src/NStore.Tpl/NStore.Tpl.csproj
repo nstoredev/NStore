@@ -1,28 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-	<PropertyGroup>
-		<TargetFrameworks Condition="'$(NOTNETCORE_MULTITARGET)' == 'false'">netstandard2.0</TargetFrameworks>
-		<TargetFrameworks Condition="'$(NOTNETCORE_MULTITARGET)' == 'true'">netstandard2.0;net461</TargetFrameworks>
-		<TargetFrameworks Condition="'$(NOTNETCORE_MULTITARGET)' == ''">netstandard2.0</TargetFrameworks>
-
-		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-		<PackageProjectUrl>https://github.com/ProximoSrl/NStore</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/ProximoSrl/NStore</RepositoryUrl>
-		<RepositoryType>Git</RepositoryType>
-	</PropertyGroup>
-
-	<ItemGroup>
-		<PackageReference Include="System.Threading.Tasks.Dataflow" Version="4.8.0" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\NStore.Domain\NStore.Domain.csproj" />
-		<ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Compile Include="..\AssemblyInfo.cs">
-			<Link>AssemblyInfo.cs</Link>
-		</Compile>
-	</ItemGroup>
+  <PropertyGroup>
+    <TargetFrameworks Condition="'$(NOTNETCORE_MULTITARGET)' == 'false'">netstandard2.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(NOTNETCORE_MULTITARGET)' == 'true'">netstandard2.0;net461</TargetFrameworks>
+    <TargetFrameworks Condition="'$(NOTNETCORE_MULTITARGET)' == ''">netstandard2.0</TargetFrameworks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <PackageProjectUrl>https://github.com/ProximoSrl/NStore</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ProximoSrl/NStore</RepositoryUrl>
+    <RepositoryType>Git</RepositoryType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Threading.Tasks.Dataflow" Version="4.8.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NStore.Domain\NStore.Domain.csproj" />
+    <ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\AssemblyInfo.cs">
+      <Link>AssemblyInfo.cs</Link>
+    </Compile>
+  </ItemGroup>
 </Project>
