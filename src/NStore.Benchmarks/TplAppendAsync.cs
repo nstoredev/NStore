@@ -7,18 +7,19 @@ using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Attributes.Jobs;
+using BenchmarkDotNet.Engines;
 using NStore.Core.Persistence;
 using NStore.Persistence.Mongo;
 using NStore.Tpl;
 
 namespace NStore.Benchmarks
 {
-    [SimpleJob(launchCount: 3, warmupCount: 1, targetCount: 3, invocationCount: 20, id: "batcher")]
+    [SimpleJob(launchCount: 3, warmupCount: 1, targetCount: 3, invocationCount: 20, id: "tpl append async")]
     [MemoryDiagnoser]
     [Config("columns=Mean,StdError,StdDev,OperationPerSecond,Min,Max")]
-    public class BatchWriteBenchmark
+    public class TplAppendAsync
     {
-        private const string Mongo = "mongodb://localhost/NStoreBatch";
+        private const string Mongo = "mongodb://localhost/NStoreTpl";
         private static int Id = 0;
         private IList<MongoPersistence> _mongoPersistence;
         private IEnumerable<int> _iterations;
@@ -26,14 +27,8 @@ namespace NStore.Benchmarks
         [Params(10_000)]
         public int Events { get; set; }
 
-        [Params(32, 256, 512)]
-        public int BatchSize { get; set; }
-
-        [Params(5, 10, 20, 50)]
-        public int FlushTimeout { get; set; }
-
         [Benchmark]
-        public void batcher_decorator()
+        public void load_mongo_async()
         {
             var options = BuildMongoConnectionOptions();
 
@@ -41,21 +36,26 @@ namespace NStore.Benchmarks
             _mongoPersistence.Add(store);
             store.InitAsync(CancellationToken.None).Wait();
 
-            var persistenceBatcher = new PersistenceBatcher(store, BatchSize, FlushTimeout);
-            async_worker2(persistenceBatcher).GetAwaiter().GetResult();
-            persistenceBatcher.Dispose();
+            async_worker(store).GetAwaiter().GetResult();
         }
 
-        private Task async_worker2(IPersistence store)
+        private async Task async_worker(IPersistence store)
         {
-            var list = new List<Task>();
+            var publish = new ActionBlock<long>(async i =>
+            {
+                await store.AppendAsync("Stream_1", i, new { data = "this is a test" });
+            }, new ExecutionDataflowBlockOptions()
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount
+            });
 
             foreach (var iteration in _iterations)
             {
-                list.Add(store.AppendAsync("Stream_1", iteration, new { data = "this is a test" }));
+                await publish.SendAsync(iteration);
             }
 
-            return Task.WhenAll(list.ToArray());
+            publish.Complete();
+            await publish.Completion;
         }
 
         private static MongoPersistenceOptions BuildMongoConnectionOptions()

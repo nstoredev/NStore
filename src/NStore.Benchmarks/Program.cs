@@ -7,6 +7,7 @@ namespace NStore.Benchmarks
         public static void Main(string[] args)
         {
             BenchmarkRunner.Run<BatchWriteBenchmark>();
+            BenchmarkRunner.Run<TplAppendAsync>();
         }
     }
 }
