@@ -22,7 +22,6 @@ namespace NStore.Persistence.MsSql
                 [PartitionId] NVARCHAR(255) NOT NULL,
                 [OperationId] NVARCHAR(255) NOT NULL,
                 [Index] BIGINT NOT NULL,
-                [Deleted] BIT NOT NULL,
                 [Payload] NVARCHAR(MAX)
             )
 
@@ -34,9 +33,9 @@ namespace NStore.Persistence.MsSql
         public virtual string GetPersistScript()
         {
             return $@"INSERT INTO [{StreamsTableName}]
-                      ([PartitionId], [Index], [Payload], [OperationId], [Deleted])
+                      ([PartitionId], [Index], [Payload], [OperationId])
                       OUTPUT INSERTED.[Position] 
-                      VALUES (@PartitionId, @Index, @Payload, @OperationId, 0)";
+                      VALUES (@PartitionId, @Index, @Payload, @OperationId)";
         }
 
         public virtual string GetDeleteStreamScript()
@@ -49,7 +48,7 @@ namespace NStore.Persistence.MsSql
         public virtual string GetLastChunkScript()
         {
             return $@"SELECT TOP 1 
-                        [Position], [PartitionId], [Index], [Payload], [OperationId], [Deleted]
+                        [Position], [PartitionId], [Index], [Payload], [OperationId]
                       FROM 
                         [{StreamsTableName}] 
                       WHERE 

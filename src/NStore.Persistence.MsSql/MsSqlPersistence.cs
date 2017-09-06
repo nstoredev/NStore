@@ -40,7 +40,7 @@ namespace NStore.Persistence.MsSql
                 sb.Append($"TOP {limit} ");
             }
 
-            sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId], [Deleted] ");
+            sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId] ");
             sb.Append($"FROM {_options.StreamsTableName} ");
             sb.Append($"WHERE [PartitionId] = @PartitionId ");
 
@@ -96,7 +96,6 @@ namespace NStore.Persistence.MsSql
                             PartitionId = reader.GetString(1),
                             Index = reader.GetInt64(2),
                             OperationId = reader.GetString(4),
-                            Deleted = reader.GetBoolean(5)
                         };
 
                         indexOrPosition = broadcastPosition ? chunk.Position : chunk.Index;
@@ -134,7 +133,7 @@ namespace NStore.Persistence.MsSql
                 sb.Append($"TOP {limit} ");
             }
 
-            sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId], [Deleted] ");
+            sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId] ");
             sb.Append($"FROM {_options.StreamsTableName} ");
             sb.Append($"WHERE [PartitionId] = @PartitionId ");
 
@@ -196,7 +195,6 @@ namespace NStore.Persistence.MsSql
                             PartitionId = reader.GetString(1),
                             Index = reader.GetInt64(2),
                             OperationId = reader.GetString(4),
-                            Deleted = reader.GetBoolean(5)
                         };
 
                         chunk.Payload = _options.Serializer.Deserialize(reader.GetString(3));
@@ -216,7 +214,7 @@ namespace NStore.Persistence.MsSql
             var top = limit != Int32.MaxValue ? $"TOP {limit}" : "";
 
             var sql = $@"SELECT {top} 
-                        [Position], [PartitionId], [Index], [Payload], [OperationId], [Deleted]
+                        [Position], [PartitionId], [Index], [Payload], [OperationId]
                       FROM 
                         [{_options.StreamsTableName}] 
                       WHERE 
