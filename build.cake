@@ -1,4 +1,4 @@
-#addin "Cake.SqlServer"
+#addin "Cake.SqlTools"
 
 //////////////////////////////////////////////////////////////////////
 // ARGUMENTS
@@ -98,10 +98,16 @@ Task("TestMsSql")
     var createdb = @"USE master 
     CREATE DATABASE NStore";
 
+    var settings =  new SqlQuerySettings()
+    {
+        Provider = "MsSql",
+        ConnectionString = msSqlServerConnectionString
+    };
+
     Information("Connected to sql server instance " + msSqlServerConnectionString);
 
-    ExecuteSqlCommand(msSqlServerConnectionString, dropdb);
-    ExecuteSqlCommand(msSqlServerConnectionString, createdb);
+    ExecuteSqlQuery(dropdb, settings);
+    ExecuteSqlQuery(createdb, settings);
 
     var env = new Dictionary<string, string>{
         { "NSTORE_MSSQL", msSqlDatabaseConnectionString},
@@ -109,7 +115,7 @@ Task("TestMsSql")
     
     RunTest("NStore.Persistence.MsSql.Tests",env);
 
-    ExecuteSqlCommand(msSqlServerConnectionString, dropdb);
+    ExecuteSqlQuery(dropdb, settings);
 });
 
 Task("TestSqlite")
