@@ -4,6 +4,9 @@ services:
   - mssql2016
   - mongodb
 shallow_clone: true
+platform:
+  - x64
+  - Any CPU
 build_script:
 - ps: >- 
 
@@ -14,6 +17,6 @@ build_script:
     .\build.ps1 -ScriptArgs '-NSTORE_MSSQL_INSTANCE="Server=(local)\SQL2016,1433;User ID=sa;Password=Password12!;"'
 
 test: off
-#cache:
-#  - C:\Users\appveyor\AppData\Local\NuGet -> appveyor.yml
+cache:
+  - C:\Users\appveyor\AppData\Local\NuGet -> appveyor.yml
 
