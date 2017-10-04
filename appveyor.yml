@@ -16,3 +16,4 @@ build_script:
 test: off
 cache:
   - C:\Users\appveyor\AppData\Local\NuGet -> appveyor.yml
+
