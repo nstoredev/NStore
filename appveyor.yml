@@ -4,10 +4,10 @@ services:
   - mssql2016
   - mongodb
 shallow_clone: true
-platform:
-  - x64
-  - x86
-  - Any CPU
+#platform:
+#  - x64
+#  - x86
+#  - Any CPU
 build_script:
 - ps: >- 
 
