@@ -39,10 +39,12 @@ namespace NStore.Persistence.Tests
         private IPersistence Create()
         {
             var mongo = Environment.GetEnvironmentVariable("NSTORE_MONGODB");
+           
             if (string.IsNullOrWhiteSpace(mongo))
             {
                 throw new TestMisconfiguredException("NSTORE_MONGODB environment variable not set");
             }
+            Console.WriteLine($"NSTORE_MONGODB = {mongo}");
 
             _options = new MongoPersistenceOptions
             {
