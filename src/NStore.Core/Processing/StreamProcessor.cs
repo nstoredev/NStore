@@ -12,15 +12,20 @@ namespace NStore.Core.Processing
         private class Reducer<TResult> : ISubscription
         {
             private readonly TResult _state;
+
             private readonly Func<long, long, bool> _onMissing;
+
             public long LastIndex { get; private set; }
+
             private readonly IPayloadProcessor _processor;
+
             private long _nextExpectedIndex = 0;
-            public Reducer(TResult state, Func<long, long, bool> onMissing)
+
+            public Reducer(TResult state, Func<long, long, bool> onMissing, IPayloadProcessor payloadProcessor)
             {
                 _state = state;
                 _onMissing = onMissing;
-                _processor = DelegateToPrivateEventHandlers.Instance;
+                _processor = payloadProcessor;
             }
 
             public Task OnStartAsync(long indexOrPosition)
@@ -72,11 +77,13 @@ namespace NStore.Core.Processing
         private ISnapshotStore _snapshots;
         private long? _upToIndex;
         private Func<long, long, bool> _onMissing;
+		private readonly IPayloadProcessor _payloadProcessor;
 
-        public StreamProcessor(IStream source)
+		public StreamProcessor(IStream source, IPayloadProcessor payloadProcessor)
         {
             _source = source ?? throw new ArgumentNullException(nameof(source));
-        }
+			_payloadProcessor = payloadProcessor;
+		}
 
         public Task<TResult> RunAsync<TResult>() where TResult : new()
         {
@@ -110,7 +117,7 @@ namespace NStore.Core.Processing
                 state = new TResult();
             }
 
-            var reducer = new Reducer<TResult>(state, _onMissing);
+            var reducer = new Reducer<TResult>(state, _onMissing, _payloadProcessor);
             await _source.ReadAsync(reducer, startIndex, _upToIndex ?? long.MaxValue, cancellationToken)
                 .ConfigureAwait(false);
 

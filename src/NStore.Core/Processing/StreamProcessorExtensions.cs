@@ -4,9 +4,9 @@ namespace NStore.Core.Processing
 {
     public static class StreamProcessorExtensions
     {
-        public static StreamProcessor Fold(this IStream stream)
+        public static StreamProcessor Fold(this IStream stream, IPayloadProcessor payloadProcessor = null)
         {
-            var processor = new StreamProcessor(stream);
+            var processor = new StreamProcessor(stream, payloadProcessor ?? DelegateToPrivateEventHandlers.Instance);
             return processor;
         }
     }
