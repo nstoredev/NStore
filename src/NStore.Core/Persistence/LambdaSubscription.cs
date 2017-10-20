@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 
 namespace NStore.Core.Persistence
 {
-
     public class LambdaSubscription : ISubscription
     {
         public delegate Task OnErrorDelegate(long position, Exception ex);
@@ -11,17 +10,14 @@ namespace NStore.Core.Persistence
         public delegate Task OnCompleteDelegate(long position);
         public delegate Task OnStopDelegate(long position);
 
-
         private readonly ChunkProcessor _fn;
         private Exception _failed;
         private long _failedPosition;
-
 
         public bool ReadCompleted { get; private set; }
         public bool Failed => this._failed != null;
         public long FailedPosition => _failedPosition;
         public Exception LastError => _failed;
-
 
         public OnErrorDelegate OnError { get; set; }
         public OnStartDelegate OnStart { get; set; }
@@ -49,7 +45,7 @@ namespace NStore.Core.Persistence
         {
             this.ReadCompleted = true;
 
-            return OnComplete!= null
+            return OnComplete != null
                 ? OnComplete(indexOrPosition)
                 : Task.CompletedTask;
         }

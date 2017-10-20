@@ -10,7 +10,7 @@ namespace NStore.Core.Persistence
         public long StreamIndex { get; }
         public string StreamId { get; }
 
-        public DuplicateStreamIndexException(string streamId, long streamIndex) : 
+        public DuplicateStreamIndexException(string streamId, long streamIndex) :
             base($"Duplicated index {streamIndex} on stream {streamId}")
         {
             this.StreamIndex = streamIndex;

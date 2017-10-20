@@ -15,7 +15,7 @@ namespace NStore.Core.Persistence
         {
             // continue
             return Task.FromResult(true);
-		}
+        }
 
         public Task OnStartAsync(long indexOrPosition)
         {

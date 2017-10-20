@@ -9,9 +9,9 @@ namespace NStore.Core.Streams
         string Id { get; }
 
         Task ReadAsync(
-            ISubscription subscription, 
-            long fromIndexInclusive, 
-            long toIndexInclusive, 
+            ISubscription subscription,
+            long fromIndexInclusive,
+            long toIndexInclusive,
             CancellationToken cancellationToken
         );
 

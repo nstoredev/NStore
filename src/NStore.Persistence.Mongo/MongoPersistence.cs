@@ -429,7 +429,7 @@ namespace NStore.Persistence.Mongo
                 partitionId,
                 index < 0 ? id : index,
                 _mongoPayloadSerializer.Serialize(payload),
-                operationId ?? Guid.NewGuid().ToString()
+                operationId ?? Guid.NewGuid().ToString() // todo: why generating a Guid here? to keep consistency among drivers should be done outside (maybe in the repository)
             );
             await InternalPersistAsync(chunk, cancellationToken).ConfigureAwait(false);
 

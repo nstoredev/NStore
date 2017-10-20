@@ -8,26 +8,26 @@ namespace NStore.Domain
     {
         Task<T> GetById<T>(
             string id
-        ) where T : IAggregate; 
-        
+        ) where T : IAggregate;
+
         Task<T> GetById<T>(
             string id,
             CancellationToken cancellationToken
-        ) where T : IAggregate;    
-        
+        ) where T : IAggregate;
+
         Task Save<T>(
-            T aggregate, 
+            T aggregate,
             string operationId
-        ) where T : IAggregate;  
-        
+        ) where T : IAggregate;
+
         Task Save<T>(
-            T aggregate, 
+            T aggregate,
             string operationId,
             Action<IHeadersAccessor> headers
-        ) where T : IAggregate;      
-        
+        ) where T : IAggregate;
+
         Task Save<T>(
-            T aggregate, 
+            T aggregate,
             string operationId,
             Action<IHeadersAccessor> headers,
             CancellationToken cancellationToken

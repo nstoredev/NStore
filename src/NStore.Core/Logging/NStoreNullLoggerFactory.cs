@@ -6,7 +6,6 @@
 
         private NStoreNullLoggerFactory()
         {
-            
         }
 
         public INStoreLogger CreateLogger(string categoryName)

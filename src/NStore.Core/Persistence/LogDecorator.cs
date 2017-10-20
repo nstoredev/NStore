@@ -59,14 +59,14 @@ namespace NStore.Core.Persistence
         {
             _logger.LogDebug("Start ReadAllAsync(from:{from}, limit:{limit})", fromPositionInclusive, limit);
             await _persistence.ReadAllAsync(fromPositionInclusive, subscription, limit, cancellationToken).ConfigureAwait(false);
-            _logger.LogDebug("end ReadAllAsync(from:{from}, limit:{limit})", fromPositionInclusive, limit);
+            _logger.LogDebug("End ReadAllAsync(from:{from}, limit:{limit})", fromPositionInclusive, limit);
         }
 
         public async Task<long> ReadLastPositionAsync(CancellationToken cancellationToken)
         {
             _logger.LogDebug("Start ReadLastPosition()");
             var result = await _persistence.ReadLastPositionAsync(cancellationToken).ConfigureAwait(false);
-            _logger.LogDebug("end ReadLastPosition()");
+            _logger.LogDebug("End ReadLastPosition()");
             return result;
         }
 

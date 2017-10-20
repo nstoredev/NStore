@@ -32,17 +32,16 @@ namespace NStore.Core.Persistence
             ISubscription subscription,
             long toUpperIndexInclusive,
             int limit,
-            CancellationToken cancellationToken
-        )
+            CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
         public Task ReadBackwardAsync(
-            string partitionId, 
-            long fromUpperIndexInclusive, 
+            string partitionId,
+            long fromUpperIndexInclusive,
             ISubscription subscription,
-            long toLowerIndexInclusive, 
+            long toLowerIndexInclusive,
             int limit,
             CancellationToken cancellationToken)
         {

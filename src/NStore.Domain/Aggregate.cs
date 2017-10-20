@@ -18,13 +18,12 @@ namespace NStore.Domain
 
         private IList<object> PendingChanges { get; } = new List<object>();
         protected TState State { get; private set; }
-        public bool IsDirty => this.PendingChanges.Any();
+        public bool IsDirty => this.PendingChanges.Count > 0;
         public bool IsNew => this.Version == 0;
         private readonly IPayloadProcessor _processor;
 
         protected Aggregate() : this((IPayloadProcessor)null)
         {
-
         }
 
         protected Aggregate(IPayloadProcessor processor)

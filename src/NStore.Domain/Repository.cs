@@ -155,7 +155,6 @@ namespace NStore.Domain
             return stream;
         }
 
-
         private IStream GetStream(IAggregate aggregate)
         {
             if (!_trackingAggregates.Values.Contains(aggregate))

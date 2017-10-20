@@ -5,7 +5,7 @@ namespace NStore.Core.Persistence
 {
     public interface IPersistence
     {
-        bool SupportsFillers { get;  }
+        bool SupportsFillers { get; }
 
         Task ReadForwardAsync(
             string partitionId,
@@ -26,15 +26,15 @@ namespace NStore.Core.Persistence
         );
 
         Task<IChunk> ReadSingleBackwardAsync(
-            string partitionId, 
-            long fromUpperIndexInclusive, 
+            string partitionId,
+            long fromUpperIndexInclusive,
             CancellationToken cancellationToken
         );
 
         Task ReadAllAsync(
-            long fromPositionInclusive, 
-            ISubscription subscription, 
-            int limit, 
+            long fromPositionInclusive,
+            ISubscription subscription,
+            int limit,
             CancellationToken cancellationToken
         );
 

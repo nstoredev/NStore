@@ -6,7 +6,7 @@ namespace NStore.Core.Logging
     {
         bool IsDebugEnabled { get; }
         void LogDebug(string message, params object[] args);
-        
+
         bool IsWarningEnabled { get; }
         void LogWarning(string message, params object[] args);
 
@@ -15,8 +15,6 @@ namespace NStore.Core.Logging
 
         void LogError(string message, params object[] args);
 
-
         IDisposable BeginScope<TState>(TState state);
-        
     }
 }

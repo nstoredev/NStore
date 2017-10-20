@@ -9,10 +9,7 @@ namespace NStore.Core.Streams
 
         public StreamsFactory(IPersistence persistence)
         {
-            if (persistence == null)
-                throw new ArgumentNullException(nameof(persistence));
-
-            _persistence = persistence;
+            _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
         }
 
         public IStream Open(string streamId)
