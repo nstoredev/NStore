@@ -7,6 +7,8 @@ namespace NStore.Domain
     {
         public Object[] Events { get; private set; }
         public long AggregateVersion { get; private set; }
+
+        // todo: shouldn't this be an IDictionary to be correctly deserialized?
         public Dictionary<string, object> Headers { get; private set; }
 
         private Changeset()
