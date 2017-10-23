@@ -43,11 +43,11 @@ namespace NStore.Persistence.Mongo
 		{
 			if (options == null || !options.IsValid())
 				throw new MongoPersistenceException("Invalid options");
-
-			var partitionsBuild = new MongoUrlBuilder(_options.PartitionsConnectionString);
-			_logger = _options.LoggerFactory.CreateLogger($"MongoPersistence-{partitionsBuild.Server.ToString()}-{options.PartitionsCollectionName}");
-
 			_options = options;
+
+			var partitionsBuild = new MongoUrlBuilder(options.PartitionsConnectionString);
+			_logger = options.LoggerFactory.CreateLogger($"MongoPersistence-{partitionsBuild.Server.ToString()}-{options.PartitionsCollectionName}");
+
 			_mongoPayloadSerializer = options.MongoPayloadSerializer ?? new TypeSystemMongoPayloadSerializer();
 			Connect();
 		}
