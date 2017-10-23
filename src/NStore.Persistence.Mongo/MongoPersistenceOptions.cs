@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using MongoDB.Driver;
+using NStore.Core.Logging;
 
 namespace NStore.Persistence.Mongo
 {
     public class MongoPersistenceOptions
     {
-        public string PartitionsConnectionString { get; set; }
+		public INStoreLoggerFactory LoggerFactory { get; set; }
+
+		public string PartitionsConnectionString { get; set; }
         public string PartitionsCollectionName { get; set; } = "chunks";
 
         public string SequenceConnectionString { get; set; }
@@ -29,6 +32,7 @@ namespace NStore.Persistence.Mongo
         {
             this.CustomizePartitionSettings = settings => { };
             this.CustomizeSquenceSettings = settings => { };
+			LoggerFactory = NStoreNullLoggerFactory.Instance;
         }
     }
 }
