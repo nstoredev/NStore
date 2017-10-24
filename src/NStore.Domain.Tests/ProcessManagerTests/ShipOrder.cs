@@ -13,4 +13,14 @@ namespace NStore.Domain.Tests.ProcessManagerTests
             OrderId = orderId;
         }
     }
+
+    public class CheckPaymentReceived
+    {
+        public string OrderId { get; private set; }
+
+        public CheckPaymentReceived(string orderId)
+        {
+            OrderId = orderId;
+        }
+    }
 }

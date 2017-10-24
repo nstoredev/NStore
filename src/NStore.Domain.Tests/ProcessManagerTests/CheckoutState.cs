@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 #pragma warning disable S1172 // Unused method parameters should be removed
 #pragma warning disable S1144 // Unused private types or members should be removed
@@ -23,6 +24,22 @@ namespace NStore.Domain.Tests.ProcessManagerTests
         private void On(OrderShipped e)
         {
             this.Shipped = true;
+        }
+
+        private ScheduledAt<CheckPaymentReceived> On(PaymentRequested e)
+        {
+            this.PaymentReceived = true;
+            return new CheckPaymentReceived(e.OrderId).HappensAt(e.TimeStamp.AddDays(1));
+        }
+
+        private object On(CheckPaymentReceived e)
+        {
+            if (!this.PaymentReceived)
+            {
+                return new CancelOrder(e.OrderId, "Payment timeout");
+            }
+
+            return null;
         }
     }
 }

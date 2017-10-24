@@ -82,7 +82,7 @@ namespace NStore.Domain.Tests.ProcessManagerTests
         [Fact]
         public void payment_received_should_change_state()
         {
-            Checkout.MessageReceived(new PaymentReceived("Order_1"));
+            Checkout.MessageReceived(new PaymentReceived("Order_1", DateTime.Parse("2017-12-31")));
             Assert.True(State.PaymentReceived);
             Assert.Collection(
                 GetMessagesOut(),
@@ -96,7 +96,7 @@ namespace NStore.Domain.Tests.ProcessManagerTests
             Setup(() =>
             {
                 Process.MessageReceived(new OrderPlaced("Order_1"));
-                Process.MessageReceived(new PaymentReceived("Order_1"));
+                Process.MessageReceived(new PaymentReceived("Order_1", DateTime.Parse("2017-12-31")));
             });
 
             Checkout.MessageReceived(new OrderShipped("Order_1"));
@@ -108,7 +108,7 @@ namespace NStore.Domain.Tests.ProcessManagerTests
         [Fact]
         public void changeset_should_include_outputs()
         {
-            Checkout.MessageReceived(new PaymentReceived("Order_1"));
+            Checkout.MessageReceived(new PaymentReceived("Order_1", DateTime.Parse("2017-12-31")));
 
             var changeset = GetChangeset();
 
@@ -124,7 +124,7 @@ namespace NStore.Domain.Tests.ProcessManagerTests
         [Fact]
         public void process_can_apply_changeset()
         {
-            Checkout.MessageReceived(new PaymentReceived("Order_1"));
+            Checkout.MessageReceived(new PaymentReceived("Order_1", DateTime.Parse("2017-12-31")));
             var changeset = GetChangeset();
 
             var cloned = new CheckoutProcess();
