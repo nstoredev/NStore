@@ -74,7 +74,7 @@ namespace NStore.Domain.Tests.ProcessManagerTests
 
             Assert.Collection(
                 GetMessagesOut(),
-                o => Assert.IsType<RequestPayment>(o),
+                o => Assert.IsType<MessageAndTimeout<RequestPayment>>(o),
                 o => Assert.IsType<SendPurchaseConfirmation>(o)
             );
         }

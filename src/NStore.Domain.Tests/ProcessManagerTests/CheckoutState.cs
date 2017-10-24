@@ -11,7 +11,9 @@ namespace NStore.Domain.Tests.ProcessManagerTests
 
         private IEnumerable On(OrderPlaced e)
         {
-            yield return new RequestPayment(e.OrderId);
+            yield return new RequestPayment(e.OrderId)
+                .AndSignalTimeoutAfter(TimeSpan.FromHours(1))
+                .ToSelf();
             yield return new SendPurchaseConfirmation(e.OrderId);
         }
 
@@ -24,6 +26,11 @@ namespace NStore.Domain.Tests.ProcessManagerTests
         private void On(OrderShipped e)
         {
             this.Shipped = true;
+        }
+
+        private void On(MessageAndTimeout<RequestPayment> e)
+        {
+            // todo
         }
 
         private ScheduledAt<CheckPaymentReceived> On(PaymentRequested e)
