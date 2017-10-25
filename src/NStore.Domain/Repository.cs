@@ -29,12 +29,12 @@ namespace NStore.Domain
             _snapshots = snapshots;
         }
 
-        public Task<T> GetById<T>(string id) where T : IAggregate
+        public Task<T> GetByIdAsync<T>(string id) where T : IAggregate
         {
-            return this.GetById<T>(id, CancellationToken.None);
+            return this.GetByIdAsync<T>(id, CancellationToken.None);
         }
 
-        public async Task<T> GetById<T>(
+        public async Task<T> GetByIdAsync<T>(
             string id,
             CancellationToken cancellationToken
         ) where T : IAggregate
@@ -97,17 +97,17 @@ namespace NStore.Domain
             return consumer;
         }
 
-        public Task Save<T>(T aggregate, string operationId) where T : IAggregate
+        public Task SaveAsync<T>(T aggregate, string operationId) where T : IAggregate
         {
-            return this.Save<T>(aggregate, operationId, null, default(CancellationToken));
+            return this.SaveAsync<T>(aggregate, operationId, null, default(CancellationToken));
         }
 
-        public Task Save<T>(T aggregate, string operationId, Action<IHeadersAccessor> headers) where T : IAggregate
+        public Task SaveAsync<T>(T aggregate, string operationId, Action<IHeadersAccessor> headers) where T : IAggregate
         {
-            return this.Save<T>(aggregate, operationId, headers, default(CancellationToken));
+            return this.SaveAsync<T>(aggregate, operationId, headers, default(CancellationToken));
         }
 
-        public async Task Save<T>(
+        public async Task SaveAsync<T>(
             T aggregate,
             string operationId,
             Action<IHeadersAccessor> headers,
@@ -165,5 +165,11 @@ namespace NStore.Domain
 
             return _openedStreams[aggregate.Id];
         }
-    }
+
+		public void Clear()
+		{
+			_trackingAggregates.Clear();
+			_openedStreams.Clear();
+		}
+	}
 }

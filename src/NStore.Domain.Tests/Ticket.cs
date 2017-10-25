@@ -11,7 +11,11 @@ namespace NStore.Domain.Tests
     {
     }
 
-    public class TicketState
+	public class TicketSomethingHappened
+	{
+	}
+
+	public class TicketState
     {
         public bool HasBeenSold { get; private set; }
 
@@ -19,7 +23,12 @@ namespace NStore.Domain.Tests
         {
             this.HasBeenSold = true;
         }
-    }
+
+		private void On(Ticket e)
+		{
+			this.HasBeenSold = true;
+		}
+	}
 
     public class Ticket : Aggregate<TicketState>
     {
@@ -35,7 +44,12 @@ namespace NStore.Domain.Tests
             Emit(new TicketSold());
         }
 
-        public void Refund()
+		public void DoSomething()
+		{
+			Emit(new TicketSomethingHappened());
+		}
+
+		public void Refund()
         {
             if(!State.HasBeenSold)
             {

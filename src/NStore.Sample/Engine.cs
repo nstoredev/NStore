@@ -205,11 +205,11 @@ namespace NStore.Sample
             async Task RoomBuilder(string id)
             {
                 var repository = GetRepository(); // repository is not thread safe!
-                var room = await repository.GetById<Room>(id);
+                var room = await repository.GetByIdAsync<Room>(id);
 
                 room.EnableBookings();
 
-                await repository.Save(room, id + "_create").ConfigureAwait(false);
+                await repository.SaveAsync(room, id + "_create").ConfigureAwait(false);
 
                 Interlocked.Increment(ref created);
 
@@ -307,11 +307,11 @@ namespace NStore.Sample
                     try
                     {
                         var repository = GetRepository(); // repository is not thread safe!
-                        var room = await repository.GetById<Room>(id);
+                        var room = await repository.GetByIdAsync<Room>(id);
 
                         room.AddBooking(new DateRange(fromDate, toDate));
 
-                        await repository.Save(room, Guid.NewGuid().ToString()).ConfigureAwait(false);
+                        await repository.SaveAsync(room, Guid.NewGuid().ToString()).ConfigureAwait(false);
                         return;
                     }
                     catch (DuplicateStreamIndexException)
