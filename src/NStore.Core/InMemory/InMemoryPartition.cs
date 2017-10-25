@@ -115,14 +115,13 @@ namespace NStore.Core.InMemory
             await subscription.CompletedAsync(index).ConfigureAwait(false);
         }
 
-
-        public void Write(Chunk chunk)
+        public Boolean Write(Chunk chunk)
         {
             _lockSlim.EnterWriteLock();
             try
             {
                 if (_operations.ContainsKey(chunk.OperationId))
-                    return;
+                    return false;
 
                 if (_sortedChunks.ContainsKey(chunk.Index))
                 {
@@ -136,6 +135,7 @@ namespace NStore.Core.InMemory
             {
                 _lockSlim.ExitWriteLock();
             }
+			return true;
         }
 
         public Chunk[] Delete(long fromIndex, long toIndex)

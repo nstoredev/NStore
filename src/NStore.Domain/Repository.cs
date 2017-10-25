@@ -133,14 +133,23 @@ namespace NStore.Domain
 
             headers?.Invoke(changeSet);
 
-            await stream.AppendAsync(changeSet, operationId, cancellationToken).ConfigureAwait(false);
-            persister.Persisted(changeSet);
+            var chunk = await stream.AppendAsync(changeSet, operationId, cancellationToken).ConfigureAwait(false);
+			//remember to check if the chunk was really persisted or skipped because of operationId idempotency.
+			if (chunk != null)
+			{
+				persister.Persisted(changeSet);
 
-            if (_snapshots != null && aggregate is ISnaphottable snaphottable)
-            {
-                //we need to await, it's responsibility of the snapshot provider to clone & store state (sync or async)
-                await _snapshots.AddAsync(aggregate.Id, snaphottable.GetSnapshot(), cancellationToken).ConfigureAwait(false);
-            }
+				if (_snapshots != null && aggregate is ISnaphottable snaphottable)
+				{
+					//we need to await, it's responsibility of the snapshot provider to clone & store state (sync or async)
+					await _snapshots.AddAsync(aggregate.Id, snaphottable.GetSnapshot(), cancellationToken).ConfigureAwait(false);
+				}
+			}
+			else 
+			{
+				Clear();
+				//persister.ClearUncommitted();
+			}
         }
 
         protected virtual IStream OpenStream(string streamId)

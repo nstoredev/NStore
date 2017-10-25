@@ -1,4 +1,6 @@
-﻿using System.Threading;
+﻿using NStore.Core.Persistence;
+using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NStore.Core.Streams
@@ -9,7 +11,8 @@ namespace NStore.Core.Streams
 
         bool IsWritable { get; }
 
-        Task AppendAsync(object payload, string operationId, CancellationToken cancellation);
+        Task<IChunk> AppendAsync(object payload, string operationId, CancellationToken cancellation);
+
         Task DeleteAsync(CancellationToken cancellation);
     }
 }

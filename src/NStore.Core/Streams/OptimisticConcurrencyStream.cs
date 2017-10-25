@@ -49,8 +49,9 @@ namespace NStore.Core.Streams
             return await Persistence.ReadSingleBackwardAsync(this.Id).ConfigureAwait(false) != null;
         }
 
-        public async Task AppendAsync(object payload, string operationId, CancellationToken cancellation)
+        public async Task<IChunk> AppendAsync(object payload, string operationId, CancellationToken cancellation)
         {
+			IChunk chunk = null;
             if (Version == -1)
                 throw new AppendFailedException(this.Id,
                         $@"Cannot append on stream {this.Id}
@@ -60,14 +61,15 @@ If you don't need to read use {typeof(Stream).Name} instead of {GetType().Name}.
             long desiredVersion = this.Version + 1;
             try
             {
-                await Persistence.AppendAsync(this.Id, desiredVersion, payload, operationId, cancellation).ConfigureAwait(false);
+				chunk = await Persistence.AppendAsync(this.Id, desiredVersion, payload, operationId, cancellation).ConfigureAwait(false);
             }
             catch (DuplicateStreamIndexException e)
             {
                 throw new ConcurrencyException($"Concurrency exception on StreamId: {this.Id}", e);
             }
             this.Version = desiredVersion;
-        }
+			return chunk;
+		}
 
         public Task DeleteAsync(CancellationToken cancellation)
         {

@@ -50,7 +50,7 @@ namespace NStore.Core.Persistence
         /// <param name="payload"></param>
         /// <param name="operationId"></param>
         /// <param name="cancellationToken"></param>
-        /// <returns></returns>
+        /// <returns>Chunk appended, or null if idempotency of command does not save anything. </returns>
         Task<IChunk> AppendAsync(
             string partitionId,
             long index,

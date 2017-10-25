@@ -219,7 +219,12 @@ namespace NStore.Core.InMemory
 
             try
             {
-                partion.Write(chunk);
+                var chunkWritten = partion.Write(chunk);
+				if (!chunkWritten)
+				{
+					//idempotency on operationId.
+					return null;
+				}
             }
             catch (DuplicateStreamIndexException)
             {

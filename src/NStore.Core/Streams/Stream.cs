@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using NStore.Core.Persistence;
+using System;
 
 namespace NStore.Core.Streams
 {
@@ -27,7 +28,7 @@ namespace NStore.Core.Streams
             );
         }
 
-        public virtual Task AppendAsync(object payload, string operationId, CancellationToken cancellation)
+        public virtual Task<IChunk> AppendAsync(object payload, string operationId, CancellationToken cancellation)
         {
             return Persistence.AppendAsync(this.Id, -1, payload, operationId, cancellation);
         }

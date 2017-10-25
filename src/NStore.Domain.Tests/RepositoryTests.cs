@@ -182,9 +182,53 @@ namespace NStore.Domain.Tests
             Assert.NotNull(snapshot.Payload);
             Assert.Equal("1", snapshot.SchemaVersion);
         }
-    }
+	}
 
-    public class with_snapshot_only : BaseRepositoryTest
+	public class with_snapshots_and_idempotent_command : BaseRepositoryTest
+	{
+		public with_snapshots_and_idempotent_command()
+		{
+			Snapshots = new DefaultSnapshotStore(new InMemoryPersistence());
+		}
+
+		[Fact]
+		public async Task idempotent_save_should_not_snapshot()
+		{
+			//Arrange, save with one commit.
+			String operationId = Guid.NewGuid().ToString();
+			var ticket = await Repository.GetByIdAsync<Ticket>("Ticket_1");
+			ticket.Sale();
+			await Repository.SaveAsync(ticket, "save_id");
+
+			//now generate an event dosomething.
+			ticket.DoSomething();
+			await Repository.SaveAsync(ticket, operationId);
+
+			//new repository reload the aggregate, and try to save with the very same operation id, this should not generate commit.
+			var newRepository = CreateRepository();
+			ticket = await newRepository.GetByIdAsync<Ticket>("Ticket_1");
+			ticket.DoSomething();
+			await newRepository.SaveAsync(ticket, operationId); //idempotent
+
+			//Verify that the aggregate is in version 2
+			var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1");
+			Assert.NotNull(chunk);
+			Assert.IsType<Changeset>(chunk.Payload);
+			Assert.Equal(2, ((Changeset)chunk.Payload).AggregateVersion);
+
+			//Verify snapshot is in version 2.
+			var snapshot = await Snapshots.GetAsync("Ticket_1", int.MaxValue);
+			Assert.NotNull(snapshot);
+			Assert.Equal(2, snapshot.SourceVersion);
+
+			//now we should be able to reload the aggregate with snapshot.
+			var finalRepository = CreateRepository();
+			ticket = await finalRepository.GetByIdAsync<Ticket>("Ticket_1");
+			Assert.Equal(2, ticket.Version);
+		}
+	}
+
+	public class with_snapshot_only : BaseRepositoryTest
     {
         public with_snapshot_only()
         {

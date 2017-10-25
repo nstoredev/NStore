@@ -304,7 +304,7 @@ namespace NStore.Persistence.Mongo
 			await InternalPersistAsync(empty, cancellationToken).ConfigureAwait(false);
 		}
 
-		private async Task InternalPersistAsync(
+		private async Task<IChunk> InternalPersistAsync(
 			TChunk chunk,
 			CancellationToken cancellationToken = default(CancellationToken)
 		)
@@ -314,7 +314,7 @@ namespace NStore.Persistence.Mongo
 				try
 				{
 					await _chunks.InsertOneAsync(chunk, cancellationToken: cancellationToken).ConfigureAwait(false);
-					return;
+					return chunk;
 				}
 				catch (MongoWriteException ex)
 				{
@@ -330,7 +330,7 @@ namespace NStore.Persistence.Mongo
 						if (ex.Message.Contains(PartitionOperationIdx))
 						{
 							await PersistAsEmptyAsync(chunk, cancellationToken).ConfigureAwait(false);
-							return;
+							return null;
 						}
 
 						if (ex.Message.Contains("_id_"))
@@ -438,9 +438,7 @@ namespace NStore.Persistence.Mongo
 				_mongoPayloadSerializer.Serialize(payload),
 				operationId ?? Guid.NewGuid().ToString()
 			);
-			await InternalPersistAsync(chunk, cancellationToken).ConfigureAwait(false);
-
-			return chunk;
+			return await InternalPersistAsync(chunk, cancellationToken).ConfigureAwait(false);
 		}
 
 		public async Task AppendBatchAsync(WriteJob[] queue, CancellationToken cancellationToken)
