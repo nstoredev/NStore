@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+// ReSharper disable UnusedMember.Local
 #pragma warning disable S1172 // Unused method parameters should be removed
 #pragma warning disable S1144 // Unused private types or members should be removed
 namespace NStore.Domain.Tests.ProcessManagerTests
@@ -9,34 +10,41 @@ namespace NStore.Domain.Tests.ProcessManagerTests
         public bool PaymentReceived { get; private set; }
         public bool Shipped { get; private set; }
 
-        private IEnumerable On(OrderPlaced e)
+        private IEnumerable StartedBy(OrderPlaced e)
         {
             yield return new RequestPayment(e.OrderId)
-                .AndSignalTimeoutAfter(TimeSpan.FromHours(1))
-                .ToSelf();
+                .AndSignalTimeout()
+                .ToSelf()
+                .After(TimeSpan.FromHours(1));
+
             yield return new SendPurchaseConfirmation(e.OrderId);
         }
 
-        private ShipOrder On(PaymentReceived e)
+        private ShipOrder ContinuedBy(PaymentReceived e)
         {
             this.PaymentReceived = true;
             return new ShipOrder(e.OrderId);
         }
 
-        private void On(OrderShipped e)
+        private object On(MessageAndTimeout<RequestPayment> e)
         {
-            this.Shipped = true;
+            if (!this.PaymentReceived)
+            {
+                if (e.Counter < 5)
+                {
+                    return e.RetryTimeoutAfter(TimeSpan.FromHours(e.Counter));
+                }
+
+                return new CancelOrder(e.Message.OrderId, "Payment timed out");
+            }
+            return null;
         }
 
-        private void On(MessageAndTimeout<RequestPayment> e)
-        {
-            // todo
-        }
-
-        private ScheduledAt<CheckPaymentReceived> On(PaymentRequested e)
+        private object On(PaymentRequested e)
         {
             this.PaymentReceived = true;
-            return new CheckPaymentReceived(e.OrderId).HappensAt(e.TimeStamp.AddDays(1));
+            return new CheckPaymentReceived(e.OrderId)
+                .HappensAfter(e.TimeStamp.AddDays(1));
         }
 
         private object On(CheckPaymentReceived e)
@@ -48,7 +56,13 @@ namespace NStore.Domain.Tests.ProcessManagerTests
 
             return null;
         }
+        
+        private void CompletedBy(OrderShipped e)
+        {
+            this.Shipped = true;
+        }
     }
 }
 #pragma warning restore S1144 // Unused private types or members should be removed
 #pragma warning restore S1172 // Unused method parameters should be removed
+// ReSharper restore UnusedMember.Local

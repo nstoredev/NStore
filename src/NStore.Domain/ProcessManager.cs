@@ -7,10 +7,10 @@ using NStore.Core.Processing;
 
 namespace NStore.Domain
 {
-    public abstract class ProcessManager<TState> :  
+    public abstract class ProcessManager<TState> :
         Aggregate<TState> where TState : class, new()
     {
-        protected ProcessManager() : this(null)
+        protected ProcessManager() : this(ProcessManagerPayloadProcessor.Instance)
         {
         }
 

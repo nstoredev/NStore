@@ -21,6 +21,26 @@ namespace NStore.Core.Processing
             return mi?.Invoke(instance, new object[] { parameter });
         }
 
+        public static object CallNonPublicIfExists(this object instance, string[] methodNames, object @parameter)
+        {
+            foreach (var methodName in methodNames)
+            {
+                var mi = instance.GetType().GetMethod(
+                    methodName,
+                    NonPublic,
+                    null,
+                    new Type[] { @parameter.GetType() },
+                    null
+                );
+
+                if (mi != null)
+                {
+                    return mi.Invoke(instance, new object[] { parameter });
+                }
+            }
+            return null;
+        }
+
         public static object CallPublicIfExists(this object instance, string methodName, object @parameter)
         {
             var mi = instance.GetType().GetMethod(

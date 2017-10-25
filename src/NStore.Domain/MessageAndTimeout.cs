@@ -11,7 +11,11 @@ namespace NStore.Domain
         public bool SendMessageOut { get; private set; }
 
         public bool SentToSelf => this.Target == "@self";
-        public bool IsValid => !String.IsNullOrWhiteSpace(this.Target);
+        public bool IsValid => !String.IsNullOrWhiteSpace(this.Target) && (this.Delay != TimeSpan.Zero);
+
+        public MessageAndTimeout(T message) : this(message, TimeSpan.Zero)
+        {
+        }
 
         public MessageAndTimeout(T message, TimeSpan delay)
         {
@@ -28,13 +32,19 @@ namespace NStore.Domain
             return this;
         }
 
+        public MessageAndTimeout<T> After(TimeSpan delay)
+        {
+            this.Delay = delay;
+            return this;
+        }
+
         public MessageAndTimeout<T> ToSelf()
         {
             this.Target = "@self";
             return this;
         }
 
-        public MessageAndTimeout<T> RetryTimeout(TimeSpan ts)
+        public MessageAndTimeout<T> RetryTimeoutAfter(TimeSpan ts)
         {
             return new MessageAndTimeout<T>(this.Message, ts)
             {
@@ -57,9 +67,9 @@ namespace NStore.Domain
 
     public static class TimeoutExtensions
     {
-        public static MessageAndTimeout<T> AndSignalTimeoutAfter<T>(this T payload, TimeSpan ts)
+        public static MessageAndTimeout<T> AndSignalTimeout<T>(this T payload)
         {
-            return new MessageAndTimeout<T>(payload, ts);
+            return new MessageAndTimeout<T>(payload);
         }
     }
 }
