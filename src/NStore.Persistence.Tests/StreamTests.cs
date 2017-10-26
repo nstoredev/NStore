@@ -184,10 +184,10 @@ namespace NStore.Persistence.Tests
         public async Task is_empty()
         {
             var stream = _streams.Open("brand_new_stream");
-            Assert.True(await stream.IsEmpty());
+            Assert.True(await stream.IsEmpty().ConfigureAwait(false));
 
-            await stream.AppendAsync("a");
-            Assert.False(await stream.IsEmpty());
+            await stream.AppendAsync("a").ConfigureAwait(false);
+            Assert.False(await stream.IsEmpty().ConfigureAwait(false));
         }
     }
 
@@ -237,7 +237,7 @@ namespace NStore.Persistence.Tests
             await Store.AppendAsync("stream_2", 1, "payload").ConfigureAwait(false);
 
             var stream = _streams.OpenReadOnly("stream_2");
-            Assert.False(await stream.IsEmpty());
+            Assert.False(await stream.IsEmpty().ConfigureAwait(false));
         }
 
     }
