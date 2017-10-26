@@ -19,5 +19,10 @@ namespace NStore.Core.Streams
         {
             return stream.DeleteAsync(CancellationToken.None);
         }
+
+        public static Task<bool> ContainsOperationAsync(this IStream stream, string operationId)
+        {
+            return stream.ContainsOperationAsync(operationId, CancellationToken.None);
+        }
     }
 }

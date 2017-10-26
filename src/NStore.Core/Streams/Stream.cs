@@ -42,5 +42,11 @@ namespace NStore.Core.Streams
         {
             return await Persistence.ReadSingleBackwardAsync(this.Id, cancellationToken).ConfigureAwait(false) == null;
         }
+
+        public async Task<bool> ContainsOperationAsync(string operationId, CancellationToken cancellationToken)
+        {
+            var chunk = await Persistence.ReadByOpeationIdAsync(this.Id, operationId, cancellationToken).ConfigureAwait(false);
+            return chunk != null;
+        }
     }
 }

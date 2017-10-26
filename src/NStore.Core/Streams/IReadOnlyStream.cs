@@ -16,5 +16,6 @@ namespace NStore.Core.Streams
         );
 
         Task<bool> IsEmpty(CancellationToken cancellationToken);
+        Task<bool> ContainsOperationAsync(string operationId, CancellationToken cancellationToken);
     }
 }
