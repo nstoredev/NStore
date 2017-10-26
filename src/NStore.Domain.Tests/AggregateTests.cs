@@ -130,7 +130,7 @@ namespace NStore.Domain.Tests
 
             ticket.Sale();
 
-            var changes = ticket.ExposePendingChanges();
+            var changes = ticket.ExposePendingChangesForTestInspection();
 
             Assert.Equal(0, ticket.Version);
             Assert.True(ticket.IsDirty);
