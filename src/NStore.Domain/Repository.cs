@@ -119,16 +119,25 @@ namespace NStore.Domain
             if (changeSet.IsEmpty() && !PersistEmptyChangeset)
                 return;
 
-            if (aggregate is IInvariantsChecker checker)
-            {
-                var check = checker.CheckInvariants();
-                check.ThrowIfInvalid();
-            }
-
             var stream = GetStream(aggregate);
             if (!stream.IsWritable)
             {
                 throw new AggregateReadOnlyException();
+            }
+
+            if (aggregate is IInvariantsChecker checker)
+            {
+                var check = checker.CheckInvariants();
+                if (check.IsInvalid)
+                {
+                    // checks for idempotency 
+                    if (await stream.ContainsOperationAsync(operationId).ConfigureAwait(false))
+                    {
+                        // already stored, we just need to skip and avoid exception
+                        return;
+                    }
+                }
+                check.ThrowIfInvalid();
             }
 
             headers?.Invoke(changeSet);
