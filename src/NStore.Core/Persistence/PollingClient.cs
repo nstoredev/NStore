@@ -89,6 +89,9 @@ namespace NStore.Core.Persistence
         private readonly INStoreLogger _logger;
         private int _isPolling = 0;
         private bool _stopped = false;
+
+        public bool IsPolling { get { return !_stopped; } }
+
         public PollingClient(IPersistence store, long lastPosition, ISubscription subscription, INStoreLoggerFactory inStoreLoggerFactory)
         {
             this._logger = inStoreLoggerFactory.CreateLogger(GetType().FullName);
@@ -132,8 +135,16 @@ namespace NStore.Core.Persistence
                 {
                     _stopped = true;
                 }
-
-            }, token).ConfigureAwait(false);
+            }, token)
+            .ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                {
+                    var ex = t.Exception.Flatten().InnerException;
+                    _logger.LogError($"Error during Poll, first exception: {ex.Message}.\n{ex}");
+                }
+            })
+            .ConfigureAwait(false);
         }
 
         public Task Poll(int timeoutInMilliseconds)
