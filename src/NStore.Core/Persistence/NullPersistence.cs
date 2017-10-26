@@ -14,6 +14,16 @@ namespace NStore.Core.Persistence
             return Task.CompletedTask;
         }
 
+        public Task<IChunk> ReadByOpeationIdAsync(string partitionId, string operationId, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<IChunk>(null);
+        }
+
+        public Task ReadAllByOperationIdAsync(string operationId, ISubscription subscription, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
         public Task<long> ReadLastPositionAsync(CancellationToken cancellationToken)
         {
             return Task.FromResult(0L);

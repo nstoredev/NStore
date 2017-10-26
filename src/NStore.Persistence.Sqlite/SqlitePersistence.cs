@@ -39,7 +39,7 @@ namespace NStore.Persistence.Sqlite
             var sb = new StringBuilder("SELECT ");
 
 
-            sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId], [Deleted] ");
+            sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId] ");
             sb.Append($"FROM {_options.StreamsTableName} ");
             sb.Append("WHERE [PartitionId] = @PartitionId ");
 
@@ -95,7 +95,6 @@ namespace NStore.Persistence.Sqlite
                         PartitionId = reader.GetString(1),
                         Index = reader.GetInt64(2),
                         OperationId = reader.GetString(4),
-                        Deleted = reader.GetBoolean(5),
                         Payload = _options.Serializer.Deserialize(reader.GetString(3))
                     };
 
@@ -127,8 +126,7 @@ namespace NStore.Persistence.Sqlite
                             Position = reader.GetInt64(0),
                             PartitionId = reader.GetString(1),
                             Index = reader.GetInt64(2),
-                            OperationId = reader.GetString(4),
-                            Deleted = reader.GetBoolean(5)
+                            OperationId = reader.GetString(4)
                         };
 
                         indexOrPosition = broadcastPosition ? chunk.Position : chunk.Index;
@@ -162,9 +160,9 @@ namespace NStore.Persistence.Sqlite
         {
             var sb = new StringBuilder("SELECT ");
 
-            sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId], [Deleted] ");
+            sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId] ");
             sb.Append($"FROM {_options.StreamsTableName} ");
-            sb.Append($"WHERE [PartitionId] = @PartitionId ");
+            sb.Append("WHERE [PartitionId] = @PartitionId ");
 
             if (fromUpperIndexInclusive > 0)
             {
@@ -231,7 +229,6 @@ namespace NStore.Persistence.Sqlite
                             PartitionId = reader.GetString(1),
                             Index = reader.GetInt64(2),
                             OperationId = reader.GetString(4),
-                            Deleted = reader.GetBoolean(5)
                         };
 
                         chunk.Payload = _options.Serializer.Deserialize(reader.GetString(3));
@@ -251,7 +248,7 @@ namespace NStore.Persistence.Sqlite
             var top = Math.Min(limit, 200);
 
             var sql = $@"SELECT  
-                        [Position], [PartitionId], [Index], [Payload], [OperationId], [Deleted]
+                        [Position], [PartitionId], [Index], [Payload], [OperationId]
                       FROM 
                         [{_options.StreamsTableName}] 
                       WHERE 
@@ -428,6 +425,58 @@ namespace NStore.Persistence.Sqlite
             }
         }
 
+        private async Task<IChunk> ReadSingleChunk(SqliteCommand command, CancellationToken cancellationToken)
+        {
+            using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
+            {
+                if (!reader.HasRows)
+                    return null;
+
+                await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+                var chunk = new SqliteChunk()
+                {
+                    Position = reader.GetInt64(0),
+                    PartitionId = reader.GetString(1),
+                    Index = reader.GetInt64(2),
+                    OperationId = reader.GetString(4),
+                    Payload = _options.Serializer.Deserialize(reader.GetString(3)),
+                };
+                return chunk;
+            }
+        }
+
+        public async Task<IChunk> ReadByOpeationIdAsync(
+            string partitionId,
+            string operationId,
+            CancellationToken cancellationToken
+        )
+        {
+            using (var connection = Connect())
+            {
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+
+                using (var command = new SqliteCommand(_options.GetFindByStreamAndOperation(), connection))
+                {
+                    command.Parameters.AddWithValue("@PartitionId", partitionId);
+                    command.Parameters.AddWithValue("@OperationId", operationId);
+
+                    return await ReadSingleChunk(command, cancellationToken).ConfigureAwait(false);
+                }
+            }
+        }
+        public async Task ReadAllByOperationIdAsync(string operationId, ISubscription subscription, CancellationToken cancellationToken)
+        {
+            using (var connection = Connect())
+            {
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+                using (var command = new SqliteCommand(_options.GetFindAllByOperation(), connection))
+                {
+                    command.Parameters.AddWithValue("@OperationId", operationId);
+                    await PushToSubscriber(command, 0, subscription, true, cancellationToken).ConfigureAwait(false);
+                }
+            }
+        }
+
         public async Task InitAsync(CancellationToken cancellationToken)
         {
             await EnsureTable(_options.StreamsTableName, cancellationToken).ConfigureAwait(false);
@@ -548,7 +597,6 @@ namespace NStore.Persistence.Sqlite
         public long Index { get; set; }
         public object Payload { get; set; }
         public string OperationId { get; set; }
-        public bool Deleted { get; set; }
         public string TextPayload { get; set; }
     }
 }

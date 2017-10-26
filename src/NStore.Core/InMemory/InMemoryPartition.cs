@@ -26,7 +26,7 @@ namespace NStore.Core.InMemory
         private readonly SortedDictionary<long, Chunk> _sortedChunks =
             new SortedDictionary<long, Chunk>();
 
-        private readonly ConcurrentDictionary<string, byte> _operations = new ConcurrentDictionary<string, byte>();
+        private readonly IDictionary<string, Chunk> _operations = new Dictionary<string, Chunk>();
         private readonly INetworkSimulator _networkSimulator;
 
         public async Task ReadForward(
@@ -78,7 +78,7 @@ namespace NStore.Core.InMemory
 
             _lockSlim.ExitReadLock();
 
-            return Task.FromResult((IChunk) Clone(chunk));
+            return Task.FromResult((IChunk)Clone(chunk));
         }
 
         private async Task PushToSubscriber(
@@ -128,14 +128,14 @@ namespace NStore.Core.InMemory
                     throw new DuplicateStreamIndexException(this.Id, chunk.Index);
                 }
 
-                _operations.TryAdd(chunk.OperationId,1);
+                _operations.Add(chunk.OperationId, chunk);
                 _sortedChunks.Add(chunk.Index, chunk);
             }
             finally
             {
                 _lockSlim.ExitWriteLock();
             }
-			return true;
+            return true;
         }
 
         public Chunk[] Delete(long fromIndex, long toIndex)
@@ -148,11 +148,20 @@ namespace NStore.Core.InMemory
             foreach (var chunk in toDelete)
             {
                 this._sortedChunks.Remove(chunk.Index);
-                this._operations.TryRemove(chunk.OperationId, out byte b);
+                this._operations.Remove(chunk.OperationId);
             }
             _lockSlim.ExitWriteLock();
 
             return toDelete;
+        }
+
+        public Task<IChunk> GetByOperationId(string operationId)
+        {
+            _lockSlim.EnterReadLock();
+            _operations.TryGetValue(operationId, out Chunk chunk);
+            _lockSlim.ExitReadLock();
+
+            return Task.FromResult((IChunk)Clone(chunk));
         }
     }
 }

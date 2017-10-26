@@ -10,14 +10,21 @@ namespace NStore.Core.Persistence
         public SubscriptionWrapper(ISubscription wrapped)
         {
             _wrapped = wrapped;
+            ChunkFilter = c => true;
         }
 
         public Action<IChunk> BeforeOnNext { get; set; }
+        public Func<IChunk, bool> ChunkFilter { get; set; }
 
         public async Task<bool> OnNextAsync(IChunk chunk)
         {
-            BeforeOnNext?.Invoke(chunk);
-            return await _wrapped.OnNextAsync(chunk).ConfigureAwait(false);
+            if (ChunkFilter(chunk))
+            {
+                BeforeOnNext?.Invoke(chunk);
+                return await _wrapped.OnNextAsync(chunk).ConfigureAwait(false);
+            }
+
+            return true;
         }
 
         public async Task CompletedAsync(long indexOrPosition)

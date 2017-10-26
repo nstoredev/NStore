@@ -190,5 +190,25 @@ namespace NStore.Core.Persistence
         {
             return persistence.ReadLastPositionAsync(CancellationToken.None);
         }
+
+
+        public static Task<IChunk> ReadByOpeationIdAsync(
+            this IPersistence persistence,
+            string partitionId,
+            string operationId
+        )
+        {
+            return persistence.ReadByOpeationIdAsync(partitionId, operationId, CancellationToken.None);
+        }
+
+        public static Task ReadAllByOperationIdAsync(
+            this IPersistence persistence,
+            string operationId,
+            ISubscription subscription
+        )
+        {
+            return persistence.ReadAllByOperationIdAsync(operationId, subscription, CancellationToken.None);
+        }
+
     }
 }

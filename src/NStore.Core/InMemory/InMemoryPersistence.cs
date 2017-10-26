@@ -55,13 +55,12 @@ namespace NStore.Core.InMemory
             CancellationToken cancellationToken
         )
         {
-            InMemoryPartition inMemoryPartition;
-            if (!_partitions.TryGetValue(partitionId, out inMemoryPartition))
+            if (!_partitions.TryGetValue(partitionId, out var partition))
             {
                 return Task.CompletedTask;
             }
 
-            return inMemoryPartition.ReadForward(
+            return partition.ReadForward(
                 fromLowerIndexInclusive,
                 subscription,
                 toUpperIndexInclusive,
@@ -79,13 +78,12 @@ namespace NStore.Core.InMemory
             CancellationToken cancellationToken
         )
         {
-            InMemoryPartition inMemoryPartition;
-            if (!_partitions.TryGetValue(partitionId, out inMemoryPartition))
+            if (!_partitions.TryGetValue(partitionId, out var partition))
             {
                 return Task.CompletedTask;
             }
 
-            return inMemoryPartition.ReadBackward(
+            return partition.ReadBackward(
                 fromUpperIndexInclusive,
                 subscription,
                 toLowerIndexInclusive,
@@ -96,13 +94,12 @@ namespace NStore.Core.InMemory
 
         public Task<IChunk> ReadSingleBackwardAsync(string partitionId, long fromUpperIndexInclusive, CancellationToken cancellationToken)
         {
-            InMemoryPartition inMemoryPartition;
-            if (!_partitions.TryGetValue(partitionId, out inMemoryPartition))
+            if (!_partitions.TryGetValue(partitionId, out var partition))
             {
                 return Task.FromResult<IChunk>(null);
             }
 
-            return inMemoryPartition.Peek(fromUpperIndexInclusive, cancellationToken);
+            return partition.Peek(fromUpperIndexInclusive, cancellationToken);
         }
 
         private Chunk Clone(Chunk source)
@@ -220,11 +217,11 @@ namespace NStore.Core.InMemory
             try
             {
                 var chunkWritten = partion.Write(chunk);
-				if (!chunkWritten)
-				{
-					//idempotency on operationId.
-					return null;
-				}
+                if (!chunkWritten)
+                {
+                    //idempotency on operationId.
+                    return null;
+                }
             }
             catch (DuplicateStreamIndexException)
             {
@@ -266,13 +263,12 @@ namespace NStore.Core.InMemory
         {
             await _networkSimulator.Wait().ConfigureAwait(false);
 
-            InMemoryPartition inMemoryPartition;
-            if (!_partitions.TryGetValue(partitionId, out inMemoryPartition))
+            if (!_partitions.TryGetValue(partitionId, out var partition))
             {
                 throw new StreamDeleteException(partitionId);
             }
 
-            var deleted = inMemoryPartition.Delete(fromLowerIndexInclusive, toUpperIndexInclusive);
+            var deleted = partition.Delete(fromLowerIndexInclusive, toUpperIndexInclusive);
             if (deleted.Length == 0)
             {
                 throw new StreamDeleteException(partitionId);
@@ -282,6 +278,35 @@ namespace NStore.Core.InMemory
             {
                 d.Deleted = true;
             }
+        }
+
+        public async Task<IChunk> ReadByOpeationIdAsync(
+            string partitionId,
+            string operationId,
+            CancellationToken cancellationToken)
+        {
+            await _networkSimulator.Wait().ConfigureAwait(false);
+
+            if (!_partitions.TryGetValue(partitionId, out var partition))
+            {
+                return null;
+            }
+
+            return await partition.GetByOperationId(operationId).ConfigureAwait(false);
+        }
+
+        public async Task ReadAllByOperationIdAsync(
+            string operationId,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            await _networkSimulator.Wait().ConfigureAwait(false);
+            var filter = new SubscriptionWrapper(subscription)
+            {
+                ChunkFilter = chunk => chunk.OperationId == operationId
+            };
+
+            await ReadAllAsync(0, filter, int.MaxValue, cancellationToken).ConfigureAwait(false);
         }
     }
 }

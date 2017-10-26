@@ -22,7 +22,6 @@ namespace NStore.Persistence.Sqlite
                 [PartitionId] NVARCHAR(255) NOT NULL,
                 [OperationId] NVARCHAR(255) NOT NULL,
                 [Index] BIGINT NOT NULL,
-                [Deleted] BIT NOT NULL,
                 [Payload] NVARCHAR(10000)
             );
 
@@ -34,11 +33,25 @@ namespace NStore.Persistence.Sqlite
         public virtual string GetPersistScript(string streamsTableName)
         {
             return $@"INSERT INTO [{streamsTableName}]
-                      ([PartitionId], [Index], [Payload], [OperationId], [Deleted])
-                      VALUES (@PartitionId, @Index, @Payload, @OperationId, 0);
+                      ([PartitionId], [Index], [Payload], [OperationId])
+                      VALUES (@PartitionId, @Index, @Payload, @OperationId);
 
                       SELECT last_insert_rowid();
 ";
+        }
+
+        public virtual string GetFindByStreamAndOperation()
+        {
+            return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId]
+                      FROM [{StreamsTableName}] 
+                      WHERE [PartitionId] = @PartitionId AND [OperationId] = @OperationId";
+        }
+
+        public virtual string GetFindAllByOperation()
+        {
+            return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId]
+                      FROM [{StreamsTableName}] 
+                      WHERE [OperationId] = @OperationId";
         }
 
         public virtual string GetDeleteStreamScript()
@@ -51,7 +64,7 @@ namespace NStore.Persistence.Sqlite
         public virtual string GetLastChunkScript()
         {
             return $@"SELECT  
-                        [Position], [PartitionId], [Index], [Payload], [OperationId], [Deleted]
+                        [Position], [PartitionId], [Index], [Payload], [OperationId]
                       FROM 
                         [{StreamsTableName}] 
                       WHERE 

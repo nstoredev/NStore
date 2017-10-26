@@ -45,6 +45,20 @@ namespace NStore.Persistence.MsSql
                       AND [Index] BETWEEN @fromLowerIndexInclusive AND @toUpperIndexInclusive";
         }
 
+        public virtual string GetFindByStreamAndOperation()
+        {
+            return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId]
+                      FROM [{StreamsTableName}] 
+                      WHERE [PartitionId] = @PartitionId AND [OperationId] = @OperationId";
+        }
+
+        public virtual string GetFindAllByOperation()
+        {
+            return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId]
+                      FROM [{StreamsTableName}] 
+                      WHERE [OperationId] = @OperationId";
+        }
+
         public virtual string GetLastChunkScript()
         {
             return $@"SELECT TOP 1 

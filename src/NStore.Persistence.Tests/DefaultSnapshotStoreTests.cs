@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using NStore.Core.Persistence;
 using NStore.Core.Snapshots;
-using NStore.Persistence;
 using Xunit;
 
 namespace NStore.Persistence.Tests
@@ -30,7 +29,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task loading_missing_snapshot_should_return_empty()
         {
-            var snapshot = await _snapshots.GetAsync("no-one", 1);
+            var snapshot = await _snapshots.GetAsync("no-one", 1).ConfigureAwait(false);
             Assert.Null(snapshot);
         }
 
@@ -38,10 +37,10 @@ namespace NStore.Persistence.Tests
         public async Task empty_snapshot_is_not_persisted()
         {
             var nullSnapshot = new SnapshotInfo("empty", 0, null, string.Empty);
-            await _snapshots.AddAsync("empty", nullSnapshot);
+            await _snapshots.AddAsync("empty", nullSnapshot).ConfigureAwait(false);
 
             var tape = new Recorder();
-            await Store.ReadForwardAsync("empty", 0, tape);
+            await Store.ReadForwardAsync("empty", 0, tape).ConfigureAwait(false);
 
             Assert.True(tape.IsEmpty);
         }
@@ -51,8 +50,8 @@ namespace NStore.Persistence.Tests
         {
             var input = new SnapshotInfo("Aggregate_1", 1, new State(), string.Empty);
 
-            await _snapshots.AddAsync("Aggregate_1", input);
-            var output = await _snapshots.GetAsync("Aggregate_1", Int32.MaxValue);
+            await _snapshots.AddAsync("Aggregate_1", input).ConfigureAwait(false);
+            var output = await _snapshots.GetAsync("Aggregate_1", Int32.MaxValue).ConfigureAwait(false);
 
             Assert.NotSame(input.Payload, output.Payload);
         }
@@ -61,12 +60,12 @@ namespace NStore.Persistence.Tests
         public async Task snapshots_can_be_deleted()
         {
             var input = new SnapshotInfo("Aggregate_1", 1, new State(), string.Empty);
-            await _snapshots.AddAsync("Aggregate_1", input);
+            await _snapshots.AddAsync("Aggregate_1", input).ConfigureAwait(false);
 
-            await _snapshots.DeleteAsync("Aggregate_1");
+            await _snapshots.DeleteAsync("Aggregate_1").ConfigureAwait(false);
 
             var tape = new Recorder();
-            await Store.ReadForwardAsync("Aggregate_1", 0, tape);
+            await Store.ReadForwardAsync("Aggregate_1", 0, tape).ConfigureAwait(false);
 
             Assert.True(tape.IsEmpty);
         }

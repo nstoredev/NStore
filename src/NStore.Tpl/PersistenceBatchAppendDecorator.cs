@@ -101,6 +101,16 @@ namespace NStore.Tpl
                 cancellationToken);
         }
 
+        public Task<IChunk> ReadByOpeationIdAsync(string partitionId, string operationId, CancellationToken cancellationToken)
+        {
+            return _persistence.ReadByOpeationIdAsync(partitionId, operationId, cancellationToken);
+        }
+
+        public Task ReadAllByOperationIdAsync(string operationId, ISubscription subscription, CancellationToken cancellationToken)
+        {
+            return _persistence.ReadAllByOperationIdAsync(operationId, subscription, cancellationToken);
+        }
+
         public void Dispose()
         {
             _batch.Complete();

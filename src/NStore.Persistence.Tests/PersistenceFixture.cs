@@ -30,7 +30,7 @@ namespace NStore.Persistence.Tests
 
         protected IPersistence Store { get; }
         protected readonly TestLoggerFactory LoggerFactory;
-        protected INStoreLogger _logger;
+        protected readonly INStoreLogger _logger;
         protected IEnhancedPersistence Batcher => _persistence as IEnhancedPersistence;
         protected readonly IPersistence _persistence;
         protected BasePersistenceTest()
@@ -57,7 +57,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task can_insert_at_first_index()
         {
-            await Store.AppendAsync("Stream_1", 1, new { data = "this is a test" });
+            await Store.AppendAsync("Stream_1", 1, new { data = "this is a test" }).ConfigureAwait(false);
         }
     }
 
@@ -66,10 +66,10 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_persist_with_chunk_id()
         {
-            await Store.AppendAsync("Stream_Neg", -1, "payload");
+            await Store.AppendAsync("Stream_Neg", -1, "payload").ConfigureAwait(false);
 
             var tape = new Recorder();
-            await Store.ReadForwardAsync("Stream_Neg", 0, tape);
+            await Store.ReadForwardAsync("Stream_Neg", 0, tape).ConfigureAwait(false);
             Assert.Equal("payload", tape.ByIndex(1).Payload);
         }
     }
@@ -79,7 +79,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_work()
         {
-            await Store.AppendAsync("Stream_1", long.MaxValue, new { data = "this is a test" });
+            await Store.AppendAsync("Stream_1", long.MaxValue, new { data = "this is a test" }).ConfigureAwait(false);
         }
     }
 
@@ -88,16 +88,77 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_throw()
         {
-            await Store.AppendAsync("dup", 1, new { data = "first attempt" });
-            await Store.AppendAsync("dup", 2, new { data = "should not work" });
+            await Store.AppendAsync("dup", 1, new { data = "first attempt" }).ConfigureAwait(false);
+            await Store.AppendAsync("dup", 2, new { data = "should not work" }).ConfigureAwait(false);
 
             var ex = await Assert.ThrowsAnyAsync<DuplicateStreamIndexException>(() =>
                 Store.AppendAsync("dup", 1, new { data = "this is a test" })
-            );
+            ).ConfigureAwait(false);
 
             Assert.Equal("Duplicated index 1 on stream dup", ex.Message);
             Assert.Equal("dup", ex.StreamId);
             Assert.Equal(1, ex.StreamIndex);
+        }
+    }
+
+    public class query_by_operation_id : BasePersistenceTest
+    {
+        public query_by_operation_id()
+        {
+            try
+            {
+                BuildStream().ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Test setup failed: {message}", e.Message);
+                throw;
+            }
+        }
+
+        [Fact]
+        public async Task should_return_null_on_missing_operation()
+        {
+            var chunk = await Store.ReadByOpeationIdAsync("stream_1", "nop",CancellationToken.None).ConfigureAwait(false);
+            Assert.Null(chunk);
+        }
+
+        [Fact]
+        public async Task should_return_index_1_for_operation_1()
+        {
+            var chunk = await Store.ReadByOpeationIdAsync("stream_1", "operation_1",CancellationToken.None).ConfigureAwait(false);
+            Assert.NotNull(chunk);
+            Assert.Equal(1, chunk.Index);
+        }
+
+        [Fact]
+        public async Task should_return_index_2_for_operation_2()
+        {
+            var chunk = await Store.ReadByOpeationIdAsync("stream_1", "operation_2",CancellationToken.None).ConfigureAwait(false);
+            Assert.NotNull(chunk);
+            Assert.Equal(2, chunk.Index);
+        }
+
+        [Fact]
+        public async Task should_find_operation_on_stream_1_2_3()
+        {
+            var recorder = new Recorder();
+            await Store.ReadAllByOperationIdAsync("operation_1", recorder, CancellationToken.None).ConfigureAwait(false);
+
+            Assert.Collection(recorder.Chunks,
+                chunk=> Assert.Equal("p1", chunk.Payload),
+                chunk=> Assert.Equal("p3", chunk.Payload),
+                chunk=> Assert.Equal("p4", chunk.Payload)
+            );
+        }
+
+        private async Task BuildStream()
+        {
+            await Store.AppendAsync("stream_1", 1, "p1", "operation_1").ConfigureAwait(false);
+            await Store.AppendAsync("stream_1", 2, "p2", "operation_2").ConfigureAwait(false);
+            await Store.AppendAsync("stream_2", 1, "p3", "operation_1").ConfigureAwait(false);
+            await Store.AppendAsync("stream_3", 1, "p4", "operation_1").ConfigureAwait(false);
+            await Store.AppendAsync("stream_4", 1, "p5", "operation_2").ConfigureAwait(false);
         }
     }
 
@@ -255,24 +316,24 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task on_empty_store_should_be_equal_zero()
         {
-            var last = await Store.ReadLastPositionAsync();
+            var last = await Store.ReadLastPositionAsync().ConfigureAwait(false);
             Assert.Equal(0L, last);
         }
 
         [Fact]
         public async Task with_only_one_chunk_should_be_equal_to_one()
         {
-            await Store.AppendAsync("a", -1, "last");
-            var last = await Store.ReadLastPositionAsync();
+            await Store.AppendAsync("a", -1, "last").ConfigureAwait(false);
+            var last = await Store.ReadLastPositionAsync().ConfigureAwait(false);
             Assert.Equal(1L, last);
         }
 
         [Fact]
         public async Task with_two_streams_of_one_chunk_should_be_two()
         {
-            await Store.AppendAsync("a", "first");
-            await Store.AppendAsync("b", "second");
-            var last = await Store.ReadLastPositionAsync();
+            await Store.AppendAsync("a", "first").ConfigureAwait(false);
+            await Store.AppendAsync("b", "second").ConfigureAwait(false);
+            var last = await Store.ReadLastPositionAsync().ConfigureAwait(false);
             Assert.Equal(2L, last);
         }
     }
@@ -312,7 +373,7 @@ namespace NStore.Persistence.Tests
                 return Task.FromResult(true);
             })).ConfigureAwait(false);
 
-            Assert.True(1 == list.Count());
+            Assert.True(1 == list.Count);
             Assert.Equal(0, list[0]);
         }
 
@@ -328,14 +389,15 @@ namespace NStore.Persistence.Tests
             {
                 list.Add(data.Payload);
                 return Task.FromResult(true);
-            }));
+            })).ConfigureAwait(false);
+
             await Store.ReadForwardAsync("Id_2", 0, new LambdaSubscription(data =>
             {
                 list.Add(data.Payload);
                 return Task.FromResult(true);
-            }));
+            })).ConfigureAwait(false);
 
-            Assert.Equal(2, list.Count());
+            Assert.Equal(2, list.Count);
         }
     }
 
@@ -545,7 +607,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task on_read_all()
         {
-            await Store.ReadAllAsync(fromPositionInclusive: 1, subscription: _subscription);
+            await Store.ReadAllAsync(fromPositionInclusive: 1, subscription: _subscription).ConfigureAwait(false);
             Assert.True(1 == _startedAt, "start position " + _startedAt);
             Assert.True(2 == _completedAt, "complete position " + _completedAt);
         }
@@ -553,7 +615,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task on_read_forward()
         {
-            await Store.ReadForwardAsync("a", fromLowerIndexInclusive: 1, subscription: _subscription);
+            await Store.ReadForwardAsync("a", fromLowerIndexInclusive: 1, subscription: _subscription).ConfigureAwait(false);
             Assert.True(1 == _startedAt, _testRunId+": start position " + _startedAt);
             Assert.True(2 == _completedAt, _testRunId + ": complete position " + _completedAt);
         }
@@ -561,7 +623,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task on_read_backward()
         {
-            await Store.ReadBackwardAsync("a", fromUpperIndexInclusive: 100, subscription: _subscription);
+            await Store.ReadBackwardAsync("a", fromUpperIndexInclusive: 100, subscription: _subscription).ConfigureAwait(false);
             Assert.True(100 == _startedAt, _testRunId + ": start position " + _startedAt);
             Assert.True(1 == _completedAt, _testRunId + ": complete position " + _completedAt);
         }
@@ -587,21 +649,21 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task on_read_all()
         {
-            await Store.ReadAllAsync(0, _subscription);
+            await Store.ReadAllAsync(0, _subscription).ConfigureAwait(false);
             Assert.True(_subscription.Failed);
         }
 
         [Fact]
         public async Task on_read_forward()
         {
-            await Store.ReadForwardAsync("a", 0, _subscription);
+            await Store.ReadForwardAsync("a", 0, _subscription).ConfigureAwait(false);
             Assert.True(_subscription.Failed);
         }
 
         [Fact]
         public async Task on_read_backward()
         {
-            await Store.ReadBackwardAsync("a", 100, _subscription);
+            await Store.ReadBackwardAsync("a", 100, _subscription).ConfigureAwait(false);
             Assert.True(_subscription.Failed);
         }
     }
@@ -712,7 +774,7 @@ namespace NStore.Persistence.Tests
             if (autopolling)
             {
                 _logger.LogDebug("Stopping poller");
-                await poller.Stop();
+                await poller.Stop().ConfigureAwait(false);
                 _logger.LogDebug("Poller stopped");
             }
 

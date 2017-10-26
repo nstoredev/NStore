@@ -66,5 +66,17 @@ namespace NStore.Core.Persistence
             long toUpperIndexInclusive,
             CancellationToken cancellationToken
         );
+
+        Task<IChunk> ReadByOpeationIdAsync(
+            string partitionId,
+            string operationId,
+            CancellationToken cancellationToken
+        );
+
+        Task ReadAllByOperationIdAsync(
+            string operationId, 
+            ISubscription subscription,
+            CancellationToken cancellationToken
+        );
     }
 }

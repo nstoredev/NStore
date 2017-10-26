@@ -93,5 +93,15 @@ namespace NStore.Core.Persistence
             await _persistence.DeleteAsync(partitionId, fromLowerIndexInclusive, toUpperIndexInclusive, cancellationToken).ConfigureAwait(false);
             _logger.LogDebug("End DeleteAsync({partitionId}, {from}, {to})", partitionId, fromLowerIndexInclusive, toUpperIndexInclusive);
         }
+
+        public Task<IChunk> ReadByOpeationIdAsync(string partitionId, string operationId, CancellationToken cancellationToken)
+        {
+            return _persistence.ReadByOpeationIdAsync(partitionId, operationId, cancellationToken);
+        }
+
+        public Task ReadAllByOperationIdAsync(string operationId, ISubscription subscription, CancellationToken cancellationToken)
+        {
+            return _persistence.ReadAllByOperationIdAsync(operationId, subscription, cancellationToken);
+        }
     }
 }

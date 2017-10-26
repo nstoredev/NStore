@@ -9,7 +9,7 @@ namespace NStore.Core.Persistence
     {
         private readonly IList<IChunk> _data = new List<IChunk>();
         private readonly IDictionary<long, IChunk> _map = new Dictionary<long, IChunk>();
-        public IEnumerable<object> Data => _data.Select(x=>x?.Payload);
+        public IEnumerable<object> Data => _data.Select(x => x?.Payload);
         public int Length => _data.Count;
         public bool ReadCompleted { get; private set; }
 
@@ -78,5 +78,6 @@ namespace NStore.Core.Persistence
 
         public long GetIndex(int position) => _data[position].Index;
         public IChunk ByIndex(int index) => _map[index];
+        public IEnumerable<IChunk> Chunks => _data;
     }
 }

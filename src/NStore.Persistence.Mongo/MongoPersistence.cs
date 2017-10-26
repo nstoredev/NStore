@@ -116,8 +116,13 @@ namespace NStore.Persistence.Mongo
 				false, cancellationToken).ConfigureAwait(false);
 		}
 
-		private async Task PushToSubscriber(long start, ISubscription subscription, FindOptions<TChunk> options,
-			FilterDefinition<TChunk> filter, bool broadcastPosition, CancellationToken cancellationToken)
+		private async Task PushToSubscriber(
+			long start, 
+			ISubscription subscription, 
+			FindOptions<TChunk> options,
+			FilterDefinition<TChunk> filter, 
+			bool broadcastPosition, 
+			CancellationToken cancellationToken)
 		{
 			long positionOrIndex = 0;
 			await subscription.OnStartAsync(start).ConfigureAwait(false);
@@ -275,6 +280,27 @@ namespace NStore.Persistence.Mongo
 			var result = await _chunks.DeleteManyAsync(filterById, cancellationToken).ConfigureAwait(false);
 			if (!result.IsAcknowledged || result.DeletedCount == 0)
 				throw new StreamDeleteException(partitionId);
+		}
+
+		public async Task<IChunk> ReadByOpeationIdAsync(string partitionId, string operationId, CancellationToken cancellationToken)
+		{
+			var filter  = Builders<TChunk>.Filter.And(
+				Builders<TChunk>.Filter.Eq(x => x.PartitionId, partitionId),
+				Builders<TChunk>.Filter.Eq(x => x.OperationId, operationId)
+			);
+			var cursor = await _chunks.FindAsync(filter, cancellationToken: cancellationToken).ConfigureAwait(false);
+			return await cursor.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+		}
+
+		public async Task ReadAllByOperationIdAsync(string operationId, ISubscription subscription, CancellationToken cancellationToken)
+		{
+			var filter = Builders<TChunk>.Filter.Eq(x => x.OperationId, operationId);
+			var options = new FindOptions<TChunk>()
+			{
+				Sort = Builders<TChunk>.Sort.Ascending(x => x.Position)
+			};
+
+			await PushToSubscriber(0, subscription, options, filter, true, cancellationToken).ConfigureAwait(false);
 		}
 
 		private async Task PersistAsEmptyAsync(

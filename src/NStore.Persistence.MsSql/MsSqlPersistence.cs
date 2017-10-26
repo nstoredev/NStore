@@ -183,25 +183,28 @@ namespace NStore.Persistence.MsSql
                     command.Parameters.AddWithValue("@PartitionId", partitionId);
                     command.Parameters.AddWithValue("@toUpperIndexInclusive", fromUpperIndexInclusive);
 
-                    using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
-                    {
-                        if (!reader.HasRows)
-                            return null;
-
-                        await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
-                        var chunk = new MsSqlChunk
-                        {
-                            Position = reader.GetInt64(0),
-                            PartitionId = reader.GetString(1),
-                            Index = reader.GetInt64(2),
-                            OperationId = reader.GetString(4),
-                        };
-
-                        chunk.Payload = _options.Serializer.Deserialize(reader.GetString(3));
-
-                        return chunk;
-                    }
+                    return await ReadSingleChunk(command, cancellationToken).ConfigureAwait(false);
                 }
+            }
+        }
+
+        private async Task<MsSqlChunk> ReadSingleChunk(SqlCommand command, CancellationToken cancellationToken)
+        {
+            using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
+            {
+                if (!reader.HasRows)
+                    return null;
+
+                await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+                var chunk = new MsSqlChunk
+                {
+                    Position = reader.GetInt64(0),
+                    PartitionId = reader.GetString(1),
+                    Index = reader.GetInt64(2),
+                    OperationId = reader.GetString(4),
+                    Payload = _options.Serializer.Deserialize(reader.GetString(3)),
+                };
+                return chunk;
             }
         }
 
@@ -340,6 +343,39 @@ namespace NStore.Persistence.MsSql
 
                     if (deleted == 0)
                         throw new StreamDeleteException(partitionId);
+                }
+            }
+        }
+
+        public async Task<IChunk> ReadByOpeationIdAsync(
+            string partitionId,
+            string operationId,
+            CancellationToken cancellationToken
+        )
+        {
+            using (var connection = Connect())
+            {
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+
+                using (var command = new SqlCommand(_options.GetFindByStreamAndOperation(), connection))
+                {
+                    command.Parameters.AddWithValue("@PartitionId", partitionId);
+                    command.Parameters.AddWithValue("@OperationId", operationId);
+
+                    return await ReadSingleChunk(command, cancellationToken).ConfigureAwait(false);
+                }
+            }
+        }
+
+        public async Task ReadAllByOperationIdAsync(string operationId, ISubscription subscription, CancellationToken cancellationToken)
+        {
+            using (var connection = Connect())
+            {
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+                using (var command = new SqlCommand(_options.GetFindAllByOperation(), connection))
+                {
+                    command.Parameters.AddWithValue("@OperationId", operationId);
+                    await PushToSubscriber(command, 0, subscription, true, cancellationToken).ConfigureAwait(false);
                 }
             }
         }
