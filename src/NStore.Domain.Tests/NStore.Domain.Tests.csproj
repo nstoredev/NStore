@@ -1,20 +1,18 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-	<PropertyGroup>
-		<TargetFramework>netcoreapp2.0</TargetFramework>
-		<OutputType>Library</OutputType>
-	</PropertyGroup>
-	<ItemGroup>
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.5.0-preview-20170810-02" />
-		<PackageReference Include="xunit" Version="2.3.0-beta5-build3769" />
-		<PackageReference Include="xunit.runner.visualstudio" Version="2.3.0-beta5-build3769" />
-		<DotNetCliToolReference Include="dotnet-xunit" Version="2.3.0-beta1-build3642" />
-		<DotNetCliToolReference Include="Microsoft.DotNet.Watcher.Tools" Version="1.0.0" />
-	</ItemGroup>
-	<ItemGroup>
-	  <ProjectReference Include="..\NStore.Core.Tests\NStore.Core.Tests.csproj" />
-	  <ProjectReference Include="..\NStore.Domain\NStore.Domain.csproj" />
-	  <ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
-	</ItemGroup>
-
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.5.0-preview-20170810-02" />
+    <PackageReference Include="xunit" Version="2.3.0-beta5-build3769" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.3.0-beta5-build3769" />
+    <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.0-beta1-build3642" />
+    <DotNetCliToolReference Include="Microsoft.DotNet.Watcher.Tools" Version="1.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NStore.Core.Tests\NStore.Core.Tests.csproj" />
+    <ProjectReference Include="..\NStore.Domain\NStore.Domain.csproj" />
+    <ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
+  </ItemGroup>
 </Project>

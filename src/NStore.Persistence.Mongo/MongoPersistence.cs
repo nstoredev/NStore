@@ -282,7 +282,7 @@ namespace NStore.Persistence.Mongo
 				throw new StreamDeleteException(partitionId);
 		}
 
-		public async Task<IChunk> ReadByOpeationIdAsync(string partitionId, string operationId, CancellationToken cancellationToken)
+		public async Task<IChunk> ReadByOperationIdAsync(string partitionId, string operationId, CancellationToken cancellationToken)
 		{
 			var filter  = Builders<TChunk>.Filter.And(
 				Builders<TChunk>.Filter.Eq(x => x.PartitionId, partitionId),

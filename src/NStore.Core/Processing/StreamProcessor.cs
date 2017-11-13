@@ -73,13 +73,13 @@ namespace NStore.Core.Processing
             }
         }
 
-        private readonly IStream _source;
+        private readonly IReadOnlyStream _source;
         private ISnapshotStore _snapshots;
         private long? _upToIndex;
         private Func<long, long, bool> _onMissing;
 		private readonly IPayloadProcessor _payloadProcessor;
 
-		public StreamProcessor(IStream source, IPayloadProcessor payloadProcessor)
+		public StreamProcessor(IReadOnlyStream source, IPayloadProcessor payloadProcessor)
         {
             _source = source ?? throw new ArgumentNullException(nameof(source));
 			_payloadProcessor = payloadProcessor;

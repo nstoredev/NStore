@@ -121,9 +121,9 @@ namespace NStore.Core.Persistence
             ).ConfigureAwait(false);
         }
 
-        public Task<IChunk> ReadByOpeationIdAsync(string partitionId, string operationId, CancellationToken cancellationToken)
+        public Task<IChunk> ReadByOperationIdAsync(string partitionId, string operationId, CancellationToken cancellationToken)
         {
-            return _persistence.ReadByOpeationIdAsync(partitionId, operationId, cancellationToken);
+            return _persistence.ReadByOperationIdAsync(partitionId, operationId, cancellationToken);
         }
 
         public Task ReadAllByOperationIdAsync(string operationId, ISubscription subscription, CancellationToken cancellationToken)

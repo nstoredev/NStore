@@ -49,13 +49,13 @@ namespace NStore.Domain
 
             SnapshotInfo snapshot = null;
 
-            if (_snapshots != null && aggregate is ISnaphottable snaphottable)
+            if (_snapshots != null && aggregate is ISnapshottable snapshottable)
             {
                 snapshot = await _snapshots.GetLastAsync(id, cancellationToken).ConfigureAwait(false);
                 if (snapshot != null)
                 {
                     //@@REVIEW: invalidate snapshot on false?
-                    snaphottable.TryRestore(snapshot);
+                    snapshottable.TryRestore(snapshot);
                 }
             }
 
@@ -148,10 +148,10 @@ namespace NStore.Domain
 			{
 				persister.Persisted(changeSet);
 
-				if (_snapshots != null && aggregate is ISnaphottable snaphottable)
+				if (_snapshots != null && aggregate is ISnapshottable snapshottable)
 				{
 					//we need to await, it's responsibility of the snapshot provider to clone & store state (sync or async)
-					await _snapshots.AddAsync(aggregate.Id, snaphottable.GetSnapshot(), cancellationToken).ConfigureAwait(false);
+					await _snapshots.AddAsync(aggregate.Id, snapshottable.GetSnapshot(), cancellationToken).ConfigureAwait(false);
 				}
 			}
 			else 

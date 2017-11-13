@@ -347,7 +347,7 @@ namespace NStore.Persistence.MsSql
             }
         }
 
-        public async Task<IChunk> ReadByOpeationIdAsync(
+        public async Task<IChunk> ReadByOperationIdAsync(
             string partitionId,
             string operationId,
             CancellationToken cancellationToken

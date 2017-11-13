@@ -53,5 +53,23 @@ namespace NStore.Core.Processing
 
             return mi?.Invoke(instance, new object[] { parameter });
         }
+        
+        public static object CallPublic(this object instance, string methodName, object @parameter)
+        {
+            var mi = instance.GetType().GetMethod(
+                methodName,
+                Public,
+                null,
+                new Type[] { @parameter.GetType() },
+                null
+            );
+
+            if (mi == null)
+            {
+                throw new MissingMethodException(instance.GetType().FullName, methodName);
+            }
+
+            return mi.Invoke(instance, new object[] { parameter });
+        }
     }
 }

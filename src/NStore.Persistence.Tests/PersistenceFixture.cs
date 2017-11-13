@@ -119,14 +119,14 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_return_null_on_missing_operation()
         {
-            var chunk = await Store.ReadByOpeationIdAsync("stream_1", "nop",CancellationToken.None).ConfigureAwait(false);
+            var chunk = await Store.ReadByOperationIdAsync("stream_1", "nop",CancellationToken.None).ConfigureAwait(false);
             Assert.Null(chunk);
         }
 
         [Fact]
         public async Task should_return_index_1_for_operation_1()
         {
-            var chunk = await Store.ReadByOpeationIdAsync("stream_1", "operation_1",CancellationToken.None).ConfigureAwait(false);
+            var chunk = await Store.ReadByOperationIdAsync("stream_1", "operation_1",CancellationToken.None).ConfigureAwait(false);
             Assert.NotNull(chunk);
             Assert.Equal(1, chunk.Index);
         }
@@ -134,7 +134,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_return_index_2_for_operation_2()
         {
-            var chunk = await Store.ReadByOpeationIdAsync("stream_1", "operation_2",CancellationToken.None).ConfigureAwait(false);
+            var chunk = await Store.ReadByOperationIdAsync("stream_1", "operation_2",CancellationToken.None).ConfigureAwait(false);
             Assert.NotNull(chunk);
             Assert.Equal(2, chunk.Index);
         }

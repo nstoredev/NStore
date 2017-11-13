@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading.Tasks;
+using NStore.Core.Streams;
 
 namespace NStore.Core.Persistence
 {
@@ -79,5 +81,15 @@ namespace NStore.Core.Persistence
         public long GetIndex(int position) => _data[position].Index;
         public IChunk ByIndex(int index) => _map[index];
         public IEnumerable<IChunk> Chunks => _data;
+    }
+
+    public static class RecorderExtensions
+    {
+        public static async Task<Recorder> ReadAsync(this IReadOnlyStream stream)
+        {
+            var recorder = new Recorder();
+            await stream.ReadAsync(recorder).ConfigureAwait(false);
+            return recorder;
+        }
     }
 }

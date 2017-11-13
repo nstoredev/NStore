@@ -51,7 +51,7 @@ namespace NStore.Core.Streams
 
         public async Task<bool> ContainsOperationAsync(string operationId, CancellationToken cancellationToken)
         {
-            var chunk = await Persistence.ReadByOpeationIdAsync(this.Id, operationId, cancellationToken).ConfigureAwait(false);
+            var chunk = await Persistence.ReadByOperationIdAsync(this.Id, operationId, cancellationToken).ConfigureAwait(false);
             return chunk != null;
         }
 

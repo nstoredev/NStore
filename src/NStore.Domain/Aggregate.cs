@@ -8,7 +8,7 @@ namespace NStore.Domain
 {
 	public abstract class Aggregate<TState> :
 		IEventSourcedAggregate,
-		ISnaphottable,
+		ISnapshottable,
 		IAggregate
 		where TState : class, new()
 	{
@@ -59,7 +59,7 @@ namespace NStore.Domain
 			//to do something after they are initialized
 		}
 
-		bool ISnaphottable.TryRestore(SnapshotInfo snapshotInfo)
+		bool ISnapshottable.TryRestore(SnapshotInfo snapshotInfo)
 		{
 			if (snapshotInfo == null) throw new ArgumentNullException(nameof(snapshotInfo));
 
@@ -92,7 +92,7 @@ namespace NStore.Domain
 			return snapshotInfo;
 		}
 
-		SnapshotInfo ISnaphottable.GetSnapshot()
+		SnapshotInfo ISnapshottable.GetSnapshot()
 		{
 			return new SnapshotInfo(
 				this.Id,
