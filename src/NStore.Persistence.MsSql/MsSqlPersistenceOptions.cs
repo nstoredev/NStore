@@ -22,7 +22,7 @@ namespace NStore.Persistence.MsSql
                 [PartitionId] NVARCHAR(255) NOT NULL,
                 [OperationId] NVARCHAR(255) NOT NULL,
                 [Index] BIGINT NOT NULL,
-                [Payload] NVARCHAR(MAX)
+                [Payload] VARBINARY(MAX)
             )
 
             CREATE UNIQUE INDEX IX_{StreamsTableName}_OPID on dbo.{StreamsTableName} (PartitionId, OperationId)

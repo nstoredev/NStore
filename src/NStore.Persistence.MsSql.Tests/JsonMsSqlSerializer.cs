@@ -1,3 +1,4 @@
+using System.Text;
 using Newtonsoft.Json;
 
 namespace NStore.Persistence.MsSql.Tests
@@ -14,14 +15,17 @@ namespace NStore.Persistence.MsSql.Tests
             };
         }
 
-        public object Deserialize(string serialized)
+        public object Deserialize(byte[] serialized)
         {
-            return JsonConvert.DeserializeObject(serialized, (JsonSerializerSettings) Settings);
+            var json = Encoding.UTF8.GetString(serialized);
+            return JsonConvert.DeserializeObject(json, Settings);
         }
 
-        public string Serialize(object payload)
+        public byte[] Serialize(object payload)
         {
-            return JsonConvert.SerializeObject(payload, (JsonSerializerSettings) Settings);
+            var json = JsonConvert.SerializeObject(payload, Settings);
+            return Encoding.UTF8.GetBytes(json);
+
         }
     }
 }
