@@ -732,7 +732,17 @@ namespace NStore.Persistence.Tests
         public async Task can_write_and_read_large_payload()
         {
             var payload = new byte[1_000_000];
+            for (int c = 0; c < payload.Length; c++)
+            {
+                payload[c] = Convert.ToByte(c % 255);
+            }
+
             await _persistence.AppendAsync("large_binary", payload).ConfigureAwait(false);
+
+            var chunk = await _persistence.ReadSingleBackwardAsync("large_binary").ConfigureAwait(false);
+            var loadedBytes = (byte[])chunk.Payload;
+
+            Assert.Equal(payload, loadedBytes);
         }
     }
 
