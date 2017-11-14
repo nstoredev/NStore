@@ -7,7 +7,8 @@ namespace NStore.Persistence.MsSql
         public long Position { get; set; }
         public string PartitionId { get; set; }
         public long Index { get; set; }
-        public object Payload { get; set; }
         public string OperationId { get; set; }
+        public string SerializerInfo { get; set; }
+        public object Payload { get; set; }
     }
 }

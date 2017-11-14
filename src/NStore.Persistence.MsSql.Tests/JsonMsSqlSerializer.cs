@@ -15,17 +15,26 @@ namespace NStore.Persistence.MsSql.Tests
             };
         }
 
-        public object Deserialize(byte[] serialized)
+        public object Deserialize(byte[] serialized, string serializerInfo)
         {
+            if (serializerInfo == "byte[]")
+                return serialized;
+
             var json = Encoding.UTF8.GetString(serialized);
             return JsonConvert.DeserializeObject(json, Settings);
         }
 
-        public byte[] Serialize(object payload)
+        public byte[] Serialize(object payload, out string serializerInfo)
         {
+            if (payload is byte[] bytes)
+            {
+                serializerInfo = "byte[]";
+                return bytes;
+            }
+
+            serializerInfo = "json";
             var json = JsonConvert.SerializeObject(payload, Settings);
             return Encoding.UTF8.GetBytes(json);
-
         }
     }
 }
