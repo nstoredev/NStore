@@ -21,8 +21,9 @@ namespace NStore.Persistence.MsSql
                 [Position] BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
                 [PartitionId] NVARCHAR(255) NOT NULL,
                 [OperationId] NVARCHAR(255) NOT NULL,
+                [SerializerInfo] NVARCHAR(255) NOT NULL,
                 [Index] BIGINT NOT NULL,
-                [Payload] NVARCHAR(MAX)
+                [Payload] VARBINARY(MAX)
             )
 
             CREATE UNIQUE INDEX IX_{StreamsTableName}_OPID on dbo.{StreamsTableName} (PartitionId, OperationId)
@@ -33,9 +34,9 @@ namespace NStore.Persistence.MsSql
         public virtual string GetPersistScript()
         {
             return $@"INSERT INTO [{StreamsTableName}]
-                      ([PartitionId], [Index], [Payload], [OperationId])
+                      ([PartitionId], [Index], [Payload], [OperationId], [SerializerInfo])
                       OUTPUT INSERTED.[Position] 
-                      VALUES (@PartitionId, @Index, @Payload, @OperationId)";
+                      VALUES (@PartitionId, @Index, @Payload, @OperationId, @SerializerInfo)";
         }
 
         public virtual string GetDeleteStreamScript()
@@ -47,14 +48,14 @@ namespace NStore.Persistence.MsSql
 
         public virtual string GetFindByStreamAndOperation()
         {
-            return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId]
+            return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
                       FROM [{StreamsTableName}] 
                       WHERE [PartitionId] = @PartitionId AND [OperationId] = @OperationId";
         }
 
         public virtual string GetFindAllByOperation()
         {
-            return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId]
+            return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
                       FROM [{StreamsTableName}] 
                       WHERE [OperationId] = @OperationId";
         }
@@ -62,7 +63,7 @@ namespace NStore.Persistence.MsSql
         public virtual string GetLastChunkScript()
         {
             return $@"SELECT TOP 1 
-                        [Position], [PartitionId], [Index], [Payload], [OperationId]
+                        [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
                       FROM 
                         [{StreamsTableName}] 
                       WHERE 

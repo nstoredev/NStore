@@ -726,6 +726,16 @@ namespace NStore.Persistence.Tests
         }
     }
 
+    public class large_payload_tests: BasePersistenceTest
+    {
+        [Fact]
+        public async Task can_write_and_read_large_payload()
+        {
+            var payload = new byte[1_000_000];
+            await _persistence.AppendAsync("large_binary", payload).ConfigureAwait(false);
+        }
+    }
+
     public class concurrency_test : BasePersistenceTest
     {
         [Theory]

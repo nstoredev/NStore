@@ -2,7 +2,7 @@ namespace NStore.Persistence.MsSql
 {
     public interface IMsSqlPayloadSearializer
     {
-        string Serialize(object payload);
-        object Deserialize(string serialized);
+        byte[] Serialize(object payload, out string serializerInfo);
+        object Deserialize(byte[] serialized, string serializerInfo);
     }
 }

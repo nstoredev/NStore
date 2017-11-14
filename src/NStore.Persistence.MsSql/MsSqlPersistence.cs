@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data.SqlClient;
+using System.Data.SqlTypes;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -40,7 +41,7 @@ namespace NStore.Persistence.MsSql
                 sb.Append($"TOP {limit} ");
             }
 
-            sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId] ");
+            sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo] ");
             sb.Append($"FROM {_options.StreamsTableName} ");
             sb.Append($"WHERE [PartitionId] = @PartitionId ");
 
@@ -96,12 +97,13 @@ namespace NStore.Persistence.MsSql
                             PartitionId = reader.GetString(1),
                             Index = reader.GetInt64(2),
                             OperationId = reader.GetString(4),
+                            SerializerInfo = reader.GetString(5),
                         };
 
                         indexOrPosition = broadcastPosition ? chunk.Position : chunk.Index;
 
                         // to handle exceptions with correct position
-                        chunk.Payload = _options.Serializer.Deserialize(reader.GetString(3));
+                        chunk.Payload = _options.Serializer.Deserialize((byte[])reader.GetSqlBinary(3), chunk.SerializerInfo);
 
                         if (!await subscription.OnNextAsync(chunk).ConfigureAwait(false))
                         {
@@ -133,7 +135,7 @@ namespace NStore.Persistence.MsSql
                 sb.Append($"TOP {limit} ");
             }
 
-            sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId] ");
+            sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo] ");
             sb.Append($"FROM {_options.StreamsTableName} ");
             sb.Append($"WHERE [PartitionId] = @PartitionId ");
 
@@ -202,8 +204,9 @@ namespace NStore.Persistence.MsSql
                     PartitionId = reader.GetString(1),
                     Index = reader.GetInt64(2),
                     OperationId = reader.GetString(4),
-                    Payload = _options.Serializer.Deserialize(reader.GetString(3)),
+                    SerializerInfo=  reader.GetString(5),
                 };
+                chunk.Payload = _options.Serializer.Deserialize((byte[]) reader.GetSqlBinary(3), chunk.SerializerInfo);
                 return chunk;
             }
         }
@@ -217,7 +220,7 @@ namespace NStore.Persistence.MsSql
             var top = limit != Int32.MaxValue ? $"TOP {limit}" : "";
 
             var sql = $@"SELECT {top} 
-                        [Position], [PartitionId], [Index], [Payload], [OperationId]
+                        [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
                       FROM 
                         [{_options.StreamsTableName}] 
                       WHERE 
@@ -278,7 +281,8 @@ namespace NStore.Persistence.MsSql
                 OperationId = operationId ?? Guid.NewGuid().ToString()
             };
 
-            string textPayload = _options.Serializer.Serialize(payload);
+            var bytes = _options.Serializer.Serialize(payload, out string serializerInfo);
+            chunk.SerializerInfo = serializerInfo;
 
             try
             {
@@ -290,7 +294,8 @@ namespace NStore.Persistence.MsSql
                         command.Parameters.AddWithValue("@PartitionId", partitionId);
                         command.Parameters.AddWithValue("@Index", index);
                         command.Parameters.AddWithValue("@OperationId", chunk.OperationId);
-                        command.Parameters.AddWithValue("@Payload", textPayload);
+                        command.Parameters.AddWithValue("@Payload", new SqlBinary(bytes));
+                        command.Parameters.AddWithValue("@SerializerInfo", serializerInfo);
 
                         chunk.Position = (long)await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
                     }
