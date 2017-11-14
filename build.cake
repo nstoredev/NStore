@@ -88,6 +88,12 @@ Task("restore-packages")
 Task("TestMsSql")
     .ContinueOnError()
     .IsDependentOn("TestLibrary")
+    .IsDependentOn("TestMsSqlOnly")
+    .Does(()=>
+{
+});
+
+Task("TestMsSqlOnly")
     .Does(()=>
 {
     var dropdb = @"USE master
