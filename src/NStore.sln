@@ -47,6 +47,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Persistence.Sqlite",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Persistence.Sqlite.Tests", "NStore.Persistence.Sqlite.Tests\NStore.Persistence.Sqlite.Tests.csproj", "{1F83B04B-7996-4F43-8288-9D22C12E4494}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.LoadTests", "NStore.LoadTests\NStore.LoadTests.csproj", "{7793803A-7E53-48C7-B602-1B4F90232C5C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -117,6 +119,10 @@ Global
 		{1F83B04B-7996-4F43-8288-9D22C12E4494}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1F83B04B-7996-4F43-8288-9D22C12E4494}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1F83B04B-7996-4F43-8288-9D22C12E4494}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7793803A-7E53-48C7-B602-1B4F90232C5C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7793803A-7E53-48C7-B602-1B4F90232C5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7793803A-7E53-48C7-B602-1B4F90232C5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7793803A-7E53-48C7-B602-1B4F90232C5C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -138,6 +144,7 @@ Global
 		{CFAB2CE9-2BC7-4421-AF2A-E961F65E8A38} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
 		{8E8DCD5A-BAA2-448D-AB6B-8DC1B2033FC0} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
 		{1F83B04B-7996-4F43-8288-9D22C12E4494} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
+		{7793803A-7E53-48C7-B602-1B4F90232C5C} = {81A65A86-5489-4358-9848-6BE40A4D13A1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {75AC1D4E-4023-436E-8BD5-B34CD115EA76}
