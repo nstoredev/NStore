@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using App.Metrics;
 using App.Metrics.Counter;
+using App.Metrics.Reporting.Console;
 using App.Metrics.Scheduling;
 
 namespace NStore.LoadTests
@@ -10,6 +11,8 @@ namespace NStore.LoadTests
     public static class Counters
     {
         public static readonly CounterOptions ReceivedMessages = new CounterOptions {Name = "Received Messages"};
+        public static readonly CounterOptions SentMessages = new CounterOptions {Name = "Sent Messages"};
+        public static readonly CounterOptions SimulatedMessages = new CounterOptions {Name = "Simulated Messages"};
     }
 
     public static class Track
@@ -23,6 +26,11 @@ namespace NStore.LoadTests
         }
 
         public static void Inc(CounterOptions counter)
+        {
+            _metrics.Measure.Counter.Increment(counter);
+        }
+        
+        public static void Dec(CounterOptions counter)
         {
             _metrics.Measure.Counter.Increment(counter);
         }

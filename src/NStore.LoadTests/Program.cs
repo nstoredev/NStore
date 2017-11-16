@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using App.Metrics;
+using App.Metrics.Filtering;
 using NStore.Core.InMemory;
 using NStore.Core.Persistence;
 
@@ -35,11 +37,19 @@ namespace NStore.LoadTests
     
         static async Task RunIoTSample()
         {
-            var persistence = new InMemoryPersistence(new UnreliableNetworkSimulator());
-            var consumer = new IoTConsumer(workers:3, bufferSize:10_000, persistence: persistence);
-            var producer = new IoTProducer(workers:5, bufferSize:10_000,consumer: consumer);
+            var persistence = new InMemoryPersistence(new ReliableNetworkSimulator(4,6));
+            var consumer = new IoTConsumer(workers:20, bufferSize:500, persistence: persistence);
+            var producer = new IoTProducer(workers:3, bufferSize:1000, consumer: consumer);
 
-            await Task.Delay(2000);
+            var options = new ParallelOptions()
+            {
+                MaxDegreeOfParallelism = 5
+            };
+
+            Parallel.ForEach(Enumerable.Range(1, 10000), options, async i =>
+            {
+                await producer.SimulateMessage(i).ConfigureAwait(false);
+            });
             
             await producer.FlushAndShutDown().ConfigureAwait(false);
             await consumer.FlushAndShutDown().ConfigureAwait(false);

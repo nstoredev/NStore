@@ -27,10 +27,14 @@ namespace NStore.LoadTests
             _queue = new ActionBlock<TPayload>(ProcessAsync, options);
         }
        
-        public Task FlushAndShutDown()
+        public async Task FlushAndShutDown()
         {
+            while (_queue.InputCount > 0)
+            {
+                await Task.Delay(100).ConfigureAwait(false);
+            }
             _queue.Complete();
-            return _queue.Completion;
+            await _queue.Completion.ConfigureAwait(false);
         }
 
         public Task Stop()
@@ -59,14 +63,25 @@ namespace NStore.LoadTests
             _persistence = persistence;
         }
 
-        protected override Task ProcessAsync(DeviceMessage payload)
+        protected override async Task ProcessAsync(DeviceMessage payload)
         {
             Track.Inc(Counters.ReceivedMessages);
-            return _persistence.AppendAsync(
-                payload.DeviceId,
-                DateTime.UtcNow.Ticks,
-                payload
-            );
+            while (true)
+            {
+                try
+                {
+                    await _persistence.AppendAsync(
+                        payload.DeviceId,
+                        DateTime.UtcNow.Ticks,
+                        payload
+                    ).ConfigureAwait(false);
+                    return;
+                }
+                catch (DuplicateStreamIndexException)
+                {
+                    // retry with new ticks
+                }
+            }
         }
     }
 
@@ -79,7 +94,7 @@ namespace NStore.LoadTests
             _consumer = consumer;
         }
 
-        protected override Task ProcessAsync(long payload)
+        protected override async Task ProcessAsync(long payload)
         {
             var msg = new DeviceMessage()
             {
@@ -88,7 +103,14 @@ namespace NStore.LoadTests
                 Counter1 = payload % 121,
                 Counter2 = payload / 2
             };
-            return _consumer.ReceiveAsync(msg);
+            await _consumer.ReceiveAsync(msg).ConfigureAwait(false);
+            Track.Inc(Counters.SentMessages);
+        }
+
+        public  Task<bool> SimulateMessage(long msgId)
+        {
+            Track.Inc(Counters.SimulatedMessages);
+            return PushAsync(msgId);
         }
     }
 }
