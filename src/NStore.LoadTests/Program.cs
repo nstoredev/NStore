@@ -23,12 +23,13 @@ namespace NStore.LoadTests
 
             Track.StartReporter(TimeSpan.FromSeconds(1));
             await RunIoTSample().ConfigureAwait(false);
-            Track.Shutdown();
 
+            await Track.FlushReporter().ConfigureAwait(false);
+            
             Console.WriteLine("ooooooooooooooooooooooooooooooooooooooooooooooo");
-            Console.WriteLine(" S T O P P I N G");
+            Console.WriteLine(" S T O P P I N G - Press any key");
             Console.WriteLine("ooooooooooooooooooooooooooooooooooooooooooooooo");
-            System.Console.ReadLine();
+            System.Console.ReadKey();
         }
 
     
@@ -38,6 +39,8 @@ namespace NStore.LoadTests
             var consumer = new IoTConsumer(workers:3, bufferSize:10_000, persistence: persistence);
             var producer = new IoTProducer(workers:5, bufferSize:10_000,consumer: consumer);
 
+            await Task.Delay(2000);
+            
             await producer.FlushAndShutDown().ConfigureAwait(false);
             await consumer.FlushAndShutDown().ConfigureAwait(false);
         }

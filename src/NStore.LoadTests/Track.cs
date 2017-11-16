@@ -15,7 +15,8 @@ namespace NStore.LoadTests
     public static class Track
     {
         private static IMetricsRoot _metrics;
-        private static readonly CancellationTokenSource _cts = new CancellationTokenSource();
+        private static AppMetricsTaskScheduler _scheduler;
+
         public static void Init(IMetricsRoot metrics)
         {
             _metrics = metrics;
@@ -28,22 +29,17 @@ namespace NStore.LoadTests
 
         public static void StartReporter(TimeSpan delay)
         {
-            Task.Factory.StartNew(
-                async () =>
-                {
-//                    while (!_cts.Token.IsCancellationRequested)
-                    {
-                        await Task.Delay(delay, _cts.Token).ConfigureAwait(false);
-                        await Task.WhenAll(_metrics.ReportRunner.RunAllAsync(_cts.Token)).ConfigureAwait(false);
-                    }
-                }, 
-                TaskCreationOptions.LongRunning
+            _scheduler = new AppMetricsTaskScheduler(
+                delay,
+                () => Task.WhenAll(_metrics.ReportRunner.RunAllAsync())
             );
+            _scheduler.Start();
         }
 
-        public static void Shutdown()
+        public static async Task FlushReporter()
         {
-            _cts.Cancel();
+            _scheduler?.Dispose();
+            await Task.WhenAll(_metrics.ReportRunner.RunAllAsync()).ConfigureAwait(false);
         }
     }
 }
