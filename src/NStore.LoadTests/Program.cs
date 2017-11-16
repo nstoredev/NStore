@@ -11,6 +11,10 @@ namespace NStore.LoadTests
     {
         static async Task Main(string[] args)
         {
+            Console.WriteLine("ooooooooooooooooooooooooooooooooooooooooooooooo");
+            Console.WriteLine(" S T A R T I N G");
+            Console.WriteLine("ooooooooooooooooooooooooooooooooooooooooooooooo");
+
             var metrics = new MetricsBuilder()
                 .Report.ToConsole()
                 .Build();
@@ -18,36 +22,24 @@ namespace NStore.LoadTests
             Track.Init(metrics);
 
             Track.StartReporter(TimeSpan.FromSeconds(1));
-            await WriteOnStream().ConfigureAwait(false);
-            await Track.FlushReporter();
+            await RunIoTSample().ConfigureAwait(false);
+            Track.Shutdown();
 
-            System.Console.ReadKey();
+            Console.WriteLine("ooooooooooooooooooooooooooooooooooooooooooooooo");
+            Console.WriteLine(" S T O P P I N G");
+            Console.WriteLine("ooooooooooooooooooooooooooooooooooooooooooooooo");
+            System.Console.ReadLine();
         }
 
-        static async Task WriteOnStream()
+    
+        static async Task RunIoTSample()
         {
-            var persistence = new InMemoryPersistence();
-            var payload = new byte[4096];
+            var persistence = new InMemoryPersistence(new UnreliableNetworkSimulator());
+            var consumer = new IoTConsumer(workers:3, bufferSize:10_000, persistence: persistence);
+            var producer = new IoTProducer(workers:5, bufferSize:10_000,consumer: consumer);
 
-            var worker = new ActionBlock<int>(async i =>
-                {
-                    Track.Inc(Counters.Iterations);
-                    await Task.Delay(3);
-                    await persistence.AppendAsync("test", i, payload, i.ToString())
-                        .ConfigureAwait(false);
-                },
-                new ExecutionDataflowBlockOptions()
-                {
-                    MaxDegreeOfParallelism = 40
-                }
-            );
-
-            for (int c = 1; c <= 100000; c++)
-            {
-                await worker.SendAsync(c).ConfigureAwait(false);
-            }
-
-            await worker.Completion.ConfigureAwait(false);
+            await producer.FlushAndShutDown().ConfigureAwait(false);
+            await consumer.FlushAndShutDown().ConfigureAwait(false);
         }
     }
 }

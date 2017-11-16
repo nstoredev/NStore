@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using App.Metrics;
 using App.Metrics.Counter;
@@ -8,14 +9,13 @@ namespace NStore.LoadTests
 {
     public static class Counters
     {
-        public static readonly CounterOptions Iterations = new CounterOptions {Name = "iterations"};
+        public static readonly CounterOptions ReceivedMessages = new CounterOptions {Name = "Received Messages"};
     }
 
     public static class Track
     {
         private static IMetricsRoot _metrics;
-        private static AppMetricsTaskScheduler _scheduler;
-
+        private static readonly CancellationTokenSource _cts = new CancellationTokenSource();
         public static void Init(IMetricsRoot metrics)
         {
             _metrics = metrics;
@@ -28,17 +28,22 @@ namespace NStore.LoadTests
 
         public static void StartReporter(TimeSpan delay)
         {
-            _scheduler = new AppMetricsTaskScheduler(
-                delay,
-                () => Task.WhenAll(_metrics.ReportRunner.RunAllAsync())
+            Task.Factory.StartNew(
+                async () =>
+                {
+//                    while (!_cts.Token.IsCancellationRequested)
+                    {
+                        await Task.Delay(delay, _cts.Token).ConfigureAwait(false);
+                        await Task.WhenAll(_metrics.ReportRunner.RunAllAsync(_cts.Token)).ConfigureAwait(false);
+                    }
+                }, 
+                TaskCreationOptions.LongRunning
             );
-            _scheduler.Start();
         }
 
-        public static async Task FlushReporter()
+        public static void Shutdown()
         {
-            _scheduler?.Dispose();
-            await Task.WhenAll(_metrics.ReportRunner.RunAllAsync()).ConfigureAwait(false);
+            _cts.Cancel();
         }
     }
 }
