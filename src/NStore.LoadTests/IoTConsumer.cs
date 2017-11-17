@@ -66,22 +66,25 @@ namespace NStore.LoadTests
         protected override async Task ProcessAsync(DeviceMessage payload)
         {
             Track.Inc(Counters.ReceivedMessages);
-            while (true)
+            await Track.Profile(Timers.RequestTimer, async () =>
             {
-                try
+                while (true)
                 {
-                    await _persistence.AppendAsync(
-                        payload.DeviceId,
-                        DateTime.UtcNow.Ticks,
-                        payload
-                    ).ConfigureAwait(false);
-                    return;
+                    try
+                    {
+                        await _persistence.AppendAsync(
+                            payload.DeviceId,
+                            DateTime.UtcNow.Ticks,
+                            payload
+                        ).ConfigureAwait(false);
+                        return;
+                    }
+                    catch (DuplicateStreamIndexException)
+                    {
+                        // retry with new ticks
+                    }
                 }
-                catch (DuplicateStreamIndexException)
-                {
-                    // retry with new ticks
-                }
-            }
+            }).ConfigureAwait(false);
         }
     }
 

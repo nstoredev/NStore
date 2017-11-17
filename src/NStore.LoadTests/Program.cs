@@ -18,6 +18,7 @@ namespace NStore.LoadTests
             Console.WriteLine("ooooooooooooooooooooooooooooooooooooooooooooooo");
 
             var metrics = new MetricsBuilder()
+                .Report.ToElasticsearch("http://127.0.0.1:9200", "nstore")
                 .Report.ToConsole()
                 .Build();
 
@@ -27,19 +28,19 @@ namespace NStore.LoadTests
             await RunIoTSample().ConfigureAwait(false);
 
             await Track.FlushReporter().ConfigureAwait(false);
-            
+
             Console.WriteLine("ooooooooooooooooooooooooooooooooooooooooooooooo");
             Console.WriteLine(" S T O P P I N G - Press any key");
             Console.WriteLine("ooooooooooooooooooooooooooooooooooooooooooooooo");
             System.Console.ReadKey();
         }
 
-    
+
         static async Task RunIoTSample()
         {
-            var persistence = new InMemoryPersistence(new ReliableNetworkSimulator(4,6));
-            var consumer = new IoTConsumer(workers:20, bufferSize:500, persistence: persistence);
-            var producer = new IoTProducer(workers:3, bufferSize:1000, consumer: consumer);
+            var persistence = new InMemoryPersistence(new ReliableNetworkSimulator(10, 50));
+            var consumer = new IoTConsumer(workers: 20, bufferSize: 500, persistence: persistence);
+            var producer = new IoTProducer(workers: 3, bufferSize: 1000, consumer: consumer);
 
             var options = new ParallelOptions()
             {
@@ -50,7 +51,7 @@ namespace NStore.LoadTests
             {
                 await producer.SimulateMessage(i).ConfigureAwait(false);
             });
-            
+
             await producer.FlushAndShutDown().ConfigureAwait(false);
             await consumer.FlushAndShutDown().ConfigureAwait(false);
         }

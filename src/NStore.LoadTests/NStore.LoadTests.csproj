@@ -6,6 +6,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="App.Metrics.Reporting.Console" Version="2.0.0-alpha" />
+    <PackageReference Include="App.Metrics.Reporting.Elasticsearch" Version="2.0.0-alpha" />
+    <PackageReference Include="App.Metrics.Reporting.InfluxDB" Version="2.0.0-alpha" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
