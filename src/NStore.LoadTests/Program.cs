@@ -6,6 +6,7 @@ using App.Metrics;
 using App.Metrics.Filtering;
 using NStore.Core.InMemory;
 using NStore.Core.Persistence;
+using NStore.Persistence.Mongo;
 
 namespace NStore.LoadTests
 {
@@ -35,11 +36,24 @@ namespace NStore.LoadTests
             System.Console.ReadKey();
         }
 
+        static IPersistence Connect()
+        {
+            return new InMemoryPersistence(new ReliableNetworkSimulator(10, 50));
+        }
+
+        static IPersistence MongoConnect()
+        {
+            var options = new MongoPersistenceOptions()
+            {
+                UseLocalSequence = true,
+                PartitionsConnectionString = "mongodb://localhost/NStoreMetrics"
+            };
+            return new MongoPersistence(options);
+        }
 
         static async Task RunIoTSample()
         {
-            var persistence = new InMemoryPersistence(new ReliableNetworkSimulator(10, 50));
-            var consumer = new IoTConsumer(workers: 20, bufferSize: 500, persistence: persistence);
+            var consumer = new IoTConsumer(workers: 20, bufferSize: 500, persistence: Connect());
             var producer = new IoTProducer(workers: 3, bufferSize: 1000, consumer: consumer);
 
             var options = new ParallelOptions()
