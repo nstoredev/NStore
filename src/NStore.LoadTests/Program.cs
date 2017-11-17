@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using App.Metrics;
@@ -7,6 +8,7 @@ using App.Metrics.Filtering;
 using NStore.Core.InMemory;
 using NStore.Core.Persistence;
 using NStore.Persistence.Mongo;
+using NStore.Tpl;
 
 namespace NStore.LoadTests
 {
@@ -48,20 +50,23 @@ namespace NStore.LoadTests
                 UseLocalSequence = true,
                 PartitionsConnectionString = "mongodb://localhost/NStoreMetrics"
             };
-            return new MongoPersistence(options);
+            var mongo= new MongoPersistence(options);
+            mongo.InitAsync(CancellationToken.None).GetAwaiter().GetResult();
+            return mongo;
+//            return new PersistenceBatchAppendDecorator(mongo, 2000, 5);
         }
 
         static async Task RunIoTSample()
         {
-            var consumer = new IoTConsumer(workers: 20, bufferSize: 500, persistence: Connect());
-            var producer = new IoTProducer(workers: 3, bufferSize: 1000, consumer: consumer);
+            var consumer = new IoTConsumer(workers: 30, bufferSize: 20000, persistence: MongoConnect());
+            var producer = new IoTProducer(workers: 30, bufferSize: 20000, consumer: consumer);
 
             var options = new ParallelOptions()
             {
                 MaxDegreeOfParallelism = 5
             };
 
-            Parallel.ForEach(Enumerable.Range(1, 10000), options, async i =>
+            Parallel.ForEach(Enumerable.Range(1, 100_000), options, async i =>
             {
                 await producer.SimulateMessage(i).ConfigureAwait(false);
             });
