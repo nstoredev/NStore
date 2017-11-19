@@ -58,7 +58,9 @@ namespace NStore.LoadTests
 
         static async Task RunIoTSample()
         {
-            var consumer = new Ingestor(workers: 30, bufferSize: 20000, persistence: MongoConnect());
+            var persistence = new MetricsPersistenceDecorator(Connect());
+            
+            var consumer = new Ingestor(workers: 30, bufferSize: 20000, persistence: persistence);
             var producer = new IoTProducer(workers: 30, bufferSize: 20000, consumer: consumer);
 
             var options = new ParallelOptions()

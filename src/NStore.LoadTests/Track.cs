@@ -51,5 +51,13 @@ namespace NStore.LoadTests
                 await task().ConfigureAwait(false);
             }
         }
+
+        public static async Task<T> Profile<T>(TimerOptions timer, Func<Task<T>> task)
+        {
+            using (_metrics.Measure.Timer.Time(timer))
+            {
+                return await task().ConfigureAwait(false);
+            }
+        }
     }
 }
