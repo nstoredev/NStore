@@ -53,12 +53,12 @@ namespace NStore.LoadTests
             var mongo= new MongoPersistence(options);
             mongo.InitAsync(CancellationToken.None).GetAwaiter().GetResult();
             return mongo;
-//            return new PersistenceBatchAppendDecorator(mongo, 2000, 5);
+//          return new PersistenceBatchAppendDecorator(mongo, 2000, 5);
         }
 
         static async Task RunIoTSample()
         {
-            var consumer = new IoTConsumer(workers: 30, bufferSize: 20000, persistence: MongoConnect());
+            var consumer = new Ingestor(workers: 30, bufferSize: 20000, persistence: MongoConnect());
             var producer = new IoTProducer(workers: 30, bufferSize: 20000, consumer: consumer);
 
             var options = new ParallelOptions()
@@ -66,7 +66,7 @@ namespace NStore.LoadTests
                 MaxDegreeOfParallelism = 5
             };
 
-            Parallel.ForEach(Enumerable.Range(1, 100_000), options, async i =>
+            Parallel.ForEach(Enumerable.Range(1, 1_000_000), options, async i =>
             {
                 await producer.SimulateMessage(i).ConfigureAwait(false);
             });
