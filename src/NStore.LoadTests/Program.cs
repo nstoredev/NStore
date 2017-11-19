@@ -68,7 +68,7 @@ namespace NStore.LoadTests
                 MaxDegreeOfParallelism = 5
             };
 
-            Parallel.ForEach(Enumerable.Range(1, 1_000_000), options, async i =>
+            Parallel.ForEach(Enumerable.Range(1, 50_000), options, async i =>
             {
                 await producer.SimulateMessage(i).ConfigureAwait(false);
             });
