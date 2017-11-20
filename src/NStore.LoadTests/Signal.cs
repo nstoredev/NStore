@@ -1,6 +1,6 @@
 ﻿namespace NStore.LoadTests
 {
-    public sealed class DeviceMessage
+    public sealed class Signal
     {
         public string DeviceId { get; set; }
         public long Sequence { get; set; }

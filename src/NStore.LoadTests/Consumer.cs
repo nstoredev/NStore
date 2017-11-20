@@ -4,18 +4,18 @@ using NStore.Core.Persistence;
 
 namespace NStore.LoadTests
 {
-    public class Ingestor : AbstractService<DeviceMessage>,
-        IConsumer<DeviceMessage>
+    public class Consumer : AbstractService<Signal>,
+        IConsumer<Signal>
     {
         private readonly IPersistence _persistence;
-        public Task<bool> ReceiveAsync(DeviceMessage msg) => PushAsync(msg);
+        public Task<bool> ReceiveAsync(Signal msg) => PushAsync(msg);
 
-        public Ingestor(int workers, int bufferSize, IPersistence persistence) : base(workers, bufferSize)
+        public Consumer(int workers, int bufferSize, IPersistence persistence) : base(workers, bufferSize)
         {
             _persistence = persistence;
         }
 
-        protected override async Task ProcessAsync(DeviceMessage payload)
+        protected override async Task ProcessAsync(Signal payload)
         {
             Track.Inc(Counters.ReceivedMessages);
             await Track.Profile(Timers.RequestTimer, async () =>

@@ -14,6 +14,10 @@ namespace NStore.LoadTests
 {
     class Program
     {
+        private static string _elasticUri = "http://127.0.0.1:9200";
+        private static string _elasticIndex = "nstore";
+        private static string _mongo = "mongodb://localhost/NStoreMetrics";
+
         static async Task Main(string[] args)
         {
             Console.WriteLine("ooooooooooooooooooooooooooooooooooooooooooooooo");
@@ -21,7 +25,7 @@ namespace NStore.LoadTests
             Console.WriteLine("ooooooooooooooooooooooooooooooooooooooooooooooo");
 
             var metrics = new MetricsBuilder()
-                .Report.ToElasticsearch("http://127.0.0.1:9200", "nstore")
+                .Report.ToElasticsearch(_elasticUri, _elasticIndex)
                 .Report.ToConsole()
                 .Build();
 
@@ -33,7 +37,7 @@ namespace NStore.LoadTests
             await Track.FlushReporter().ConfigureAwait(false);
 
             Console.WriteLine("ooooooooooooooooooooooooooooooooooooooooooooooo");
-            Console.WriteLine(" S T O P P I N G - Press any key");
+            Console.WriteLine(" S T O P P E D - Press any key");
             Console.WriteLine("ooooooooooooooooooooooooooooooooooooooooooooooo");
             System.Console.ReadKey();
         }
@@ -48,27 +52,27 @@ namespace NStore.LoadTests
             var options = new MongoPersistenceOptions()
             {
                 UseLocalSequence = true,
-                PartitionsConnectionString = "mongodb://localhost/NStoreMetrics"
+                PartitionsConnectionString = _mongo
             };
             var mongo= new MongoPersistence(options);
             mongo.InitAsync(CancellationToken.None).GetAwaiter().GetResult();
             return mongo;
-//          return new PersistenceBatchAppendDecorator(mongo, 2000, 5);
         }
 
         static async Task RunIoTSample()
         {
-            var persistence = new MetricsPersistenceDecorator(Connect());
+//            var persistence = new MetricsPersistenceDecorator(MongoConnect());
+            var persistence = Connect();
             
-            var consumer = new Ingestor(workers: 30, bufferSize: 20000, persistence: persistence);
-            var producer = new IoTProducer(workers: 30, bufferSize: 20000, consumer: consumer);
+            var consumer = new Consumer(workers: 60, bufferSize: 20_000, persistence: persistence);
+            var producer = new Producer(workers: 30, bufferSize: 20_000, consumer: consumer);
 
             var options = new ParallelOptions()
             {
-                MaxDegreeOfParallelism = 5
+                MaxDegreeOfParallelism = Environment.ProcessorCount
             };
 
-            Parallel.ForEach(Enumerable.Range(1, 50_000), options, async i =>
+            Parallel.ForEach(Enumerable.Range(1, 10_000), options, async i =>
             {
                 await producer.SimulateMessage(i).ConfigureAwait(false);
             });

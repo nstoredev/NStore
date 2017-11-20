@@ -2,21 +2,21 @@
 
 namespace NStore.LoadTests
 {
-    public class IoTProducer : AbstractService<long>
+    public class Producer : AbstractService<long>
     {
-        private readonly IConsumer<DeviceMessage> _consumer;
+        private readonly IConsumer<Signal> _consumer;
 
-        public IoTProducer(int workers, int bufferSize, IConsumer<DeviceMessage> consumer) : base(workers, bufferSize)
+        public Producer(int workers, int bufferSize, IConsumer<Signal> consumer) : base(workers, bufferSize)
         {
             _consumer = consumer;
         }
 
         protected override async Task ProcessAsync(long payload)
         {
-            var msg = new DeviceMessage()
+            var msg = new Signal()
             {
                 Sequence = payload,
-                DeviceId = $"Sensor{payload % 10}",
+                DeviceId = $"Source{payload % 10}",
                 Counter1 = payload % 121,
                 Counter2 = payload / 2
             };
