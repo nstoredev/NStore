@@ -32,7 +32,7 @@ namespace NStore.LoadTests
             Track.Init(metrics);
 
             Track.StartReporter(TimeSpan.FromSeconds(1));
-            await RunIoTSample().ConfigureAwait(false);
+            await RunProducerConsumer().ConfigureAwait(false);
 
             await Track.FlushReporter().ConfigureAwait(false);
 
@@ -59,7 +59,7 @@ namespace NStore.LoadTests
             return mongo;
         }
 
-        static async Task RunIoTSample()
+        static async Task RunProducerConsumer()
         {
 //            var persistence = new MetricsPersistenceDecorator(MongoConnect());
             var persistence = Connect();
