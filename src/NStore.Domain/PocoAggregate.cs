@@ -1,8 +1,9 @@
 ﻿using System.Collections;
 using NStore.Core.Processing;
+
 // ReSharper disable ClassNeverInstantiated.Global
 
-namespace NStore.Domain.Experimental
+namespace NStore.Domain
 {
     public class PocoAggregate<TState> : Aggregate<TState> where TState : class, new()
     {
@@ -15,6 +16,12 @@ namespace NStore.Domain.Experimental
                 {
                     Emit(e);
                 }
+                return;
+            }
+            
+            if (events != null)
+            {
+                Emit(events);
             }
         }
     }

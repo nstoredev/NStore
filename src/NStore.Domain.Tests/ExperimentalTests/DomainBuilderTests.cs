@@ -5,6 +5,7 @@ using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using NStore.Core.Snapshots;
 using NStore.Domain.Experimental;
+using NStore.Domain.Tests.PocoAggregateTests;
 using Xunit;
 
 // ReSharper disable ClassNeverInstantiated.Global
