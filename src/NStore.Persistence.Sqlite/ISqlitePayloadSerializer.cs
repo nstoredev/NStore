@@ -1,8 +1,8 @@
+using NStore.BaseSqlPersistence;
+
 namespace NStore.Persistence.Sqlite
 {
-    public interface ISqlitePayloadSerializer
+    public interface ISqlitePayloadSerializer : ISqlPayloadSearializer
     {
-        string Serialize(object payload);
-        object Deserialize(string serialized);
     }
 }

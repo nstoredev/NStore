@@ -1,75 +1,127 @@
+using System;
+using System.Text;
+using NStore.BaseSqlPersistence;
 using NStore.Core.Logging;
 
 namespace NStore.Persistence.Sqlite
 {
-    public class SqlitePersistenceOptions
+    public class SqlitePersistenceOptions : BaseSqlPersistenceOptions
     {
-        public INStoreLoggerFactory LoggerFactory { get; set; }
-        public ISqlitePayloadSerializer Serializer { get; set; }
-        public string ConnectionString { get; set; }
-        public string StreamsTableName { get; set; }
-
-        public SqlitePersistenceOptions(INStoreLoggerFactory loggerFactory)
+        public SqlitePersistenceOptions(INStoreLoggerFactory loggerFactory) : base(loggerFactory)
         {
-            LoggerFactory = loggerFactory;
-            StreamsTableName = "Streams";
         }
 
-        public virtual string GetCreateTableScript(string streamsTableName)
+        protected virtual string GetCreateTableSql()
         {
-            return $@"CREATE TABLE [{streamsTableName}](
+            return $@"CREATE TABLE [{StreamsTableName}](
                 [Position] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                 [PartitionId] NVARCHAR(255) NOT NULL,
-                [OperationId] NVARCHAR(255) NOT NULL,
                 [Index] BIGINT NOT NULL,
-                [Payload] NVARCHAR(10000)
+                [OperationId] NVARCHAR(255) NOT NULL,
+                [SerializerInfo] NVARCHAR(255) NOT NULL,
+                [Payload] BLOB
             );
 
-            CREATE UNIQUE INDEX IX_{streamsTableName}_OPID on {streamsTableName} (PartitionId, OperationId);
-            CREATE UNIQUE INDEX IX_{streamsTableName}_IDX on {streamsTableName} (PartitionId, [Index]);
+            CREATE UNIQUE INDEX IX_{StreamsTableName}_OPID on {StreamsTableName} (PartitionId, OperationId);
+            CREATE UNIQUE INDEX IX_{StreamsTableName}_IDX on {StreamsTableName} (PartitionId, [Index]);
 ";
         }
 
-        public virtual string GetPersistScript(string streamsTableName)
+        public override string GetInsertChunkSql()
         {
-            return $@"INSERT INTO [{streamsTableName}]
-                      ([PartitionId], [Index], [Payload], [OperationId])
-                      VALUES (@PartitionId, @Index, @Payload, @OperationId);
+            return $@"INSERT INTO [{StreamsTableName}]
+                      ([PartitionId], [Index], [Payload], [OperationId], [SerializerInfo])
+                      VALUES (@PartitionId, @Index, @Payload, @OperationId, @SerializerInfo);
 
                       SELECT last_insert_rowid();
 ";
         }
 
-        public virtual string GetFindByStreamAndOperation()
+        public override string GetSelectChunkByStreamAndOperation()
         {
-            return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId]
+            return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
                       FROM [{StreamsTableName}] 
                       WHERE [PartitionId] = @PartitionId AND [OperationId] = @OperationId";
         }
 
-        public virtual string GetFindAllByOperation()
+        public override string GetSelectAllChunksByOperationSql()
         {
-            return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId]
+            return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
                       FROM [{StreamsTableName}] 
                       WHERE [OperationId] = @OperationId";
         }
 
-        public virtual string GetDeleteStreamScript()
+        public override string GetDeleteStreamChunksSql()
         {
             return $@"DELETE FROM [{StreamsTableName}] WHERE 
                           [PartitionId] = @PartitionId 
                       AND [Index] BETWEEN @fromLowerIndexInclusive AND @toUpperIndexInclusive";
         }
 
-        public virtual string GetLastChunkScript()
+        public override string GetSelectLastChunkSql()
         {
             return $@"SELECT  
-                        [Position], [PartitionId], [Index], [Payload], [OperationId]
+                        [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo] 
                       FROM 
                         [{StreamsTableName}] 
                       WHERE 
                           [PartitionId] = @PartitionId 
                       AND [Index] <= @toUpperIndexInclusive 
+                      ORDER BY 
+                          [Position] DESC
+                      LIMIT 1";
+        }
+
+        public override string GetCreateTableIfMissingSql()
+        {
+            return GetCreateTableSql();
+        }
+
+        public override string GetReadAllChunksSql(int limit)
+        {
+            return $@"SELECT  
+                        [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo] 
+                      FROM 
+                        [{StreamsTableName}] 
+                      WHERE 
+                          [Position] >= @fromPositionInclusive 
+                      ORDER BY 
+                          [Position] LIMIT {limit}";
+        }
+
+        public override string GetRangeSelectChunksSql(long upperIndexInclusive, long lowerIndexInclusive, int limit, bool @descending = true)
+        {
+            var sb = new StringBuilder("SELECT ");
+            sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo] ");
+            sb.Append($"FROM {StreamsTableName} ");
+            sb.Append("WHERE [PartitionId] = @PartitionId ");
+
+            if (lowerIndexInclusive > 0 && lowerIndexInclusive != Int64.MinValue)
+            {
+                sb.Append("AND [Index] >= @lowerIndexInclusive ");
+            }
+
+            if (upperIndexInclusive > 0 && upperIndexInclusive != Int64.MaxValue)
+            {
+                sb.Append("AND [Index] <= @upperIndexInclusive ");
+            }
+
+            sb.Append(@descending ? "ORDER BY [Index] DESC" : "ORDER BY [Index]");
+
+            if (limit > 0 && limit != int.MaxValue)
+            {
+                sb.Append($"LIMIT {limit} ");
+            }
+
+            return sb.ToString();
+        }
+
+        public override string GetSelectLastPositionSql()
+        {
+            return $@"SELECT 
+                        [Position]
+                      FROM 
+                        [{StreamsTableName}] 
                       ORDER BY 
                           [Position] DESC
                       LIMIT 1";

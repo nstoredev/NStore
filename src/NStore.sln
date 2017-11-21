@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27004.2005
+VisualStudioVersion = 15.0.26730.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Core", "NStore.Core\NStore.Core.csproj", "{0AAD1793-0A61-42E6-9EBC-6729058EBE70}"
 EndProject
@@ -47,7 +47,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Persistence.Sqlite",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Persistence.Sqlite.Tests", "NStore.Persistence.Sqlite.Tests\NStore.Persistence.Sqlite.Tests.csproj", "{1F83B04B-7996-4F43-8288-9D22C12E4494}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.LoadTests", "NStore.LoadTests\NStore.LoadTests.csproj", "{7793803A-7E53-48C7-B602-1B4F90232C5C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.LoadTests", "NStore.LoadTests\NStore.LoadTests.csproj", "{7793803A-7E53-48C7-B602-1B4F90232C5C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.BaseSqlPersistence", "NStore.BaseSqlPersistence\NStore.BaseSqlPersistence.csproj", "{A83CF5E1-B9AF-4CEC-8BC2-B9B1EA19253F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -123,6 +125,10 @@ Global
 		{7793803A-7E53-48C7-B602-1B4F90232C5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7793803A-7E53-48C7-B602-1B4F90232C5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7793803A-7E53-48C7-B602-1B4F90232C5C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A83CF5E1-B9AF-4CEC-8BC2-B9B1EA19253F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A83CF5E1-B9AF-4CEC-8BC2-B9B1EA19253F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A83CF5E1-B9AF-4CEC-8BC2-B9B1EA19253F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A83CF5E1-B9AF-4CEC-8BC2-B9B1EA19253F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -145,6 +151,7 @@ Global
 		{8E8DCD5A-BAA2-448D-AB6B-8DC1B2033FC0} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
 		{1F83B04B-7996-4F43-8288-9D22C12E4494} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
 		{7793803A-7E53-48C7-B602-1B4F90232C5C} = {81A65A86-5489-4358-9848-6BE40A4D13A1}
+		{A83CF5E1-B9AF-4CEC-8BC2-B9B1EA19253F} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {75AC1D4E-4023-436E-8BD5-B34CD115EA76}

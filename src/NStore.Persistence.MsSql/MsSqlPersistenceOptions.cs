@@ -1,23 +1,17 @@
 using System;
 using System.Text;
+using NStore.BaseSqlPersistence;
 using NStore.Core.Logging;
 
 namespace NStore.Persistence.MsSql
 {
-    public class MsSqlPersistenceOptions
+    public class MsSqlPersistenceOptions : BaseSqlPersistenceOptions
     {
-        public INStoreLoggerFactory LoggerFactory { get; set; }
-        public IMsSqlPayloadSearializer Serializer { get; set; }
-        public string ConnectionString { get; set; }
-        public string StreamsTableName { get; set; }
-
-        public MsSqlPersistenceOptions(INStoreLoggerFactory loggerFactory)
+        public MsSqlPersistenceOptions(INStoreLoggerFactory loggerFactory) : base(loggerFactory)
         {
-            LoggerFactory = loggerFactory;
-            StreamsTableName = "Streams";
         }
 
-        public virtual string GetCreateTableSql()
+        protected virtual string GetCreateTableSql()
         {
             return $@"CREATE TABLE [{StreamsTableName}](
                 [Position] BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
@@ -33,7 +27,7 @@ namespace NStore.Persistence.MsSql
 ";
         }
 
-        public virtual string GetInsertChunkSql()
+        public override string GetInsertChunkSql()
         {
             return $@"INSERT INTO [{StreamsTableName}]
                       ([PartitionId], [Index], [Payload], [OperationId], [SerializerInfo])
@@ -41,28 +35,28 @@ namespace NStore.Persistence.MsSql
                       VALUES (@PartitionId, @Index, @Payload, @OperationId, @SerializerInfo)";
         }
 
-        public virtual string GetDeleteStreamChunksSql()
+        public override string GetDeleteStreamChunksSql()
         {
             return $@"DELETE FROM [{StreamsTableName}] WHERE 
                           [PartitionId] = @PartitionId 
                       AND [Index] BETWEEN @fromLowerIndexInclusive AND @toUpperIndexInclusive";
         }
 
-        public virtual string GetSelectChunkByStreamAndOperation()
+        public override string GetSelectChunkByStreamAndOperation()
         {
             return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
                       FROM [{StreamsTableName}] 
                       WHERE [PartitionId] = @PartitionId AND [OperationId] = @OperationId";
         }
 
-        public virtual string GetSelectAllChunksByOperationSql()
+        public override string GetSelectAllChunksByOperationSql()
         {
             return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
                       FROM [{StreamsTableName}] 
                       WHERE [OperationId] = @OperationId";
         }
 
-        public virtual string GetSelectLastChunkSql()
+        public override string GetSelectLastChunkSql()
         {
             return $@"SELECT TOP 1 
                         [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
@@ -75,7 +69,7 @@ namespace NStore.Persistence.MsSql
                           [Position] DESC";
         }
 
-        public virtual string GetRangeSelectChunksSql(
+        public override string GetRangeSelectChunksSql(
             long upperIndexInclusive,
             long lowerIndexInclusive,
             int limit,
@@ -90,7 +84,7 @@ namespace NStore.Persistence.MsSql
 
             sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo] ");
             sb.Append($"FROM {StreamsTableName} ");
-            sb.Append($"WHERE [PartitionId] = @PartitionId ");
+            sb.Append("WHERE [PartitionId] = @PartitionId ");
 
             if (lowerIndexInclusive > 0 && lowerIndexInclusive != Int64.MinValue)
             {
@@ -114,21 +108,19 @@ namespace NStore.Persistence.MsSql
                 $"DROP TABLE {this.StreamsTableName}";
         }
 
-        public virtual string GetCreateTableIfMissingSql(string tableName)
+        public override string GetCreateTableIfMissingSql()
         {
             var sql = GetCreateTableSql();
             
             return $@"
-if not exists (select * from dbo.sysobjects where id = object_id(N'{
-                    tableName
-                }') and OBJECTPROPERTY(id, N'IsUserTable') = 1) 
+if not exists (select * from dbo.sysobjects where id = object_id(N'{{StreamsTableName}}') and OBJECTPROPERTY(id, N'IsUserTable') = 1) 
 BEGIN
 {sql}
 END
 ";
         }
 
-        public virtual string GetReadAllChunksSql(int limit)
+        public override string GetReadAllChunksSql(int limit)
         {
             var top = limit != Int32.MaxValue ? $"TOP {limit}" : "";
 
@@ -143,7 +135,7 @@ END
             
         }
 
-        public virtual string GetSelectLastPositionSql()
+        public override string GetSelectLastPositionSql()
         {
             return $@"SELECT TOP 1
                         [Position]
