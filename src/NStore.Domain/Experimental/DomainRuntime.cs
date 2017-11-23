@@ -50,7 +50,7 @@ namespace NStore.Domain.Experimental
             var repo = new Repository(_aggregateFactory, _streamsFactory, _snapshots);
             var aggregate = await repo.GetByIdAsync<TAggregate>(aggreagateId).ConfigureAwait(false);
             action(aggregate);
-            await repo.SaveAsync(aggregate, operationId);
+            await repo.SaveAsync(aggregate, operationId).ConfigureAwait(false);
         }
 
         public Recording Record(string sessionId)
@@ -72,7 +72,7 @@ namespace NStore.Domain.Experimental
                 long maxPos = await _persistence.ReadLastPositionAsync().ConfigureAwait(false);
                 if (maxPos > _pollingClient.Position)
                 {
-                    await Task.Delay(500);
+                    await Task.Delay(500).ConfigureAwait(false);
                     continue;
                 }
                 break;
