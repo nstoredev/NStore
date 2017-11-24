@@ -21,11 +21,11 @@ namespace NStore.Tpl
             this._completionSource.SetResult(chunk);
         }
 
+        //@@REVIEW should set invaliid stream operation exception on completitionSource?
         public override void Failed(WriteResult result)
         {
             base.Failed(result);
             this._completionSource.SetResult(null);
-            //            _completionSource.SetException(new InvalidStreamOperationException());
         }
     }
 }

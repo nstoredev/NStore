@@ -2,7 +2,7 @@ namespace NStore.Domain
 {
     public sealed class InvariantsCheckResult
     {
-        public static InvariantsCheckResult Ok = new InvariantsCheckResult();
+        public static readonly InvariantsCheckResult Ok = new InvariantsCheckResult();
 
         public string Message { get; private set; }
         public bool IsInvalid => !IsValid;
