@@ -73,7 +73,7 @@ namespace NStore.Persistence.MsSql
             long upperIndexInclusive,
             long lowerIndexInclusive,
             int limit,
-            bool descending = true
+            bool descending
         )
         {
             var sb = new StringBuilder("SELECT ");

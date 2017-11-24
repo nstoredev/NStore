@@ -89,7 +89,7 @@ namespace NStore.Persistence.Sqlite
                           [Position] LIMIT {limit}";
         }
 
-        public override string GetRangeSelectChunksSql(long upperIndexInclusive, long lowerIndexInclusive, int limit, bool @descending = true)
+        public override string GetRangeSelectChunksSql(long upperIndexInclusive, long lowerIndexInclusive, int limit, bool descending)
         {
             var sb = new StringBuilder("SELECT ");
             sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo] ");
@@ -106,7 +106,7 @@ namespace NStore.Persistence.Sqlite
                 sb.Append("AND [Index] <= @upperIndexInclusive ");
             }
 
-            sb.Append(@descending ? "ORDER BY [Index] DESC" : "ORDER BY [Index]");
+            sb.Append(descending ? "ORDER BY [Index] DESC" : "ORDER BY [Index]");
 
             if (limit > 0 && limit != int.MaxValue)
             {
