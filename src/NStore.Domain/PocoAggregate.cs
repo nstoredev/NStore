@@ -5,7 +5,12 @@ using NStore.Core.Processing;
 
 namespace NStore.Domain
 {
-    public class PocoAggregate<TState> : Aggregate<TState> where TState : class, new()
+    public interface IPocoAggregate
+    {
+        void Do(object command);
+    }
+
+    public class PocoAggregate<TState> : Aggregate<TState>, IPocoAggregate where TState : class, new()
     {
         public void Do(object command)
         {
@@ -18,7 +23,7 @@ namespace NStore.Domain
                 }
                 return;
             }
-            
+
             if (events != null)
             {
                 Emit(events);
