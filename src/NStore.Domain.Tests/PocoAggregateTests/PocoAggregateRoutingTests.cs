@@ -22,21 +22,33 @@ namespace NStore.Domain.Tests.PocoAggregateTests
 
     public delegate object Executor(object command);
 
-    
-    
-    
-    public class LightBulb
+    public class StateRouter
     {
         private Executor _state;
 
-        private void TransitionTo(Executor state)
+        public StateRouter(Executor state)
         {
             _state = state;
         }
 
+        public void TransitionTo(Executor state)
+        {
+            _state = state;
+        }
+
+        public object Execute(object command)
+        {
+            return _state(command);
+        }
+    }
+
+    public class LightBulb
+    {
+        private readonly StateRouter _router;
+
         public LightBulb()
         {
-            _state = StateOff;
+            _router = new StateRouter(StateOff);
         }
 
         private object StateOff(object command)
@@ -62,18 +74,18 @@ namespace NStore.Domain.Tests.PocoAggregateTests
         private void On(SwitchedOn evt)
         {
             this.IsOn = true;
-            TransitionTo(StateOn);
+            _router.TransitionTo(StateOn);
         }
 
         private void On(SwitchedOff evt)
         {
             this.IsOn = false;
-            TransitionTo(StateOff);
+            _router.TransitionTo(StateOff);
         }
 
         public object OnCommand(object command)
         {
-            return _state(command);
+            return _router.Execute(command);
         }
     }
 
