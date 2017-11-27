@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using NStore.Core.Processing;
 
@@ -12,6 +13,36 @@ namespace NStore.Domain
         void Do(object command);
     }
 
+    public delegate object Executor(object command);
+
+    public class StateRouter
+    {
+        private readonly IDictionary<string, Executor> _nodes = new Dictionary<string, Executor>();
+        private Executor _state;
+
+        public void TransitionTo(string node)
+        {
+            _state = _nodes[node];
+        }
+
+        public object Execute(object command)
+        {
+            return _state(command);
+        }
+
+        public StateRouter Define(string node, Executor executor)
+        {
+            _nodes[node] = executor;
+            return this;
+        }
+
+        public StateRouter Start(string node)
+        {
+            _state = _nodes[node];
+            return this;
+        }
+    }
+    
     public interface ICommandProcessor
     {
         object RunCommand(object state, object command);

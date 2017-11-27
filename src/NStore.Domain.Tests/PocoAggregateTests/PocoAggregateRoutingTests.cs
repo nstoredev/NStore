@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -20,35 +21,16 @@ namespace NStore.Domain.Tests.PocoAggregateTests
     {
     }
 
-    public delegate object Executor(object command);
-
-    public class StateRouter
-    {
-        private Executor _state;
-
-        public StateRouter(Executor state)
-        {
-            _state = state;
-        }
-
-        public void TransitionTo(Executor state)
-        {
-            _state = state;
-        }
-
-        public object Execute(object command)
-        {
-            return _state(command);
-        }
-    }
-
     public class LightBulb
     {
-        private readonly StateRouter _router;
+        private readonly StateRouter _state;
 
         public LightBulb()
         {
-            _router = new StateRouter(StateOff);
+            _state = new StateRouter()
+                .Define("On", StateOn)
+                .Define("Off", StateOff)
+                .Start("Off");
         }
 
         private object StateOff(object command)
@@ -74,18 +56,18 @@ namespace NStore.Domain.Tests.PocoAggregateTests
         private void On(SwitchedOn evt)
         {
             this.IsOn = true;
-            _router.TransitionTo(StateOn);
+            _state.TransitionTo("On");
         }
 
         private void On(SwitchedOff evt)
         {
             this.IsOn = false;
-            _router.TransitionTo(StateOff);
+            _state.TransitionTo("Off");
         }
 
         public object OnCommand(object command)
         {
-            return _router.Execute(command);
+            return _state.Execute(command);
         }
     }
 
@@ -96,6 +78,15 @@ namespace NStore.Domain.Tests.PocoAggregateTests
         [Fact]
         public void should_switch_on()
         {
+            LightBulb.Do(new TurnOn());
+            Assert.True(State.IsOn);
+        }
+
+        [Fact]
+        public void should_eventually_turned_on()
+        {
+            LightBulb.Do(new TurnOn());
+            LightBulb.Do(new TurnOff());
             LightBulb.Do(new TurnOn());
             Assert.True(State.IsOn);
         }
