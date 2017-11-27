@@ -83,7 +83,7 @@ namespace NStore.Domain
 
             //Check lambda subscription for errors.
             if (subscription.Failed)
-                throw subscription.LastError;
+                throw new RepositoryReadException($"Error reading aggregate {id}", subscription.LastError);
 
             persister.Loaded();
 
