@@ -98,7 +98,7 @@ namespace NStore.Domain.Tests.PocoAggregateTests
         {
             Setup(() => { LightBulb.Do(new TurnOn()); });
 
-            Assert.Throws<NotSupportedException>(() =>
+            Assert.Throws<InvalidOperationException>(() =>
                 LightBulb.Do(new TurnOn())
             );
         }

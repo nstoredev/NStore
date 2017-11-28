@@ -8,7 +8,7 @@ namespace NStore.Domain.Tests
     {
         private readonly IAggregateFactory _factory = new DefaultAggregateFactory();
         private TAggregate _aggregate;
-        private IEventSourcedAggregate _accessor;
+        private IEventSourcedAggregate Accessor => (IEventSourcedAggregate)Aggregate;
 
         protected TAggregate Aggregate
         {
@@ -17,7 +17,6 @@ namespace NStore.Domain.Tests
                 if (_aggregate == null)
                 {
                     _aggregate = Create();
-                    _accessor = (IEventSourcedAggregate)Aggregate;
                     _aggregate.Init("test_aggregate_id");
                 }
                 return _aggregate;
@@ -28,7 +27,7 @@ namespace NStore.Domain.Tests
         {
             get
             {
-                var changeset = _accessor.GetChangeSet();
+                var changeset = Accessor.GetChangeSet();
                 return changeset.Events;
             }
         }
@@ -38,8 +37,8 @@ namespace NStore.Domain.Tests
         protected void Setup(Action action)
         {
             action();
-            var cs = _accessor.GetChangeSet();
-            _accessor.Persisted(cs);
+            var cs = Accessor.GetChangeSet();
+            Accessor.Persisted(cs);
         }
 
         protected virtual TAggregate Create() => _factory.Create<TAggregate>();
