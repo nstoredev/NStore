@@ -1,13 +1,25 @@
 ﻿using System;
 using System.Threading.Tasks;
+using NStore.Domain.Poco;
 using Xunit;
 
 namespace NStore.Domain.Tests.PocoAggregateTests
 {
-    public class TurnOn { }
-    public class TurnOff { }
-    public class SwitchedOn { }
-    public class SwitchedOff { }
+    public class TurnOn
+    {
+    }
+
+    public class TurnOff
+    {
+    }
+
+    public class SwitchedOn
+    {
+    }
+
+    public class SwitchedOff
+    {
+    }
 
     public class LightBulb
     {
@@ -65,7 +77,9 @@ namespace NStore.Domain.Tests.PocoAggregateTests
 
         protected override PocoAggregate<LightBulb> Create()
         {
-            return new PocoAggregate<LightBulb>(new ExecuteProcessor());
+            return new PocoAggregate<LightBulb>(
+                (state, cmd) => state.Execute(cmd)
+            );
         }
 
         [Fact]
