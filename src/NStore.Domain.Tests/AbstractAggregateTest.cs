@@ -6,15 +6,22 @@ namespace NStore.Domain.Tests
 {
     public abstract class AbstractAggregateTest<TAggregate, TState> where TAggregate : IAggregate
     {
-        protected readonly TAggregate Aggregate;
-        protected readonly IAggregateFactory Factory = new DefaultAggregateFactory();
-        private readonly IEventSourcedAggregate _accessor;
+        private readonly IAggregateFactory _factory = new DefaultAggregateFactory();
+        private TAggregate _aggregate;
+        private IEventSourcedAggregate _accessor;
 
-        protected AbstractAggregateTest()
+        protected TAggregate Aggregate
         {
-            Aggregate = Factory.Create<TAggregate>();
-            _accessor = (IEventSourcedAggregate) Aggregate;
-            Aggregate.Init("mage");
+            get
+            {
+                if (_aggregate == null)
+                {
+                    _aggregate = Create();
+                    _accessor = (IEventSourcedAggregate)Aggregate;
+                    _aggregate.Init("test_aggregate_id");
+                }
+                return _aggregate;
+            }
         }
 
         protected IEnumerable<object> Events
@@ -26,7 +33,7 @@ namespace NStore.Domain.Tests
             }
         }
 
-        protected TState State => (TState) (((ISnapshottable) Aggregate).GetSnapshot().Payload);
+        protected TState State => (TState)(((ISnapshottable)Aggregate).GetSnapshot().Payload);
 
         protected void Setup(Action action)
         {
@@ -34,5 +41,7 @@ namespace NStore.Domain.Tests
             var cs = _accessor.GetChangeSet();
             _accessor.Persisted(cs);
         }
+
+        protected virtual TAggregate Create() => _factory.Create<TAggregate>();
     }
 }

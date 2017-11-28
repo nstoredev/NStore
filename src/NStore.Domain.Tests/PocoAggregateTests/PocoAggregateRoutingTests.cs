@@ -1,25 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xunit;
 
 namespace NStore.Domain.Tests.PocoAggregateTests
 {
-    public class TurnOn
-    {
-    }
-
-    public class TurnOff
-    {
-    }
-
-    public class SwitchedOn
-    {
-    }
-
-    public class SwitchedOff
-    {
-    }
+    public class TurnOn { }
+    public class TurnOff { }
+    public class SwitchedOn { }
+    public class SwitchedOff { }
 
     public class LightBulb
     {
@@ -39,7 +27,7 @@ namespace NStore.Domain.Tests.PocoAggregateTests
             {
                 case TurnOn t: return new SwitchedOn();
             }
-            throw new NotSupportedException();
+            return _state.Unhandled(command);
         }
 
         private object StateOn(object command)
@@ -48,7 +36,7 @@ namespace NStore.Domain.Tests.PocoAggregateTests
             {
                 case TurnOff t: return new SwitchedOff();
             }
-            throw new NotSupportedException();
+            return _state.Unhandled(command);
         }
 
         public bool IsOn { get; private set; }
@@ -65,7 +53,7 @@ namespace NStore.Domain.Tests.PocoAggregateTests
             _state.TransitionTo("Off");
         }
 
-        public object OnCommand(object command)
+        public object Execute(object command)
         {
             return _state.Execute(command);
         }
@@ -74,6 +62,11 @@ namespace NStore.Domain.Tests.PocoAggregateTests
     public class PocoAggregateRoutingTests : AbstractPocoAggregateTest<LightBulb>
     {
         private IPocoAggregate LightBulb => Aggregate;
+
+        protected override PocoAggregate<LightBulb> Create()
+        {
+            return new PocoAggregate<LightBulb>(new ExecuteProcessor());
+        }
 
         [Fact]
         public void should_switch_on()

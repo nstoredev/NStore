@@ -2,10 +2,6 @@
 
 namespace NStore.Domain.Tests.PocoAggregateTests
 {
-    public abstract class AbstractPocoAggregateTest<TState> : AbstractAggregateTest<PocoAggregate<TState>, TState> where TState : class, new()
-    {
-    }
-
     public class PocoAggregateTests : AbstractPocoAggregateTest<Mage>
     {
         private readonly Attack _attack = new Attack("target_1", Attack.AttackLevel.Hit);

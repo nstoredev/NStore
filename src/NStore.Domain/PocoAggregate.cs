@@ -13,36 +13,6 @@ namespace NStore.Domain
         void Do(object command);
     }
 
-    public delegate object Executor(object command);
-
-    public class StateRouter
-    {
-        private readonly IDictionary<string, Executor> _nodes = new Dictionary<string, Executor>();
-        private Executor _state;
-
-        public void TransitionTo(string node)
-        {
-            _state = _nodes[node];
-        }
-
-        public object Execute(object command)
-        {
-            return _state(command);
-        }
-
-        public StateRouter Define(string node, Executor executor)
-        {
-            _nodes[node] = executor;
-            return this;
-        }
-
-        public StateRouter Start(string node)
-        {
-            _state = _nodes[node];
-            return this;
-        }
-    }
-    
     public interface ICommandProcessor
     {
         object RunCommand(object state, object command);
@@ -62,20 +32,42 @@ namespace NStore.Domain
         }
     }
 
-    public class OnCommandProcessor : ICommandProcessor
+    public class ExecuteProcessor : ICommandProcessor
     {
-        private readonly MethodInfo _onCommand;
+        private MethodInfo _execute;
+        private readonly string _methodName;
 
-        public OnCommandProcessor(MethodInfo onCommand)
+        public ExecuteProcessor() : this("Execute")
         {
-            _onCommand = onCommand;
+            
+        }
+
+        public ExecuteProcessor(string methodName)
+        {
+            _methodName = methodName;
         }
 
         public object RunCommand(object state, object command)
         {
+            if (_execute == null)
+            {
+                _execute = state.GetType().GetMethod(
+                    _methodName,
+                    BindingFlags.Public | BindingFlags.Instance,
+                    null,
+                    new[] { typeof(object) },
+                    null
+                );
+
+                if (_execute == null)
+                {
+                    throw new MissingMethodException($"Type {state.GetType()} must implement method 'object {_methodName}(object command)");
+                }
+            }
+
             try
             {
-                return _onCommand.Invoke(state, new[] {command});
+                return _execute.Invoke(state, new[] {command});
             }
             catch (TargetInvocationException e)
             {
@@ -91,24 +83,15 @@ namespace NStore.Domain
 
     public class PocoAggregate<TState> : Aggregate<TState>, IPocoAggregate where TState : class, new()
     {
-        private ICommandProcessor _processor = DefaultCommandProcessor.Instance;
+        private readonly ICommandProcessor _processor = DefaultCommandProcessor.Instance;
 
-        protected override void AfterInit()
+        public PocoAggregate()
         {
-            base.AfterInit();
-
-            var onCommand = typeof(TState).GetMethod(
-                "OnCommand",
-                BindingFlags.Public | BindingFlags.Instance,
-                null,
-                new[] {typeof(object)},
-                null
-            );
-
-            if (onCommand != null)
-            {
-                _processor = new OnCommandProcessor(onCommand);
-            }
+            
+        }
+        public PocoAggregate(ICommandProcessor processor)
+        {
+            _processor = processor;
         }
 
         public void Do(object command)
