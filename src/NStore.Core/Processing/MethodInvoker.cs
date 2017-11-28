@@ -14,11 +14,11 @@ namespace NStore.Core.Processing
                 methodName,
                 NonPublic,
                 null,
-                new Type[] { @parameter.GetType() },
+                new Type[] {@parameter.GetType()},
                 null
             );
 
-            return mi?.Invoke(instance, new object[] { parameter });
+            return mi == null ? null : Execute(mi, instance, parameter);
         }
 
         public static object CallNonPublicIfExists(this object instance, string[] methodNames, object @parameter)
@@ -29,13 +29,13 @@ namespace NStore.Core.Processing
                     methodName,
                     NonPublic,
                     null,
-                    new Type[] { @parameter.GetType() },
+                    new Type[] {@parameter.GetType()},
                     null
                 );
 
                 if (mi != null)
                 {
-                    return mi.Invoke(instance, new object[] { parameter });
+                    return Execute(mi, instance, parameter);
                 }
             }
             return null;
@@ -47,20 +47,20 @@ namespace NStore.Core.Processing
                 methodName,
                 Public,
                 null,
-                new Type[] { @parameter.GetType() },
+                new Type[] {@parameter.GetType()},
                 null
             );
 
-            return mi?.Invoke(instance, new object[] { parameter });
+            return mi == null ? null : Execute(mi, instance, parameter);
         }
-        
+
         public static object CallPublic(this object instance, string methodName, object @parameter)
         {
             var mi = instance.GetType().GetMethod(
                 methodName,
                 Public,
                 null,
-                new Type[] { @parameter.GetType() },
+                new Type[] {@parameter.GetType()},
                 null
             );
 
@@ -69,7 +69,23 @@ namespace NStore.Core.Processing
                 throw new MissingMethodException(instance.GetType().FullName, methodName);
             }
 
-            return mi.Invoke(instance, new object[] { parameter });
+            return Execute(mi, instance, parameter);
+        }
+
+        private static object Execute(MethodInfo mi, object instance, object @parameter)
+        {
+            try
+            {
+                return mi.Invoke(instance, new object[] {parameter});
+            }
+            catch (TargetInvocationException e)
+            {
+                if (e.InnerException != null)
+                {
+                    throw e.InnerException;
+                }
+                throw;
+            }
         }
     }
 }

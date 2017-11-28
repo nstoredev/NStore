@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace NStore.Domain.Tests.PocoAggregateTests
 {
-    public class StateRouter
+    internal class StateRouter
     {
         public delegate object Executor(object command);
 
