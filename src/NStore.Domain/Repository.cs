@@ -68,18 +68,22 @@ namespace NStore.Domain
             var stream = OpenStream(id);
 
             int readCount = 0;
-            var consumer = ConfigureConsumer(new LambdaSubscription(data =>
+            var subscription = new LambdaSubscription(data =>
             {
                 readCount++;
                 persister.ApplyChanges((Changeset) data.Payload);
                 return Task.FromResult(true);
-            }), cancellationToken);
+            });
+            var consumer = ConfigureConsumer(subscription, cancellationToken);
 
             // we use aggregate.Version because snapshot could be rejected
             // Starting point is inclusive, so almost one changeset should be loaded
             // aggregate will ignore because ApplyChanges is idempotent
-            await stream.ReadAsync(consumer, aggregate.Version, long.MaxValue, cancellationToken)
-                .ConfigureAwait(false);
+            await stream.ReadAsync(consumer, aggregate.Version, long.MaxValue, cancellationToken).ConfigureAwait(false);
+
+            //Check lambda subscription for errors.
+            if (subscription.Failed)
+                throw new RepositoryReadException($"Error reading aggregate {id}", subscription.LastError);
 
             persister.Loaded();
 
