@@ -198,7 +198,7 @@ namespace NStore.Core.Persistence
             string operationId
         )
         {
-            return persistence.ReadByOpeationIdAsync(partitionId, operationId, CancellationToken.None);
+            return persistence.ReadByOperationIdAsync(partitionId, operationId, CancellationToken.None);
         }
 
         public static Task ReadAllByOperationIdAsync(

@@ -1,8 +1,8 @@
+using NStore.BaseSqlPersistence;
+
 namespace NStore.Persistence.MsSql
 {
-    public interface IMsSqlPayloadSearializer
+    public interface IMsSqlPayloadSearializer : ISqlPayloadSearializer
     {
-        string Serialize(object payload);
-        object Deserialize(string serialized);
     }
 }

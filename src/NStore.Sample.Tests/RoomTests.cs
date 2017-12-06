@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using NStore.Core.Snapshots;
 using NStore.Domain;
 using NStore.Sample.Domain.Room;
@@ -18,7 +20,7 @@ namespace NStore.Sample.Tests
             this.Aggregate = _defaultFactory.Create<TAggregate>();
             this.State = new TState();
             var snapshot = new SnapshotInfo("test", 1, this.State, "1");
-            ((ISnaphottable)this.Aggregate).TryRestore(snapshot);
+            ((ISnapshottable)this.Aggregate).TryRestore(snapshot);
 
             if (!this.Aggregate.IsInitialized)
                 throw new Exception("something went wrong");
@@ -34,6 +36,22 @@ namespace NStore.Sample.Tests
             {
                 var cs = persiter.GetChangeSet();
                 persiter.Persisted(cs);
+            }
+        }
+
+        protected IEnumerable<object> Events
+        {
+            get
+            {
+                var persiter = Aggregate as IEventSourcedAggregate;
+
+                if (persiter != null)
+                {
+                    var cs = persiter.GetChangeSet();
+                    return cs.Events;
+                }
+
+                return Enumerable.Empty<object>();
             }
         }
     }
@@ -67,6 +85,16 @@ namespace NStore.Sample.Tests
 
             Assert.True(State.BookingsEnabled);
             Assert.False(Room.CheckInvariants().IsInvalid);
+        }
+
+        [Fact]
+        public void room_registration_should_emit_event()
+        {
+            Room.EnableBookings();
+
+            Assert.Collection(Events, 
+                e => Assert.IsType<BookingsEnabled>(e)
+            );
         }
 
         [Fact]

@@ -35,11 +35,6 @@ namespace NStore.Core.Persistence
             OperationId = operationId;
         }
 
-        //public void AssignPosition(long position)
-        //{
-        //    this.Position = position;
-        //}
-
         public virtual void Succeeded(IChunk chunk)
         {
             this.Result = WriteResult.Committed;

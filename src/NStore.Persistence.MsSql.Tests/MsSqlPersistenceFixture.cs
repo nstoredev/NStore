@@ -15,20 +15,20 @@ namespace NStore.Persistence.Tests
     {
         private MsSqlPersistence _sqlPersistence;
         private MsSqlPersistenceOptions _options;
-        private string ConnectionString;
+        private string _connectionString;
         private const string TestSuitePrefix = "Mssql";
 
         protected void Connect()
         {
-            ConnectionString = Environment.GetEnvironmentVariable("NSTORE_MSSQL");
-            if (String.IsNullOrWhiteSpace(ConnectionString))
+            _connectionString = Environment.GetEnvironmentVariable("NSTORE_MSSQL");
+            if (String.IsNullOrWhiteSpace(_connectionString))
                 throw new TestMisconfiguredException("Please set connection string as NSTORE_MSSQL environment variable");
 
-            if (ConnectionString.StartsWith("\""))
-                ConnectionString = ConnectionString.Substring(1);
+            if (_connectionString.StartsWith("\""))
+                _connectionString = _connectionString.Substring(1);
 
-            if (ConnectionString.EndsWith("\""))
-                ConnectionString = ConnectionString.Substring(0, ConnectionString.Length - 1);
+            if (_connectionString.EndsWith("\""))
+                _connectionString = _connectionString.Substring(0, _connectionString.Length - 1);
         }
 
         private IPersistence Create()
@@ -39,7 +39,7 @@ namespace NStore.Persistence.Tests
 
             _options = new MsSqlPersistenceOptions(LoggerFactory)
             {
-                ConnectionString = ConnectionString,
+                ConnectionString = _connectionString,
                 StreamsTableName = "streams_" + _testRunId + "_" + GetType().Name,
                 Serializer = new JsonMsSqlSerializer()
             };

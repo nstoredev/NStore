@@ -41,21 +41,21 @@ namespace NStore.Domain
         {
             if (_trackingAggregates.TryGetValue(id, out IAggregate aggregate))
             {
-                return (T)aggregate;
+                return (T) aggregate;
             }
 
             aggregate = _factory.Create<T>();
-            var persister = (IEventSourcedAggregate)aggregate;
+            var persister = (IEventSourcedAggregate) aggregate;
 
             SnapshotInfo snapshot = null;
 
-            if (_snapshots != null && aggregate is ISnaphottable snaphottable)
+            if (_snapshots != null && aggregate is ISnapshottable snapshottable)
             {
                 snapshot = await _snapshots.GetLastAsync(id, cancellationToken).ConfigureAwait(false);
                 if (snapshot != null)
                 {
                     //@@REVIEW: invalidate snapshot on false?
-                    snaphottable.TryRestore(snapshot);
+                    snapshottable.TryRestore(snapshot);
                 }
             }
 
@@ -68,18 +68,22 @@ namespace NStore.Domain
             var stream = OpenStream(id);
 
             int readCount = 0;
-            var consumer = ConfigureConsumer(new LambdaSubscription(data =>
+            var subscription = new LambdaSubscription(data =>
             {
                 readCount++;
-                persister.ApplyChanges((Changeset)data.Payload);
+                persister.ApplyChanges((Changeset) data.Payload);
                 return Task.FromResult(true);
-            }), cancellationToken);
+            });
+            var consumer = ConfigureConsumer(subscription, cancellationToken);
 
             // we use aggregate.Version because snapshot could be rejected
             // Starting point is inclusive, so almost one changeset should be loaded
             // aggregate will ignore because ApplyChanges is idempotent
-            await stream.ReadAsync(consumer, aggregate.Version, long.MaxValue, cancellationToken)
-                .ConfigureAwait(false);
+            await stream.ReadAsync(consumer, aggregate.Version, long.MaxValue, cancellationToken).ConfigureAwait(false);
+
+            //Check lambda subscription for errors.
+            if (subscription.Failed)
+                throw new RepositoryReadException($"Error reading aggregate {id}", subscription.LastError);
 
             persister.Loaded();
 
@@ -89,7 +93,7 @@ namespace NStore.Domain
                 throw new StaleSnapshotException(snapshot.SourceId, snapshot.SourceVersion);
             }
 
-            return (T)aggregate;
+            return (T) aggregate;
         }
 
         protected virtual ISubscription ConfigureConsumer(ISubscription consumer, CancellationToken token)
@@ -114,7 +118,7 @@ namespace NStore.Domain
             CancellationToken cancellationToken
         ) where T : IAggregate
         {
-            var persister = (IEventSourcedAggregate)aggregate;
+            var persister = (IEventSourcedAggregate) aggregate;
             var changeSet = persister.GetChangeSet();
             if (changeSet.IsEmpty() && !PersistEmptyChangeset)
                 return;
@@ -128,37 +132,35 @@ namespace NStore.Domain
             if (aggregate is IInvariantsChecker checker)
             {
                 var check = checker.CheckInvariants();
-                if (check.IsInvalid)
+               
+                // checks for idempotency 
+                if (check.IsInvalid && await stream.ContainsOperationAsync(operationId).ConfigureAwait(false))
                 {
-                    // checks for idempotency 
-                    if (await stream.ContainsOperationAsync(operationId).ConfigureAwait(false))
-                    {
-                        // already stored, we just need to skip and avoid exception
-                        return;
-                    }
+                    return;
                 }
+                
                 check.ThrowIfInvalid();
             }
 
             headers?.Invoke(changeSet);
 
             var chunk = await stream.AppendAsync(changeSet, operationId, cancellationToken).ConfigureAwait(false);
-			//remember to check if the chunk was really persisted or skipped because of operationId idempotency.
-			if (chunk != null)
-			{
-				persister.Persisted(changeSet);
+            //remember to check if the chunk was really persisted or skipped because of operationId idempotency.
+            if (chunk != null)
+            {
+                persister.Persisted(changeSet);
 
-				if (_snapshots != null && aggregate is ISnaphottable snaphottable)
-				{
-					//we need to await, it's responsibility of the snapshot provider to clone & store state (sync or async)
-					await _snapshots.AddAsync(aggregate.Id, snaphottable.GetSnapshot(), cancellationToken).ConfigureAwait(false);
-				}
-			}
-			else 
-			{
-				Clear();
-				//persister.ClearUncommitted();
-			}
+                if (_snapshots != null && aggregate is ISnapshottable snapshottable)
+                {
+                    //we need to await, it's responsibility of the snapshot provider to clone & store state (sync or async)
+                    await _snapshots.AddAsync(aggregate.Id, snapshottable.GetSnapshot(), cancellationToken)
+                        .ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                Clear();
+            }
         }
 
         protected virtual IStream OpenStream(string streamId)
@@ -184,10 +186,10 @@ namespace NStore.Domain
             return _openedStreams[aggregate.Id];
         }
 
-		public void Clear()
-		{
-			_trackingAggregates.Clear();
-			_openedStreams.Clear();
-		}
-	}
+        public void Clear()
+        {
+            _trackingAggregates.Clear();
+            _openedStreams.Clear();
+        }
+    }
 }

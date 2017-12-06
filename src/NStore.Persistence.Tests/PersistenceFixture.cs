@@ -119,14 +119,14 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_return_null_on_missing_operation()
         {
-            var chunk = await Store.ReadByOpeationIdAsync("stream_1", "nop",CancellationToken.None).ConfigureAwait(false);
+            var chunk = await Store.ReadByOperationIdAsync("stream_1", "nop",CancellationToken.None).ConfigureAwait(false);
             Assert.Null(chunk);
         }
 
         [Fact]
         public async Task should_return_index_1_for_operation_1()
         {
-            var chunk = await Store.ReadByOpeationIdAsync("stream_1", "operation_1",CancellationToken.None).ConfigureAwait(false);
+            var chunk = await Store.ReadByOperationIdAsync("stream_1", "operation_1",CancellationToken.None).ConfigureAwait(false);
             Assert.NotNull(chunk);
             Assert.Equal(1, chunk.Index);
         }
@@ -134,7 +134,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_return_index_2_for_operation_2()
         {
-            var chunk = await Store.ReadByOpeationIdAsync("stream_1", "operation_2",CancellationToken.None).ConfigureAwait(false);
+            var chunk = await Store.ReadByOperationIdAsync("stream_1", "operation_2",CancellationToken.None).ConfigureAwait(false);
             Assert.NotNull(chunk);
             Assert.Equal(2, chunk.Index);
         }
@@ -723,6 +723,26 @@ namespace NStore.Persistence.Tests
             await client.Poll(5000).ConfigureAwait(false);
 
             Assert.Equal(expected, recorder.Length);
+        }
+    }
+
+    public class large_payload_tests: BasePersistenceTest
+    {
+        [Fact]
+        public async Task can_write_and_read_large_payload()
+        {
+            var payload = new byte[1_000_000];
+            for (int c = 0; c < payload.Length; c++)
+            {
+                payload[c] = Convert.ToByte(c % 255);
+            }
+
+            await _persistence.AppendAsync("large_binary", payload).ConfigureAwait(false);
+
+            var chunk = await _persistence.ReadSingleBackwardAsync("large_binary").ConfigureAwait(false);
+            var loadedBytes = (byte[])chunk.Payload;
+
+            Assert.Equal(payload, loadedBytes);
         }
     }
 

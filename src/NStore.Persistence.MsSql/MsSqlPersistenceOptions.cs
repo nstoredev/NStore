@@ -1,28 +1,25 @@
+using System;
+using System.Text;
+using NStore.BaseSqlPersistence;
 using NStore.Core.Logging;
 
 namespace NStore.Persistence.MsSql
 {
-    public class MsSqlPersistenceOptions
+    public class MsSqlPersistenceOptions : BaseSqlPersistenceOptions
     {
-        public INStoreLoggerFactory LoggerFactory { get; set; }
-        public IMsSqlPayloadSearializer Serializer { get; set; }
-        public string ConnectionString { get; set; }
-        public string StreamsTableName { get; set; }
-
-        public MsSqlPersistenceOptions(INStoreLoggerFactory loggerFactory)
+        public MsSqlPersistenceOptions(INStoreLoggerFactory loggerFactory) : base(loggerFactory)
         {
-            LoggerFactory = loggerFactory;
-            StreamsTableName = "Streams";
         }
 
-        public virtual string GetCreateTableScript()
+        protected virtual string GetCreateTableSql()
         {
             return $@"CREATE TABLE [{StreamsTableName}](
                 [Position] BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
                 [PartitionId] NVARCHAR(255) NOT NULL,
                 [OperationId] NVARCHAR(255) NOT NULL,
+                [SerializerInfo] NVARCHAR(255) NOT NULL,
                 [Index] BIGINT NOT NULL,
-                [Payload] NVARCHAR(MAX)
+                [Payload] VARBINARY(MAX)
             )
 
             CREATE UNIQUE INDEX IX_{StreamsTableName}_OPID on dbo.{StreamsTableName} (PartitionId, OperationId)
@@ -30,44 +27,120 @@ namespace NStore.Persistence.MsSql
 ";
         }
 
-        public virtual string GetPersistScript()
+        public override string GetInsertChunkSql()
         {
             return $@"INSERT INTO [{StreamsTableName}]
-                      ([PartitionId], [Index], [Payload], [OperationId])
+                      ([PartitionId], [Index], [Payload], [OperationId], [SerializerInfo])
                       OUTPUT INSERTED.[Position] 
-                      VALUES (@PartitionId, @Index, @Payload, @OperationId)";
+                      VALUES (@PartitionId, @Index, @Payload, @OperationId, @SerializerInfo)";
         }
 
-        public virtual string GetDeleteStreamScript()
+        public override string GetDeleteStreamChunksSql()
         {
             return $@"DELETE FROM [{StreamsTableName}] WHERE 
                           [PartitionId] = @PartitionId 
                       AND [Index] BETWEEN @fromLowerIndexInclusive AND @toUpperIndexInclusive";
         }
 
-        public virtual string GetFindByStreamAndOperation()
+        public override string GetSelectChunkByStreamAndOperation()
         {
-            return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId]
+            return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
                       FROM [{StreamsTableName}] 
                       WHERE [PartitionId] = @PartitionId AND [OperationId] = @OperationId";
         }
 
-        public virtual string GetFindAllByOperation()
+        public override string GetSelectAllChunksByOperationSql()
         {
-            return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId]
+            return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
                       FROM [{StreamsTableName}] 
                       WHERE [OperationId] = @OperationId";
         }
 
-        public virtual string GetLastChunkScript()
+        public override string GetSelectLastChunkSql()
         {
             return $@"SELECT TOP 1 
-                        [Position], [PartitionId], [Index], [Payload], [OperationId]
+                        [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
                       FROM 
                         [{StreamsTableName}] 
                       WHERE 
                           [PartitionId] = @PartitionId 
                       AND [Index] <= @toUpperIndexInclusive 
+                      ORDER BY 
+                          [Position] DESC";
+        }
+
+        public override string GetRangeSelectChunksSql(
+            long upperIndexInclusive,
+            long lowerIndexInclusive,
+            int limit,
+            bool descending
+        )
+        {
+            var sb = new StringBuilder("SELECT ");
+            if (limit > 0 && limit != int.MaxValue)
+            {
+                sb.Append($"TOP {limit} ");
+            }
+
+            sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo] ");
+            sb.Append($"FROM {StreamsTableName} ");
+            sb.Append("WHERE [PartitionId] = @PartitionId ");
+
+            if (lowerIndexInclusive > 0 && lowerIndexInclusive != Int64.MinValue)
+            {
+                sb.Append("AND [Index] >= @lowerIndexInclusive ");
+            }
+
+            if (upperIndexInclusive > 0 && upperIndexInclusive != Int64.MaxValue)
+            {
+                sb.Append("AND [Index] <= @upperIndexInclusive ");
+            }
+
+            sb.Append(@descending ? "ORDER BY [Index] DESC" : "ORDER BY [Index]");
+
+            return sb.ToString();
+        }
+
+        public virtual string GetDropTableSql()
+        {
+            return
+                $"if exists (select * from INFORMATION_SCHEMA.TABLES where TABLE_NAME = '{this.StreamsTableName}' AND TABLE_SCHEMA = 'dbo') " +
+                $"DROP TABLE {this.StreamsTableName}";
+        }
+
+        public override string GetCreateTableIfMissingSql()
+        {
+            var sql = GetCreateTableSql();
+            
+            return $@"
+if not exists (select * from dbo.sysobjects where id = object_id(N'{{StreamsTableName}}') and OBJECTPROPERTY(id, N'IsUserTable') = 1) 
+BEGIN
+{sql}
+END
+";
+        }
+
+        public override string GetReadAllChunksSql(int limit)
+        {
+            var top = limit != Int32.MaxValue ? $"TOP {limit}" : "";
+
+            return $@"SELECT {top} 
+                        [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
+                      FROM 
+                        [{this.StreamsTableName}] 
+                      WHERE 
+                          [Position] >= @fromPositionInclusive 
+                      ORDER BY 
+                          [Position]";
+            
+        }
+
+        public override string GetSelectLastPositionSql()
+        {
+            return $@"SELECT TOP 1
+                        [Position]
+                      FROM 
+                        [{this.StreamsTableName}] 
                       ORDER BY 
                           [Position] DESC";
         }

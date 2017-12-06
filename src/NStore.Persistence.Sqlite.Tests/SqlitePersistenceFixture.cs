@@ -51,7 +51,7 @@ namespace NStore.Persistence.Tests
             {
                 ConnectionString = ConnectionString,
                 StreamsTableName = "streams_" + _testRunId + "_" + GetType().Name,
-                Serializer = new JsonMsSqlSerializer()
+                Serializer = new JsonSqliteSerializer()
             };
 
             _sqlPersistence = new SqlitePersistence(_options);

@@ -5,6 +5,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using NStore.Core.Persistence;
 using NStore.Core.Logging;
+using System.Linq;
 
 namespace NStore.Persistence.Mongo
 {
@@ -46,7 +47,7 @@ namespace NStore.Persistence.Mongo
 			_options = options;
 
 			var partitionsBuild = new MongoUrlBuilder(options.PartitionsConnectionString);
-			_logger = options.LoggerFactory.CreateLogger($"MongoPersistence-{partitionsBuild.Server.ToString()}-{options.PartitionsCollectionName}");
+			_logger = options.LoggerFactory.CreateLogger($"Mongo-{String.Join(",", partitionsBuild.Servers.Select(s => $"{s.Host}:{s.Port}"))}, {options.PartitionsCollectionName}");
 
 			_mongoPayloadSerializer = options.MongoPayloadSerializer ?? new TypeSystemMongoPayloadSerializer();
 			Connect();
@@ -282,7 +283,7 @@ namespace NStore.Persistence.Mongo
 				throw new StreamDeleteException(partitionId);
 		}
 
-		public async Task<IChunk> ReadByOpeationIdAsync(string partitionId, string operationId, CancellationToken cancellationToken)
+		public async Task<IChunk> ReadByOperationIdAsync(string partitionId, string operationId, CancellationToken cancellationToken)
 		{
 			var filter  = Builders<TChunk>.Filter.And(
 				Builders<TChunk>.Filter.Eq(x => x.PartitionId, partitionId),
@@ -491,7 +492,6 @@ namespace NStore.Persistence.Mongo
 					current.OperationId ?? Guid.NewGuid().ToString()
 				);
 
-				//                current.AssignPosition(id);
 				chunks[currentIdx] = chunk;
 			}
 

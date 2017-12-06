@@ -21,7 +21,7 @@ namespace NStore.Domain.Tests.ProcessManagerTests
 
             //restore @ version 1
             var snapshot = new SnapshotInfo("test", 1, State, "1");
-            ((ISnaphottable)this.Process).TryRestore(snapshot);
+            ((ISnapshottable)this.Process).TryRestore(snapshot);
 
             if (!this.Process.IsInitialized)
 #pragma warning disable S112 // General exceptions should never be thrown
@@ -129,7 +129,7 @@ namespace NStore.Domain.Tests.ProcessManagerTests
 
             var cloned = new CheckoutProcess();
             var snapshot = new SnapshotInfo("test", 1, new CheckoutState(), "1");
-            ((ISnaphottable)cloned).TryRestore(snapshot);
+            ((ISnapshottable)cloned).TryRestore(snapshot);
 
             ((IEventSourcedAggregate)cloned).ApplyChanges(changeset);
 

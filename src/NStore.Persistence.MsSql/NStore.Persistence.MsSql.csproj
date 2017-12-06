@@ -18,6 +18,7 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+		<ProjectReference Include="..\NStore.BaseSqlPersistence\NStore.BaseSqlPersistence.csproj" />
 		<ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
   </ItemGroup>
 </Project>

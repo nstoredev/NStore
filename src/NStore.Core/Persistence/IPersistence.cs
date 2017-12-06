@@ -67,7 +67,7 @@ namespace NStore.Core.Persistence
             CancellationToken cancellationToken
         );
 
-        Task<IChunk> ReadByOpeationIdAsync(
+        Task<IChunk> ReadByOperationIdAsync(
             string partitionId,
             string operationId,
             CancellationToken cancellationToken

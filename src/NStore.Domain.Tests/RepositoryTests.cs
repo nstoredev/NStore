@@ -14,8 +14,10 @@ namespace NStore.Domain.Tests
 {
     public abstract class BaseRepositoryTest
     {
-        protected IStreamsFactory Streams { get; }
-        protected IPersistence Persistence { get; }
+        protected IStreamsFactory _streams;
+        protected IStreamsFactory Streams => _streams ?? (_streams = new StreamsFactory(Persistence));
+        protected IPersistence _persistence;
+        protected IPersistence Persistence => _persistence ?? (_persistence = new InMemoryPersistence());
         private IAggregateFactory AggregateFactory { get; }
         protected ISnapshotStore Snapshots { get; set; }
         private IRepository _repository;
@@ -23,13 +25,10 @@ namespace NStore.Domain.Tests
 
         protected BaseRepositoryTest()
         {
-            Persistence = new InMemoryPersistence();
-
-            Streams = new StreamsFactory(Persistence);
             AggregateFactory = new DefaultAggregateFactory();
         }
 
-        protected IRepository CreateRepository()
+        protected virtual IRepository CreateRepository()
         {
             return new Repository(
                 AggregateFactory,
@@ -282,6 +281,38 @@ namespace NStore.Domain.Tests
             Assert.IsType<Changeset>(chunk.Payload);
             Assert.True(((Changeset)chunk.Payload).IsEmpty());
             Assert.Equal("empty", chunk.OperationId);
+        }
+    }
+
+    public class handling_exception_on_streams : BaseRepositoryTest
+    {
+        [Fact]
+        public async Task repository_should_throw_if_stream_throws_exception()
+        {
+            await Setup().ConfigureAwait(false);
+
+            //After setup lets throw for all the reads
+            networkSimulator.ShouldThrow = true;
+            await Assert.ThrowsAsync<RepositoryReadException>(() =>
+              Repository.GetByIdAsync<CounterAggregate>("Counter_1")).ConfigureAwait(false);
+        }
+
+        AlwaysThrowsNetworkSimulator networkSimulator;
+        protected IPersistence CreatePersistence()
+        {
+            networkSimulator = new AlwaysThrowsNetworkSimulator();
+            var persistence = new InMemoryPersistence(networkSimulator);
+            return persistence;
+        }
+
+        private async Task Setup()
+        {
+            _persistence = CreatePersistence();
+            var counter = await Repository.GetByIdAsync<CounterAggregate>("Counter_1").ConfigureAwait(false);
+            counter.Increment();
+            await Repository.SaveAsync(counter, "inc_1").ConfigureAwait(false);
+
+            Repository.Clear();
         }
     }
 

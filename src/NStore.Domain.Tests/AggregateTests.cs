@@ -205,7 +205,7 @@ namespace NStore.Domain.Tests
         public void restoring_null_snapshot_should_throw()
         {
             var ticket = TicketTestFactory.ForTest();
-            var snaphottable = (ISnaphottable)ticket;
+            var snaphottable = (ISnapshottable)ticket;
 
             Assert.Throws<ArgumentNullException>(() =>
             {
@@ -217,7 +217,7 @@ namespace NStore.Domain.Tests
         public void restoring_empty_snapshot_should_return_false()
         {
             var ticket = TicketTestFactory.ForTest();
-            var snaphottable = (ISnaphottable)ticket;
+            var snaphottable = (ISnapshottable)ticket;
             var snapshot = new SnapshotInfo(null, 0, null, null);
             var restored = snaphottable.TryRestore(snapshot);
 
@@ -228,7 +228,7 @@ namespace NStore.Domain.Tests
         public void restoring_incompatible_snapshot_should_return_false()
         {
             var ticket = TicketTestFactory.ForTest();
-            var snaphottable = (ISnaphottable)ticket;
+            var snaphottable = (ISnapshottable)ticket;
             var snapshot = new SnapshotInfo(ticket.Id, 2, null, null);
             var restored = snaphottable.TryRestore(snapshot);
 
