@@ -77,20 +77,27 @@ namespace NStore.Core.Processing
         private ISnapshotStore _snapshots;
         private long? _upToIndex;
         private Func<long, long, bool> _onMissing;
-		private readonly IPayloadProcessor _payloadProcessor;
 
-		public StreamProcessor(IReadOnlyStream source, IPayloadProcessor payloadProcessor)
+        public StreamProcessor(IReadOnlyStream source)
         {
             _source = source ?? throw new ArgumentNullException(nameof(source));
-			_payloadProcessor = payloadProcessor;
-		}
+        }
 
         public Task<TResult> RunAsync<TResult>() where TResult : new()
         {
-            return RunAsync<TResult>(default(CancellationToken));
+            return RunAsync<TResult>(DelegateToPrivateEventHandlers.Instance, default(CancellationToken));
         }
 
-        public async Task<TResult> RunAsync<TResult>(CancellationToken cancellationToken) where TResult : new()
+        public Task<TResult> RunAsync<TResult>(Func<TResult, object, object> processor) where TResult : new()
+        {
+            return RunAsync<TResult>(
+                new DelegateToLambdaPayloadProcessor<TResult>(processor),
+                default(CancellationToken)
+            );
+        }
+
+        public async Task<TResult> RunAsync<TResult>(IPayloadProcessor processor, CancellationToken cancellationToken)
+            where TResult : new()
         {
             long startIndex = 1;
             TResult state = default(TResult);
@@ -102,7 +109,7 @@ namespace NStore.Core.Processing
 
                 if (si != null)
                 {
-                    state = (TResult)si.Payload;
+                    state = (TResult) si.Payload;
                     if (_upToIndex.HasValue && si.SourceVersion == _upToIndex.Value)
                     {
                         return state;
@@ -117,7 +124,7 @@ namespace NStore.Core.Processing
                 state = new TResult();
             }
 
-            var reducer = new Reducer<TResult>(state, _onMissing, _payloadProcessor);
+            var reducer = new Reducer<TResult>(state, _onMissing, processor);
             await _source.ReadAsync(reducer, startIndex, _upToIndex ?? long.MaxValue, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -147,6 +154,7 @@ namespace NStore.Core.Processing
                 si = await _snapshots.GetLastAsync(snapshotId, cancellationToken)
                     .ConfigureAwait(false);
             }
+
             return si;
         }
 
