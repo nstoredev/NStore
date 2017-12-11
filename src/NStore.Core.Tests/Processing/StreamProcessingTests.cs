@@ -23,7 +23,7 @@ namespace NStore.Core.Tests.Processing
         public Task ProcessAsync(object input)
         {
             Counter++;
-            return Task.CompletedTask;
+            return Task.Delay(10);
         }
     }
 
@@ -233,12 +233,30 @@ namespace NStore.Core.Tests.Processing
         }
 
         [Fact]
+        public async Task should_fold_using_lambda_async_await()
+        {
+            var sequence = await CreateStream("sequence_1").ConfigureAwait(false);
+            var result = await sequence
+                .Fold()
+                .RunAsync<CounterProcessor>(async (c, o) =>
+                {
+                    await c.ProcessAsync(o);
+                    return Task.Delay(10);
+                })
+                .ConfigureAwait(false);
+            
+            Assert.Equal(10,result.Counter);
+        }
+
+        [Fact]
         public async Task should_fold_using_lambda_async()
         {
             var sequence = await CreateStream("sequence_1").ConfigureAwait(false);
             var result = await sequence
                 .Fold()
-                .RunAsync<CounterProcessor>((c, o) => c.ProcessAsync(o))
+                .RunAsync<CounterProcessor>((c, o) =>
+                    c.ProcessAsync(o)
+                )
                 .ConfigureAwait(false);
             
             Assert.Equal(10,result.Counter);

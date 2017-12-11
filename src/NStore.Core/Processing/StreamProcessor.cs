@@ -96,6 +96,14 @@ namespace NStore.Core.Processing
             );
         }
 
+        public Task<TResult> RunAsync<TResult>(Func<TResult, object, Task<object>> processor) where TResult : new()
+        {
+            return RunAsync<TResult>(
+                new DelegateToLambdaPayloadProcessor<TResult>(processor),
+                default(CancellationToken)
+            );
+        }
+
         public async Task<TResult> RunAsync<TResult>(IPayloadProcessor processor, CancellationToken cancellationToken)
             where TResult : new()
         {
