@@ -35,9 +35,14 @@ namespace NStore.Core.Streams
             return Persistence.ReadSingleBackwardAsync(Id, cancellationToken);
         }
 
-        public virtual Task<IChunk> AppendAsync(object payload, string operationId, CancellationToken cancellation)
+        public virtual Task<IChunk> AppendAsync(
+            object payload, 
+            long index,
+            string operationId, 
+            CancellationToken cancellation
+            )
         {
-            return Persistence.AppendAsync(this.Id, -1, payload, operationId, cancellation);
+            return Persistence.AppendAsync(this.Id, index, payload, operationId, cancellation);
         }
 
         public virtual Task DeleteAsync(CancellationToken cancellation)

@@ -12,7 +12,7 @@ namespace NStore.Core.Streams
         {
         }
 
-        public override Task<IChunk> AppendAsync(object payload, string operationId, CancellationToken cancellation )
+        public override Task<IChunk> AppendAsync(object payload, long index, string operationId, CancellationToken cancellation )
         {
             throw new StreamReadOnlyException();
         }
