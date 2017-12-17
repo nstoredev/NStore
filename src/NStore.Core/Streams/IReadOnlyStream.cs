@@ -15,6 +15,8 @@ namespace NStore.Core.Streams
             CancellationToken cancellationToken
         );
 
+        Task<IChunk> PeekAsync(CancellationToken cancellationToken);
+
         Task<bool> IsEmpty(CancellationToken cancellationToken);
         Task<bool> ContainsOperationAsync(string operationId, CancellationToken cancellationToken);
     }

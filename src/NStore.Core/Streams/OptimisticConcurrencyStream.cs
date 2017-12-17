@@ -20,7 +20,8 @@ namespace NStore.Core.Streams
             this.Persistence = persistence;
         }
 
-        public Task ReadAsync(ISubscription subscription, long fromIndexInclusive, long toIndexInclusive, CancellationToken cancellationToken)
+        public Task ReadAsync(ISubscription subscription, long fromIndexInclusive, long toIndexInclusive,
+            CancellationToken cancellationToken)
         {
             // @@REVIEW: micro optimization for reading only last index? (fromIndexInclusive == toIndexInclusive == Int32.MaxValue)
             var readConsumer = subscription;
@@ -43,6 +44,11 @@ namespace NStore.Core.Streams
             );
         }
 
+        public Task<IChunk> PeekAsync(CancellationToken cancellationToken)
+        {
+            return Persistence.ReadSingleBackwardAsync(Id, cancellationToken);
+        }
+
         public async Task<bool> IsEmpty(CancellationToken cancellationToken)
         {
             // @@REVIEW: check version to avoid db rountrip
@@ -51,13 +57,14 @@ namespace NStore.Core.Streams
 
         public async Task<bool> ContainsOperationAsync(string operationId, CancellationToken cancellationToken)
         {
-            var chunk = await Persistence.ReadByOperationIdAsync(this.Id, operationId, cancellationToken).ConfigureAwait(false);
+            var chunk = await Persistence.ReadByOperationIdAsync(this.Id, operationId, cancellationToken)
+                .ConfigureAwait(false);
             return chunk != null;
         }
 
         public async Task<IChunk> AppendAsync(object payload, string operationId, CancellationToken cancellation)
         {
-			IChunk chunk = null;
+            IChunk chunk = null;
             if (Version == -1)
                 throw new AppendFailedException(this.Id,
                         $@"Cannot append on stream {this.Id}
@@ -67,15 +74,17 @@ If you don't need to read use {typeof(Stream).Name} instead of {GetType().Name}.
             long desiredVersion = this.Version + 1;
             try
             {
-				chunk = await Persistence.AppendAsync(this.Id, desiredVersion, payload, operationId, cancellation).ConfigureAwait(false);
+                chunk = await Persistence.AppendAsync(this.Id, desiredVersion, payload, operationId, cancellation)
+                    .ConfigureAwait(false);
             }
             catch (DuplicateStreamIndexException e)
             {
                 throw new ConcurrencyException($"Concurrency exception on StreamId: {this.Id}", e);
             }
+
             this.Version = desiredVersion;
-			return chunk;
-		}
+            return chunk;
+        }
 
         public Task DeleteAsync(CancellationToken cancellation)
         {

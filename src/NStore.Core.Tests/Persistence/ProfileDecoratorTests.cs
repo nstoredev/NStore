@@ -43,7 +43,7 @@ namespace NStore.Core.Tests.Persistence
             Assert.Equal(0, _profile.StoreScanCounter.Calls);
             Assert.Equal(0, _profile.ReadForwardCounter.Calls);
             Assert.Equal(0, _profile.ReadBackwardCounter.Calls);
-            Assert.Equal(0, _profile.PeekCounter.Calls);
+            Assert.Equal(0, _profile.ReadSingleBackwardCounter.Calls);
         }
 
         [Fact]
@@ -55,7 +55,7 @@ namespace NStore.Core.Tests.Persistence
             Assert.Equal(0, _profile.StoreScanCounter.Calls);
             Assert.Equal(0, _profile.ReadForwardCounter.Calls);
             Assert.Equal(0, _profile.ReadBackwardCounter.Calls);
-            Assert.Equal(0, _profile.PeekCounter.Calls);
+            Assert.Equal(0, _profile.ReadSingleBackwardCounter.Calls);
         }
 
         [Fact]
@@ -67,7 +67,7 @@ namespace NStore.Core.Tests.Persistence
             Assert.Equal(0, _profile.StoreScanCounter.Calls);
             Assert.Equal(0, _profile.ReadForwardCounter.Calls);
             Assert.Equal(0, _profile.ReadBackwardCounter.Calls);
-            Assert.Equal(0, _profile.PeekCounter.Calls);
+            Assert.Equal(0, _profile.ReadSingleBackwardCounter.Calls);
         }
 
         [Fact]
@@ -79,7 +79,7 @@ namespace NStore.Core.Tests.Persistence
             Assert.Equal(1, _profile.StoreScanCounter.Calls);
             Assert.Equal(0, _profile.ReadForwardCounter.Calls);
             Assert.Equal(0, _profile.ReadBackwardCounter.Calls);
-            Assert.Equal(0, _profile.PeekCounter.Calls);
+            Assert.Equal(0, _profile.ReadSingleBackwardCounter.Calls);
         }
 
         [Fact]
@@ -91,7 +91,7 @@ namespace NStore.Core.Tests.Persistence
             Assert.Equal(0, _profile.StoreScanCounter.Calls);
             Assert.Equal(1, _profile.ReadForwardCounter.Calls);
             Assert.Equal(0, _profile.ReadBackwardCounter.Calls);
-            Assert.Equal(0, _profile.PeekCounter.Calls);
+            Assert.Equal(0, _profile.ReadSingleBackwardCounter.Calls);
         }
 
         [Fact]
@@ -103,7 +103,7 @@ namespace NStore.Core.Tests.Persistence
             Assert.Equal(0, _profile.StoreScanCounter.Calls);
             Assert.Equal(0, _profile.ReadForwardCounter.Calls);
             Assert.Equal(1, _profile.ReadBackwardCounter.Calls);
-            Assert.Equal(0, _profile.PeekCounter.Calls);
+            Assert.Equal(0, _profile.ReadSingleBackwardCounter.Calls);
         }
 
         [Fact]
@@ -115,7 +115,7 @@ namespace NStore.Core.Tests.Persistence
             Assert.Equal(0, _profile.StoreScanCounter.Calls);
             Assert.Equal(0, _profile.ReadForwardCounter.Calls);
             Assert.Equal(0, _profile.ReadBackwardCounter.Calls);
-            Assert.Equal(1, _profile.PeekCounter.Calls);
+            Assert.Equal(1, _profile.ReadSingleBackwardCounter.Calls);
         }
     }
 }
