@@ -75,7 +75,7 @@ namespace NStore.Domain.Tests.ExperimentalTests
             el.Do(new Attack("demogorgon", Attack.AttackLevel.Kill));
             await scene.StreamAsync();
 
-            var changes = await strangerStreams.OpenForRead("11").ReadAsync();
+            var changes = await strangerStreams.OpenForRead("11").RecordAsync();
             Assert.Equal(1, changes.Length);
         }
 

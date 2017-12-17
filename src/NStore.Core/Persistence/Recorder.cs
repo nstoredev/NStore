@@ -82,13 +82,20 @@ namespace NStore.Core.Persistence
         public IChunk ByIndex(int index) => _map[index];
         public IEnumerable<IChunk> Chunks => _data;
     }
-
+    
     public static class RecorderExtensions
     {
-        public static async Task<Recorder> ReadAsync(this IReadOnlyStream stream)
+        public static async Task<Recorder> RecordAsync(this IReadOnlyStream stream)
         {
             var recorder = new Recorder();
             await stream.ReadAsync(recorder).ConfigureAwait(false);
+            return recorder;
+        }
+
+        public static async Task<Recorder> RecordAsync(this IPersistence persistence, string partitionId)
+        {
+            var recorder = new Recorder();
+            await persistence.ReadForwardAsync(partitionId, recorder).ConfigureAwait(false);
             return recorder;
         }
     }
