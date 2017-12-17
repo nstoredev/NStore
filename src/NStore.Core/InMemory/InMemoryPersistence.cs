@@ -265,14 +265,10 @@ namespace NStore.Core.InMemory
 
             if (!_partitions.TryGetValue(partitionId, out var partition))
             {
-                throw new StreamDeleteException(partitionId);
+                return;
             }
 
             var deleted = partition.Delete(fromLowerIndexInclusive, toUpperIndexInclusive);
-            if (deleted.Length == 0)
-            {
-                throw new StreamDeleteException(partitionId);
-            }
 
             foreach (var d in deleted)
             {
