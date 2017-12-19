@@ -10,12 +10,21 @@ namespace NStore.Core.Streams
 
         Task<IChunk> AppendAsync(
             object payload, 
-            long index,
             string operationId, 
             CancellationToken cancellation
         );
 
         Task DeleteAsync(
+            CancellationToken cancellation
+        );
+    }
+
+    public interface IRandomAccessStream : IStream
+    {
+        Task<IChunk> PersistAsync(
+            object payload,
+            long index,
+            string operationId,
             CancellationToken cancellation
         );
     }

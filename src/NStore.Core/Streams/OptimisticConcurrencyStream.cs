@@ -79,18 +79,10 @@ namespace NStore.Core.Streams
 
         public async Task<IChunk> AppendAsync(
             object payload,
-            long index,
             string operationId,
             CancellationToken cancellation
         )
         {
-            if (index != -1)
-            {
-                throw new AppendFailedException(Id,
-                    $@"Cannot append on stream {Id}
-Append can't be called with an index value.");
-            }
-
             IChunk chunk = null;
             if (_version == -1)
             {
