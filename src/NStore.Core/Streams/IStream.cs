@@ -18,14 +18,4 @@ namespace NStore.Core.Streams
             CancellationToken cancellation
         );
     }
-
-    public interface IRandomAccessStream : IStream
-    {
-        Task<IChunk> PersistAsync(
-            object payload,
-            long index,
-            string operationId,
-            CancellationToken cancellation
-        );
-    }
 }

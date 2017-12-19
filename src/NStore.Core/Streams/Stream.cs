@@ -5,7 +5,7 @@ using System;
 
 namespace NStore.Core.Streams
 {
-    public class Stream : IStream, IRandomAccessStream
+    public class Stream : IRandomAccessStream
     {
         private IPersistence Persistence { get; }
         public string Id { get; }
