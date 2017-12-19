@@ -26,24 +26,25 @@ namespace NStore.Quickstart
 
             Console.WriteLine("Writing to Stream_1");
             var stream = streams.Open("Stream_1");
-            await stream.AppendAsync(new { data = "Hello world!" });
+            await stream.AppendAsync(new { data = "Hello world!" }).ConfigureAwait(false);
 
             Console.WriteLine("Reading from Stream_1");
-            await stream.ReadAsync(data => {
+            await stream.ReadAsync(data =>
+            {
                 Console.WriteLine($"  index {data.Index} => {data.Payload}");
                 return Task.FromResult(true);
-            });
+            }).ConfigureAwait(false);
         }
 
         private static async Task raw_api()
         {
             var persister = CreateYourStore();
-            await persister.AppendAsync("Stream_1", new { data = "Hello world!" });
+            await persister.AppendAsync("Stream_1", new { data = "Hello world!" }).ConfigureAwait(false);
         }
 
         private static IPersistence CreateYourStore()
         {
-            return new InMemoryPersistence(o => o);
+            return new InMemoryPersistence();
         }
     }
 }
