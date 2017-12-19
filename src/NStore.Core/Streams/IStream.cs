@@ -10,7 +10,6 @@ namespace NStore.Core.Streams
 
         Task<IChunk> AppendAsync(
             object payload, 
-            long index,
             string operationId, 
             CancellationToken cancellation
         );

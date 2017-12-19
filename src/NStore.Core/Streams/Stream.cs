@@ -5,7 +5,7 @@ using System;
 
 namespace NStore.Core.Streams
 {
-    public class Stream : IStream
+    public class Stream : IRandomAccessStream
     {
         private IPersistence Persistence { get; }
         public string Id { get; }
@@ -37,17 +37,21 @@ namespace NStore.Core.Streams
 
         public virtual Task<IChunk> AppendAsync(
             object payload, 
-            long index,
             string operationId, 
             CancellationToken cancellation
             )
         {
-            return Persistence.AppendAsync(this.Id, index, payload, operationId, cancellation);
+            return Persistence.AppendAsync(this.Id, -1, payload, operationId, cancellation);
         }
 
         public virtual Task DeleteAsync(CancellationToken cancellation)
         {
             return Persistence.DeleteAsync(this.Id, 0, long.MaxValue, cancellation);
+        }
+
+        public Task<IChunk> PersistAsync(object payload, long index, string operationId, CancellationToken cancellation)
+        {
+            return Persistence.AppendAsync(this.Id, index, payload, operationId, cancellation);
         }
 
         public async Task<bool> IsEmpty(CancellationToken cancellationToken)

@@ -22,13 +22,5 @@ namespace NStore.Core.Tests.Streams
             await _stream.PeekAsync().ConfigureAwait(false);
             Assert.Equal(1, _persistence.ReadSingleBackwardCounter.Calls);
         }
-
-        [Fact]
-        public async Task append_with_index_should_throw()
-        {
-            await Assert.ThrowsAsync<AppendFailedException>(() =>
-                _stream.AppendAsync(1, "payload", "op_unique")
-            );
-        }
     }
 }
