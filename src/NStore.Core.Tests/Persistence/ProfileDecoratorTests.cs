@@ -19,20 +19,20 @@ namespace NStore.Core.Tests.Persistence
 
         private async Task Wait(int ms)
         {
-            await Task.Delay(ms);
+            await Task.Delay(ms).ConfigureAwait(false);
         }
 
         [Fact]
-        public async void should_count_wait_time()
+        public async Task should_count_wait_time()
         {
             var pi = new TaskProfilingInfo("test");
             var sw = new Stopwatch();
             sw.Start();
-            await pi.CaptureAsync(() => Wait(1000));
+            await pi.CaptureAsync(() => Wait(300)).ConfigureAwait(false);
             sw.Stop();
 
-            Assert.True(sw.ElapsedMilliseconds >= 1000, "sw.ElapsedMilliseconds >= 1000");
-            Assert.True(pi.Elapsed.TotalMilliseconds >= 1000, "pi.Elapsed.Milliseconds >= 1000");
+            Assert.True(sw.ElapsedMilliseconds >= 300, "sw.ElapsedMilliseconds >= 300");
+            Assert.True(pi.Elapsed.TotalMilliseconds >= 300, "pi.Elapsed.Milliseconds >= 300");
         }
 
         [Fact]
@@ -47,9 +47,9 @@ namespace NStore.Core.Tests.Persistence
         }
 
         [Fact]
-        public async void persist_should_be_recorded()
+        public async Task persist_should_be_recorded()
         {
-            await _store.AppendAsync("empty", 0, null);
+            await _store.AppendAsync("empty", 0, null).ConfigureAwait(false);
             Assert.Equal(1, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
             Assert.Equal(0, _profile.StoreScanCounter.Calls);
@@ -59,9 +59,9 @@ namespace NStore.Core.Tests.Persistence
         }
 
         [Fact]
-        public async void delete_should_be_recorded()
+        public async Task delete_should_be_recorded()
         {
-            await _store.DeleteAsync("empty");
+            await _store.DeleteAsync("empty").ConfigureAwait(false);
             Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(1, _profile.DeleteCounter.Calls);
             Assert.Equal(0, _profile.StoreScanCounter.Calls);
@@ -71,9 +71,9 @@ namespace NStore.Core.Tests.Persistence
         }
 
         [Fact]
-        public async void scan_store_should_be_recorded()
+        public async Task scan_store_should_be_recorded()
         {
-            await _store.ReadAllAsync(0, new AllPartitionsRecorder(), 10);
+            await _store.ReadAllAsync(0, new AllPartitionsRecorder(), 10).ConfigureAwait(false);
             Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
             Assert.Equal(1, _profile.StoreScanCounter.Calls);
@@ -83,9 +83,9 @@ namespace NStore.Core.Tests.Persistence
         }
 
         [Fact]
-        public async void scan_partition_should_be_recorded()
+        public async Task scan_partition_should_be_recorded()
         {
-            await _store.ReadForwardAsync("empty", 0, new Recorder(), 10);
+            await _store.ReadForwardAsync("empty", 0, new Recorder(), 10).ConfigureAwait(false);
             Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
             Assert.Equal(0, _profile.StoreScanCounter.Calls);
@@ -95,9 +95,9 @@ namespace NStore.Core.Tests.Persistence
         }
 
         [Fact]
-        public async void scan_partition_backward_should_be_recorded()
+        public async Task scan_partition_backward_should_be_recorded()
         {
-            await _store.ReadBackwardAsync("empty", 0, new Recorder(), 10);
+            await _store.ReadBackwardAsync("empty", 0, new Recorder(), 10).ConfigureAwait(false);
             Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
             Assert.Equal(0, _profile.StoreScanCounter.Calls);
@@ -107,9 +107,9 @@ namespace NStore.Core.Tests.Persistence
         }
 
         [Fact]
-        public async void peek_partition_should_be_recorded()
+        public async Task peek_partition_should_be_recorded()
         {
-            var value = await _store.ReadSingleBackwardAsync("empty", 1, CancellationToken.None);
+            var value = await _store.ReadSingleBackwardAsync("empty", 1, CancellationToken.None).ConfigureAwait(false);
             Assert.Equal(0, _profile.PersistCounter.Calls);
             Assert.Equal(0, _profile.DeleteCounter.Calls);
             Assert.Equal(0, _profile.StoreScanCounter.Calls);
