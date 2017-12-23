@@ -9,8 +9,11 @@ var configuration = Argument("configuration", "Release");
 //////////////////////////////////////////////////////////////////////
 // PREPARATION
 //////////////////////////////////////////////////////////////////////
-var msSqlServerConnectionString = RemoveQuotes(GetVariable("NSTORE_MSSQL_INSTANCE")) ?? "Server=localhost,1433;User Id=sa;Password=NStoreD0ck3r";
+var msSqlServerConnectionString = RemoveQuotes(GetVariable("NSTORE_MSSQL")) ?? "Server=localhost,1433;User Id=sa;Password=NStoreD0ck3r";
 var msSqlDatabaseConnectionString  = msSqlServerConnectionString +";Database=NStore";
+//Grab connection string for mongodb
+var mongoDbServerConnectionString = GetVariable("NSTORE_MONGODB") ?? "mongodb://localhost/nstore-tests";
+
 var testOutput = GetVariable("testoutput");
 var version = Argument("nugetver","0.0.1-localbuild");
 
@@ -142,7 +145,7 @@ Task("TestMongoDb")
     .Does(() =>
 {
     var env = new Dictionary<string, string>{
-        { "NSTORE_MONGODB", "mongodb://localhost/nstore-tests"},
+        { "NSTORE_MONGODB", mongoDbServerConnectionString},
     };
 
     RunTest("NStore.Persistence.Mongo.Tests",env);
