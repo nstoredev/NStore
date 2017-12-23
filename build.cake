@@ -234,6 +234,9 @@ Task("pack")
     DotNetCorePack("./src/NStore.Domain/", settings);
     DotNetCorePack("./src/NStore.Tpl/", settings);
     DotNetCorePack("./src/NStore.Persistence.Mongo/", settings);
+
+    //Do not forget the BaseSqlPersistence package, it was missing in 0.2.0
+    DotNetCorePack("./src/NStore.BaseSqlPersistence/", settings);
     DotNetCorePack("./src/NStore.Persistence.MsSql/", settings);
     DotNetCorePack("./src/NStore.Persistence.Sqlite/", settings);
 });
