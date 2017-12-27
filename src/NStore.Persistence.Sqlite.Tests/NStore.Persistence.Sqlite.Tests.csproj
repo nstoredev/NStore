@@ -10,6 +10,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\NStore.Persistence.Tests\batch_writes_test.cs" Link="batch_writes_test.cs" />
+    <Compile Include="..\NStore.Persistence.Tests\ConcurrencyTests.cs" Link="ConcurrencyTests.cs" />
     <Compile Include="..\NStore.Persistence.Tests\DefaultSnapshotStoreTests.cs">
       <Link>DefaultSnapshotStoreTests.cs</Link>
     </Compile>

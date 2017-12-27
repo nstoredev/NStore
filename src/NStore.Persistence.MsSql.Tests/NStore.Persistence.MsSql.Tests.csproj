@@ -8,6 +8,7 @@
     <ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\NStore.Persistence.Tests\ConcurrencyTests.cs" Link="ConcurrencyTests.cs" />
     <Compile Include="..\NStore.Persistence.Tests\DefaultSnapshotStoreTests.cs">
       <Link>DefaultSnapshotStoreTests.cs</Link>
     </Compile>
