@@ -22,10 +22,10 @@ namespace NStore.Sample
         static void Main(string[] args)
         {
             ParseCommandLine(args);
-            
+
             var store = BuildStore(_providerName);
 
-            using (var app = new SampleApp(store, _providerName, _useSnapshots,_quietMode, _fastMode))
+            using (var app = new SampleApp(store, _providerName, _useSnapshots, _quietMode, _fastMode))
             {
                 Console.WriteLine(
                     "Press ENTER to start sequential stream write");
@@ -41,7 +41,7 @@ namespace NStore.Sample
                 Console.ReadLine();
                 app.CreateRooms(32)
                     .ConfigureAwait(false).GetAwaiter().GetResult();
-                
+
                 app.DumpMetrics();
 
                 app.AddSomeBookings(1_024)
@@ -67,7 +67,7 @@ namespace NStore.Sample
             var quietmode = Cmd.Option("-q|--quiet", "Quiet mode", CommandOptionType.NoValue);
             var fastmode = Cmd.Option("-f|--fast", "Fast mode: latency @ 1ms", CommandOptionType.NoValue);
 
-			Cmd.HelpOption("-? | -h | --help");
+            Cmd.HelpOption("-? | -h | --help");
 
             Cmd.OnExecute(() =>
             {
@@ -81,7 +81,7 @@ namespace NStore.Sample
                 _fastMode = fastmode.HasValue();
                 return 0;
             });
-            
+
             Cmd.Execute(args);
         }
 
@@ -92,30 +92,35 @@ namespace NStore.Sample
             switch (store.ToLowerInvariant())
             {
                 case "memory":
-                {
-                    var network = new ReliableNetworkSimulator(2, 10);
-                    return new InMemoryPersistence(network, ObjectSerializer.Clone);
-                }
+                    {
+                        var network = new ReliableNetworkSimulator(2, 10);
+                        var options = new InMemoryPersistenceOptions
+                        {
+                            CloneFunc = ObjectSerializer.Clone,
+                            NetworkSimulator = network
+                        };
+                        return new InMemoryPersistence(options);
+                    }
 
                 case "mongo":
-                {
-                    var options = new MongoPersistenceOptions
                     {
-                        PartitionsConnectionString = Mongo,
-                        UseLocalSequence = true,
-                        PartitionsCollectionName = "partitions",
-                        SequenceCollectionName = "seq",
-                        DropOnInit = true,
-                        MongoPayloadSerializer = new DiagnosticSerializerWrapper(new MongoCustomMongoPayloadSerializer()),
-                        CustomizePartitionSettings = settings =>
+                        var options = new MongoPersistenceOptions
                         {
-                            settings.MaxConnectionPoolSize = 5000;
-                        }
-                    };
-                    var mongo = new MongoPersistence(options);
-                    mongo.InitAsync(CancellationToken.None).GetAwaiter().GetResult();
-                    return mongo;
-                }
+                            PartitionsConnectionString = Mongo,
+                            UseLocalSequence = true,
+                            PartitionsCollectionName = "partitions",
+                            SequenceCollectionName = "seq",
+                            DropOnInit = true,
+                            MongoPayloadSerializer = new DiagnosticSerializerWrapper(new MongoCustomMongoPayloadSerializer()),
+                            CustomizePartitionSettings = settings =>
+                            {
+                                settings.MaxConnectionPoolSize = 5000;
+                            }
+                        };
+                        var mongo = new MongoPersistence(options);
+                        mongo.InitAsync(CancellationToken.None).GetAwaiter().GetResult();
+                        return mongo;
+                    }
             }
 
             throw new Exception($"Invalid store {store}");

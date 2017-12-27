@@ -108,8 +108,8 @@ namespace NStore.Sample
             _aggregateFactory = new DefaultAggregateFactory();
 
             var network = fast
-                ? (INetworkSimulator) new NoNetworkLatencySimulator()
-                : (INetworkSimulator) new ReliableNetworkSimulator(10, 50);
+                ? (INetworkSimulator)new NoNetworkLatencySimulator()
+                : (INetworkSimulator)new ReliableNetworkSimulator(10, 50);
 
             _appProjections = new AppProjections(network, quiet);
 
@@ -118,7 +118,11 @@ namespace NStore.Sample
             if (useSnapshots)
             {
                 _cloneProfiler = new TaskProfilingInfo("Cloning state");
-                var inMemoryPersistence = new InMemoryPersistence(cloneFunc: CloneSnapshot);
+
+                var inMemoryPersistence = new InMemoryPersistence(new InMemoryPersistenceOptions
+                {
+                    CloneFunc = CloneSnapshot
+                });
                 _snapshotProfile = new ProfileDecorator(inMemoryPersistence);
                 _snapshots = new DefaultSnapshotStore(_snapshotProfile);
             }
@@ -172,7 +176,7 @@ namespace NStore.Sample
                 await stream.AppendAsync(c, c.ToString()).ConfigureAwait(false);
                 Interlocked.Increment(ref written);
                 // ReSharper disable once AccessToDisposedClosure
-                progress.Report((double) written / writes);
+                progress.Report((double)written / writes);
             }
 
             var worker = new ActionBlock<int>(Write, _unboundedOptions);
@@ -293,7 +297,7 @@ namespace NStore.Sample
             {
                 if (progress != null)
                 {
-                    var percent = Interlocked.Increment(ref current) / (double) bookings;
+                    var percent = Interlocked.Increment(ref current) / (double)bookings;
                     progress.Report(percent);
                 }
 

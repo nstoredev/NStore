@@ -17,7 +17,7 @@ namespace NStore.Domain.Tests
         protected IStreamsFactory _streams;
         protected IStreamsFactory Streams => _streams ?? (_streams = new StreamsFactory(Persistence));
         protected IPersistence _persistence;
-        protected IPersistence Persistence => _persistence ?? (_persistence = new InMemoryPersistence());
+        protected IPersistence Persistence => _persistence ?? (_persistence = new InMemoryPersistence(new InMemoryPersistenceOptions()));
         private IAggregateFactory AggregateFactory { get; }
         protected ISnapshotStore Snapshots { get; set; }
         private IRepository _repository;
@@ -143,7 +143,7 @@ namespace NStore.Domain.Tests
     {
         public with_snapshots()
         {
-            Snapshots = new DefaultSnapshotStore(new InMemoryPersistence());
+            Snapshots = new DefaultSnapshotStore(new InMemoryPersistence(new InMemoryPersistenceOptions()));
 
             Persistence.AppendAsync("Ticket_1", 1, new Changeset(1, new TicketSold())).Wait();
             Persistence.AppendAsync("Ticket_1", 2, new Changeset(2, new TicketRefunded())).Wait();
@@ -189,7 +189,7 @@ namespace NStore.Domain.Tests
     {
         public with_snapshots_and_idempotent_command()
         {
-            Snapshots = new DefaultSnapshotStore(new InMemoryPersistence());
+            Snapshots = new DefaultSnapshotStore(new InMemoryPersistence(new InMemoryPersistenceOptions()));
         }
 
         [Fact]
@@ -233,7 +233,7 @@ namespace NStore.Domain.Tests
     {
         public with_snapshot_only()
         {
-            Snapshots = new DefaultSnapshotStore(new InMemoryPersistence());
+            Snapshots = new DefaultSnapshotStore(new InMemoryPersistence(new InMemoryPersistenceOptions()));
         }
 
         [Fact]
@@ -301,7 +301,11 @@ namespace NStore.Domain.Tests
         protected IPersistence CreatePersistence()
         {
             networkSimulator = new AlwaysThrowsNetworkSimulator();
-            var persistence = new InMemoryPersistence(networkSimulator);
+            var options = new InMemoryPersistenceOptions
+            {
+                NetworkSimulator = networkSimulator
+            };
+            var persistence = new InMemoryPersistence(options);
             return persistence;
         }
 
@@ -353,10 +357,10 @@ namespace NStore.Domain.Tests
     }
 
     /// <summary>
-	/// Verify that we can clear the repository when a concurrency exception is thrown
-	/// and we can re-use the same instance to reload the aggregate e retry the operation.
-	/// </summary>
-	public class identity_map_management : BaseRepositoryTest
+    /// Verify that we can clear the repository when a concurrency exception is thrown
+    /// and we can re-use the same instance to reload the aggregate e retry the operation.
+    /// </summary>
+    public class identity_map_management : BaseRepositoryTest
     {
         [Fact]
         public async Task when_concurrency_exception_we_can_clear_the_identity_map()

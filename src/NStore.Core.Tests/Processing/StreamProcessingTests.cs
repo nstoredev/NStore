@@ -49,9 +49,9 @@ namespace NStore.Core.Tests.Processing
 
 		public StreamProcessingTests()
 		{
-			_persistence = new InMemoryPersistence();
+			_persistence = new InMemoryPersistence(new InMemoryPersistenceOptions());
 			_streams = new StreamsFactory(_persistence);
-			_snapshots = new DefaultSnapshotStore(new InMemoryPersistence());
+			_snapshots = new DefaultSnapshotStore(new InMemoryPersistence(new InMemoryPersistenceOptions()));
 		}
 
 		private async Task<IStream> CreateStream(string streamId)
