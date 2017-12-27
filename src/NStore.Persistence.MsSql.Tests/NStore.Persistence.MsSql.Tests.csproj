@@ -12,6 +12,7 @@
     <Compile Include="..\NStore.Persistence.Tests\DefaultSnapshotStoreTests.cs">
       <Link>DefaultSnapshotStoreTests.cs</Link>
     </Compile>
+    <Compile Include="..\NStore.Persistence.Tests\PersistenceDebugExtensions.cs" Link="PersistenceDebugExtensions.cs" />
     <Compile Include="..\NStore.Persistence.Tests\PersistenceFixture.cs">
       <Link>PersistenceFixture.cs</Link>
     </Compile>
