@@ -10,7 +10,7 @@ namespace NStore.Core.InMemory
     public class InMemoryPersistence : IPersistence
     {
         private readonly Func<object, object> _cloneFunc;
-        private readonly Chunk[] _chunks;
+        private readonly MemoryChunk[] _chunks;
 
         private readonly ConcurrentDictionary<string, InMemoryPartition> _partitions =
             new ConcurrentDictionary<string, InMemoryPartition>();
@@ -39,7 +39,7 @@ namespace NStore.Core.InMemory
 
         public InMemoryPersistence(INetworkSimulator networkSimulator, Func<object, object> cloneFunc)
         {
-            _chunks = new Chunk[1024 * 1024];
+            _chunks = new MemoryChunk[1024 * 1024];
             _cloneFunc = cloneFunc ?? (o => o);
             _networkSimulator = networkSimulator ?? new NoNetworkLatencySimulator();
             _emptyInMemoryPartition = new InMemoryPartition("::empty", _networkSimulator, Clone);
@@ -102,18 +102,19 @@ namespace NStore.Core.InMemory
             return partition.Peek(fromUpperIndexInclusive, cancellationToken);
         }
 
-        private Chunk Clone(Chunk source)
+        private MemoryChunk Clone(MemoryChunk source)
         {
             if (source == null)
                 return null;
 
-            return new Chunk()
+            return new MemoryChunk()
             {
                 Position = source.Position,
                 Index = source.Index,
                 OperationId = source.OperationId,
                 PartitionId = source.PartitionId,
-                Payload = _cloneFunc(source.Payload)
+                Payload = _cloneFunc(source.Payload),
+                PayloadType = source.PayloadType
             };
         }
 
@@ -140,7 +141,7 @@ namespace NStore.Core.InMemory
                 return;
             }
 
-            IEnumerable<Chunk> list = new ArraySegment<Chunk>(_chunks, start, toRead);
+            IEnumerable<MemoryChunk> list = new ArraySegment<MemoryChunk>(_chunks, start, toRead);
 
             long position = 0;
 
@@ -199,13 +200,14 @@ namespace NStore.Core.InMemory
         public async Task<IChunk> AppendAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
         {
             var id = Interlocked.Increment(ref _sequence);
-            var chunk = new Chunk()
+            var chunk = new MemoryChunk()
             {
                 Position = id,
                 Index = index >= 0 ? index : id,
                 OperationId = operationId ?? Guid.NewGuid().ToString(),
                 PartitionId = partitionId,
-                Payload = _cloneFunc(payload)
+                Payload = _cloneFunc(payload),
+                PayloadType = payload?.GetType().FullName ?? "n/a"
             };
 
             await _networkSimulator.Wait().ConfigureAwait(false);
@@ -231,6 +233,7 @@ namespace NStore.Core.InMemory
                 chunk.Index = chunk.Position;
                 chunk.OperationId = chunk.Position.ToString();
                 chunk.Payload = null;
+                chunk.PayloadType = "filler";
                 _emptyInMemoryPartition.Write(chunk);
                 SetChunk(chunk);
                 throw;
@@ -241,7 +244,7 @@ namespace NStore.Core.InMemory
             return chunk;
         }
 
-        private void SetChunk(Chunk chunk)
+        private void SetChunk(MemoryChunk chunk)
         {
             int slot = (int)chunk.Position - 1;
             _chunks[slot] = chunk;

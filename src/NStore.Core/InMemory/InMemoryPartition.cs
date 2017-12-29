@@ -12,21 +12,21 @@ namespace NStore.Core.InMemory
     {
         private readonly ReaderWriterLockSlim _lockSlim = new ReaderWriterLockSlim();
 
-        public InMemoryPartition(string partitionId, INetworkSimulator networkSimulator, Func<Chunk, Chunk> clone)
+        public InMemoryPartition(string partitionId, INetworkSimulator networkSimulator, Func<MemoryChunk, MemoryChunk> clone)
         {
             this.Id = partitionId;
             _networkSimulator = networkSimulator;
             Clone = clone;
         }
 
-        private Func<Chunk, Chunk> Clone { get; }
+        private Func<MemoryChunk, MemoryChunk> Clone { get; }
         public string Id { get; set; }
-        private IEnumerable<Chunk> Chunks => _sortedChunks.Values;
+        private IEnumerable<MemoryChunk> Chunks => _sortedChunks.Values;
 
-        private readonly SortedDictionary<long, Chunk> _sortedChunks =
-            new SortedDictionary<long, Chunk>();
+        private readonly SortedDictionary<long, MemoryChunk> _sortedChunks =
+            new SortedDictionary<long, MemoryChunk>();
 
-        private readonly IDictionary<string, Chunk> _operations = new Dictionary<string, Chunk>();
+        private readonly IDictionary<string, MemoryChunk> _operations = new Dictionary<string, MemoryChunk>();
         private readonly INetworkSimulator _networkSimulator;
 
         public async Task ReadForward(
@@ -84,7 +84,7 @@ namespace NStore.Core.InMemory
         private async Task PushToSubscriber(
             long start,
             ISubscription subscription,
-            IEnumerable<Chunk> chunks,
+            IEnumerable<MemoryChunk> chunks,
             CancellationToken cancellationToken)
         {
             long index = 0;
@@ -115,7 +115,7 @@ namespace NStore.Core.InMemory
             await subscription.CompletedAsync(index).ConfigureAwait(false);
         }
 
-        public Boolean Write(Chunk chunk)
+        public Boolean Write(MemoryChunk chunk)
         {
             _lockSlim.EnterWriteLock();
             try
@@ -138,7 +138,7 @@ namespace NStore.Core.InMemory
             return true;
         }
 
-        public Chunk[] Delete(long fromIndex, long toIndex)
+        public MemoryChunk[] Delete(long fromIndex, long toIndex)
         {
             _lockSlim.EnterReadLock();
             var toDelete = Chunks.Where(x => x.Index >= fromIndex && x.Index <= toIndex).ToArray();
@@ -158,7 +158,7 @@ namespace NStore.Core.InMemory
         public Task<IChunk> GetByOperationId(string operationId)
         {
             _lockSlim.EnterReadLock();
-            _operations.TryGetValue(operationId, out Chunk chunk);
+            _operations.TryGetValue(operationId, out MemoryChunk chunk);
             _lockSlim.ExitReadLock();
 
             return Task.FromResult((IChunk)Clone(chunk));
