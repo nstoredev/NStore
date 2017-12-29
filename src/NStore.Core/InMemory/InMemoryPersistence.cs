@@ -113,8 +113,7 @@ namespace NStore.Core.InMemory
                 Index = source.Index,
                 OperationId = source.OperationId,
                 PartitionId = source.PartitionId,
-                Payload = _cloneFunc(source.Payload),
-                PayloadType = source.PayloadType
+                Payload = _cloneFunc(source.Payload)
             };
         }
 
@@ -206,8 +205,7 @@ namespace NStore.Core.InMemory
                 Index = index >= 0 ? index : id,
                 OperationId = operationId ?? Guid.NewGuid().ToString(),
                 PartitionId = partitionId,
-                Payload = _cloneFunc(payload),
-                PayloadType = payload?.GetType().FullName ?? "n/a"
+                Payload = _cloneFunc(payload)
             };
 
             await _networkSimulator.Wait().ConfigureAwait(false);
@@ -233,7 +231,6 @@ namespace NStore.Core.InMemory
                 chunk.Index = chunk.Position;
                 chunk.OperationId = chunk.Position.ToString();
                 chunk.Payload = null;
-                chunk.PayloadType = "filler";
                 _emptyInMemoryPartition.Write(chunk);
                 SetChunk(chunk);
                 throw;

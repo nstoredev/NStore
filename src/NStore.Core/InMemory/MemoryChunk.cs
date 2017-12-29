@@ -8,8 +8,8 @@ namespace NStore.Core.InMemory
         public string PartitionId { get; set; }
         public long Index { get; set; }
         public object Payload { get; set; }
-        public string PayloadType { get; set; }
         public string OperationId { get; set; }
         public bool Deleted { get; set; }
+        public string PayloadType => Payload?.GetType().FullName ?? "null";
     }
 }
