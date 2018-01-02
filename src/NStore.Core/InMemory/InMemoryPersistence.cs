@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NStore.Core.Persistence;
@@ -20,6 +21,7 @@ namespace NStore.Core.InMemory
         private readonly INetworkSimulator _networkSimulator;
         private readonly InMemoryPartition _emptyInMemoryPartition;
         private readonly ReaderWriterLockSlim _lockSlim = new ReaderWriterLockSlim();
+        private const string EmptyPartitionId = "::empty";
 
         public bool SupportsFillers => true;
 
@@ -37,12 +39,17 @@ namespace NStore.Core.InMemory
         {
         }
 
+        /// <summary>
+        /// Use only for debug / test
+        /// </summary>
+        public IEnumerable<string> PartitionIds => _partitions.Keys.Where(x => x != EmptyPartitionId);
+
         public InMemoryPersistence(INetworkSimulator networkSimulator, Func<object, object> cloneFunc)
         {
             _chunks = new MemoryChunk[1024 * 1024];
             _cloneFunc = cloneFunc ?? (o => o);
             _networkSimulator = networkSimulator ?? new NoNetworkLatencySimulator();
-            _emptyInMemoryPartition = new InMemoryPartition("::empty", _networkSimulator, Clone);
+            _emptyInMemoryPartition = new InMemoryPartition(EmptyPartitionId, _networkSimulator, Clone);
             _partitions.TryAdd(_emptyInMemoryPartition.Id, _emptyInMemoryPartition);
         }
 
@@ -55,6 +62,11 @@ namespace NStore.Core.InMemory
             CancellationToken cancellationToken
         )
         {
+            if (partitionId == null)
+            {
+                throw new ArgumentNullException(nameof(partitionId));
+            }
+
             if (!_partitions.TryGetValue(partitionId, out var partition))
             {
                 return Task.CompletedTask;
@@ -78,6 +90,11 @@ namespace NStore.Core.InMemory
             CancellationToken cancellationToken
         )
         {
+            if (partitionId == null)
+            {
+                throw new ArgumentNullException(nameof(partitionId));
+            }
+
             if (!_partitions.TryGetValue(partitionId, out var partition))
             {
                 return Task.CompletedTask;
@@ -94,6 +111,11 @@ namespace NStore.Core.InMemory
 
         public Task<IChunk> ReadSingleBackwardAsync(string partitionId, long fromUpperIndexInclusive, CancellationToken cancellationToken)
         {
+            if (partitionId == null)
+            {
+                throw new ArgumentNullException(nameof(partitionId));
+            }
+
             if (!_partitions.TryGetValue(partitionId, out var partition))
             {
                 return Task.FromResult<IChunk>(null);
@@ -227,7 +249,7 @@ namespace NStore.Core.InMemory
             {
                 // write empty chunk
                 // keep same id to avoid holes in the stream
-                chunk.PartitionId = "::empty";
+                chunk.PartitionId = EmptyPartitionId;
                 chunk.Index = chunk.Position;
                 chunk.OperationId = chunk.Position.ToString();
                 chunk.Payload = null;
