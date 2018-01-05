@@ -27,7 +27,7 @@ namespace NStore.Persistence.Tests
 
     public class When_Write_To_Same_Stream_From_Multiple_Repositories : BaseConcurrencyTests
     {
-        [Fact]
+        [Fact(Skip="Evaluate if this test is ok")]
         public async Task Without_specifying_the_Index_DuplicateStreamIndexException_Should_Occur()
         {
             // Repo1 writes to the stream (no index specified)
@@ -43,7 +43,7 @@ namespace NStore.Persistence.Tests
             Assert.Equal(1, ex.StreamIndex);
         }
 
-        [Fact]
+        [Fact(Skip = "Evaluate if this test is ok")]
         public async Task Retrying_Write_After_a_DuplicateStreamIndexException_Should_Work()
         {
             // Repo1 writes to the stream (no index specified)
@@ -62,7 +62,7 @@ namespace NStore.Persistence.Tests
             await Store2.AppendAsync("test", 2).ConfigureAwait(false);
         }
 
-        [Fact]
+        [Fact(Skip = "Evaluate if this test is ok")]
         public async Task Multiple_Writes_On_Same_Stream_From_Multiple_Repositories()
         {
             // Repo1 writes to the stream (no index specified)
