@@ -15,9 +15,6 @@ namespace NStore.Core.InMemory
         private readonly ConcurrentDictionary<string, InMemoryPartition> _partitions =
             new ConcurrentDictionary<string, InMemoryPartition>();
 
-        private static readonly ConcurrentDictionary<string, InMemoryPartition> _sharedPartitions =
-            new ConcurrentDictionary<string, InMemoryPartition>();
-
         private int _sequence = 0;
         private int _lastWrittenPosition = -1;
         private readonly INetworkSimulator _networkSimulator;
@@ -29,15 +26,6 @@ namespace NStore.Core.InMemory
 
         public InMemoryPersistence(InMemoryPersistenceOptions options)
         {
-            if (options.DropSharedPartitionCollectionOnInit)
-            {
-                _sharedPartitions.Clear();
-            }
-            if (options.UseSharedPartitionCollection)
-            {
-                _partitions = _sharedPartitions;
-            }
-
             _chunks = new Chunk[1024 * 1024];
             _cloneFunc = options.CloneFunc ?? (o => o);
             _networkSimulator = options.NetworkSimulator ?? new NoNetworkLatencySimulator();

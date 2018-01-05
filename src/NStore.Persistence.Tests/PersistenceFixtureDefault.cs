@@ -13,14 +13,13 @@ namespace NStore.Persistence.Tests
             var options = new InMemoryPersistenceOptions
             {
                 CloneFunc = Clone,
-                UseSharedPartitionCollection = true,
-                DropSharedPartitionCollectionOnInit = dropOnInit
             };
             return new InMemoryPersistence(options);
         }
 
         protected internal void Clear()
         {
+            // Method intentionally left empty.
         }
 
         private static object Clone(object source)
