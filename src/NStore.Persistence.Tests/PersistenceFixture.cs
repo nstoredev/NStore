@@ -40,16 +40,47 @@ namespace NStore.Persistence.Tests
             LoggerFactory = new TestLoggerFactory(TestSuitePrefix + "::" + GetType().Name);
             _logger = LoggerFactory.CreateLogger(GetType().FullName);
             _logger.LogDebug("Creating store");
-            _persistence = Create();
+            _persistence = Create(true);
             _logger.LogDebug("Store created");
             Store = new LogDecorator(_persistence, LoggerFactory);
         }
 
+        #region IDisposable Support
+        private bool disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // dispose managed state (managed objects).
+                    Clear();
+                    _logger.LogDebug("Test disposed");
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
+                // TODO: set large fields to null.
+
+                disposedValue = true;
+            }
+        }
+
+        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
+        // ~BasePersistenceTest() {
+        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+        //   Dispose(false);
+        // }
+
+        // This code added to correctly implement the disposable pattern.
         public void Dispose()
         {
-            Clear();
-            _logger.LogDebug("Test disposed");
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);
+            // TODO: uncomment the following line if the finalizer is overridden above.
+            // GC.SuppressFinalize(this);
         }
+        #endregion
     }
 
     public class WriteTests : BasePersistenceTest
@@ -119,14 +150,14 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_return_null_on_missing_operation()
         {
-            var chunk = await Store.ReadByOperationIdAsync("stream_1", "nop",CancellationToken.None).ConfigureAwait(false);
+            var chunk = await Store.ReadByOperationIdAsync("stream_1", "nop", CancellationToken.None).ConfigureAwait(false);
             Assert.Null(chunk);
         }
 
         [Fact]
         public async Task should_return_index_1_for_operation_1()
         {
-            var chunk = await Store.ReadByOperationIdAsync("stream_1", "operation_1",CancellationToken.None).ConfigureAwait(false);
+            var chunk = await Store.ReadByOperationIdAsync("stream_1", "operation_1", CancellationToken.None).ConfigureAwait(false);
             Assert.NotNull(chunk);
             Assert.Equal(1, chunk.Index);
         }
@@ -134,7 +165,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_return_index_2_for_operation_2()
         {
-            var chunk = await Store.ReadByOperationIdAsync("stream_1", "operation_2",CancellationToken.None).ConfigureAwait(false);
+            var chunk = await Store.ReadByOperationIdAsync("stream_1", "operation_2", CancellationToken.None).ConfigureAwait(false);
             Assert.NotNull(chunk);
             Assert.Equal(2, chunk.Index);
         }
@@ -146,9 +177,9 @@ namespace NStore.Persistence.Tests
             await Store.ReadAllByOperationIdAsync("operation_1", recorder, CancellationToken.None).ConfigureAwait(false);
 
             Assert.Collection(recorder.Chunks,
-                chunk=> Assert.Equal("p1", chunk.Payload),
-                chunk=> Assert.Equal("p3", chunk.Payload),
-                chunk=> Assert.Equal("p4", chunk.Payload)
+                chunk => Assert.Equal("p1", chunk.Payload),
+                chunk => Assert.Equal("p3", chunk.Payload),
+                chunk => Assert.Equal("p4", chunk.Payload)
             );
         }
 
@@ -616,7 +647,7 @@ namespace NStore.Persistence.Tests
         public async Task on_read_forward()
         {
             await Store.ReadForwardAsync("a", fromLowerIndexInclusive: 1, subscription: _subscription).ConfigureAwait(false);
-            Assert.True(1 == _startedAt, _testRunId+": start position " + _startedAt);
+            Assert.True(1 == _startedAt, _testRunId + ": start position " + _startedAt);
             Assert.True(2 == _completedAt, _testRunId + ": complete position " + _completedAt);
         }
 
@@ -726,7 +757,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class large_payload_tests: BasePersistenceTest
+    public class large_payload_tests : BasePersistenceTest
     {
         [Fact]
         public async Task can_write_and_read_large_payload()

@@ -168,7 +168,7 @@ namespace NStore.Domain.Tests.ExperimentalTests
 
     public class TwitterEngine
     {
-        private readonly IPersistence _persistence = new InMemoryPersistence();
+        private readonly IPersistence _persistence = new InMemoryPersistence(new InMemoryPersistenceOptions());
         private readonly DomainRuntime _runtime;
         private readonly TwitterViews _views;
         public ITwitterQueryModel Query => _views;
@@ -178,7 +178,7 @@ namespace NStore.Domain.Tests.ExperimentalTests
             _views = new TwitterViews(id => new ReadOnlyStream(id, _persistence));
             _runtime = new DomainBuilder()
                 .PersistOn(() => _persistence)
-                .WithSnapshotsOn(() => new DefaultSnapshotStore(new InMemoryPersistence()))
+                .WithSnapshotsOn(() => new DefaultSnapshotStore(new InMemoryPersistence(new InMemoryPersistenceOptions())))
                 .CreateAggregatesWith(() => new DefaultAggregateFactory())
                 .BroadcastTo(_views.Watch)
                 .Build();

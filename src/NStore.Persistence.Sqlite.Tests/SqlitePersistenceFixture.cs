@@ -41,7 +41,7 @@ namespace NStore.Persistence.Tests
             //                ConnectionString = ConnectionString.Substring(0, ConnectionString.Length - 1);
         }
 
-        private IPersistence Create()
+        protected internal IPersistence Create(bool dropOnInit)
         {
             Connect();
 
@@ -55,13 +55,16 @@ namespace NStore.Persistence.Tests
             };
 
             _sqlPersistence = new SqlitePersistence(_options);
-            _sqlPersistence.DestroyAllAsync(CancellationToken.None).Wait();
+            if (dropOnInit)
+            {
+                _sqlPersistence.DestroyAllAsync(CancellationToken.None).Wait();
+            }
             _sqlPersistence.InitAsync(CancellationToken.None).Wait();
             _logger.LogInformation("Test #{number} started", _testRunId);
             return _sqlPersistence;
         }
 
-        private void Clear()
+        protected internal void Clear()
         {
             _logger.LogInformation("Cleaning up test #{number}", _testRunId);
             _sqlPersistence.DestroyAllAsync(CancellationToken.None).Wait();

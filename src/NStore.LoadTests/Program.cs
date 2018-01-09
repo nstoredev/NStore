@@ -44,7 +44,11 @@ namespace NStore.LoadTests
 
         static IPersistence Connect()
         {
-            return new InMemoryPersistence(new ReliableNetworkSimulator(10, 50));
+            var options = new InMemoryPersistenceOptions
+            {
+                NetworkSimulator = new ReliableNetworkSimulator(10, 50)
+            };
+            return new InMemoryPersistence(options);
         }
 
         static IPersistence MongoConnect()
@@ -54,16 +58,16 @@ namespace NStore.LoadTests
                 UseLocalSequence = true,
                 PartitionsConnectionString = _mongo
             };
-            var mongo= new MongoPersistence(options);
+            var mongo = new MongoPersistence(options);
             mongo.InitAsync(CancellationToken.None).GetAwaiter().GetResult();
             return mongo;
         }
 
         static async Task RunProducerConsumer()
         {
-//            var persistence = new MetricsPersistenceDecorator(MongoConnect());
+            //            var persistence = new MetricsPersistenceDecorator(MongoConnect());
             var persistence = Connect();
-            
+
             var consumer = new Consumer(workers: 60, bufferSize: 20_000, persistence: persistence);
             var producer = new Producer(workers: 30, bufferSize: 20_000, consumer: consumer);
 

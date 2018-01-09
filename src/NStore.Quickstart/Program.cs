@@ -43,7 +43,7 @@ namespace NStore.Quickstart
 
         private static IPersistence CreateYourStore()
         {
-            return new InMemoryPersistence(o => o);
+            return new InMemoryPersistence(null);
         }
     }
 }

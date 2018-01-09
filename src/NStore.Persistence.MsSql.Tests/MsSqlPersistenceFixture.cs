@@ -31,7 +31,7 @@ namespace NStore.Persistence.Tests
                 _connectionString = _connectionString.Substring(0, _connectionString.Length - 1);
         }
 
-        private IPersistence Create()
+        protected internal IPersistence Create(bool dropOnInit)
         {
             Connect();
 
@@ -45,7 +45,10 @@ namespace NStore.Persistence.Tests
             };
 
             _sqlPersistence = new MsSqlPersistence(_options);
-            _sqlPersistence.DestroyAllAsync(CancellationToken.None).Wait();
+            if (dropOnInit)
+            {
+                _sqlPersistence.DestroyAllAsync(CancellationToken.None).Wait();
+            }
             _sqlPersistence.InitAsync(CancellationToken.None).Wait();
             _logger.LogInformation("Test #{number} started", _testRunId);
             return _sqlPersistence;
