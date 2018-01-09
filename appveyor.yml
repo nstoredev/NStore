@@ -15,7 +15,7 @@ build_script:
     
     $env:NSTORE_LOG_LEVEL = "none";
 
-    .\build.ps1 -ScriptArgs '-NSTORE_MSSQL_INSTANCE="Server=(local)\SQL2016,1433;User ID=sa;Password=Password12!;"'
+    .\build.ps1 -ScriptArgs '-NSTORE_MSSQL="Server=(local)\SQL2016,1433;User ID=sa;Password=Password12!;"'
 
 test: off
 cache:
