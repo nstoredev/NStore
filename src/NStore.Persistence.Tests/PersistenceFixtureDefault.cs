@@ -1,7 +1,6 @@
 ﻿using NStore.Core.InMemory;
 using NStore.Core.Persistence;
 using NStore.Core.Snapshots;
-using NStore.Persistence;
 
 namespace NStore.Persistence.Tests
 {
@@ -9,16 +8,20 @@ namespace NStore.Persistence.Tests
     {
         private const string TestSuitePrefix = "Memory";
 
-        private IPersistence Create()
+        protected internal IPersistence Create(bool dropOnInit)
         {
-            var store = new InMemoryPersistence(cloneFunc:Clone);
-            return store;
+            var options = new InMemoryPersistenceOptions
+            {
+                CloneFunc = Clone,
+            };
+            return new InMemoryPersistence(options);
         }
 
-        private void Clear()
+        protected internal void Clear()
         {
+            // Method intentionally left empty.
         }
-        
+
         private static object Clone(object source)
         {
             if (source == null)
@@ -29,7 +32,7 @@ namespace NStore.Persistence.Tests
                 return new SnapshotInfo(
                     si.SourceId,
                     si.SourceVersion,
-                    new State((State) si.Payload),
+                    new State((State)si.Payload),
                     si.SchemaVersion
                 );
             }

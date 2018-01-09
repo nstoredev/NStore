@@ -64,12 +64,12 @@ namespace NStore.Core.Tests.Processing
         private readonly StreamsFactory _streams;
         private readonly ISnapshotStore _snapshots;
 
-        public StreamProcessingTests()
-        {
-            _persistence = new InMemoryPersistence();
-            _streams = new StreamsFactory(_persistence);
-            _snapshots = new DefaultSnapshotStore(new InMemoryPersistence());
-        }
+		public StreamProcessingTests()
+		{
+			_persistence = new InMemoryPersistence(new InMemoryPersistenceOptions());
+			_streams = new StreamsFactory(_persistence);
+			_snapshots = new DefaultSnapshotStore(new InMemoryPersistence(new InMemoryPersistenceOptions()));
+		}
 
         private async Task<IStream> CreateStream(string streamId)
         {

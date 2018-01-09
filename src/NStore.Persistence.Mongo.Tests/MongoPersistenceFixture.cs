@@ -17,6 +17,7 @@ namespace NStore.Persistence.Tests
 {
     public partial class BasePersistenceTest
     {
+        protected string _mongoConnectionString;
         protected IMongoPersistence _mongoPersistence;
         private MongoPersistenceOptions _options;
         private const string TestSuitePrefix = "Mongo";
@@ -36,7 +37,33 @@ namespace NStore.Persistence.Tests
             });
         }
 #endif
-        private IPersistence Create()
+        protected internal IPersistence Create(bool dropOnInit)
+        {
+            _mongoConnectionString = GetPartitionsConnectionString();
+            _options = GetMongoPersistenceOptions();
+            if (dropOnInit)
+            {
+                _options.DropOnInit = true;
+            }
+            _mongoPersistence = CreatePersistence(_options);
+
+            _mongoPersistence.InitAsync(CancellationToken.None).Wait();
+
+            return _mongoPersistence;
+        }
+
+        protected internal MongoPersistenceOptions GetMongoPersistenceOptions()
+        {
+            return new MongoPersistenceOptions
+            {
+                PartitionsConnectionString = _mongoConnectionString,
+                UseLocalSequence = true,
+                PartitionsCollectionName = "partitions_" + GetType().Name + "_" + _testRunId,
+                SequenceCollectionName = "seq_" + _testRunId
+            };
+        }
+
+        private static string GetPartitionsConnectionString()
         {
             var mongo = Environment.GetEnvironmentVariable("NSTORE_MONGODB");
             if (string.IsNullOrWhiteSpace(mongo))
@@ -44,20 +71,9 @@ namespace NStore.Persistence.Tests
                 throw new TestMisconfiguredException("NSTORE_MONGODB environment variable not set");
             }
 
-            _options = new MongoPersistenceOptions
-            {
-                PartitionsConnectionString = mongo,
-                UseLocalSequence = true,
-                PartitionsCollectionName = "partitions_" + GetType().Name + "_" + _testRunId,
-                SequenceCollectionName = "seq_" + _testRunId,
-                DropOnInit = true
-            };
-            _mongoPersistence = CreatePersistence(_options);
-
-            _mongoPersistence.InitAsync(CancellationToken.None).Wait();
-
-            return _mongoPersistence;
+            return mongo;
         }
+
         protected IMongoCollection<TChunk> GetCollection<TChunk>()
         {
             var fieldInfo = _mongoPersistence.GetType()
@@ -72,7 +88,7 @@ namespace NStore.Persistence.Tests
             return new MongoPersistence(options);
         }
 
-        private void Clear()
+        protected internal void Clear()
         {
             // nothing to do
         }

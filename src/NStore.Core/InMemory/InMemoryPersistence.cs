@@ -21,21 +21,22 @@ namespace NStore.Core.InMemory
         private readonly INetworkSimulator _networkSimulator;
         private readonly InMemoryPartition _emptyInMemoryPartition;
         private readonly ReaderWriterLockSlim _lockSlim = new ReaderWriterLockSlim();
+        private readonly InMemoryPersistenceOptions _options;
         private const string EmptyPartitionId = "::empty";
 
         public bool SupportsFillers => true;
 
-        public InMemoryPersistence() : this(null, null)
+        public InMemoryPersistence() : this(new InMemoryPersistenceOptions())
         {
         }
 
         public InMemoryPersistence(INetworkSimulator networkSimulator)
-            : this(networkSimulator, null)
+            : this(new InMemoryPersistenceOptions(null, networkSimulator))
         {
         }
 
         public InMemoryPersistence(Func<object, object> cloneFunc)
-            : this(null, cloneFunc)
+            : this(new InMemoryPersistenceOptions(cloneFunc, null))
         {
         }
 
@@ -44,12 +45,13 @@ namespace NStore.Core.InMemory
         /// </summary>
         public IEnumerable<string> PartitionIds => _partitions.Keys.Where(x => x != EmptyPartitionId);
 
-        public InMemoryPersistence(INetworkSimulator networkSimulator, Func<object, object> cloneFunc)
+        public InMemoryPersistence(InMemoryPersistenceOptions options)
         {
             _chunks = new MemoryChunk[1024 * 1024];
-            _cloneFunc = cloneFunc ?? (o => o);
-            _networkSimulator = networkSimulator ?? new NoNetworkLatencySimulator();
-            _emptyInMemoryPartition = new InMemoryPartition(EmptyPartitionId, _networkSimulator, Clone);
+            _options = options;
+            _cloneFunc = _options.CloneFunc ?? (o => o);
+            _networkSimulator = _options.NetworkSimulator ?? new NoNetworkLatencySimulator();
+            _emptyInMemoryPartition = new InMemoryPartition("::empty", _networkSimulator, Clone);
             _partitions.TryAdd(_emptyInMemoryPartition.Id, _emptyInMemoryPartition);
         }
 
