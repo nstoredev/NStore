@@ -186,6 +186,52 @@ namespace NStore.Persistence.Tests
             Assert.Equal("a", tape[0].Payload);
         }
 
+        /// <summary>
+        /// Evaluate if this is an expected behavior
+        /// </summary>
+        /// <returns></returns>
+        [Fact]
+        public async Task peek_on_a_stream_should_allow_for_appending()
+        {
+            //Open a stream, then peek just to load the version.
+            var stream = await Open("stream_1", false).ConfigureAwait(false);
+            await stream.PeekAsync().ConfigureAwait(false);
+
+            //now we should be able to append, because we loaded the version.
+            await stream.AppendAsync("a").ConfigureAwait(false);
+            var tape = new Recorder();
+            await Store.ReadForwardAsync("stream_1", 0, tape).ConfigureAwait(false);
+
+            Assert.Equal(1, tape.Length);
+            Assert.Equal("a", tape[0].Payload);
+        }
+
+        /// <summary>
+        /// Evaluate if this is an expected behavior
+        /// </summary>
+        /// <returns></returns>
+        [Fact]
+        public async Task peek_on_a_stream_should_get_correct_version()
+        {
+            //Open a stream, peek, then load version
+            var stream = await Open("stream_1", true).ConfigureAwait(false);
+            await stream.AppendAsync("a").ConfigureAwait(false);
+
+            //now create another stream, and peek to append the second payload
+            var sut = await Open("stream_1", false).ConfigureAwait(false);
+            await sut.PeekAsync().ConfigureAwait(false);
+            await sut.AppendAsync("b").ConfigureAwait(false);
+
+            var tape = new Recorder();
+            await Store.ReadForwardAsync("stream_1", 0, tape).ConfigureAwait(false);
+
+            Assert.Equal(2, tape.Length);
+            Assert.Equal("a", tape[0].Payload);
+            Assert.Equal(1, tape[0].Index);
+            Assert.Equal("b", tape[1].Payload);
+            Assert.Equal(2, tape[1].Index);
+        }
+
         [Fact]
         public async Task appending_on_a_partially_loaded_stream_should_throw()
         {
