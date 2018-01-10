@@ -165,9 +165,25 @@ namespace NStore.Persistence.Tests
         public async Task appending_on_a_stream_without_reading_to_end_should_throw()
         {
             var stream = await Open("stream_1", false).ConfigureAwait(false);
-            var ex = await Assert.ThrowsAnyAsync<AppendFailedException>(() =>
+            await Assert.ThrowsAnyAsync<AppendFailedException>(() =>
                 stream.AppendAsync("b")
             ).ConfigureAwait(false);
+        }
+
+        [Fact]
+        public async Task appending_on_a_stream_after_reading_with_null_subscription_should_not_throw()
+        {
+            //Open a stream, then reading with a null subscription, just to load version
+            var stream = await Open("stream_1", false).ConfigureAwait(false);
+            await stream.ReadAsync(NullSubscription.Instance).ConfigureAwait(false);
+
+            //now we should be able to append, because we loaded the version.
+            await stream.AppendAsync("a").ConfigureAwait(false);
+            var tape = new Recorder();
+            await Store.ReadForwardAsync("stream_1", 0, tape).ConfigureAwait(false);
+
+            Assert.Equal(1, tape.Length);
+            Assert.Equal("a", tape[0].Payload);
         }
 
         [Fact]
@@ -175,7 +191,7 @@ namespace NStore.Persistence.Tests
         {
             var stream = await Open("stream_1", false).ConfigureAwait(false);
             await stream.ReadAsync(NullSubscription.Instance, 0, 10).ConfigureAwait(false);
-            var ex = await Assert.ThrowsAnyAsync<AppendFailedException>(() =>
+            await Assert.ThrowsAnyAsync<AppendFailedException>(() =>
                 stream.AppendAsync("b")
             ).ConfigureAwait(false);
         }
@@ -217,7 +233,7 @@ namespace NStore.Persistence.Tests
         public async Task delete_should_throw_exception()
         {
             var stream = _streams.OpenReadOnly("stream_2");
-            var ex = await Assert.ThrowsAsync<StreamReadOnlyException>(() =>
+            await Assert.ThrowsAsync<StreamReadOnlyException>(() =>
                 stream.DeleteAsync()
             ).ConfigureAwait(false);
         }
@@ -226,7 +242,7 @@ namespace NStore.Persistence.Tests
         public async Task append_should_throw_exception()
         {
             var stream = _streams.OpenReadOnly("stream_2");
-            var ex = await Assert.ThrowsAsync<StreamReadOnlyException>(() =>
+            await Assert.ThrowsAsync<StreamReadOnlyException>(() =>
                 stream.AppendAsync("a")
             ).ConfigureAwait(false);
         }
