@@ -162,6 +162,34 @@ namespace NStore.Persistence.Tests
         }
 
         [Fact]
+        public async Task reading_again_entire_stream_should_resolve_concurrency_exception()
+        {
+            //Create two stream and simulate concurrency exception
+            var streama = await Open("stream_1").ConfigureAwait(false);
+            var streamb = await Open("stream_1").ConfigureAwait(false);
+            await streama.AppendAsync("a").ConfigureAwait(false);
+
+            //Verify that indeed appending throws exception
+            await Assert.ThrowsAnyAsync<ConcurrencyException>(() =>
+                streamb.AppendAsync("b")
+            ).ConfigureAwait(false);
+
+            //now streamb can read again the entire stream to be able to append again
+            await streamb.ReadAsync(NullSubscription.Instance).ConfigureAwait(false);
+            await streamb.AppendAsync("b").ConfigureAwait(false);
+
+            //Verify that the stream is correct.
+            var tape = new Recorder();
+            await Store.ReadForwardAsync("stream_1", 0, tape).ConfigureAwait(false);
+
+            Assert.Equal(2, tape.Length);
+            Assert.Equal("a", tape[0].Payload);
+            Assert.Equal(1, tape[0].Index);
+            Assert.Equal("b", tape[1].Payload);
+            Assert.Equal(2, tape[1].Index);
+        }
+
+        [Fact]
         public async Task appending_on_a_stream_without_reading_to_end_should_throw()
         {
             var stream = await Open("stream_1", false).ConfigureAwait(false);
@@ -213,7 +241,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task peek_on_a_stream_should_get_correct_version()
         {
-            //Open a stream, peek, then load version
+            //Open a stream, then append an object
             var stream = await Open("stream_1", true).ConfigureAwait(false);
             await stream.AppendAsync("a").ConfigureAwait(false);
 
@@ -230,6 +258,43 @@ namespace NStore.Persistence.Tests
             Assert.Equal(1, tape[0].Index);
             Assert.Equal("b", tape[1].Payload);
             Assert.Equal(2, tape[1].Index);
+        }
+
+        /// <summary>
+        /// If a stream has <see cref="ConcurrencyException" /> doing a peek
+        /// should be able to reset version and append again in the same stream.
+        /// </summary>
+        /// <returns></returns>
+        [Fact]
+        public async Task peek_on_a_stream_should_solve_concurrency_exception()
+        {
+            //Open a stream, then append an object
+            var stream = await Open("stream_1", true).ConfigureAwait(false);
+            await stream.AppendAsync("a").ConfigureAwait(false);
+
+            //now create another stream to simulate concurrency
+            var sut = await Open("stream_1", true).ConfigureAwait(false);
+            await sut.AppendAsync("b").ConfigureAwait(false);
+
+            //now take the original stream, if we try to append we should have exception
+            await Assert.ThrowsAnyAsync<ConcurrencyException>(() =>
+                stream.AppendAsync("c")
+            ).ConfigureAwait(false);
+
+            //now if we peek again we should be able to update the version and being able to append
+            await stream.PeekAsync().ConfigureAwait(false);
+            await stream.AppendAsync("c").ConfigureAwait(false);
+
+            var tape = new Recorder();
+            await Store.ReadForwardAsync("stream_1", 0, tape).ConfigureAwait(false);
+
+            Assert.Equal(3, tape.Length);
+            Assert.Equal("a", tape[0].Payload);
+            Assert.Equal(1, tape[0].Index);
+            Assert.Equal("b", tape[1].Payload);
+            Assert.Equal(2, tape[1].Index);
+            Assert.Equal("c", tape[2].Payload);
+            Assert.Equal(3, tape[2].Index);
         }
 
         [Fact]
