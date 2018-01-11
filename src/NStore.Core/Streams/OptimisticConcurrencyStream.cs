@@ -51,9 +51,11 @@ namespace NStore.Core.Streams
             );
         }
 
-        public Task<IChunk> PeekAsync(CancellationToken cancellationToken)
+        public async Task<IChunk> PeekAsync(CancellationToken cancellationToken)
         {
-            return Persistence.ReadSingleBackwardAsync(Id, cancellationToken);
+            var chunk = await Persistence.ReadSingleBackwardAsync(Id, cancellationToken).ConfigureAwait(false);
+            _version = chunk?.Index ?? 0; //if we have no chunk version is zero.
+            return chunk;
         }
 
         public async Task<bool> IsEmpty(CancellationToken cancellationToken)

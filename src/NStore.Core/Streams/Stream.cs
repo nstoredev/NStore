@@ -36,8 +36,8 @@ namespace NStore.Core.Streams
         }
 
         public virtual Task<IChunk> AppendAsync(
-            object payload, 
-            string operationId, 
+            object payload,
+            string operationId,
             CancellationToken cancellation
             )
         {
