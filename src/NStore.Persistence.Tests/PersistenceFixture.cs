@@ -483,17 +483,12 @@ namespace NStore.Persistence.Tests
     public class DeleteStreamTest_2 : DeleteStreamTest
     {
 
-        [Fact]
-        public async Task delete_invalid_stream_should_throw_exception()
-        {
-            var ex = await Assert.ThrowsAnyAsync<StreamDeleteException>(() =>
-                Store.DeleteAsync("delete_2")
-            ).ConfigureAwait(false);
-
-            Assert.Equal("delete_2", ex.StreamId);
-        }
-
-    }
+		[Fact]
+		public async Task delete_invalid_stream_should_not_throw_exception()
+		{
+			await Store.DeleteAsync("delete_2").ConfigureAwait(false);
+		}
+	}
 
     public class DeleteStreamTest_3 : DeleteStreamTest
     {

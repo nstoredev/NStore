@@ -2,7 +2,7 @@
 
 namespace NStore.Core.InMemory
 {
-    internal class Chunk : IChunk
+    internal class MemoryChunk : IChunk
     {
         public long Position { get; set; }
         public string PartitionId { get; set; }
@@ -10,5 +10,6 @@ namespace NStore.Core.InMemory
         public object Payload { get; set; }
         public string OperationId { get; set; }
         public bool Deleted { get; set; }
+        public string PayloadType => Payload?.GetType().FullName ?? "null";
     }
 }

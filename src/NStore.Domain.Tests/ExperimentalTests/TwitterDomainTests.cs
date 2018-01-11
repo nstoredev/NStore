@@ -154,7 +154,7 @@ namespace NStore.Domain.Tests.ExperimentalTests
 
         public async Task<IEnumerable<Tuple<string, DateTime>>> FavsOfTweetAsync(TweetId tweetId)
         {
-            var recorded = await _streamFactory($"{tweetId}/favs").ReadAsync();
+            var recorded = await _streamFactory($"{tweetId}/favs").RecordAsync();
             return recorded.Data
                 .Cast<TweetFavorited>()
                 .Select(f => new Tuple<string, DateTime>(f.UserId, f.When));

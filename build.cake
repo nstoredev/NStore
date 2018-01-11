@@ -248,6 +248,14 @@ Task("pack")
 Task("Default")
     .IsDependentOn("TestAll");
 
+Task("Travis")
+    .IsDependentOn("TestDomain")
+    .IsDependentOn("TestInMemory")
+    .IsDependentOn("TestMongoDb")
+    .IsDependentOn("TestSqlite")
+    .IsDependentOn("TestSample");
+
+
 //////////////////////////////////////////////////////////////////////
 // EXECUTION
 //////////////////////////////////////////////////////////////////////

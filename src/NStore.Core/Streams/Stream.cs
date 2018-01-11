@@ -5,18 +5,20 @@ using System;
 
 namespace NStore.Core.Streams
 {
-    public class Stream : IStream
+    public class Stream : IRandomAccessStream
     {
         private IPersistence Persistence { get; }
         public string Id { get; }
         public virtual bool IsWritable => true;
+
         public Stream(string streamId, IPersistence persistence)
         {
             this.Id = streamId;
             this.Persistence = persistence;
         }
 
-        public Task ReadAsync(ISubscription subscription, long fromIndexInclusive, long toIndexInclusive, CancellationToken cancellationToken)
+        public Task ReadAsync(ISubscription subscription, long fromIndexInclusive, long toIndexInclusive,
+            CancellationToken cancellationToken)
         {
             return Persistence.ReadForwardAsync(
                 Id,
@@ -28,7 +30,16 @@ namespace NStore.Core.Streams
             );
         }
 
-        public virtual Task<IChunk> AppendAsync(object payload, string operationId, CancellationToken cancellation)
+        public Task<IChunk> PeekAsync(CancellationToken cancellationToken)
+        {
+            return Persistence.ReadSingleBackwardAsync(Id, cancellationToken);
+        }
+
+        public virtual Task<IChunk> AppendAsync(
+            object payload,
+            string operationId,
+            CancellationToken cancellation
+            )
         {
             return Persistence.AppendAsync(this.Id, -1, payload, operationId, cancellation);
         }
@@ -38,6 +49,11 @@ namespace NStore.Core.Streams
             return Persistence.DeleteAsync(this.Id, 0, long.MaxValue, cancellation);
         }
 
+        public Task<IChunk> PersistAsync(object payload, long index, string operationId, CancellationToken cancellation)
+        {
+            return Persistence.AppendAsync(this.Id, index, payload, operationId, cancellation);
+        }
+
         public async Task<bool> IsEmpty(CancellationToken cancellationToken)
         {
             return await Persistence.ReadSingleBackwardAsync(this.Id, cancellationToken).ConfigureAwait(false) == null;
@@ -45,7 +61,8 @@ namespace NStore.Core.Streams
 
         public async Task<bool> ContainsOperationAsync(string operationId, CancellationToken cancellationToken)
         {
-            var chunk = await Persistence.ReadByOperationIdAsync(this.Id, operationId, cancellationToken).ConfigureAwait(false);
+            var chunk = await Persistence.ReadByOperationIdAsync(this.Id, operationId, cancellationToken)
+                .ConfigureAwait(false);
             return chunk != null;
         }
     }

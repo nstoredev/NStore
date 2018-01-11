@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NStore.Core.Persistence;
@@ -10,7 +11,7 @@ namespace NStore.Core.InMemory
     public class InMemoryPersistence : IPersistence
     {
         private readonly Func<object, object> _cloneFunc;
-        private readonly Chunk[] _chunks;
+        private readonly MemoryChunk[] _chunks;
 
         private readonly ConcurrentDictionary<string, InMemoryPartition> _partitions =
             new ConcurrentDictionary<string, InMemoryPartition>();
@@ -21,17 +22,37 @@ namespace NStore.Core.InMemory
         private readonly InMemoryPartition _emptyInMemoryPartition;
         private readonly ReaderWriterLockSlim _lockSlim = new ReaderWriterLockSlim();
         private readonly InMemoryPersistenceOptions _options;
+        private const string EmptyPartitionId = "::empty";
 
         public bool SupportsFillers => true;
 
+        public InMemoryPersistence() : this(new InMemoryPersistenceOptions())
+        {
+        }
+
+        public InMemoryPersistence(INetworkSimulator networkSimulator)
+            : this(new InMemoryPersistenceOptions(null, networkSimulator))
+        {
+        }
+
+        public InMemoryPersistence(Func<object, object> cloneFunc)
+            : this(new InMemoryPersistenceOptions(cloneFunc, null))
+        {
+        }
+
+        /// <summary>
+        /// Use only for debug / test
+        /// </summary>
+        public IEnumerable<string> PartitionIds => _partitions.Keys.Where(x => x != EmptyPartitionId);
+
         public InMemoryPersistence(InMemoryPersistenceOptions options)
         {
-            _chunks = new Chunk[1024 * 1024];
-            _cloneFunc = options.CloneFunc ?? (o => o);
-            _networkSimulator = options.NetworkSimulator ?? new NoNetworkLatencySimulator();
+            _chunks = new MemoryChunk[1024 * 1024];
+            _options = options;
+            _cloneFunc = _options.CloneFunc ?? (o => o);
+            _networkSimulator = _options.NetworkSimulator ?? new NoNetworkLatencySimulator();
             _emptyInMemoryPartition = new InMemoryPartition("::empty", _networkSimulator, Clone);
             _partitions.TryAdd(_emptyInMemoryPartition.Id, _emptyInMemoryPartition);
-            _options = options;
         }
 
         public Task ReadForwardAsync(
@@ -43,6 +64,11 @@ namespace NStore.Core.InMemory
             CancellationToken cancellationToken
         )
         {
+            if (partitionId == null)
+            {
+                throw new ArgumentNullException(nameof(partitionId));
+            }
+
             if (!_partitions.TryGetValue(partitionId, out var partition))
             {
                 return Task.CompletedTask;
@@ -66,6 +92,11 @@ namespace NStore.Core.InMemory
             CancellationToken cancellationToken
         )
         {
+            if (partitionId == null)
+            {
+                throw new ArgumentNullException(nameof(partitionId));
+            }
+
             if (!_partitions.TryGetValue(partitionId, out var partition))
             {
                 return Task.CompletedTask;
@@ -82,6 +113,11 @@ namespace NStore.Core.InMemory
 
         public Task<IChunk> ReadSingleBackwardAsync(string partitionId, long fromUpperIndexInclusive, CancellationToken cancellationToken)
         {
+            if (partitionId == null)
+            {
+                throw new ArgumentNullException(nameof(partitionId));
+            }
+
             if (!_partitions.TryGetValue(partitionId, out var partition))
             {
                 return Task.FromResult<IChunk>(null);
@@ -90,12 +126,12 @@ namespace NStore.Core.InMemory
             return partition.Peek(fromUpperIndexInclusive, cancellationToken);
         }
 
-        private Chunk Clone(Chunk source)
+        private MemoryChunk Clone(MemoryChunk source)
         {
             if (source == null)
                 return null;
 
-            return new Chunk()
+            return new MemoryChunk()
             {
                 Position = source.Position,
                 Index = source.Index,
@@ -128,7 +164,7 @@ namespace NStore.Core.InMemory
                 return;
             }
 
-            IEnumerable<Chunk> list = new ArraySegment<Chunk>(_chunks, start, toRead);
+            IEnumerable<MemoryChunk> list = new ArraySegment<MemoryChunk>(_chunks, start, toRead);
 
             long position = 0;
 
@@ -187,7 +223,7 @@ namespace NStore.Core.InMemory
         public async Task<IChunk> AppendAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
         {
             var id = Interlocked.Increment(ref _sequence);
-            var chunk = new Chunk()
+            var chunk = new MemoryChunk()
             {
                 Position = id,
                 Index = index >= 0 ? index : id,
@@ -215,7 +251,7 @@ namespace NStore.Core.InMemory
             {
                 // write empty chunk
                 // keep same id to avoid holes in the stream
-                chunk.PartitionId = "::empty";
+                chunk.PartitionId = EmptyPartitionId;
                 chunk.Index = chunk.Position;
                 chunk.OperationId = chunk.Position.ToString();
                 chunk.Payload = null;
@@ -229,7 +265,7 @@ namespace NStore.Core.InMemory
             return chunk;
         }
 
-        private void SetChunk(Chunk chunk)
+        private void SetChunk(MemoryChunk chunk)
         {
             int slot = (int)chunk.Position - 1;
             _chunks[slot] = chunk;
@@ -253,14 +289,10 @@ namespace NStore.Core.InMemory
 
             if (!_partitions.TryGetValue(partitionId, out var partition))
             {
-                throw new StreamDeleteException(partitionId);
+                return;
             }
 
             var deleted = partition.Delete(fromLowerIndexInclusive, toUpperIndexInclusive);
-            if (deleted.Length == 0)
-            {
-                throw new StreamDeleteException(partitionId);
-            }
 
             foreach (var d in deleted)
             {

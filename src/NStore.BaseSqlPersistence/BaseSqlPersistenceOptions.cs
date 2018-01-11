@@ -160,10 +160,7 @@ namespace NStore.BaseSqlPersistence
                     AddParam(command, "@fromLowerIndexInclusive", fromLowerIndexInclusive);
                     AddParam(command, "@toUpperIndexInclusive", toUpperIndexInclusive);
 
-                    var deleted = (long)await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-
-                    if (deleted == 0)
-                        throw new StreamDeleteException(partitionId);
+                    await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                 }
             }
         }

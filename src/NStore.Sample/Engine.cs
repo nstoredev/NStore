@@ -381,7 +381,7 @@ namespace NStore.Sample
             this._reporter.Report($"  {_storeProfile.PersistCounter}");
             this._reporter.Report($"  {_storeProfile.ReadForwardCounter}");
             this._reporter.Report($"  {_storeProfile.ReadBackwardCounter}");
-            this._reporter.Report($"  {_storeProfile.PeekCounter}");
+            this._reporter.Report($"  {_storeProfile.ReadSingleBackwardCounter}");
             this._reporter.Report($"  {_storeProfile.DeleteCounter}");
             this._reporter.Report($"  {_storeProfile.StoreScanCounter}");
             this._reporter.Report($"  {_storeProfile.ReadLastCounter}");
@@ -394,7 +394,7 @@ namespace NStore.Sample
                 this._reporter.Report($"  {_snapshotProfile.PersistCounter}");
                 this._reporter.Report($"  {_snapshotProfile.ReadForwardCounter}");
                 this._reporter.Report($"  {_snapshotProfile.ReadBackwardCounter}");
-                this._reporter.Report($"  {_snapshotProfile.PeekCounter}");
+                this._reporter.Report($"  {_snapshotProfile.ReadSingleBackwardCounter}");
                 this._reporter.Report($"  {_snapshotProfile.DeleteCounter}");
                 this._reporter.Report($"  {_snapshotProfile.StoreScanCounter}");
             }

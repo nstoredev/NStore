@@ -113,7 +113,7 @@ namespace NStore.Persistence.MsSql
             var sql = GetCreateTableSql();
             
             return $@"
-if not exists (select * from dbo.sysobjects where id = object_id(N'{{StreamsTableName}}') and OBJECTPROPERTY(id, N'IsUserTable') = 1) 
+if not exists (select * from dbo.sysobjects where id = object_id(N'{StreamsTableName}') and OBJECTPROPERTY(id, N'IsUserTable') = 1) 
 BEGIN
 {sql}
 END
