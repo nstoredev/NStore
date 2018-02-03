@@ -18,7 +18,7 @@ namespace NStore.Domain
         public bool PersistEmptyChangeset { get; set; } = false;
 
         public Repository(IAggregateFactory factory, IStreamsFactory streams)
-            : this(factory, streams, (ISnapshotStore) null)
+            : this(factory, streams, (ISnapshotStore)null)
         {
         }
 
@@ -29,23 +29,25 @@ namespace NStore.Domain
             _snapshots = snapshots;
         }
 
+        public Task<IAggregate> GetByIdAsync(Type aggregateType, string id)
+        {
+            return GetByIdAsync(aggregateType, id, CancellationToken.None);
+        }
+
         public Task<T> GetByIdAsync<T>(string id) where T : IAggregate
         {
             return this.GetByIdAsync<T>(id, CancellationToken.None);
         }
 
-        public async Task<T> GetByIdAsync<T>(
-            string id,
-            CancellationToken cancellationToken
-        ) where T : IAggregate
+        public async Task<IAggregate> GetByIdAsync(Type aggregateType, string id, CancellationToken cancellationToken)
         {
             if (_trackingAggregates.TryGetValue(id, out IAggregate aggregate))
             {
-                return (T) aggregate;
+                return aggregate;
             }
 
-            aggregate = _factory.Create<T>();
-            var persister = (IEventSourcedAggregate) aggregate;
+            aggregate = _factory.Create(aggregateType);
+            var persister = (IEventSourcedAggregate)aggregate;
 
             SnapshotInfo snapshot = null;
 
@@ -71,7 +73,7 @@ namespace NStore.Domain
             var subscription = new LambdaSubscription(data =>
             {
                 readCount++;
-                persister.ApplyChanges((Changeset) data.Payload);
+                persister.ApplyChanges((Changeset)data.Payload);
                 return Task.FromResult(true);
             });
             var consumer = ConfigureConsumer(subscription, cancellationToken);
@@ -93,7 +95,15 @@ namespace NStore.Domain
                 throw new StaleSnapshotException(snapshot.SourceId, snapshot.SourceVersion);
             }
 
-            return (T) aggregate;
+            return aggregate;
+        }
+
+        public async Task<T> GetByIdAsync<T>(
+            string id, 
+            CancellationToken cancellationToken
+        ) where T : IAggregate
+        {
+            return (T) await GetByIdAsync(typeof(T), id, cancellationToken).ConfigureAwait(false);
         }
 
         protected virtual ISubscription ConfigureConsumer(ISubscription consumer, CancellationToken token)
@@ -101,24 +111,24 @@ namespace NStore.Domain
             return consumer;
         }
 
-        public Task SaveAsync<T>(T aggregate, string operationId) where T : IAggregate
+        public Task SaveAsync(IAggregate aggregate, string operationId) 
         {
-            return this.SaveAsync<T>(aggregate, operationId, null, default(CancellationToken));
+            return this.SaveAsync(aggregate, operationId, null, default(CancellationToken));
         }
 
-        public Task SaveAsync<T>(T aggregate, string operationId, Action<IHeadersAccessor> headers) where T : IAggregate
+        public Task SaveAsync(IAggregate aggregate, string operationId, Action<IHeadersAccessor> headers) 
         {
-            return this.SaveAsync<T>(aggregate, operationId, headers, default(CancellationToken));
+            return this.SaveAsync(aggregate, operationId, headers, default(CancellationToken));
         }
 
-        public async Task SaveAsync<T>(
-            T aggregate,
+        public async Task SaveAsync(
+            IAggregate aggregate,
             string operationId,
             Action<IHeadersAccessor> headers,
             CancellationToken cancellationToken
-        ) where T : IAggregate
+        ) 
         {
-            var persister = (IEventSourcedAggregate) aggregate;
+            var persister = (IEventSourcedAggregate)aggregate;
             var changeSet = persister.GetChangeSet();
             if (changeSet.IsEmpty() && !PersistEmptyChangeset)
                 return;
@@ -132,13 +142,13 @@ namespace NStore.Domain
             if (aggregate is IInvariantsChecker checker)
             {
                 var check = checker.CheckInvariants();
-               
+
                 // checks for idempotency 
                 if (check.IsInvalid && await stream.ContainsOperationAsync(operationId).ConfigureAwait(false))
                 {
                     return;
                 }
-                
+
                 check.ThrowIfInvalid();
             }
 
