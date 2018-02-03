@@ -26,7 +26,7 @@ namespace NStore.Core.Tests.Persistence
             var subscription = new LambdaSubscription(_empty);
 
             var ex = new Exception("message");
-            await subscription.OnErrorAsync(1, ex);
+            await subscription.OnErrorAsync(1, ex).ConfigureAwait(false);
 
             Assert.True(subscription.Failed);
             Assert.Same(ex, subscription.LastError);
@@ -49,7 +49,7 @@ namespace NStore.Core.Tests.Persistence
             };
 
             var ex = new Exception("message");
-            await subscription.OnErrorAsync(1, ex);
+            await subscription.OnErrorAsync(1, ex).ConfigureAwait(false);
 
             Assert.True(subscription.Failed);
             Assert.Same(ex, trackedException);
@@ -69,7 +69,7 @@ namespace NStore.Core.Tests.Persistence
                 }
             };
 
-            await subscription.OnStartAsync(1);
+            await subscription.OnStartAsync(1).ConfigureAwait(false);
             Assert.Equal(1, trackedPosition);
         }
 
@@ -86,7 +86,7 @@ namespace NStore.Core.Tests.Persistence
                  }
             };
 
-            await subscription.StoppedAsync(1);
+            await subscription.StoppedAsync(1).ConfigureAwait(false);
             Assert.Equal(1, trackedPosition);
             Assert.True(subscription.ReadCompleted);
         }
@@ -104,7 +104,7 @@ namespace NStore.Core.Tests.Persistence
                 }
             };
 
-            await subscription.CompletedAsync(1);
+            await subscription.CompletedAsync(1).ConfigureAwait(false);
 
             Assert.Equal(1, trackedPosition);
             Assert.True(subscription.ReadCompleted);

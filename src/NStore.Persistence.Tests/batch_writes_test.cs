@@ -26,7 +26,7 @@ namespace NStore.Persistence.Tests
                 new WriteJob("a", 2, "second", null),
             };
 
-            await Batcher.AppendBatchAsync(jobs, CancellationToken.None);
+            await Batcher.AppendBatchAsync(jobs, CancellationToken.None).ConfigureAwait(false);
 
             Assert.InRange(jobs[0].Position, 1, 2);
             Assert.InRange(jobs[1].Position, 1, 2);

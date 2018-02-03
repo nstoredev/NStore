@@ -15,5 +15,10 @@ namespace NStore.Domain
         {
             return (T)_factory(typeof(T));
         }
+
+        public IAggregate Create(Type aggregateType)
+        {
+            return _factory(aggregateType);
+        }
     }
 }

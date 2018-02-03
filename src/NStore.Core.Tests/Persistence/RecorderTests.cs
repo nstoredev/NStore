@@ -42,7 +42,7 @@ namespace NStore.Core.Tests.Persistence
             var recorder = new Recorder();
             var chunk = new RecorderChunk {Index = 1, Payload = "a"};
 
-            await recorder.OnNextAsync(chunk);
+            await recorder.OnNextAsync(chunk).ConfigureAwait(false);
 
             var list = new List<IChunk>();
             recorder.Replay(list.Add);

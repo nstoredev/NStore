@@ -9,5 +9,10 @@ namespace NStore.Domain
             var aggregate = Activator.CreateInstance<T>();
             return aggregate;
         }
+
+        public IAggregate Create(Type aggregateType)
+        {
+            return (IAggregate)Activator.CreateInstance(aggregateType);
+        }
     }
 }

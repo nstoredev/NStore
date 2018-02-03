@@ -876,7 +876,7 @@ namespace NStore.Persistence.Tests
 
         public Task OnErrorAsync(long indexOrPosition, Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            Console.WriteLine($"Error [{_configMessage}]: {ex.Message}\n{ex.StackTrace}");
             throw ex;
         }
     }

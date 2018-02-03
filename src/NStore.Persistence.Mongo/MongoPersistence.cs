@@ -151,9 +151,14 @@ namespace NStore.Persistence.Mongo
 
                 await subscription.CompletedAsync(positionOrIndex).ConfigureAwait(false);
             }
+            catch (TaskCanceledException ex)
+            {
+                _logger.LogWarning($"PushToSubscriber: {ex.Message}.\n{ex.StackTrace}");
+                await subscription.StoppedAsync(positionOrIndex).ConfigureAwait(false);
+            }
             catch (Exception e)
             {
-                _logger.LogError($"Error During PushToSubscriber: {e.Message}.\n{e.ToString()}");
+                _logger.LogError($"Error During PushToSubscriber: {e.Message}.\n{e.StackTrace}");
                 await subscription.OnErrorAsync(positionOrIndex, e).ConfigureAwait(false);
             }
         }
