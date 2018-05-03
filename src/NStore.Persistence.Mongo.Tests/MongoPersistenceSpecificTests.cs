@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.Options;
@@ -87,16 +88,36 @@ namespace NStore.Persistence.Mongo.Tests
         [Fact]
         public async Task empty_payload_should_be_serialized()
         {
-            await Store.AppendAsync("a", 1, "payload");
+            await Store.AppendAsync("a", 1, "payload").ConfigureAwait(false);
             await Assert.ThrowsAsync<DuplicateStreamIndexException>(() =>
                 Store.AppendAsync("a", 1, "payload")
-            );
+            ).ConfigureAwait(false);
 
             // Counter progression
             // 1 first ok
             // 2 second ko
             // 3 empty 
             Assert.Equal(3, _serializer.SerializeCount);
+        }
+    }
+
+    public class filler_tests : BasePersistenceTest
+    {
+        [Fact]
+        public async Task filler_should_regenerate_operation_id()
+        {
+            await Store.AppendAsync("::empty", 1, "payload", "op1").ConfigureAwait(false);
+            var cts = new CancellationTokenSource(2000);
+            var result = await Store.AppendAsync("::empty", 2, "payload", "op1",cts.Token).ConfigureAwait(false);
+            Assert.Null(result);
+
+            var recorder = new Recorder();
+            await Store.ReadAllAsync(0, recorder, 100).ConfigureAwait(false);
+
+            Assert.Collection(recorder.Chunks, 
+                c=> Assert.Equal("op1", c.OperationId),
+                c=> Assert.Equal("_2", c.OperationId)
+            );
         }
     }
 }

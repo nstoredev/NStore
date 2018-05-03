@@ -7,6 +7,7 @@ namespace NStore.Persistence.Mongo
         void ReplacePayload(object payload);
         void RewriteIndex(long newIndex);
         void RewritePosition(long newPosition);
+        void RewriteOperationId(string id);
 
         void Init(long id, string partitionId, long index, object payload, string operationId);
     }
