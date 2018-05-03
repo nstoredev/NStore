@@ -323,6 +323,7 @@ namespace NStore.Persistence.Mongo
                 // reuse chunk
                 empty = chunk;
                 empty.RewriteIndex(empty.Position);
+                empty.RewriteOperationId("_" + empty.Position);
             }
             else
             {
@@ -364,12 +365,22 @@ namespace NStore.Persistence.Mongo
 
                         if (ex.Message.Contains(PartitionOperationIdx))
                         {
+                            if (cancellationToken.IsCancellationRequested)
+                            {
+                                cancellationToken.ThrowIfCancellationRequested();
+                            }
+
                             await PersistAsEmptyAsync(chunk, cancellationToken).ConfigureAwait(false);
                             return null;
                         }
 
                         if (ex.Message.Contains("_id_"))
                         {
+                            if (cancellationToken.IsCancellationRequested)
+                            {
+                                cancellationToken.ThrowIfCancellationRequested();
+                            }
+
                             Console.WriteLine(
                                 $"Error writing chunk #{chunk.Position} => {ex.Message} - {ex.GetType().FullName} ");
                             await ReloadSequence(cancellationToken).ConfigureAwait(false);
