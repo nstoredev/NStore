@@ -27,6 +27,11 @@ namespace NStore.Persistence.Mongo
             this.Position = newPosition;
         }
 
+        public void RewriteOperationId(string id)
+        {
+            this.OperationId = id;
+        }
+
         public virtual void Init(long id, string partitionId, long index, object payload, string operationId)
         {
             Position = id;
