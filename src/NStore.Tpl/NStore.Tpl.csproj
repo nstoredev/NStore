@@ -8,8 +8,9 @@
     <RepositoryUrl>https://github.com/ProximoSrl/NStore</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
   </PropertyGroup>
+  
   <ItemGroup>
-    <PackageReference Include="System.Threading.Tasks.Dataflow" Version="4.8.0" />
+
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">
