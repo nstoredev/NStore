@@ -7,15 +7,15 @@ namespace NStore.Core.Streams
     public static class StreamExtensions
     {
         public static Task<IChunk> PersistAsync(
-            this IRandomAccessStream stream, 
+            this IRandomAccessStream stream,
             object payload)
         {
             return stream.PersistAsync(payload, -1, null, CancellationToken.None);
         }
 
         public static Task<IChunk> PersistAsync(
-            this IRandomAccessStream stream, 
-            object payload, 
+            this IRandomAccessStream stream,
+            object payload,
             string operationId)
         {
             return stream.PersistAsync(payload, -1, operationId, CancellationToken.None);
@@ -31,9 +31,9 @@ namespace NStore.Core.Streams
         }
 
         public static Task<IChunk> PersistAsync(
-            this IRandomAccessStream stream, 
-            long index, 
-            object payload, 
+            this IRandomAccessStream stream,
+            long index,
+            object payload,
             string operationId)
         {
             return stream.PersistAsync(payload, index, operationId, CancellationToken.None);

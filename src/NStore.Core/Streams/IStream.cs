@@ -9,8 +9,8 @@ namespace NStore.Core.Streams
         bool IsWritable { get; }
 
         Task<IChunk> AppendAsync(
-            object payload, 
-            string operationId, 
+            object payload,
+            string operationId,
             CancellationToken cancellation
         );
 

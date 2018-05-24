@@ -381,7 +381,7 @@ namespace NStore.Persistence.Mongo
                                 cancellationToken.ThrowIfCancellationRequested();
                             }
 
-                            Console.WriteLine(
+                            _logger.LogWarning(
                                 $"Error writing chunk #{chunk.Position} => {ex.Message} - {ex.GetType().FullName} ");
                             await ReloadSequence(cancellationToken).ConfigureAwait(false);
                             chunk.RewritePosition(await GetNextId(1, cancellationToken).ConfigureAwait(false));
@@ -481,7 +481,7 @@ namespace NStore.Persistence.Mongo
             chunk.Init(
                 id,
                 partitionId,
-                index < 0 ? id : index,
+                index,
                 _mongoPayloadSerializer.Serialize(payload),
                 operationId ?? Guid.NewGuid().ToString()
             );
@@ -507,7 +507,7 @@ namespace NStore.Persistence.Mongo
                 chunk.Init(
                     id,
                     current.PartitionId,
-                    current.Index < 0 ? id : current.Index,
+                    current.Index,
                     _mongoPayloadSerializer.Serialize(current.Payload),
                     current.OperationId ?? Guid.NewGuid().ToString()
                 );
