@@ -20,7 +20,7 @@ namespace NStore.Core.Persistence
                 CancellationToken.None
             );
         }
-        
+
         public static Task ReadForwardAsync(
             this IPersistence persistence,
             string partitionId,
@@ -55,7 +55,6 @@ namespace NStore.Core.Persistence
                 CancellationToken.None
             );
         }
-
 
         public static Task ReadBackwardAsync(
             this IPersistence persistence,
@@ -112,7 +111,7 @@ namespace NStore.Core.Persistence
         }
 
         public static Task<IChunk> ReadSingleBackwardAsync(
-            this IPersistence persistence, 
+            this IPersistence persistence,
             string partitionId
         )
         {
@@ -127,7 +126,6 @@ namespace NStore.Core.Persistence
         {
             return persistence.ReadSingleBackwardAsync(partitionId, long.MaxValue, cancellationToken);
         }
-
 
         public static Task<IChunk> AppendAsync(
             this IPersistence persistence,
@@ -191,7 +189,6 @@ namespace NStore.Core.Persistence
             return persistence.ReadLastPositionAsync(CancellationToken.None);
         }
 
-
         public static Task<IChunk> ReadByOpeationIdAsync(
             this IPersistence persistence,
             string partitionId,
@@ -209,6 +206,5 @@ namespace NStore.Core.Persistence
         {
             return persistence.ReadAllByOperationIdAsync(operationId, subscription, CancellationToken.None);
         }
-
     }
 }
