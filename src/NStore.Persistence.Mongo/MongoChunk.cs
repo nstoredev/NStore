@@ -12,6 +12,8 @@ namespace NStore.Persistence.Mongo
         public object Payload { get; private set; }
         public string OperationId { get; private set; }
 
+        private bool IndexEqualToId;
+
         public void ReplacePayload(object payload)
         {
             this.Payload = payload;
@@ -25,6 +27,10 @@ namespace NStore.Persistence.Mongo
         public void RewritePosition(long newPosition)
         {
             this.Position = newPosition;
+            if (IndexEqualToId)
+            {
+                RewriteIndex(newPosition);
+            }
         }
 
         public void RewriteOperationId(string id)
@@ -32,11 +38,24 @@ namespace NStore.Persistence.Mongo
             this.OperationId = id;
         }
 
-        public virtual void Init(long id, string partitionId, long index, object payload, string operationId)
+        public virtual void Init(
+            long id,
+            string partitionId,
+            long index,
+            object payload,
+            string operationId)
         {
             Position = id;
             PartitionId = partitionId;
-            Index = index;
+            if (index < 0)
+            {
+                Index = id;
+                IndexEqualToId = true;
+            }
+            else
+            {
+                Index = index;
+            }
             Payload = payload;
             OperationId = operationId;
         }
