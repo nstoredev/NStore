@@ -1,12 +1,13 @@
+using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson.Serialization.Options;
+using MongoDB.Driver;
+using MongoDB.Driver.Core.Events;
+using NStore.Core.Persistence;
+using NStore.Persistence.Tests;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using MongoDB.Bson.Serialization.Attributes;
-using MongoDB.Bson.Serialization.Options;
-using MongoDB.Driver;
-using NStore.Core.Persistence;
-using NStore.Persistence.Tests;
 using Xunit;
 
 namespace NStore.Persistence.Mongo.Tests
@@ -108,15 +109,15 @@ namespace NStore.Persistence.Mongo.Tests
         {
             await Store.AppendAsync("::empty", 1, "payload", "op1").ConfigureAwait(false);
             var cts = new CancellationTokenSource(2000);
-            var result = await Store.AppendAsync("::empty", 2, "payload", "op1",cts.Token).ConfigureAwait(false);
+            var result = await Store.AppendAsync("::empty", 2, "payload", "op1", cts.Token).ConfigureAwait(false);
             Assert.Null(result);
 
             var recorder = new Recorder();
             await Store.ReadAllAsync(0, recorder, 100).ConfigureAwait(false);
 
-            Assert.Collection(recorder.Chunks, 
-                c=> Assert.Equal("op1", c.OperationId),
-                c=> Assert.Equal("_2", c.OperationId)
+            Assert.Collection(recorder.Chunks,
+                c => Assert.Equal("op1", c.OperationId),
+                c => Assert.Equal("_2", c.OperationId)
             );
         }
     }
@@ -142,6 +143,46 @@ namespace NStore.Persistence.Mongo.Tests
             {
                 Assert.Equal(chunk.Position, chunk.Index);
             }
+        }
+    }
+
+    public class Can_intercept_mongo_query_with_options : BasePersistenceTest
+    {
+        private Int32 callCount;
+        private Int32 failedCallCount;
+        private Int32 startCallCount;
+
+        protected internal override MongoPersistenceOptions GetMongoPersistenceOptions()
+        {
+            var options = base.GetMongoPersistenceOptions();
+            options.CustomizePartitionClientSettings = mongoClientSettings =>
+                mongoClientSettings.ClusterConfigurator = clusterConfigurator =>
+                {
+                    clusterConfigurator.Subscribe<CommandStartedEvent>(e =>
+                    {
+                        startCallCount++;
+                    });
+                    clusterConfigurator.Subscribe<CommandSucceededEvent>(e =>
+                    {
+                        callCount++;
+                    });
+                    clusterConfigurator.Subscribe<CommandFailedEvent>(e =>
+                    {
+                        failedCallCount++;
+                    });
+                };
+            return options;
+        }
+
+        [Fact()]
+        public async Task Verify_that_after_append_async_we_have_intercepted_the_call()
+        {
+            callCount = 0;
+
+            // Repo1 writes to a stream (no index specified)
+            await Store.AppendAsync("test1", -1, "CHUNK1").ConfigureAwait(false);
+
+            Assert.Equal(1, callCount);
         }
     }
 }
