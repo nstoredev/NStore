@@ -116,17 +116,17 @@ namespace NStore.Domain
 		void IEventSourcedAggregate.ApplyChanges(Changeset changeset)
 		{
 			// skip if same version
-			if (changeset.AggregateVersion == this.Version)
+			if (changeset.AggregateVersion == Version)
 				return;
 
-			if (changeset.AggregateVersion != this.Version + 1)
-				throw new AggregateRestoreException(this.Version + 1, changeset.AggregateVersion);
+			if (changeset.AggregateVersion != Version + 1)
+				throw new AggregateRestoreException(this.GetType(), Version + 1, changeset.AggregateVersion);
 
 			this.Version = changeset.AggregateVersion;
 
 			foreach (var @event in PreprocessEvents(changeset.Events))
 			{
-				this._processor.Process(this.State, @event);
+				this._processor.Process(State, @event);
 			}
 		}
 
