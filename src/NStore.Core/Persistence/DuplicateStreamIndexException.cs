@@ -4,6 +4,11 @@ using System.Security.Permissions;
 
 namespace NStore.Core.Persistence
 {
+    /// <summary>
+    /// This exception should be thrown when we are trying to persist a chunk for a
+    /// given PartitionId but the Index already exists. This is usually due to concurrency
+    /// on the same PartitionId
+    /// </summary>
     [Serializable]
     public class DuplicateStreamIndexException : Exception
     {
