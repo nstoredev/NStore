@@ -35,7 +35,14 @@ namespace NStore.Persistence.Mongo
 
         private long _sequence = 0;
 
+        /// <summary>
+        /// Index for partitionId+Index, used for concurrency check.
+        /// </summary>
         private const string PartitionIndexIdx = "partition_index";
+
+        /// <summary>
+        /// Index on partitionId+operationId, for idempotency on operations
+        /// </summary>
         private const string PartitionOperationIdx = "partition_operation";
 
         public bool SupportsFillers => true;
@@ -354,8 +361,11 @@ namespace NStore.Persistence.Mongo
                 }
                 catch (MongoWriteException ex)
                 {
-                    if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+                    //Need to understand what kind of exception we had, some of them could lead to a retry
+                    if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey) 
                     {
+                        //Index violation, we do have a chunk that broke an unique index, we need to know if this is 
+                        //at partitionId level (concurrency) or at position level (UseLocalSequence == false and multiple process/appdomain are appending to the stream).
                         if (ex.Message.Contains(PartitionIndexIdx))
                         {
                             await PersistAsEmptyAsync(chunk, cancellationToken).ConfigureAwait(false);
@@ -370,6 +380,7 @@ namespace NStore.Persistence.Mongo
                                 cancellationToken.ThrowIfCancellationRequested();
                             }
 
+                            //since we should ignore the chunk (already exist a chunk with that operation Id, we fill with a blank).
                             await PersistAsEmptyAsync(chunk, cancellationToken).ConfigureAwait(false);
                             return null;
                         }
@@ -381,8 +392,11 @@ namespace NStore.Persistence.Mongo
                                 cancellationToken.ThrowIfCancellationRequested();
                             }
 
-                            _logger.LogWarning(
-                                $"Error writing chunk #{chunk.Position} => {ex.Message} - {ex.GetType().FullName} ");
+                            //some other process steals the Position, we need to warn the user, because too many of this error could suggest to enable UseLocalSequence
+                            _logger.LogWarning($@"Error writing chunk #{chunk.Position} - Some other process already wrote position {chunk.Position}. 
+Operation will be retried. 
+If you see too many of this kind of errors, consider enabling UseLocalSequence.
+{ex.Message} - {ex.GetType().FullName} ");
                             await ReloadSequence(cancellationToken).ConfigureAwait(false);
                             chunk.RewritePosition(await GetNextId(1, cancellationToken).ConfigureAwait(false));
                             continue;
