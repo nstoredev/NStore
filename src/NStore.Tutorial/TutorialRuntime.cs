@@ -111,5 +111,10 @@ namespace NStore.Tutorial
 
             return runtime;
         }
+
+        public IStream OpenStream(string id)
+        {
+            return _streamsFactory.Open(id);
+        }
     }
 }

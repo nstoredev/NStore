@@ -9,7 +9,8 @@ namespace NStore.Tutorial
     {
         static async Task Main(string[] args)
         {
-            await new T01_Create_Read_Update().ShowAsync();
+            await new T10_Aggregate_Create_Read_Update().ShowAsync();
+            await new T11_Aggregate_Delete().ShowAsync();
         }
     }
 }
