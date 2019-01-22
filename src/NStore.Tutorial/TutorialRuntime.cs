@@ -8,6 +8,7 @@ using NStore.Core.Streams;
 using NStore.Domain;
 using NStore.Tutorial.CartDomain;
 using NStore.Tutorial.Support;
+using Serilog;
 
 namespace NStore.Tutorial
 {
@@ -69,6 +70,8 @@ namespace NStore.Tutorial
         {
             _logger.LogInformation("Shutting down... bye");
             _serviceProvider.Dispose();
+            
+            Serilog.Log.CloseAndFlush();
         }
 
         public IRepository CreateRepository()
@@ -80,13 +83,17 @@ namespace NStore.Tutorial
             );
         }
 
-
         private void Configure()
         {
+            Serilog.Log.Logger = new LoggerConfiguration()
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .MinimumLevel.Verbose()
+                .CreateLogger();
+            
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging(configure =>
-                configure.AddConsole()
-                    .SetMinimumLevel(LogLevel.Trace)
+                configure.AddSerilog()
             );
 
             // add domain
