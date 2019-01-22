@@ -9,7 +9,7 @@ namespace NStore.Tutorial
         static async Task Main(string[] args)
         {
             // runtime
-            var runtime = ApplicationRuntime.CreateDefaultRuntime();
+            var runtime = TutorialRuntime.CreateDefaultRuntime();
 
             // create aggregate
             var repository = runtime.CreateRepository();

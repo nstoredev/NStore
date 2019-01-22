@@ -10,17 +10,17 @@ using NStore.Tutorial.Support;
 
 namespace NStore.Tutorial
 {
-    public class ApplicationRuntime
+    public class TutorialRuntime
     {
         private readonly IAggregateFactory _aggregateFactory;
         private readonly IStreamsFactory _streamsFactory;
         private readonly ISnapshotStore _snapshotStore;
         private ServiceProvider _serviceProvider;
 
-        private readonly ILogger<ApplicationRuntime> _logger;
+        private readonly ILogger<TutorialRuntime> _logger;
         private readonly INStoreLoggerFactory _loggerFactory;
 
-        private ApplicationRuntime(
+        private TutorialRuntime(
             IPersistence persistence,
             IPersistence snapshots)
         {
@@ -28,7 +28,7 @@ namespace NStore.Tutorial
 
             _loggerFactory = new ConsoleLoggerFactory(_serviceProvider.GetRequiredService<ILoggerFactory>());
 
-            _logger = _serviceProvider.GetService<ILogger<ApplicationRuntime>>();
+            _logger = _serviceProvider.GetService<ILogger<TutorialRuntime>>();
             _logger.LogInformation("Runtime Started");
 
             _aggregateFactory = new AggregateFactory(
@@ -59,12 +59,12 @@ namespace NStore.Tutorial
             );
         }
 
-        public static ApplicationRuntime CreateDefaultRuntime()
+        public static TutorialRuntime CreateDefaultRuntime()
         {
             var persistence = PersistenceFactory.CreateInMemory();
             var snapshots = PersistenceFactory.CreateInMemory();
 
-            var runtime = new ApplicationRuntime(persistence,snapshots);
+            var runtime = new TutorialRuntime(persistence,snapshots);
 
             return runtime;
         }

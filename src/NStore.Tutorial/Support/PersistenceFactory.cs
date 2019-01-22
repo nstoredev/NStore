@@ -7,7 +7,11 @@ namespace NStore.Tutorial.Support
     {
         public static IPersistence CreateInMemory()
         {
-            return new InMemoryPersistence();
+            // Cloning function allow safe operations avoiding shared 
+            // data between snapshots, aggregates, streams.
+            //
+            // Mimic (de)serialization of other persistence providers
+            return new InMemoryPersistence( SerializationHelper.DeepClone);
         }
     }
 }
