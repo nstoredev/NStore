@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NStore.Core.Logging;
@@ -10,33 +11,53 @@ using NStore.Tutorial.Support;
 
 namespace NStore.Tutorial
 {
+    /// <summary>
+    /// Tutorial runtime.
+    /// </summary>
     public class TutorialRuntime
     {
+        //
+        // Core stuff
+        //
+
+        // Build aggregate instances
         private readonly IAggregateFactory _aggregateFactory;
+
+        // streams management
         private readonly IStreamsFactory _streamsFactory;
+
+        // snapshots persistence
         private readonly ISnapshotStore _snapshotStore;
+
+        //
+        // Support stuff
+        //
+
+        // for DI Enabled Aggregates 
         private ServiceProvider _serviceProvider;
 
-        private readonly ILogger<TutorialRuntime> _logger;
-        private readonly INStoreLoggerFactory _loggerFactory;
+        // logging
+        private ILogger<TutorialRuntime> _logger;
+        private INStoreLoggerFactory _loggerFactory;
 
-        private TutorialRuntime(
-            IPersistence persistence,
-            IPersistence snapshots)
+        private TutorialRuntime(IPersistence persistence, IPersistence snapshots)
         {
-            Startup();
+            Configure();
 
-            _loggerFactory = new ConsoleLoggerFactory(_serviceProvider.GetRequiredService<ILoggerFactory>());
-
-            _logger = _serviceProvider.GetService<ILogger<TutorialRuntime>>();
             _logger.LogInformation("Runtime Started");
 
+            // configure aggregate factory delegation to DI container
             _aggregateFactory = new AggregateFactory(
-                aggregateType => (IAggregate)this._serviceProvider.GetService(aggregateType)
+                aggregateType => (IAggregate) this._serviceProvider.GetService(aggregateType)
             );
 
             _streamsFactory = new StreamsFactory(Instrument(persistence, "streams"));
             _snapshotStore = new DefaultSnapshotStore(Instrument(snapshots, "snapshots"));
+        }
+
+        public void Log(string message)
+        {
+            _logger.LogInformation(message);
         }
 
         private IPersistence Instrument(IPersistence persistence, string name)
@@ -59,29 +80,36 @@ namespace NStore.Tutorial
             );
         }
 
-        public static TutorialRuntime CreateDefaultRuntime()
-        {
-            var persistence = PersistenceFactory.CreateInMemory();
-            var snapshots = PersistenceFactory.CreateInMemory();
 
-            var runtime = new TutorialRuntime(persistence,snapshots);
-
-            return runtime;
-        }
-
-
-        private void Startup()
+        private void Configure()
         {
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddLogging(configure =>
                 configure.AddConsole()
                     .SetMinimumLevel(LogLevel.Trace)
-                );
+            );
 
             // add domain
             serviceCollection.AddTransient<ShoppingCart>();
 
             _serviceProvider = serviceCollection.BuildServiceProvider();
+
+            _loggerFactory = new ConsoleLoggerFactory(_serviceProvider.GetRequiredService<ILoggerFactory>());
+            _logger = _serviceProvider.GetService<ILogger<TutorialRuntime>>();
+        }
+
+        /// <summary>
+        /// Default runtime factory
+        /// </summary>
+        /// <returns>Runtime</returns>
+        public static TutorialRuntime CreateDefaultRuntime()
+        {
+            var persistence = PersistenceFactory.CreateInMemory();
+            var snapshots = PersistenceFactory.CreateInMemory();
+
+            var runtime = new TutorialRuntime(persistence, snapshots);
+
+            return runtime;
         }
     }
 }
