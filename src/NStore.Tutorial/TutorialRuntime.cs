@@ -38,14 +38,15 @@ namespace NStore.Tutorial
         private ServiceProvider _serviceProvider;
 
         // logging
-        private ILogger<TutorialRuntime> _logger;
         private INStoreLoggerFactory _loggerFactory;
+
+        public ILogger<TutorialRuntime> Logger { get; private set; }
 
         private TutorialRuntime(IPersistence persistence, IPersistence snapshots)
         {
             Configure();
 
-            _logger.LogInformation("Runtime Started");
+            Logger.LogInformation("Runtime Started");
 
             // configure aggregate factory delegation to DI container
             _aggregateFactory = new AggregateFactory(
@@ -56,11 +57,6 @@ namespace NStore.Tutorial
             _snapshotStore = new DefaultSnapshotStore(Instrument(snapshots, "snapshots"));
         }
 
-        public void Log(string message)
-        {
-            _logger.LogInformation(message);
-        }
-
         private IPersistence Instrument(IPersistence persistence, string name)
         {
             return new LogDecorator(persistence, _loggerFactory, name);
@@ -68,7 +64,7 @@ namespace NStore.Tutorial
 
         public void Shutdown()
         {
-            _logger.LogInformation("Shutting down... bye");
+            Logger.LogInformation("Shutting down... bye");
             _serviceProvider.Dispose();
             
             Serilog.Log.CloseAndFlush();
@@ -101,8 +97,10 @@ namespace NStore.Tutorial
 
             _serviceProvider = serviceCollection.BuildServiceProvider();
 
-            _loggerFactory = new ConsoleLoggerFactory(_serviceProvider.GetRequiredService<ILoggerFactory>());
-            _logger = _serviceProvider.GetService<ILogger<TutorialRuntime>>();
+            _loggerFactory = new LoggerFactoryAdapter(
+                _serviceProvider.GetRequiredService<ILoggerFactory>()
+            );
+            Logger = _serviceProvider.GetService<ILogger<TutorialRuntime>>();
         }
 
         /// <summary>

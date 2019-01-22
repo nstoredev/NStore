@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using NStore.Core.Streams;
 using NStore.Domain;
 
@@ -25,17 +26,19 @@ namespace NStore.Tutorial.Tutorials
         {
             return _runtime.OpenStream(id);
         }
-        
+
+        protected ILogger Logger => _runtime.Logger;
+    
         protected abstract Task RunAsync();
 
         public async Task ShowAsync()
         {
             Console.Clear();
             
-            _runtime.Log($"\nRunning {this.GetType().Name}\n");
+            Logger.LogInformation($"\nRunning {this.GetType().Name}\n");
             await RunAsync();
             _runtime.Shutdown();
-            _runtime.Log("\nPress ENTER to continue\n");
+            Logger.LogInformation("\nPress ENTER to continue\n");
 
             Console.ReadLine();
         }
