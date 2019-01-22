@@ -9,10 +9,10 @@ namespace NStore.Core.Persistence
         private readonly IPersistence _persistence;
         private readonly INStoreLogger _logger;
 
-        public LogDecorator(IPersistence persistence, INStoreLoggerFactory inStoreLoggerFactory)
+        public LogDecorator(IPersistence persistence, INStoreLoggerFactory inStoreLoggerFactory, string categoryName = "Persistence")
         {
             _persistence = persistence;
-            _logger = inStoreLoggerFactory.CreateLogger("Persistence");
+            _logger = inStoreLoggerFactory.CreateLogger(categoryName);
         }
 
         public bool SupportsFillers => _persistence.SupportsFillers;

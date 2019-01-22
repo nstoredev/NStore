@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace NStore.Tutorial.CartDomain
 {
@@ -12,6 +13,11 @@ namespace NStore.Tutorial.CartDomain
         private void On(ItemAddedToCart evt)
         {
             _items.Add(evt.ItemData);
+        }
+
+        public override string ToString()
+        {
+            return JsonConvert.SerializeObject(this, Formatting.Indented);
         }
     }
 }
