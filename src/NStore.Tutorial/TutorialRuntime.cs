@@ -17,6 +17,9 @@ namespace NStore.Tutorial
     /// </summary>
     public class TutorialRuntime
     {
+        public IPersistence StreamsPersistence { get; }
+
+        public IPersistence SnapshotsPersistence { get; }
         //
         // Core stuff
         //
@@ -42,8 +45,10 @@ namespace NStore.Tutorial
 
         public ILogger<TutorialRuntime> Logger { get; private set; }
 
-        private TutorialRuntime(IPersistence persistence, IPersistence snapshots)
+        private TutorialRuntime(IPersistence streamsPersistence, IPersistence snapshotsPersistence)
         {
+            StreamsPersistence = streamsPersistence;
+            SnapshotsPersistence = snapshotsPersistence;
             Configure();
 
             Logger.LogInformation("Runtime Started");
@@ -53,18 +58,17 @@ namespace NStore.Tutorial
                 aggregateType => (IAggregate) this._serviceProvider.GetService(aggregateType)
             );
 
-            _streamsFactory = new StreamsFactory(Instrument(persistence, "streams"));
-            _snapshotStore = new DefaultSnapshotStore(Instrument(snapshots, "snapshots"));
+            _streamsFactory = new StreamsFactory(Instrument(streamsPersistence, "streams"));
+            _snapshotStore = new DefaultSnapshotStore(Instrument(snapshotsPersistence, "snapshots"));
         }
 
-        private IPersistence Instrument(IPersistence persistence, string name)
+        public IPersistence Instrument(IPersistence persistence, string name)
         {
             return new LogDecorator(persistence, _loggerFactory, name);
         }
 
         public void Shutdown()
         {
-            Logger.LogInformation("Shutting down... bye");
             _serviceProvider.Dispose();
             
             Serilog.Log.CloseAndFlush();
@@ -83,7 +87,9 @@ namespace NStore.Tutorial
         {
             Serilog.Log.Logger = new LoggerConfiguration()
                 .Enrich.FromLogContext()
-                .WriteTo.Console()
+                .Enrich.WithCaller()
+                .WriteTo.Console(outputTemplate:
+                    "[{Timestamp:HH:mm:ss} {SourceContext:l} {Level:u3}]{NewLine}{Message:lj}{NewLine}at {Caller}{NewLine}{Exception}{NewLine}")
                 .MinimumLevel.Verbose()
                 .CreateLogger();
             

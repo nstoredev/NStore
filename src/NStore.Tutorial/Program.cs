@@ -9,6 +9,10 @@ namespace NStore.Tutorial
     {
         static async Task Main(string[] args)
         {
+            // Persistence
+            await new T00_Persistence_Append().ShowAsync();
+            await new T01_Persistence_Append_with_idempotency().ShowAsync();
+                
             // Streams
             await new T01_Stream_Create_Read_Update_Delete().ShowAsync();
             

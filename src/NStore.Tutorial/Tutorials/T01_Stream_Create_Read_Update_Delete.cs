@@ -16,7 +16,7 @@ namespace NStore.Tutorial.Tutorials
             public string EventName { get; set; }
             public DateTime Timestamp { get; set; }
         }
-        
+
         protected override async Task RunAsync()
         {
             //
@@ -36,9 +36,8 @@ namespace NStore.Tutorial.Tutorials
             // ACT
             //
             var chunk = await stream.AppendAsync(payload);
-            
+
             Logger.LogDebug("Payload persisted {dump}", SerializationHelper.ToJson(chunk));
-            
         }
     }
 }

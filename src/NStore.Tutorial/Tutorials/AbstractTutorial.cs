@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using NStore.Core.Persistence;
 using NStore.Core.Streams;
 using NStore.Domain;
 
@@ -11,7 +12,7 @@ namespace NStore.Tutorial.Tutorials
     /// </summary>
     public abstract class AbstractTutorial
     {
-        private readonly TutorialRuntime _runtime;
+        protected readonly TutorialRuntime _runtime;
         protected AbstractTutorial()
         {
             _runtime = TutorialRuntime.CreateDefaultRuntime();
@@ -35,10 +36,10 @@ namespace NStore.Tutorial.Tutorials
         {
             Console.Clear();
             
-            Logger.LogInformation($"\nRunning {this.GetType().Name}\n");
+            Logger.LogInformation($"Running {this.GetType().Name}");
             await RunAsync();
             _runtime.Shutdown();
-            Logger.LogInformation("\nPress ENTER to continue\n");
+            Logger.LogInformation("Press ENTER to continue");
 
             Console.ReadLine();
         }
