@@ -66,7 +66,10 @@ namespace NStore.Persistence.Mongo
             var partitionsBuild = new MongoUrlBuilder(_options.PartitionsConnectionString);
             _options.CustomizePartitionSettings(partitionsBuild);
 
-            var partitionsClient = new MongoClient(partitionsBuild.ToMongoUrl());
+            var settings = MongoClientSettings.FromUrl(partitionsBuild.ToMongoUrl());
+            _options.CustomizePartitionClientSettings(settings);
+
+            var partitionsClient = new MongoClient(settings);
 
             this._partitionsDb = partitionsClient.GetDatabase(partitionsBuild.DatabaseName);
 
@@ -77,9 +80,12 @@ namespace NStore.Persistence.Mongo
             else
             {
                 var countersUrlBuilder = new MongoUrlBuilder(_options.SequenceConnectionString);
-                _options.CustomizeSquenceSettings(countersUrlBuilder);
+                _options.CustomizeSequenceSettings(countersUrlBuilder);
 
-                var countersClient = new MongoClient(countersUrlBuilder.ToMongoUrl());
+                var countersSettings = MongoClientSettings.FromUrl(countersUrlBuilder.ToMongoUrl());
+                _options.CustomizeSequenceClientSettings(countersSettings);
+
+                var countersClient = new MongoClient(countersSettings);
                 this._countersDb = countersClient.GetDatabase(countersUrlBuilder.DatabaseName);
             }
         }

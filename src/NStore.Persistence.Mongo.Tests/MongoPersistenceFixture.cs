@@ -52,7 +52,7 @@ namespace NStore.Persistence.Tests
             return _mongoPersistence;
         }
 
-        protected internal MongoPersistenceOptions GetMongoPersistenceOptions()
+        protected virtual internal MongoPersistenceOptions GetMongoPersistenceOptions()
         {
             return new MongoPersistenceOptions
             {
