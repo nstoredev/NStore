@@ -12,10 +12,9 @@ namespace NStore.Tutorial.Tutorials
     /// </summary>
     public abstract class AbstractTutorial
     {
-        protected readonly TutorialRuntime _runtime;
+        protected TutorialRuntime _runtime;
         protected AbstractTutorial()
         {
-            _runtime = TutorialRuntime.CreateDefaultRuntime();
         }
 
         protected IRepository CreateRepository()
@@ -35,6 +34,8 @@ namespace NStore.Tutorial.Tutorials
         public async Task ShowAsync()
         {
             Console.Clear();
+
+            _runtime = await TutorialRuntime.Initializer();
             
             Logger.LogInformation($"Running {this.GetType().Name}");
             await RunAsync();

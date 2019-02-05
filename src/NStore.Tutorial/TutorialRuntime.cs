@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NStore.Core.Logging;
@@ -109,15 +110,37 @@ namespace NStore.Tutorial
             Logger = _serviceProvider.GetService<ILogger<TutorialRuntime>>();
         }
 
+        public static Func<Task<TutorialRuntime>> Initializer = () => null;
+        
         /// <summary>
         /// Default runtime factory
         /// </summary>
         /// <returns>Runtime</returns>
-        public static TutorialRuntime CreateDefaultRuntime()
+        public static async Task<TutorialRuntime> UseInMemory()
         {
-            var persistence = PersistenceFactory.CreateInMemory();
-            var snapshots = PersistenceFactory.CreateInMemory();
+            var persistence = await PersistenceFactory.CreateInMemoryAsync();
+            var snapshots = await PersistenceFactory.CreateInMemoryAsync();
 
+            var runtime = new TutorialRuntime(persistence, snapshots);
+
+            return runtime;
+        }
+
+        public static async Task<TutorialRuntime> UseSqlServer(string connectionString)
+        {
+            var persistence = await PersistenceFactory.CreateSqlServerAsync
+            (
+                connectionString,
+                "streams",
+                NStoreNullLoggerFactory.Instance
+            );
+            
+            var snapshots = await PersistenceFactory.CreateSqlServerAsync
+            (
+                connectionString,
+                "snapshots",
+                NStoreNullLoggerFactory.Instance
+            );
             var runtime = new TutorialRuntime(persistence, snapshots);
 
             return runtime;

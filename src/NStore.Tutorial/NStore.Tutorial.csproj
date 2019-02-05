@@ -9,6 +9,7 @@
     <ItemGroup>
       <ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
       <ProjectReference Include="..\NStore.Domain\NStore.Domain.csproj" />
+      <ProjectReference Include="..\NStore.Persistence.MsSql\NStore.Persistence.MsSql.csproj" />
     </ItemGroup>
 
     <ItemGroup>
