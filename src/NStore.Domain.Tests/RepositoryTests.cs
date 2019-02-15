@@ -1,11 +1,11 @@
 ﻿// ReSharper disable InconsistentNaming
 
-using System;
-using System.Threading.Tasks;
 using NStore.Core.InMemory;
 using NStore.Core.Persistence;
 using NStore.Core.Snapshots;
 using NStore.Core.Streams;
+using System;
+using System.Threading.Tasks;
 using Xunit;
 
 #pragma warning disable S101 // Types should be named in camel case
@@ -104,8 +104,8 @@ namespace NStore.Domain.Tests
     {
         public with_populated_stream()
         {
-            Persistence.AppendAsync("Ticket_1", 1, new Changeset(1, new TicketSold())).Wait();
-            Persistence.AppendAsync("Ticket_1", 2, new Changeset(2, new TicketRefunded())).Wait();
+            Persistence.AppendAsync("Ticket_1", 1, new Changeset(1, new object[] { new TicketSold() })).Wait();
+            Persistence.AppendAsync("Ticket_1", 2, new Changeset(2, new object[] { new TicketRefunded() })).Wait();
         }
 
         [Fact]
@@ -145,8 +145,8 @@ namespace NStore.Domain.Tests
         {
             Snapshots = new DefaultSnapshotStore(new InMemoryPersistence(new InMemoryPersistenceOptions()));
 
-            Persistence.AppendAsync("Ticket_1", 1, new Changeset(1, new TicketSold())).Wait();
-            Persistence.AppendAsync("Ticket_1", 2, new Changeset(2, new TicketRefunded())).Wait();
+            Persistence.AppendAsync("Ticket_1", 1, new Changeset(1, new object[] { new TicketSold() })).Wait();
+            Persistence.AppendAsync("Ticket_1", 2, new Changeset(2, new object[] { new TicketRefunded() })).Wait();
         }
 
         [Fact]
