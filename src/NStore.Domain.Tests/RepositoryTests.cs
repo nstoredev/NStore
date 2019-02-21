@@ -400,5 +400,26 @@ namespace NStore.Domain.Tests
             Assert.Equal(3, ((Changeset)chunk.Payload).AggregateVersion);
         }
     }
+
+    public class with_repository : BaseRepositoryTest
+    {
+        [Fact]
+        public async Task should_save_aggregate_create_by_external_factory()
+        {
+            // arrange
+            var ticket = Ticket.CreateNew("Ticket_1");
+            ticket.Sale();
+            
+            // act
+            await Repository.SaveAsync(ticket, "new");
+
+            // assert
+            var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
+
+            Assert.NotNull(chunk);
+            Assert.IsType<Changeset>(chunk.Payload);
+            Assert.Equal(1, ((Changeset)chunk.Payload).AggregateVersion);
+        }
+    }
 }
 #pragma warning restore S101 // Types should be named in camel case

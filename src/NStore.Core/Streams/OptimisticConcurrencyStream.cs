@@ -23,6 +23,11 @@ namespace NStore.Core.Streams
             Persistence = persistence;
         }
 
+        public void MarkAsNew()
+        {
+            _version = 0;
+        }
+
         public Task ReadAsync(
             ISubscription subscription,
             long fromIndexInclusive,
@@ -60,7 +65,7 @@ namespace NStore.Core.Streams
 
         public async Task<bool> IsEmpty(CancellationToken cancellationToken)
         {
-            // @@REVIEW: check version to avoid db rountrip
+            // @@REVIEW: check version to avoid db roundtrip
             return await Persistence.ReadSingleBackwardAsync(Id, cancellationToken)
                        .ConfigureAwait(false) != null;
         }
