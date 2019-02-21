@@ -201,6 +201,7 @@ namespace NStore.Domain
                     {
                         os.MarkAsNew();
                     }
+                    _trackingAggregates.Add(aggregate.Id, aggregate);
 
                     return newStream;
                 }

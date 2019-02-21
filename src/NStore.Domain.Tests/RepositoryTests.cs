@@ -404,7 +404,7 @@ namespace NStore.Domain.Tests
     public class with_repository : BaseRepositoryTest
     {
         [Fact]
-        public async Task should_save_aggregate_create_by_external_factory()
+        public async Task should_save_aggregate_created_by_external_factory()
         {
             // arrange
             var ticket = Ticket.CreateNew("Ticket_1");
@@ -419,6 +419,27 @@ namespace NStore.Domain.Tests
             Assert.NotNull(chunk);
             Assert.IsType<Changeset>(chunk.Payload);
             Assert.Equal(1, ((Changeset)chunk.Payload).AggregateVersion);
+        }
+
+        [Fact]
+        public async Task should_save_twice_aggregate_created_by_external_factory()
+        {
+            // arrange
+            var ticket = Ticket.CreateNew("Ticket_1");
+            ticket.Sale();
+            await Repository.SaveAsync(ticket, "new");
+            
+            // act
+            ticket.Refund();
+            await Repository.SaveAsync(ticket, "update");
+            
+            // assert
+            var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
+
+            Assert.NotNull(chunk);
+            Assert.IsType<Changeset>(chunk.Payload);
+            Assert.Equal(2, ((Changeset)chunk.Payload).AggregateVersion);
+            
         }
     }
 }
