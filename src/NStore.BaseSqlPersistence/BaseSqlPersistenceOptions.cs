@@ -9,7 +9,7 @@ using NStore.Core.Persistence;
 
 namespace NStore.BaseSqlPersistence
 {
-    public interface ISqlPayloadSearializer
+    public interface ISqlPayloadSerializer
     {
         byte[] Serialize(object payload, out string serializerInfo);
         object Deserialize(byte[] serialized, string serializerInfo);
@@ -20,7 +20,7 @@ namespace NStore.BaseSqlPersistence
         public INStoreLoggerFactory LoggerFactory { get; set; }
         public string ConnectionString { get; set; }
         public string StreamsTableName { get; set; }
-        public ISqlPayloadSearializer Serializer { get; set; }
+        public ISqlPayloadSerializer Serializer { get; set; }
         protected BaseSqlPersistenceOptions(INStoreLoggerFactory loggerFactory)
         {
             LoggerFactory = loggerFactory;

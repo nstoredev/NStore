@@ -4,7 +4,7 @@ using NStore.Persistence.MsSql;
 
 namespace NStore.Tutorial.Support
 {
-    internal class JsonMsSqlSerializer : IMsSqlPayloadSearializer
+    internal class JsonMsSqlSerializer : IMsSqlPayloadSerializer
     {
         JsonSerializerSettings Settings { get; set; }
 
