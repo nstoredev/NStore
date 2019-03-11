@@ -2,7 +2,7 @@ using NStore.BaseSqlPersistence;
 
 namespace NStore.Persistence.MsSql
 {
-    public interface IMsSqlPayloadSearializer : ISqlPayloadSearializer
+    public interface IMsSqlPayloadSerializer : ISqlPayloadSerializer
     {
     }
 }

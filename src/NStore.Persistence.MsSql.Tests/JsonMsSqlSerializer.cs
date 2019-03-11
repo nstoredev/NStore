@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace NStore.Persistence.MsSql.Tests
 {
-    internal class JsonMsSqlSerializer : IMsSqlPayloadSearializer
+    internal class JsonMsSqlSerializer : IMsSqlPayloadSerializer
     {
         JsonSerializerSettings Settings { get; set; }
 
