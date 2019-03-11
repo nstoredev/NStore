@@ -111,7 +111,7 @@ namespace NStore.Sample.Tests
             var result = Room.CheckInvariants();
 
             Assert.True(result.IsInvalid);
-            Assert.Equal("Room has beed disabled with active reservations", result.Message);
+            Assert.Equal("Room has been disabled with active reservations", result.Message);
         }
     }
 }
