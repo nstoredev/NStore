@@ -1,6 +1,6 @@
-﻿using System;
-using NStore.Core.Processing;
+﻿using NStore.Core.Processing;
 using NStore.Core.Snapshots;
+using System;
 using Xunit;
 
 namespace NStore.Domain.Tests
@@ -48,7 +48,7 @@ namespace NStore.Domain.Tests
 
             Assert.True(state.Signaled);
         }
-        
+
     }
 
     public class AggregateTests
@@ -99,7 +99,7 @@ namespace NStore.Domain.Tests
         {
             Ticket ticket = TicketTestFactory.ForTest();
             var persister = (IEventSourcedAggregate)ticket;
-            var changeSet = new Changeset(1, new TicketSold());
+            var changeSet = new Changeset(1, new object[] { new TicketSold() });
 
             persister.ApplyChanges(changeSet);
             persister.ApplyChanges(changeSet);
@@ -115,7 +115,7 @@ namespace NStore.Domain.Tests
         {
             Ticket ticket = TicketTestFactory.ForTest();
             var persister = (IEventSourcedAggregate)ticket;
-            var changeSet = new Changeset(1, new TicketSold());
+            var changeSet = new Changeset(1, new object[] { new TicketSold() });
             persister.ApplyChanges(changeSet);
 
             Assert.True(ticket.IsInitialized);
@@ -167,7 +167,7 @@ namespace NStore.Domain.Tests
             var ticket = TicketTestFactory.ForTest();
             var persister = (IEventSourcedAggregate)ticket;
 
-            var changeSet = new Changeset(1, new TicketSold());
+            var changeSet = new Changeset(1, new object[] { new TicketSold() });
             persister.ApplyChanges(changeSet);
 
             ticket.Refund();
@@ -187,8 +187,8 @@ namespace NStore.Domain.Tests
             var ticket = TicketTestFactory.ForTest();
             var persister = (IEventSourcedAggregate)ticket;
 
-            var first = new Changeset(1, new TicketSold());
-            var third = new Changeset(3, new TicketSold());
+            var first = new Changeset(1, new object[] { new TicketSold() });
+            var third = new Changeset(3, new object[] { new TicketSold() });
 
             persister.ApplyChanges(first);
 

@@ -34,6 +34,13 @@ namespace NStore.Domain.Tests
     {
         public TicketState ExposedStateForTest => State;
 
+        public static Ticket CreateNew(string id)
+        {
+            var ticket = new Ticket();
+            ticket.Init(id);
+            return ticket;
+        }
+
         public void Sale()
         {
             if (State.HasBeenSold)

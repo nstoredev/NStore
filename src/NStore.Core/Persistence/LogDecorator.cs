@@ -9,10 +9,10 @@ namespace NStore.Core.Persistence
         private readonly IPersistence _persistence;
         private readonly INStoreLogger _logger;
 
-        public LogDecorator(IPersistence persistence, INStoreLoggerFactory inStoreLoggerFactory)
+        public LogDecorator(IPersistence persistence, INStoreLoggerFactory inStoreLoggerFactory, string categoryName = "Persistence")
         {
             _persistence = persistence;
-            _logger = inStoreLoggerFactory.CreateLogger("Persistence");
+            _logger = inStoreLoggerFactory.CreateLogger(categoryName);
         }
 
         public bool SupportsFillers => _persistence.SupportsFillers;
@@ -25,9 +25,9 @@ namespace NStore.Core.Persistence
             int limit,
             CancellationToken cancellationToken)
         {
-            _logger.LogDebug("Start ReadPartitionForward(Partition {ParitionId}, from: {from})", partitionId, fromLowerIndexInclusive);
+            _logger.LogDebug("Start ReadPartitionForward(Partition {PartitionId}, from: {from})", partitionId, fromLowerIndexInclusive);
             await _persistence.ReadForwardAsync(partitionId, fromLowerIndexInclusive, subscription, toUpperIndexInclusive, limit, cancellationToken).ConfigureAwait(false);
-            _logger.LogDebug("End ReadPartitionForward(Partition {ParitionId}, from: {from})", partitionId, fromLowerIndexInclusive);
+            _logger.LogDebug("End ReadPartitionForward(Partition {PartitionId}, from: {from})", partitionId, fromLowerIndexInclusive);
         }
 
         public async Task ReadBackwardAsync(
@@ -38,9 +38,9 @@ namespace NStore.Core.Persistence
             int limit,
             CancellationToken cancellationToken)
         {
-            _logger.LogDebug("Start ReadPartitionBackward(Partition {ParitionId}, from: {from})", partitionId, fromUpperIndexInclusive);
+            _logger.LogDebug("Start ReadPartitionBackward(Partition {PartitionId}, from: {from})", partitionId, fromUpperIndexInclusive);
             await _persistence.ReadBackwardAsync(partitionId, fromUpperIndexInclusive, subscription, toLowerIndexInclusive, limit, cancellationToken).ConfigureAwait(false);
-            _logger.LogDebug("End ReadPartitionBackward(Partition {ParitionId}, from: {from})", partitionId, fromUpperIndexInclusive);
+            _logger.LogDebug("End ReadPartitionBackward(Partition {PartitionId}, from: {from})", partitionId, fromUpperIndexInclusive);
         }
 
         public async Task<IChunk> ReadSingleBackwardAsync(string partitionId, long fromUpperIndexInclusive, CancellationToken cancellationToken)
@@ -77,9 +77,9 @@ namespace NStore.Core.Persistence
             string operationId,
             CancellationToken cancellationToken)
         {
-            _logger.LogDebug("Start PersistAsync({partitionId}, {index})", partitionId, index);
+            _logger.LogDebug("Start PersistAsync(partition: \"{partitionId}\", index: {index}, op: \"{op}\")", partitionId, index, operationId);
             var result = await _persistence.AppendAsync(partitionId, index, payload, operationId, cancellationToken).ConfigureAwait(false);
-            _logger.LogDebug("End PersistAsync({partitionId}, {index}) => {Position}", partitionId, index, result?.Position);
+            _logger.LogDebug("End PersistAsync(partition: \"{partitionId}\", index: {index}, op: \"{op}\") => position: {Position}", partitionId, index, operationId, result?.Position);
             return result;
         }
 

@@ -1,11 +1,11 @@
 ﻿// ReSharper disable InconsistentNaming
 
-using System;
-using System.Threading.Tasks;
 using NStore.Core.InMemory;
 using NStore.Core.Persistence;
 using NStore.Core.Snapshots;
 using NStore.Core.Streams;
+using System;
+using System.Threading.Tasks;
 using Xunit;
 
 #pragma warning disable S101 // Types should be named in camel case
@@ -104,8 +104,8 @@ namespace NStore.Domain.Tests
     {
         public with_populated_stream()
         {
-            Persistence.AppendAsync("Ticket_1", 1, new Changeset(1, new TicketSold())).Wait();
-            Persistence.AppendAsync("Ticket_1", 2, new Changeset(2, new TicketRefunded())).Wait();
+            Persistence.AppendAsync("Ticket_1", 1, new Changeset(1, new object[] { new TicketSold() })).Wait();
+            Persistence.AppendAsync("Ticket_1", 2, new Changeset(2, new object[] { new TicketRefunded() })).Wait();
         }
 
         [Fact]
@@ -145,8 +145,8 @@ namespace NStore.Domain.Tests
         {
             Snapshots = new DefaultSnapshotStore(new InMemoryPersistence(new InMemoryPersistenceOptions()));
 
-            Persistence.AppendAsync("Ticket_1", 1, new Changeset(1, new TicketSold())).Wait();
-            Persistence.AppendAsync("Ticket_1", 2, new Changeset(2, new TicketRefunded())).Wait();
+            Persistence.AppendAsync("Ticket_1", 1, new Changeset(1, new object[] { new TicketSold() })).Wait();
+            Persistence.AppendAsync("Ticket_1", 2, new Changeset(2, new object[] { new TicketRefunded() })).Wait();
         }
 
         [Fact]
@@ -398,6 +398,48 @@ namespace NStore.Domain.Tests
             Assert.NotNull(chunk);
             Assert.IsType<Changeset>(chunk.Payload);
             Assert.Equal(3, ((Changeset)chunk.Payload).AggregateVersion);
+        }
+    }
+
+    public class with_repository : BaseRepositoryTest
+    {
+        [Fact]
+        public async Task should_save_aggregate_created_by_external_factory()
+        {
+            // arrange
+            var ticket = Ticket.CreateNew("Ticket_1");
+            ticket.Sale();
+            
+            // act
+            await Repository.SaveAsync(ticket, "new");
+
+            // assert
+            var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
+
+            Assert.NotNull(chunk);
+            Assert.IsType<Changeset>(chunk.Payload);
+            Assert.Equal(1, ((Changeset)chunk.Payload).AggregateVersion);
+        }
+
+        [Fact]
+        public async Task should_save_twice_aggregate_created_by_external_factory()
+        {
+            // arrange
+            var ticket = Ticket.CreateNew("Ticket_1");
+            ticket.Sale();
+            await Repository.SaveAsync(ticket, "new");
+            
+            // act
+            ticket.Refund();
+            await Repository.SaveAsync(ticket, "update");
+            
+            // assert
+            var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
+
+            Assert.NotNull(chunk);
+            Assert.IsType<Changeset>(chunk.Payload);
+            Assert.Equal(2, ((Changeset)chunk.Payload).AggregateVersion);
+            
         }
     }
 }

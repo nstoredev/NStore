@@ -40,7 +40,7 @@ namespace NStore.Sample.Domain.Room
         {
             if (!BookingsEnabled && _reservations.Any())
             {
-                return InvariantsCheckResult.Invalid("Room has beed disabled with active reservations");
+                return InvariantsCheckResult.Invalid("Room has been disabled with active reservations");
             }
 
             return InvariantsCheckResult.Ok;

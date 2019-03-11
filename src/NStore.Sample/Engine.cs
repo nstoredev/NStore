@@ -21,7 +21,7 @@ using NStore.Persistence.Mongo;
 
 namespace NStore.Sample
 {
-    public class ConsoleLoggerFactory : INStoreLoggerFactory
+    internal class ConsoleLoggerFactory : INStoreLoggerFactory
     {
         public INStoreLogger CreateLogger(string categoryName)
         {
@@ -34,7 +34,7 @@ namespace NStore.Sample
         }
     }
 
-    public class ConsoleLoggerWrapper : INStoreLogger
+    internal class ConsoleLoggerWrapper : INStoreLogger
     {
         private readonly ConsoleLogger _logger;
 

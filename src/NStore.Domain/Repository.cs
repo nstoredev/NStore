@@ -18,7 +18,7 @@ namespace NStore.Domain
         public bool PersistEmptyChangeset { get; set; } = false;
 
         public Repository(IAggregateFactory factory, IStreamsFactory streams)
-            : this(factory, streams, (ISnapshotStore)null)
+            : this(factory, streams, (ISnapshotStore) null)
         {
         }
 
@@ -47,7 +47,7 @@ namespace NStore.Domain
             }
 
             aggregate = _factory.Create(aggregateType);
-            var persister = (IEventSourcedAggregate)aggregate;
+            var persister = (IEventSourcedAggregate) aggregate;
 
             SnapshotInfo snapshot = null;
 
@@ -73,7 +73,7 @@ namespace NStore.Domain
             var subscription = new LambdaSubscription(data =>
             {
                 readCount++;
-                persister.ApplyChanges((Changeset)data.Payload);
+                persister.ApplyChanges((Changeset) data.Payload);
                 return Task.FromResult(true);
             });
             var consumer = ConfigureConsumer(subscription, cancellationToken);
@@ -85,7 +85,9 @@ namespace NStore.Domain
 
             //Check lambda subscription for errors.
             if (subscription.Failed)
+            {
                 throw new RepositoryReadException($"Error reading aggregate {id}", subscription.LastError);
+            }
 
             persister.Loaded();
 
@@ -99,7 +101,7 @@ namespace NStore.Domain
         }
 
         public async Task<T> GetByIdAsync<T>(
-            string id, 
+            string id,
             CancellationToken cancellationToken
         ) where T : IAggregate
         {
@@ -111,12 +113,12 @@ namespace NStore.Domain
             return consumer;
         }
 
-        public Task SaveAsync(IAggregate aggregate, string operationId) 
+        public Task SaveAsync(IAggregate aggregate, string operationId)
         {
             return this.SaveAsync(aggregate, operationId, null, default(CancellationToken));
         }
 
-        public Task SaveAsync(IAggregate aggregate, string operationId, Action<IHeadersAccessor> headers) 
+        public Task SaveAsync(IAggregate aggregate, string operationId, Action<IHeadersAccessor> headers)
         {
             return this.SaveAsync(aggregate, operationId, headers, default(CancellationToken));
         }
@@ -126,12 +128,14 @@ namespace NStore.Domain
             string operationId,
             Action<IHeadersAccessor> headers,
             CancellationToken cancellationToken
-        ) 
+        )
         {
-            var persister = (IEventSourcedAggregate)aggregate;
+            var persister = (IEventSourcedAggregate) aggregate;
             var changeSet = persister.GetChangeSet();
             if (changeSet.IsEmpty() && !PersistEmptyChangeset)
+            {
                 return;
+            }
 
             var stream = GetStream(aggregate);
             if (!stream.IsWritable)
@@ -190,6 +194,18 @@ namespace NStore.Domain
         {
             if (!_trackingAggregates.Values.Contains(aggregate))
             {
+                if (aggregate.IsNew)
+                {
+                    var newStream = OpenStream(aggregate.Id);
+                    if (newStream is OptimisticConcurrencyStream os)
+                    {
+                        os.MarkAsNew();
+                    }
+                    _trackingAggregates.Add(aggregate.Id, aggregate);
+
+                    return newStream;
+                }
+
                 throw new RepositoryMismatchException($"Aggregate {aggregate.Id} was not loaded by this repository");
             }
 

@@ -4,6 +4,9 @@ using System.Threading.Tasks;
 
 namespace NStore.Domain
 {
+    /// <summary>
+    /// Stateful (thread unsafe) repository
+    /// </summary>
     public interface IRepository
     {
         Task<T> GetByIdAsync<T>(string id) where T : IAggregate;
