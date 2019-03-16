@@ -1,0 +1,100 @@
+pool:
+  vmImage: 'VS2017-Win2016'
+  demands:
+    - DotNetFramework
+    - msbuild
+    - visualstudio
+    - java 
+
+trigger:
+- master
+- develop
+- release/*
+- hotfix/*
+- feature/*
+
+variables:
+  AssemblyVersion: '0.0.1'
+  solution: 'src/NStore.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+
+steps:
+- task: DotNetCoreInstaller@0
+  displayName: 'Use .NET Core sdk 2.2.101'
+  inputs:
+    version: 2.2.101
+
+- task: GitVersion@0
+  displayName: 'GitVersion '
+  inputs:
+    BuildNamePrefix: NStore
+
+- task: DotNetCoreCLI@1
+  displayName: 'dotnet restore'
+  inputs:
+    command: restore
+    projects: '$(solution)'
+
+- task: PowerShell@1
+  displayName: 'Dump all variables'
+  inputs:
+    scriptType: inlineScript
+    inlineScript: |
+     $var = (gci env:*).GetEnumerator() | Sort-Object Name
+     $out = ""
+     Foreach ($v in $var) {$out = $out + "`t{0,-28} = {1,-28}`n" -f $v.Name, $v.Value}
+      
+     write-output "dump variables on $env:BUILD_ARTIFACTSTAGINGDIRECTORY\test.md"
+     $fileName = "$env:BUILD_ARTIFACTSTAGINGDIRECTORY\test.md"
+     set-content $fileName $out
+      
+     write-output "##vso[task.addattachment type=Distributedtask.Core.Summary;name=Environment Variables;]$fileName"
+
+- task: SonarSource.sonarcloud.14d9cde6-c1da-4d55-aa01-2965cd301255.SonarCloudPrepare@1
+  displayName: 'Prepare analysis on SonarCloud'
+  inputs:
+    SonarCloud: 'SonarCloud'
+    organization: 'alkampfergit-github'
+    projectKey: nstore
+    projectName: Nstore
+    projectVersion: '$(AssemblyVersion)'
+
+
+# - task: NuGetToolInstaller@0
+#   displayName: 'Install nuget version 4.3.0'
+#   inputs:
+#     versionSpec: '4.3.0'
+
+# - task: NuGetCommand@2
+#   displayName: 'Nuget restore packages'
+#   inputs:
+#     restoreSolution: '$(solution)'
+
+- task: VSBuild@1
+  displayName: 'Build solution $(solution)'
+  inputs:
+    solution: '$(solution)'
+    vsVersion: "15.0"
+    platform: '$(BuildPlatform)'
+    configuration: '$(BuildConfiguration)'
+    clean: true
+
+- task: PublishTestResults@1
+  displayName: 'Publish Test Results from dotnet'
+  inputs:
+    testRunner: VSTest
+    testResultsFiles: '$(Common.TestResultsDirectory)\**\*.trx '
+
+- task: CopyFiles@2
+  displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
+  inputs:
+    SourceFolder: '$(build.sourcesdirectory)'
+    Contents: '**\bin\$(BuildConfiguration)\**'
+    TargetFolder: '$(build.artifactstagingdirectory)'
+
+- task: SonarSource.sonarcloud.ce096e50-6155-4de8-8800-4221aaeed4a1.SonarCloudAnalyze@1
+  displayName: 'Run Code Analysis'
+
+- task: SonarSource.sonarcloud.38b27399-a642-40af-bb7d-9971f69712e8.SonarCloudPublish@1
+  displayName: 'Publish Quality Gate Result'
