@@ -36,12 +36,11 @@ namespace NStore.Persistence.MsSql
         {
             var sql = _options.GetReadAllChunksSql(limit);
 
-            using (var connection = Connect())
+            using (var context = await _options.GetContextAsync(cancellationToken).ConfigureAwait(false))
             {
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-                using (var command = CreateCommand(sql, connection))
+                using (var command = context.CreateCommand(sql))
                 {
-                    AddParam(command, "@fromPositionInclusive", fromPositionInclusive);
+                    context.AddParam(command, "@fromPositionInclusive", fromPositionInclusive);
 
                     await PushToSubscriber(command, fromPositionInclusive, subscription, true, cancellationToken)
                         .ConfigureAwait(false);
@@ -56,41 +55,13 @@ namespace NStore.Persistence.MsSql
 
         public async Task DestroyAllAsync(CancellationToken cancellationToken)
         {
-            using (var conn = Connect())
+            using (var context = await _options.GetContextAsync(cancellationToken).ConfigureAwait(false))
             {
-                await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
                 var sql = _options.GetDropTableSql();
-                using (var cmd = CreateCommand(sql, conn))
+                using (var cmd = context.CreateCommand(sql))
                 {
                     await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                 }
-            }
-        }
-
-        protected override DbConnection Connect()
-        {
-            return new SqlConnection(_options.ConnectionString);
-        }
-
-        protected override DbCommand CreateCommand(string sql, DbConnection connection)
-        {
-            return new SqlCommand(sql, (SqlConnection)connection);
-        }
-
-        protected override DbCommand CreateCommand(string sql, DbConnection connection, DbTransaction transaction)
-        {
-            return new SqlCommand(sql, (SqlConnection)connection, (SqlTransaction)transaction);
-        }
-
-        protected override void AddParam(DbCommand command, string paramName, object value)
-        {
-            if (value is byte[] bytes)
-            {
-                ((SqlCommand)command).Parameters.AddWithValue(paramName, new SqlBinary(bytes));
-            }
-            else
-            {
-                ((SqlCommand)command).Parameters.AddWithValue(paramName, value);
             }
         }
 

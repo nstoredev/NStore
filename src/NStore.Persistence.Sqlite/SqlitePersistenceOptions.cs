@@ -1,5 +1,8 @@
 using System;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Data.Sqlite;
 using NStore.BaseSqlPersistence;
 using NStore.Core.Logging;
 
@@ -114,6 +117,21 @@ namespace NStore.Persistence.Sqlite
             }
 
             return sb.ToString();
+        }
+
+        public override async Task<AbstractSqlContext> GetContextAsync(CancellationToken cancellationToken)
+        {
+            var connection =  new SqliteConnection(ConnectionString);
+            try
+            {
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception )
+            {
+                connection.Dispose();
+                throw;
+            }
+            return new SqliteContext(connection, true);
         }
 
         public override string GetSelectLastPositionSql()

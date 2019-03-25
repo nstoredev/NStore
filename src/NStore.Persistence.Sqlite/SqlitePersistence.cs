@@ -66,12 +66,11 @@ namespace NStore.Persistence.Sqlite
                 {
                     IList<IChunk> buffer = null;
 
-                    using (var connection = Connect())
+                    using (var context = await _options.GetContextAsync(cancellationToken).ConfigureAwait(false))
                     {
-                        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-                        using (var command = CreateCommand(sql, connection))
+                        using (var command = context.CreateCommand(sql))
                         {
-                            AddParam(command, "@fromPositionInclusive", fromPositionInclusive);
+                            context.AddParam(command, "@fromPositionInclusive", fromPositionInclusive);
                             buffer = await LoadBuffer(command, cancellationToken).ConfigureAwait(false);
                         }
                     }
@@ -137,31 +136,16 @@ namespace NStore.Persistence.Sqlite
 
         public async Task DestroyAllAsync(CancellationToken cancellationToken)
         {
-            using (var conn = Connect())
+            using (var context = await _options.GetContextAsync(cancellationToken).ConfigureAwait(false))
             {
-                await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
                 var sql = $"DROP TABLE IF EXISTS {_options.StreamsTableName} ";
-                using (var cmd = CreateCommand(sql, conn))
+                using (var cmd = context.CreateCommand(sql))
                 {
                     await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                 }
             }
         }
 
-        protected override DbConnection Connect()
-        {
-            return new SqliteConnection(_options.ConnectionString);
-        }
-
-        protected override DbCommand CreateCommand(string sql, DbConnection connection)
-        {
-            return new SqliteCommand(sql, (SqliteConnection)connection);
-        }
-
-        protected override DbCommand CreateCommand(string sql, DbConnection connection, DbTransaction transaction)
-        {
-            return new SqliteCommand(sql, (SqliteConnection)connection, (SqliteTransaction)transaction);
-        }
 
         public async Task AppendBatchAsync(WriteJob[] queue, CancellationToken cancellationToken)
         {
@@ -183,21 +167,20 @@ namespace NStore.Persistence.Sqlite
             try
             {
                 var sql = _options.GetInsertChunkSql();
-                using (var connection = Connect())
+                using (var context = await _options.GetContextAsync(cancellationToken).ConfigureAwait(false))
                 {
-                    await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
-                    using (var transaction = connection.BeginTransaction())
+                    using (var transaction = context.Connection.BeginTransaction())
                     {
                         for (var index = 0; index < chunks.Length; index++)
                         {
                             var chunk = chunks[index];
-                            using (var command = CreateCommand(sql, connection, transaction))
+                            using (var command = context.CreateCommand(sql, transaction))
                             {
-                                AddParam(command, "@PartitionId", chunk.PartitionId);
-                                AddParam(command, "@Index", chunk.Index);
-                                AddParam(command, "@OperationId", chunk.OperationId);
-                                AddParam(command, "@Payload", chunk.Payload);
-                                AddParam(command, "@SerializerInfo", chunk.SerializerInfo);
+                                context.AddParam(command, "@PartitionId", chunk.PartitionId);
+                                context.AddParam(command, "@Index", chunk.Index);
+                                context.AddParam(command, "@OperationId", chunk.OperationId);
+                                context.AddParam(command, "@Payload", chunk.Payload);
+                                context.AddParam(command, "@SerializerInfo", chunk.SerializerInfo);
 
                                 try
                                 {
@@ -243,16 +226,6 @@ namespace NStore.Persistence.Sqlite
             }
         }
 
-        protected override void AddParam(DbCommand command, string paramName, object value)
-        {
-            if (value is byte[] bytes)
-            {
-                ((SqliteCommand)command).Parameters.Add(paramName, SqliteType.Blob).Value = bytes;
-            }
-            else
-            {
-                ((SqliteCommand)command).Parameters.AddWithValue(paramName, value);
-            }
-        }
+
     }
 }
