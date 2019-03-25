@@ -1,5 +1,8 @@
 using System;
+using System.Data.SqlClient;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using NStore.BaseSqlPersistence;
 using NStore.Core.Logging;
 
@@ -101,6 +104,23 @@ namespace NStore.Persistence.MsSql
             return sb.ToString();
         }
 
+        public override async Task<AbstractSqlContext> GetContextAsync(CancellationToken cancellationToken)
+        {
+            var connection = new SqlConnection(ConnectionString);
+
+            try
+            {
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                connection.Dispose();
+                throw;
+            }
+
+            return new MsSqlContext(connection);
+        }
+
         public virtual string GetDropTableSql()
         {
             return
@@ -111,7 +131,7 @@ namespace NStore.Persistence.MsSql
         public override string GetCreateTableIfMissingSql()
         {
             var sql = GetCreateTableSql();
-            
+
             return $@"
 if not exists (select * from dbo.sysobjects where id = object_id(N'{StreamsTableName}') and OBJECTPROPERTY(id, N'IsUserTable') = 1) 
 BEGIN
@@ -132,7 +152,6 @@ END
                           [Position] >= @fromPositionInclusive 
                       ORDER BY 
                           [Position]";
-            
         }
 
         public override string GetSelectLastPositionSql()
