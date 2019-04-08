@@ -31,5 +31,13 @@ namespace NStore.Core.Tests.Streams
             Assert.IsType<ReadOnlyStream>(stream);
             Assert.False(stream.IsWritable);
         }
+
+        [Fact]
+        public void open_random_access_should_return_stream()
+        {
+            var stream = _store.OpenRandomAccess("random");
+            Assert.IsType<Stream>(stream);
+            Assert.True(stream.IsWritable);
+        }
     }
 }

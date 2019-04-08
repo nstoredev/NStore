@@ -9,10 +9,12 @@ namespace NStore.Core.Streams
 
         public StreamsFactory(IPersistence persistence)
         {
-            if (persistence == null)
-                throw new ArgumentNullException(nameof(persistence));
+            _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
+        }
 
-            _persistence = persistence;
+        public IRandomAccessStream OpenRandomAccess(string streamId)
+        {
+            return Open(streamId) as IRandomAccessStream;
         }
 
         public IStream Open(string streamId)
