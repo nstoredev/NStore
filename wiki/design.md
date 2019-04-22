@@ -16,10 +16,13 @@ Every NStore persistence:
 2. can be paritioned in smaller sequences of `Chunks` with custom ordering
 3. supports write idempotency
 
-| Partition         | 1   | 2   | 3   | 4   | 5   | 6   | 7 |
-| ---               | -: | - | --- | --- | --- | --- | --- | 
-| Users/123         | 001   | 1   | 1   | 1   |  1|  1|  1 
-| Users/123/Clicks  |     | 1   | 1   | 1   |  1|  1|  1 
+### Storage Layout
+
+| Partition         | 1   | 2   | 3  | 4  | 5  | 6   | 7  |
+| :-                | -:  | -:  | -: | -: | -: | -:  | -: | 
+| Users/1           | 1   |     |    |    |  2 |  3|   
+| Users/1/Clicks    |     |     | 10 |    |    |   |  20 
+| Users/2           |     | 1   |    | 2  |    |   |  
 
 ### Chunk
 Chunks are the storage building blocks.  
