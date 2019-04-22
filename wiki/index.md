@@ -15,5 +15,4 @@ NStore is a .net standard EventSourcing library.
    1. Aggregate
    1. State
    1. Factory
-   1. Repository
-   
+   1. Repository   
