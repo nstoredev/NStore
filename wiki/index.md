@@ -3,7 +3,7 @@
 NStore is a .net standard EventSourcing library.
 
 ## Table of contents
-1.  [Design principles](design.md)
+1. [Design principles](design.md)
 1. [Persistence](persistence/index.md)
    1. [Memory](persistence/memory.md)
    1. [Microsoft Sql Server](persistence/sqlserver.md)
@@ -16,3 +16,5 @@ NStore is a .net standard EventSourcing library.
    1. State
    1. Factory
    1. Repository   
+1. [Build](build.md)
+1. Tutorial
