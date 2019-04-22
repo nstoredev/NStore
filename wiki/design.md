@@ -18,13 +18,15 @@ Every NStore persistence:
 
 ### Storage Layout
 
-|    | 1   | 2   | 3  | 4  | 5  | 6   | 7  | Position |
-| :-                | -:  | -:  | -: | -: | -: | -:  | -: | :- |
-| Users/1           | 1   |     |    |    |  2 |  3|   
-| Users/1/Clicks    |     |     | 10 |    |    |   |  20 
-| Users/2           |     | 1   |    | 2  |    |   |  
+|                   | 1   | 2   | 3  | 4  | 5  | 6  | 7  | Position |
+| :-                | -:  | -:  | -: | -: | -: | -: | -: | :-       |
+| Users/1           | 1   |     |    |    |  2 |  3 |    |          |
+| Users/1/Clicks    |     |     | 10 |    |    |    | 20 |          |
+| Users/2           |     | 1   |    | 2  |    |    |    |          |
 | **Partition**|
 
+Every cell represents a `Chunk` idenfied by the `Partition Index` assigned by the caller. 
+Store can be read ordered by global `Position` or by single streams ordered by `Index`.
 
 ### Chunk
 Chunks are the storage building blocks.  
@@ -66,10 +68,13 @@ Tracks the write operation identifier, OperationId is guaranteed to be unique in
 
 A Stream is an ordered sequence of zero or more Chunks. Streams are mapped over Partitions of Layer 0. 
 
+### Logical mapping
 `PartitionId -> StreamId`
 
 ## Domain (Level 2)
 
 Domain add support for event sourced `Aggregate` persisted as a `Stream` of `Changeset` payloads. 
+
+### Logical mapping
 
 `PartitionId -> StreamId -> AggregateId`
