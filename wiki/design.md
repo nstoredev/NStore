@@ -3,9 +3,9 @@
 ## API
 NStore implements persistence API at three different levels.
 
-1. [Raw Persistence](#raw-persistence-layer-0)
-1. [Streams](#streams-layer-1)
-1. [Domain](#domain-layer-2)
+1. [Raw Persistence](#raw-persistence-level-0)
+1. [Streams](#streams-level-1)
+1. [Domain](#domain-level-2)
 
 
 ## Raw Persistence (Level 0)
