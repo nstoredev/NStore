@@ -18,11 +18,13 @@ Every NStore persistence:
 
 ### Storage Layout
 
-| Partition         | 1   | 2   | 3  | 4  | 5  | 6   | 7  |
-| :-                | -:  | -:  | -: | -: | -: | -:  | -: | 
+|    | 1   | 2   | 3  | 4  | 5  | 6   | 7  | Position |
+| :-                | -:  | -:  | -: | -: | -: | -:  | -: | :- |
 | Users/1           | 1   |     |    |    |  2 |  3|   
 | Users/1/Clicks    |     |     | 10 |    |    |   |  20 
 | Users/2           |     | 1   |    | 2  |    |   |  
+| **Partition**|
+
 
 ### Chunk
 Chunks are the storage building blocks.  
