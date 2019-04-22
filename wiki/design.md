@@ -14,8 +14,12 @@ Raw persistence are `Facade` over native database drivers to provide a common AP
 Every NStore persistence:
 1. implements a globally ordered sequence of `Chunks`.
 2. can be paritioned in smaller sequences of `Chunks` with custom ordering
-3. supports idempotency on write
+3. supports write idempotency
 
+| Partition         | 1   | 2   | 3   | 4   | 5   | 6   | 7 |
+| ---               | -: | - | --- | --- | --- | --- | --- | 
+| Users/123         | 001   | 1   | 1   | 1   |  1|  1|  1 
+| Users/123/Clicks  |     | 1   | 1   | 1   |  1|  1|  1 
 
 ### Chunk
 Chunks are the storage building blocks.  
