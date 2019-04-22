@@ -68,13 +68,13 @@ Tracks the write operation identifier, OperationId is guaranteed to be unique in
 
 A Stream is an ordered sequence of zero or more Chunks. Streams are mapped over Partitions of Layer 0. 
 
-### Logical mapping
+#### Logical mapping
 `PartitionId -> StreamId`
 
 ## Domain (Level 2)
 
 Domain add support for event sourced `Aggregate` persisted as a `Stream` of `Changeset` payloads. 
 
-### Logical mapping
+#### Logical mapping
 
 `PartitionId -> StreamId -> AggregateId`
