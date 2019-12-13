@@ -16,16 +16,24 @@ namespace NStore.Persistence.MsSql
 
         protected virtual string GetCreateTableSql()
         {
+            string idempotencySql = StreamIdempotencyEnabled
+                ? $"CREATE UNIQUE INDEX IX_{StreamsTableName}_OPID on dbo.{StreamsTableName} (PartitionId, OperationId)"
+                : string.Empty;
+
+            string idempotencyConstraint = StreamIdempotencyEnabled
+                ? "NOT NULL"
+                : "NULL";
+            
             return $@"CREATE TABLE [{StreamsTableName}](
                 [Position] BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
                 [PartitionId] NVARCHAR(255) NOT NULL,
-                [OperationId] NVARCHAR(255) NOT NULL,
+                [OperationId] NVARCHAR(255) {idempotencyConstraint},
                 [SerializerInfo] NVARCHAR(255) NOT NULL,
                 [Index] BIGINT NOT NULL,
                 [Payload] VARBINARY(MAX)
             )
 
-            CREATE UNIQUE INDEX IX_{StreamsTableName}_OPID on dbo.{StreamsTableName} (PartitionId, OperationId)
+            {idempotencySql}
             CREATE UNIQUE INDEX IX_{StreamsTableName}_IDX on dbo.{StreamsTableName} (PartitionId, [Index])
 ";
         }
@@ -47,6 +55,11 @@ namespace NStore.Persistence.MsSql
 
         public override string GetSelectChunkByStreamAndOperation()
         {
+            if (!StreamIdempotencyEnabled)
+            {
+                throw new MsSqlPersistenceException("Stream idempotency is disabled. Cannot search by OperationId");
+            }
+
             return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
                       FROM [{StreamsTableName}] 
                       WHERE [PartitionId] = @PartitionId AND [OperationId] = @OperationId";
@@ -54,6 +67,11 @@ namespace NStore.Persistence.MsSql
 
         public override string GetSelectAllChunksByOperationSql()
         {
+            if (!StreamIdempotencyEnabled)
+            {
+                throw new MsSqlPersistenceException("Stream idempotency is disabled. Cannot search by OperationId");
+            }
+
             return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
                       FROM [{StreamsTableName}] 
                       WHERE [OperationId] = @OperationId";
