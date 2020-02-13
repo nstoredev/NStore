@@ -60,7 +60,7 @@ namespace NStore.BaseSqlPersistence
                 Position = reader.GetInt64(0),
                 PartitionId = reader.GetString(1),
                 Index = reader.GetInt64(2),
-                OperationId = reader.GetString(4),
+                OperationId = reader.IsDBNull(4) ? null : reader.GetString(4),
                 SerializerInfo = reader.GetString(5),
             };
 
@@ -194,8 +194,13 @@ namespace NStore.BaseSqlPersistence
                     PartitionId = partitionId,
                     Index = index,
                     Payload = payload,
-                    OperationId = operationId ?? Guid.NewGuid().ToString()
+                    OperationId = operationId
                 };
+
+                if (chunk.OperationId == null && Options.StreamIdempotencyEnabled)
+                {
+                    chunk.OperationId = Guid.NewGuid().ToString();
+                }
 
                 var bytes = Options.Serializer.Serialize(payload, out string serializerInfo);
                 chunk.SerializerInfo = serializerInfo;
@@ -207,7 +212,14 @@ namespace NStore.BaseSqlPersistence
                     {
                         context.AddParam(command, "@PartitionId", partitionId);
                         context.AddParam(command, "@Index", index);
-                        context.AddParam(command, "@OperationId", chunk.OperationId);
+                        if (chunk.OperationId == null)
+                        {
+                            context.AddParam(command, "@OperationId", DBNull.Value);
+                        }
+                        else
+                        {
+                            context.AddParam(command, "@OperationId", chunk.OperationId);
+                        }
                         context.AddParam(command, "@Payload", bytes);
                         context.AddParam(command, "@SerializerInfo", serializerInfo);
 

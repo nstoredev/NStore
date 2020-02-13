@@ -16,6 +16,28 @@ namespace NStore.Persistence.MsSql.Tests
         }
 
         [Fact]
+        public async Task should_persist_with_null_operationId()
+        {
+            var chunk1 = await Store.AppendAsync
+            (
+                "partition", 
+                1, 
+                "payload 1", 
+                null, 
+                CancellationToken.None
+            );
+            
+            var reader = new Recorder();
+            await Store.ReadAllAsync(0, reader, 100, CancellationToken.None);
+
+            Assert.Collection(reader.Chunks, chunk =>
+            {
+                Assert.Null(chunk.OperationId);
+            });
+            
+        }
+
+        [Fact]
         public async Task should_append_chunk_with_duplicated_operation_id()
         {
             var chunk1 = await Store.AppendAsync("partition", 1, "payload 1", "same_op", CancellationToken.None);
