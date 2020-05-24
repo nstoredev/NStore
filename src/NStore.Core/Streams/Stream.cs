@@ -49,6 +49,11 @@ namespace NStore.Core.Streams
             return Persistence.DeleteAsync(this.Id, 0, long.MaxValue, cancellation);
         }
 
+        public Task DeleteBeforeAsync(long index, CancellationToken cancellation)
+        {
+            return Persistence.DeleteAsync(this.Id, 0, index-1, cancellation);
+        }
+
         public Task<IChunk> PersistAsync(object payload, long index, string operationId, CancellationToken cancellation)
         {
             return Persistence.AppendAsync(this.Id, index, payload, operationId, cancellation);

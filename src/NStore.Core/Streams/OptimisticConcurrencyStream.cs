@@ -123,5 +123,10 @@ If you don't need to read use {typeof(Stream).Name} instead of {GetType().Name}.
         {
             return Persistence.DeleteAsync(Id, 0, long.MaxValue, cancellation);
         }
+
+        public Task DeleteBeforeAsync(long index, CancellationToken cancellation)
+        {
+            return Persistence.DeleteAsync(Id, 0, index-1, cancellation);
+        }
     }
 }

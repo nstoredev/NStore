@@ -17,5 +17,10 @@ namespace NStore.Core.Streams
         Task DeleteAsync(
             CancellationToken cancellation
         );
+
+        Task DeleteBeforeAsync(
+            long index,
+            CancellationToken cancellation
+        );
     }
 }

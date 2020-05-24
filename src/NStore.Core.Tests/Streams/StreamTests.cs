@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using NStore.Core.InMemory;
 using NStore.Core.Persistence;
 using NStore.Core.Streams;
 using Xunit;
@@ -23,5 +22,6 @@ namespace NStore.Core.Tests.Streams
             await _stream.PeekAsync().ConfigureAwait(false);
             Assert.Equal(1, _persistence.ReadSingleBackwardCounter.Calls);
         }
+
     }
 }
