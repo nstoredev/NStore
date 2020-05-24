@@ -12,6 +12,13 @@ namespace NStore.BaseSqlPersistence
         public INStoreLoggerFactory LoggerFactory { get; set; }
         public string ConnectionString { get; set; }
         public string StreamsTableName { get; set; }
+
+        /// <summary>
+        /// When stream idempotency is enabled OperationsId must be unique:
+        /// with two or more chunks with same OperationId only the first one
+        /// is stored, others are skipped without errors. 
+        /// </summary>
+        public bool StreamIdempotencyEnabled { get; set; } = true;
         public ISqlPayloadSerializer Serializer { get; set; }
 
         protected BaseSqlPersistenceOptions(INStoreLoggerFactory loggerFactory)
