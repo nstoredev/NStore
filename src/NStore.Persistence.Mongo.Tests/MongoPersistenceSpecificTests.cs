@@ -1,3 +1,4 @@
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.Options;
 using MongoDB.Driver;
@@ -183,6 +184,37 @@ namespace NStore.Persistence.Mongo.Tests
             await Store.AppendAsync("test1", -1, "CHUNK1").ConfigureAwait(false);
 
             Assert.Equal(1, callCount);
+        }
+    }
+
+    /// <summary>
+    /// Correctly initialize the seed when you want to use the sequence generated it
+    /// </summary>
+    public class Sequence_generator_id_is_initialized_correctly : BasePersistenceTest
+    {
+        private MongoPersistenceOptions options;
+
+        protected internal override MongoPersistenceOptions GetMongoPersistenceOptions()
+        {
+            options = base.GetMongoPersistenceOptions();
+            options.UseLocalSequence = false;
+            options.SequenceCollectionName = "sequence_test";
+            return options;
+        }
+
+        [Fact()]
+        public async Task Verify_that_after_append_async_we_have_intercepted_the_call()
+        {
+            // We need to be sure that the record was correctly created
+            var url = new MongoUrl(options.PartitionsConnectionString);
+            var client = new MongoClient(url);
+            var db = client.GetDatabase(url.DatabaseName);
+            var coll = db.GetCollection<BsonDocument>(options.SequenceCollectionName);
+
+            var single = coll.AsQueryable().SingleOrDefault();
+            Assert.NotNull(single);
+            Assert.Equal("streams", single["_id"].AsString);
+            Assert.Equal(0L, single["LastValue"].AsInt64);
         }
     }
 }
