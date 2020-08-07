@@ -25,7 +25,7 @@ steps:
   inputs:
     version: 2.2.101
 
-- task: GitVersion@0
+- task: GitVersion@1
   displayName: 'GitVersion '
   inputs:
     BuildNamePrefix: NStore

@@ -1,11 +1,11 @@
-﻿using System;
+﻿using MongoDB.Bson;
+using MongoDB.Driver;
+using NStore.Core.Logging;
+using NStore.Core.Persistence;
+using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using MongoDB.Bson;
-using MongoDB.Driver;
-using NStore.Core.Persistence;
-using NStore.Core.Logging;
-using System.Linq;
 
 namespace NStore.Persistence.Mongo
 {
@@ -50,7 +50,10 @@ namespace NStore.Persistence.Mongo
         public MongoPersistence(MongoPersistenceOptions options)
         {
             if (options == null || !options.IsValid())
+            {
                 throw new MongoPersistenceException("Invalid options");
+            }
+
             _options = options;
 
             var partitionsBuild = new MongoUrlBuilder(options.PartitionsConnectionString);
@@ -117,7 +120,7 @@ namespace NStore.Persistence.Mongo
             );
 
             var sort = Builders<TChunk>.Sort.Ascending(x => x.Index);
-            var options = new FindOptions<TChunk>() {Sort = sort};
+            var options = new FindOptions<TChunk>() { Sort = sort };
             if (limit != int.MaxValue)
             {
                 options.Limit = limit;
@@ -192,7 +195,7 @@ namespace NStore.Persistence.Mongo
             );
 
             var sort = Builders<TChunk>.Sort.Descending(x => x.Index);
-            var options = new FindOptions<TChunk>() {Sort = sort};
+            var options = new FindOptions<TChunk>() { Sort = sort };
             if (limit != int.MaxValue)
             {
                 options.Limit = limit;
@@ -220,7 +223,7 @@ namespace NStore.Persistence.Mongo
             );
 
             var sort = Builders<TChunk>.Sort.Descending(x => x.Index);
-            var options = new FindOptions<TChunk>() {Sort = sort, Limit = 1};
+            var options = new FindOptions<TChunk>() { Sort = sort, Limit = 1 };
 
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
             {
@@ -368,7 +371,7 @@ namespace NStore.Persistence.Mongo
                 catch (MongoWriteException ex)
                 {
                     //Need to understand what kind of exception we had, some of them could lead to a retry
-                    if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey) 
+                    if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
                     {
                         //Index violation, we do have a chunk that broke an unique index, we need to know if this is 
                         //at partitionId level (concurrency) or at position level (UseLocalSequence == false and multiple process/appdomain are appending to the stream).
@@ -418,10 +421,14 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
         public async Task InitAsync(CancellationToken cancellationToken)
         {
             if (_partitionsDb == null)
+            {
                 Connect();
+            }
 
             if (_options.DropOnInit)
+            {
                 Drop(cancellationToken).Wait(cancellationToken);
+            }
 
             _chunks = _partitionsDb.GetCollection<TChunk>(_options.PartitionsCollectionName);
             _counters = _countersDb.GetCollection<Counter>(_options.SequenceCollectionName);
@@ -452,6 +459,10 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
             {
                 await ReloadSequence(cancellationToken).ConfigureAwait(false);
             }
+            else
+            {
+                await EnsureFirstSequenceRecord().ConfigureAwait(false);
+            }
         }
 
         private async Task ReloadSequence(CancellationToken cancellationToken = default(CancellationToken))
@@ -468,10 +479,40 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
             this._sequence = lastSequenceNumber;
         }
 
+        private async Task EnsureFirstSequenceRecord()
+        {
+            //initialize if needed
+            var existing = _counters.AsQueryable().SingleOrDefault(c => c.Id == _options.SequenceId);
+            if (existing == null)
+            {
+                try
+                {
+                    await _counters.InsertOneAsync(new Counter()
+                    {
+                        Id = _options.SequenceId,
+                        LastValue = 0L
+                    }).ConfigureAwait(false);
+                }
+                catch (MongoWriteException ex)
+                {
+                    if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+                    {
+                        //ignore the error, in the meanwhile between loading existing value and inserting someone else already inserted the record, everything is normal.
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+            }
+        }
+
         private async Task<long> GetNextId(int size, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (_options.UseLocalSequence)
+            {
                 return Interlocked.Add(ref _sequence, size);
+            }
 
             // server side sequence
             var filter = Builders<Counter>.Filter.Eq(x => x.Id, _options.SequenceId);
