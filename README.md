@@ -13,6 +13,8 @@ Heavily inspired from NEventStore, rewritten from scratch to be simple to learn 
 | ------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | AppVeyor     | Windows  | [<img src="https://ci.appveyor.com/api/projects/status/github/proximosrl/nstore?svg=true" alt="Build status" >](https://ci.appveyor.com/project/andreabalducci/nstore) |
 | Travis       | Ubuntu   | [<img src="https://travis-ci.org/ProximoSrl/NStore.svg?branch=develop" alt="Build status" >](https://travis-ci.org/ProximoSrl/NStore)                                  |
+| GH Actions   | Linux    | [<img src="https://github.com/ProximoSrl/NStore/workflows/NStore%20CI/badge.svg" alt="Build status" >](https://github.com/ProximoSrl/NStore/blob/develop/.github/workflows/ci.yml)                                  |
+| Azdo         | Windows  | [<img src="https://dev.azure.com/gianmariaricci/Public/_apis/build/status/130" alt="Build status" >](https://dev.azure.com/gianmariaricci/Public/_build/latest?definitionId=130)                                  |
 
 ## Quickstart
 
