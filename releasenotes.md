@@ -1,4 +1,12 @@
-## 0.10.0
+## 0.10.3
+
+- Updated mongodb driver to latest version
+
+## 0.10.2
+
+- Updated mongodb driver to latest version
+
+## 0.10.1
 
 - Updated mongodb driver to latest version
 - Fixed cake build.
