@@ -26,6 +26,7 @@
     <Compile Include="..\TestGlobalSuppressions.cs" Link="TestGlobalSuppressions.cs" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Fasterflect.Netstandard" Version="1.0.9" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
     <PackageReference Include="NETStandard.Library" Version="2.0.3" />
