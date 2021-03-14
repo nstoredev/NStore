@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26730.16
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31105.61
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Core", "NStore.Core\NStore.Core.csproj", "{0AAD1793-0A61-42E6-9EBC-6729058EBE70}"
 EndProject
@@ -51,7 +51,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.LoadTests", "NStore.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.BaseSqlPersistence", "NStore.BaseSqlPersistence\NStore.BaseSqlPersistence.csproj", "{A83CF5E1-B9AF-4CEC-8BC2-B9B1EA19253F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Tutorial", "NStore.Tutorial\NStore.Tutorial.csproj", "{11148E66-62F6-4BAE-A4ED-74A2C7E751A6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Tutorial", "NStore.Tutorial\NStore.Tutorial.csproj", "{11148E66-62F6-4BAE-A4ED-74A2C7E751A6}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Persistence.LiteDB", "NStore.Persistence.LiteDB\NStore.Persistence.LiteDB.csproj", "{90924EF2-5318-43C4-9247-64218B8E88C3}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Persistence.LiteDB.Tests", "NStore.Persistence.LiteDB.Tests\NStore.Persistence.LiteDB.Tests.csproj", "{055B4E47-75E1-4237-BDEC-6678B58C0482}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -135,6 +139,14 @@ Global
 		{11148E66-62F6-4BAE-A4ED-74A2C7E751A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{11148E66-62F6-4BAE-A4ED-74A2C7E751A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{11148E66-62F6-4BAE-A4ED-74A2C7E751A6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{90924EF2-5318-43C4-9247-64218B8E88C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{90924EF2-5318-43C4-9247-64218B8E88C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{90924EF2-5318-43C4-9247-64218B8E88C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{90924EF2-5318-43C4-9247-64218B8E88C3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{055B4E47-75E1-4237-BDEC-6678B58C0482}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{055B4E47-75E1-4237-BDEC-6678B58C0482}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{055B4E47-75E1-4237-BDEC-6678B58C0482}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{055B4E47-75E1-4237-BDEC-6678B58C0482}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -159,6 +171,8 @@ Global
 		{7793803A-7E53-48C7-B602-1B4F90232C5C} = {81A65A86-5489-4358-9848-6BE40A4D13A1}
 		{A83CF5E1-B9AF-4CEC-8BC2-B9B1EA19253F} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
 		{11148E66-62F6-4BAE-A4ED-74A2C7E751A6} = {D3212016-BB8D-4E16-94C4-2D0990B2C14A}
+		{90924EF2-5318-43C4-9247-64218B8E88C3} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
+		{055B4E47-75E1-4237-BDEC-6678B58C0482} = {F89E08E9-BE00-4101-8F7B-DFB0B178EDBB}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {75AC1D4E-4023-436E-8BD5-B34CD115EA76}
