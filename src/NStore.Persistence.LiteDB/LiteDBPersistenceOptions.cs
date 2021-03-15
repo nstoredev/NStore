@@ -18,6 +18,7 @@ namespace NStore.Persistence.LiteDB
             PayloadSerializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
             LoggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             this.Mapper = mapper;
+            StreamsCollectionName = "streams";
         }
 
         public string ConnectionString { get; set; }

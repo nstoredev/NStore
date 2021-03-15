@@ -25,31 +25,25 @@ namespace NStore.Persistence.Tests
 
         protected IPersistence Create(bool dropOnInit)
         {
-            var mapper = new BsonMapper();
-            mapper.RegisterType<SnapshotInfo>
-            (
-                serialize: (snapshot) => JsonConvert.SerializeObject(snapshot),
-                deserialize: DeserializeSnapshot
-            );
-
             var pathToFile = $"{_testRunId}.litedb";
 
-            if (dropOnInit)
-            {
-                if (File.Exists(pathToFile))
-                    File.Delete(pathToFile);
-            }
 
             _logger.LogInformation("Starting test #{number}", _testRunId);
             var serializer = new LiteDBSerializer();
-            _options = new LiteDBPersistenceOptions(serializer, LoggerFactory, mapper)
+            _options = new LiteDBPersistenceOptions(serializer, LoggerFactory)
             {
                 ConnectionString = pathToFile,
                 StreamsCollectionName = "streams"
             };
 
             _liteDbPersistence = new LiteDBPersistence(_options);
-            _liteDbPersistence.InitAsync(CancellationToken.None).Wait();
+
+            if (dropOnInit)
+            {
+                _liteDbPersistence.DeleteDataFiles();
+            }
+
+            _liteDbPersistence.Init();
 
             return _liteDbPersistence;
         }
@@ -61,7 +55,7 @@ namespace NStore.Persistence.Tests
 
         private void Clear()
         {
-            _liteDbPersistence.DestroyAllAsync(CancellationToken.None).Wait();
+            _liteDbPersistence.DeleteDataFiles();
             _liteDbPersistence.Dispose();
         }
     }
@@ -86,6 +80,11 @@ namespace NStore.Persistence.Tests
 
         public string Serialize(object payload)
         {
+            if (payload == null)
+            {
+                return null;
+            }
+
             var wrapped = new Wrapper
             {
                 Value = payload,
@@ -96,6 +95,11 @@ namespace NStore.Persistence.Tests
 
         public object Deserialize(string payload)
         {
+            if (payload == null)
+            {
+                return null;
+            }
+
             var wrapped = JsonConvert.DeserializeObject<Wrapper>(payload, Settings);
             return wrapped.Value;
         }

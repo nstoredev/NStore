@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using LiteDB;
@@ -14,20 +15,15 @@ namespace NStore.Persistence.LiteDB
     public class LiteDBPersistence : IPersistence, IDisposable
     {
         private readonly LiteDBPersistenceOptions _options;
-        private readonly LiteDatabase _db;
-        private readonly ILiteCollection<LiteDBChunk> _streams;
+        private LiteDatabase _db;
+        private ILiteCollection<LiteDBChunk> _streams;
         private readonly INStoreLogger _logger;
         private long _sequence = 0;
 
         public LiteDBPersistence(LiteDBPersistenceOptions options)
         {
             _options = options;
-            _db = new LiteDatabase(_options.ConnectionString, _options.Mapper);
-            _streams = _db.GetCollection<LiteDBChunk>(_options.StreamsCollectionName);
-            _logger = options.LoggerFactory.CreateLogger(_options.ConnectionString);
-
-            _streams.EnsureIndex(x => x.StreamSequence, true);
-            _streams.EnsureIndex(x => x.StreamOperation, true);
+            _logger = _options.LoggerFactory.CreateLogger(_options.ConnectionString);
         }
 
         public bool SupportsFillers => false;
@@ -246,15 +242,44 @@ namespace NStore.Persistence.LiteDB
             await PublishAsync(chunks, 0, subscription, true, cancellationToken).ConfigureAwait(false);
         }
 
-        public Task InitAsync(CancellationToken cancellationToken)
+        public void Init()
         {
-            _streams.DeleteAll();
-            return Task.CompletedTask;
+            _db = new LiteDatabase(_options.ConnectionString, _options.Mapper);
+            _streams = _db.GetCollection<LiteDBChunk>(_options.StreamsCollectionName);
+
+            _streams.EnsureIndex(x => x.StreamSequence, true);
+            _streams.EnsureIndex(x => x.StreamOperation, true);
         }
 
-        public Task DestroyAllAsync(CancellationToken cancellationToken)
+        public void DeleteDataFiles()
         {
-            return Task.CompletedTask;
+            if (_db != null)
+            {
+                _streams = null;
+                _db.Dispose();
+            }
+
+            // data file
+            if (File.Exists(_options.ConnectionString))
+            {
+                File.Delete(_options.ConnectionString);
+            }
+
+            // log file
+            var logFileName = Path.Combine
+            (
+                Path.GetDirectoryName(_options.ConnectionString),
+                Path.ChangeExtension
+                (
+                    Path.GetFileNameWithoutExtension(_options.ConnectionString) + "-log",
+                    Path.GetExtension(_options.ConnectionString)
+                )
+            );
+
+            if (File.Exists(logFileName))
+            {
+                File.Delete(logFileName);
+            }
         }
 
         public void Dispose()
