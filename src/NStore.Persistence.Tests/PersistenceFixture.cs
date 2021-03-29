@@ -7,6 +7,7 @@ using System.Threading.Tasks.Dataflow;
 using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using Xunit;
+using Xunit.Abstractions;
 
 #pragma warning disable S101 // Types should be named in camel case
 #pragma warning disable IDE1006 // Naming Styles
@@ -33,52 +34,49 @@ namespace NStore.Persistence.Tests
         protected readonly INStoreLogger _logger;
         protected IEnhancedPersistence Batcher => _persistence as IEnhancedPersistence;
         protected readonly IPersistence _persistence;
-        protected BasePersistenceTest()
+        
+        protected BasePersistenceTest(bool autoCreateStore = true)
         {
             _testRunId = Interlocked.Increment(ref _staticId);
 
             LoggerFactory = new TestLoggerFactory(TestSuitePrefix + "::" + GetType().Name);
             _logger = LoggerFactory.CreateLogger(GetType().FullName);
-            _logger.LogDebug("Creating store");
-            _persistence = Create(true);
-            _logger.LogDebug("Store created");
-            Store = new LogDecorator(_persistence, LoggerFactory);
-        }
 
-        #region IDisposable Support
-        private bool disposedValue = false; // To detect redundant calls
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
+            if (autoCreateStore)
             {
-                if (disposing)
-                {
-                    // dispose managed state (managed objects).
-                    Clear();
-                    _logger.LogDebug("Test disposed");
-                }
-
-                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-                // TODO: set large fields to null.
-
-                disposedValue = true;
+                _logger.LogDebug("Creating store");
+                _persistence = Create(true);
+                _logger.LogDebug("Store created");
+                Store = new LogDecorator(_persistence, LoggerFactory);
             }
         }
 
-        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        // ~BasePersistenceTest() {
-        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-        //   Dispose(false);
-        // }
+        #region IDisposable Support
+        private bool _disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposedValue) 
+                return;
+            
+            if (disposing)
+            {
+                if (_persistence != null)
+                {
+                    Clear(_persistence, true);
+                }
+
+                _logger.LogDebug("Test disposed");
+            }
+
+            _disposedValue = true;
+        }
 
         // This code added to correctly implement the disposable pattern.
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             Dispose(true);
-            // TODO: uncomment the following line if the finalizer is overridden above.
-            // GC.SuppressFinalize(this);
         }
         #endregion
     }
@@ -134,7 +132,7 @@ namespace NStore.Persistence.Tests
 
     public class query_by_operation_id : BasePersistenceTest
     {
-        public query_by_operation_id()
+        public query_by_operation_id() : base()
         {
             try
             {
@@ -195,7 +193,7 @@ namespace NStore.Persistence.Tests
 
     public class ScanTest : BasePersistenceTest
     {
-        public ScanTest()
+        public ScanTest() : base()
         {
             try
             {
@@ -434,7 +432,7 @@ namespace NStore.Persistence.Tests
 
     public class DeleteStreamTest : BasePersistenceTest
     {
-        protected DeleteStreamTest()
+        protected DeleteStreamTest() : base()
         {
             try
             {
@@ -606,7 +604,7 @@ namespace NStore.Persistence.Tests
         private long _startedAt = -1;
         private long _completedAt = -1;
 
-        public subscription_events_should_be_signaled()
+        public subscription_events_should_be_signaled() : base()
         {
             // write stream out of order to have 
             // position 1 : index 2 
@@ -660,7 +658,7 @@ namespace NStore.Persistence.Tests
         private readonly ChunkProcessor _throw = c => throw new TimeoutException();
         private readonly LambdaSubscription _subscription;
 
-        public exceptions_should_be_signaled()
+        public exceptions_should_be_signaled() : base()
         {
             // write stream out of order to have 
             // position 1 : index 2 

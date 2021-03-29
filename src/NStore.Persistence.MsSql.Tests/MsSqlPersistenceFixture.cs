@@ -13,12 +13,10 @@ namespace NStore.Persistence.Tests
 {
     public partial class BasePersistenceTest
     {
-        private MsSqlPersistence _sqlPersistence;
-        private MsSqlPersistenceOptions _options;
         private string _connectionString;
         private const string TestSuitePrefix = "Mssql";
 
-        protected void Connect()
+        private void Connect()
         {
             _connectionString = Environment.GetEnvironmentVariable("NSTORE_MSSQL");
             if (String.IsNullOrWhiteSpace(_connectionString))
@@ -47,29 +45,33 @@ namespace NStore.Persistence.Tests
             };
         }
 
-        protected internal IPersistence Create(bool dropOnInit)
+        protected IPersistence Create(bool dropOnInit)
         {
             Connect();
 
             _logger.LogInformation("Starting test #{number}", _testRunId);
 
-            _options = CreateOptions();
+            var options = CreateOptions();
 
-            _sqlPersistence = new MsSqlPersistence(_options);
+            var sqlPersistence = new MsSqlPersistence(options);
             if (dropOnInit)
             {
-                _sqlPersistence.DestroyAllAsync(CancellationToken.None).Wait();
+                sqlPersistence.DestroyAllAsync(CancellationToken.None).Wait();
             }
-            _sqlPersistence.InitAsync(CancellationToken.None).Wait();
+            sqlPersistence.InitAsync(CancellationToken.None).Wait();
             _logger.LogInformation("Test #{number} started", _testRunId);
-            return _sqlPersistence;
+            return sqlPersistence;
         }
 
-        private void Clear()
+        protected void Clear(IPersistence persistence, bool drop)
         {
-            _logger.LogInformation("Cleaning up test #{number}", _testRunId);
-            _sqlPersistence.DestroyAllAsync(CancellationToken.None).Wait();
-            _logger.LogInformation("Cleanup test #{number} done", _testRunId);
+            var sql = (MsSqlPersistence) persistence;
+            if (drop)
+            {
+                _logger.LogInformation("Cleaning up test #{number}", _testRunId);
+                sql.DestroyAllAsync(CancellationToken.None).Wait();
+                _logger.LogInformation("Cleanup test #{number} done", _testRunId);
+            }
         }
     }
 }

@@ -19,44 +19,41 @@ namespace NStore.Persistence.Tests
 {
     public partial class BasePersistenceTest
     {
-        private LiteDBPersistenceOptions _options;
-        private LiteDBPersistence _liteDbPersistence;
         private const string TestSuitePrefix = "LiteDB";
 
         protected IPersistence Create(bool dropOnInit)
         {
             var pathToFile = $"{_testRunId}.litedb";
 
-
             _logger.LogInformation("Starting test #{number}", _testRunId);
             var serializer = new LiteDBSerializer();
-            _options = new LiteDBPersistenceOptions(serializer, LoggerFactory)
+            var options = new LiteDBPersistenceOptions(serializer, LoggerFactory)
             {
                 ConnectionString = pathToFile,
                 StreamsCollectionName = "streams"
             };
 
-            _liteDbPersistence = new LiteDBPersistence(_options);
+            var lite = new LiteDBPersistence(options);
 
             if (dropOnInit)
             {
-                _liteDbPersistence.DeleteDataFiles();
+                lite.DeleteDataFiles();
             }
 
-            _liteDbPersistence.Init();
+            lite.Init();
 
-            return _liteDbPersistence;
+            return lite;
         }
 
-        private SnapshotInfo DeserializeSnapshot(BsonValue bson)
+        protected void Clear(IPersistence persistence, bool drop)
         {
-            return JsonConvert.DeserializeObject<SnapshotInfo>(bson.AsString);
-        }
+            var lite = (LiteDBPersistence)persistence;
+            if (drop)
+            {
+                lite.DeleteDataFiles();
+            }
 
-        private void Clear()
-        {
-            _liteDbPersistence.DeleteDataFiles();
-            _liteDbPersistence.Dispose();
+            lite.Dispose();
         }
     }
 

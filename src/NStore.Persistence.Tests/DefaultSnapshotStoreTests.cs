@@ -21,7 +21,7 @@ namespace NStore.Persistence.Tests
     {
         private readonly ISnapshotStore _snapshots;
 
-        public DefaultSnapshotStoreTests()
+        public DefaultSnapshotStoreTests() : base()
         {
             _snapshots = new DefaultSnapshotStore(Store);
         }

@@ -24,6 +24,8 @@ namespace NStore.Persistence.LiteDB
         {
             _options = options;
             _logger = _options.LoggerFactory.CreateLogger(_options.ConnectionString);
+            
+            _logger.LogInformation("LiteDB Persistence on {file}", _options.ConnectionString);
         }
 
         public bool SupportsFillers => false;
@@ -133,7 +135,7 @@ namespace NStore.Persistence.LiteDB
             return Task.FromResult((IChunk) chunk);
         }
 
-        public Task<IChunk> AppendAsync(
+        public async Task<IChunk> AppendAsync(
             string partitionId,
             long index,
             object payload,
@@ -148,37 +150,50 @@ namespace NStore.Persistence.LiteDB
                 Payload = _options.PayloadSerializer.Serialize(payload)
             };
 
-            if (index < 0)
+            for (int c = 0; c <= 10; c++)
             {
-                chunk.Index = Interlocked.Increment(ref _sequence);
-            }
-
-            chunk.StreamSequence = $"{chunk.PartitionId}-{chunk.Index}";
-            chunk.StreamOperation = $"{chunk.PartitionId}-{chunk.OperationId}";
-
-            try
-            {
-                _streams.Insert(chunk);
-            }
-            catch (LiteException ex)
-            {
-                if (ex.ErrorCode == LiteException.INDEX_DUPLICATE_KEY)
+                if (index < 0)
                 {
-                    if (ex.Message.Contains(nameof(chunk.StreamOperation)))
-                    {
-                        return Task.FromResult((IChunk) null);
-                    }
-
-                    if (ex.Message.Contains(nameof(chunk.StreamSequence)))
-                    {
-                        throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
-                    }
+                    chunk.Index = Interlocked.Increment(ref _sequence);
                 }
 
-                throw;
+                chunk.StreamSequence = $"{chunk.PartitionId}-{chunk.Index}";
+                chunk.StreamOperation = $"{chunk.PartitionId}-{chunk.OperationId}";
+
+                try
+                {
+                    _streams.Insert(chunk);
+                    return chunk;
+                }
+                catch (LiteException ex)
+                {
+                    if (ex.ErrorCode == LiteException.INDEX_DUPLICATE_KEY)
+                    {
+                        if (ex.Message.Contains(nameof(chunk.StreamOperation)))
+                        {
+                            return null;
+                        }
+
+                        if (ex.Message.Contains(nameof(chunk.StreamSequence)))
+                        {
+                            if (index < 0)
+                            {
+                                cancellationToken.ThrowIfCancellationRequested();
+                                await Task.Delay(c * 10, cancellationToken);
+
+                                _sequence = await ReadLastPositionAsync(cancellationToken);
+                                continue;
+                            }
+
+                            throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
+                        }
+                    }
+
+                    throw;
+                }
             }
 
-            return Task.FromResult((IChunk) chunk);
+            throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
         }
 
         public Task DeleteAsync(

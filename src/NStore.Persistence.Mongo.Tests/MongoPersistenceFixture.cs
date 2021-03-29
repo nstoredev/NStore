@@ -91,7 +91,7 @@ namespace NStore.Persistence.Tests
             return new MongoPersistence(options);
         }
 
-        protected internal void Clear()
+        protected void Clear(IPersistence persistence, bool drop)
         {
             // nothing to do
         }
