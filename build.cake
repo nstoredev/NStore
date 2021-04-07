@@ -139,6 +139,18 @@ Task("TestSqlite")
     RunTest("NStore.Persistence.Sqlite.Tests",env);
 });
 
+Task("TestLiteDB")
+    .ContinueOnError()
+    .IsDependentOn("TestLibrary")
+    .Does(() =>
+{
+    var env = new Dictionary<string, string>{
+        { "NSTORE_LITEDB", "TODO"},
+    };
+
+    RunTest("NStore.Persistence.LiteDB.Tests",env);
+});
+
 Task("TestMongoDb")
     .ContinueOnError()
     .IsDependentOn("TestLibrary")
@@ -195,6 +207,7 @@ Task("TestDomain")
 Task("TestAll")
     .IsDependentOn("TestDomain")
     .IsDependentOn("TestInMemory")
+    .IsDependentOn("TestLiteDB")
     .IsDependentOn("TestMongoDb")
     .IsDependentOn("TestMsSql")
     .IsDependentOn("TestSqlite")
@@ -253,6 +266,7 @@ Task("Travis")
     .IsDependentOn("TestInMemory")
     .IsDependentOn("TestMongoDb")
     .IsDependentOn("TestSqlite")
+    .IsDependentOn("TestLiteDB")
     .IsDependentOn("TestSample");
 
 
