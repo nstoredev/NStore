@@ -10,7 +10,7 @@ namespace NStore.Persistence.Tests
     {
         private readonly IStreamsFactory _streams;
 
-        public StreamTests()
+        public StreamTests() : base()
         {
             _streams = new StreamsFactory(Store);
         }
@@ -87,7 +87,7 @@ namespace NStore.Persistence.Tests
     {
         private readonly IStreamsFactory _streams;
 
-        public OptimisticConcurrencyStreamTests()
+        public OptimisticConcurrencyStreamTests() : base()
         {
             _streams = new StreamsFactory(Store);
         }
@@ -322,7 +322,7 @@ namespace NStore.Persistence.Tests
     {
         private readonly IStreamsFactory _streams;
 
-        public ReadOnlyStreamTests()
+        public ReadOnlyStreamTests() : base()
         {
             _streams = new StreamsFactory(Store);
         }
