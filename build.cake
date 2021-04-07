@@ -252,6 +252,7 @@ Task("pack")
     DotNetCorePack("./src/NStore.BaseSqlPersistence/", settings);
     DotNetCorePack("./src/NStore.Persistence.MsSql/", settings);
     DotNetCorePack("./src/NStore.Persistence.Sqlite/", settings);
+    DotNetCorePack("./src/NStore.Persistence.LiteDB/", settings);
 });
 
 //////////////////////////////////////////////////////////////////////
