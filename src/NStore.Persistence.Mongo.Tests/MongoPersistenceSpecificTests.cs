@@ -192,29 +192,29 @@ namespace NStore.Persistence.Mongo.Tests
     /// </summary>
     public class Sequence_generator_id_is_initialized_correctly : BasePersistenceTest
     {
-        private MongoPersistenceOptions options;
+        private MongoPersistenceOptions _options;
 
         protected internal override MongoPersistenceOptions GetMongoPersistenceOptions()
         {
-            options = base.GetMongoPersistenceOptions();
-            options.UseLocalSequence = false;
-            options.SequenceCollectionName = "sequence_test";
-            return options;
+            _options = base.GetMongoPersistenceOptions();
+            _options.UseLocalSequence = false;
+            _options.SequenceCollectionName = "sequence_test";
+            return _options;
         }
 
         [Fact()]
-        public async Task Verify_that_after_append_async_we_have_intercepted_the_call()
+        public void Verify_that_after_persistence_initialization_sequence_collection_is_populated()
         {
             // We need to be sure that the record was correctly created
-            var url = new MongoUrl(options.PartitionsConnectionString);
+            var url = new MongoUrl(_options.PartitionsConnectionString);
             var client = new MongoClient(url);
             var db = client.GetDatabase(url.DatabaseName);
-            var coll = db.GetCollection<BsonDocument>(options.SequenceCollectionName);
+            var coll = db.GetCollection<BsonDocument>(_options.SequenceCollectionName);
 
-            var single = coll.AsQueryable().SingleOrDefault();
-            Assert.NotNull(single);
-            Assert.Equal("streams", single["_id"].AsString);
-            Assert.Equal(0L, single["LastValue"].AsInt64);
+            var sequenceDocument = coll.AsQueryable().SingleOrDefault();
+            Assert.NotNull(sequenceDocument);
+            Assert.Equal("streams", sequenceDocument["_id"].AsString);
+            Assert.Equal(0L, sequenceDocument["LastValue"].AsInt64);
         }
     }
 }

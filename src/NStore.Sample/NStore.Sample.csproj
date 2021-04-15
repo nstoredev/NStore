@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>netcoreapp2.0</TargetFramework>
+		<TargetFramework>net5.0</TargetFramework>
 	</PropertyGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\NStore.Domain\NStore.Domain.csproj" />
@@ -14,7 +14,8 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.0.0" />
 		<PackageReference Include="Microsoft.Extensions.CommandLineUtils" Version="1.1.1">
 		</PackageReference>
-		<PackageReference Include="Newtonsoft.Json" Version="12.0.2">
+		<PackageReference Include="NETStandard.Library" Version="2.0.3" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.1">
 		</PackageReference>
 		<PackageReference Include="System.Threading.Tasks.Dataflow" Version="4.11.1">
 		</PackageReference>
