@@ -41,6 +41,7 @@ namespace NStore.Core.Streams
             CancellationToken cancellation
             )
         {
+            //@@FIXME
             return Persistence.AppendAsync(this.Id, -1, payload, operationId, cancellation);
         }
 

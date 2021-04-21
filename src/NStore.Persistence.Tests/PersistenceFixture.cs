@@ -93,13 +93,13 @@ namespace NStore.Persistence.Tests
     public class negative_index : BasePersistenceTest
     {
         [Fact]
-        public async Task should_persist_with_chunk_id()
+        public async Task should_persist_with_negative_index()
         {
             await Store.AppendAsync("Stream_Neg", -1, "payload").ConfigureAwait(false);
 
             var tape = new Recorder();
-            await Store.ReadForwardAsync("Stream_Neg", 0, tape).ConfigureAwait(false);
-            Assert.Equal("payload", tape.ByIndex(1).Payload);
+            await Store.ReadForwardAsync("Stream_Neg", -2, tape).ConfigureAwait(false);
+            Assert.Equal("payload", tape.ByIndex(-1).Payload);
         }
     }
 

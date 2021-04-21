@@ -14,7 +14,6 @@ namespace NStore.Persistence.Sqlite
     public class SqlitePersistence : AbstractSqlPersistence, IPersistence, IEnhancedPersistence
     {
         private const int DUPLICATED_INDEX_EXCEPTION = 19;
-        private int REFACTOR_TO_USE_SEQUENCE_OR_NOT_STRICTLY_SEQUENTIAL_VALUE = 0;
 
         private readonly SqlitePersistenceOptions _options;
         private readonly INStoreLogger _logger;
@@ -108,11 +107,6 @@ namespace NStore.Persistence.Sqlite
             }
         }
 
-        protected override long GenerateIndex()
-        {
-            return Interlocked.Increment(ref REFACTOR_TO_USE_SEQUENCE_OR_NOT_STRICTLY_SEQUENTIAL_VALUE);
-        }
-
         protected override bool IsDuplicatedStreamOperation(Exception exception)
         {
             return exception is SqliteException ex &&
@@ -151,15 +145,14 @@ namespace NStore.Persistence.Sqlite
         {
             var chunks = queue.Select(x =>
             {
-                var chunk = new SqlChunk()
+                var chunk = new SqlChunk
                 {
                     PartitionId = x.PartitionId,
-                    Index = x.Index == -1 ? GenerateIndex() : x.Index,
-                    OperationId = x.OperationId ?? Guid.NewGuid().ToString()
+                    Index = x.Index,
+                    OperationId = x.OperationId ?? Guid.NewGuid().ToString(),
+                    Payload = _options.Serializer.Serialize(x.Payload, out string serializerInfo),
+                    SerializerInfo = serializerInfo
                 };
-
-                chunk.Payload = _options.Serializer.Serialize(x.Payload, out string serializerInfo);
-                chunk.SerializerInfo = serializerInfo;
 
                 return chunk;
             }).ToArray();
