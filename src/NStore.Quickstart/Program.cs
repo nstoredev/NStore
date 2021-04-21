@@ -39,7 +39,7 @@ namespace NStore.Quickstart
         private static async Task raw_api()
         {
             var persister = CreateYourStore();
-            await persister.AppendAsync("Stream_1", new { data = "Hello world!" }).ConfigureAwait(false);
+            await persister.AppendAsync("Stream_1", 1, new { data = "Hello world!" }).ConfigureAwait(false);
         }
 
         private static IPersistence CreateYourStore()
