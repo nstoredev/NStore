@@ -360,8 +360,8 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task with_two_streams_of_one_chunk_should_be_two()
         {
-            await Store.AppendAsync("a", "first").ConfigureAwait(false);
-            await Store.AppendAsync("b", "second").ConfigureAwait(false);
+            await Store.AppendAsync("a", 1, "first").ConfigureAwait(false);
+            await Store.AppendAsync("b", 1, "second").ConfigureAwait(false);
             var last = await Store.ReadLastPositionAsync().ConfigureAwait(false);
             Assert.Equal(2L, last);
         }
@@ -761,7 +761,7 @@ namespace NStore.Persistence.Tests
                 payload[c] = Convert.ToByte(c % 255);
             }
 
-            await _persistence.AppendAsync("large_binary", payload).ConfigureAwait(false);
+            await _persistence.AppendAsync("large_binary", 1, payload).ConfigureAwait(false);
 
             var chunk = await _persistence.ReadSingleBackwardAsync("large_binary").ConfigureAwait(false);
             var loadedBytes = (byte[])chunk.Payload;

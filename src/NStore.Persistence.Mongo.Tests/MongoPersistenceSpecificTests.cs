@@ -38,7 +38,7 @@ namespace NStore.Persistence.Mongo.Tests
         [Fact]
         public async Task can_write_custom_data()
         {
-            var persisted = (CustomChunk)await Store.AppendAsync("a", "data");
+            var persisted = (CustomChunk)await Store.AppendAsync("a", 1, "data");
 
             var collection = GetCollection<CustomChunk>();
             var read_from_collection = await (await collection.FindAsync(FilterDefinition<CustomChunk>.Empty)).FirstAsync();
@@ -50,7 +50,7 @@ namespace NStore.Persistence.Mongo.Tests
         [Fact]
         public async Task can_read_custom_data()
         {
-            var persisted = (CustomChunk)await Store.AppendAsync("a", "data");
+            var persisted = (CustomChunk)await Store.AppendAsync("a", 1, "data");
             var read = (CustomChunk)await Store.ReadSingleBackwardAsync("a");
 
             Assert.Equal("a", read.CustomHeaders["test.1"]);

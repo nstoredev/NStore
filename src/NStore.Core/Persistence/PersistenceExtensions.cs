@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NStore.Core.Persistence
@@ -125,15 +126,6 @@ namespace NStore.Core.Persistence
         )
         {
             return persistence.ReadSingleBackwardAsync(partitionId, long.MaxValue, cancellationToken);
-        }
-
-        public static Task<IChunk> AppendAsync(
-            this IPersistence persistence,
-            string partitionId,
-            object payload
-        )
-        {
-            return persistence.AppendAsync(partitionId, -1, payload, null, CancellationToken.None);
         }
 
         public static Task<IChunk> AppendAsync(
