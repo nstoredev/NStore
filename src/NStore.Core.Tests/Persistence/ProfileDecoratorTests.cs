@@ -31,8 +31,8 @@ namespace NStore.Core.Tests.Persistence
             await pi.CaptureAsync(() => Wait(300)).ConfigureAwait(false);
             sw.Stop();
 
-            Assert.True(sw.ElapsedMilliseconds >= 300, "sw.ElapsedMilliseconds >= 300");
-            Assert.True(pi.Elapsed.TotalMilliseconds >= 300, "pi.Elapsed.Milliseconds >= 300");
+            Assert.True(sw.ElapsedMilliseconds >= 300, $"sw.ElapsedMilliseconds >= 300. Was {sw.ElapsedMilliseconds}");
+            Assert.True(pi.Elapsed.TotalMilliseconds >= 300, $"pi.Elapsed.Milliseconds >= 300. Was {pi.Elapsed.TotalMilliseconds}");
         }
 
         [Fact]
