@@ -181,6 +181,11 @@ namespace NStore.BaseSqlPersistence
             string operationId,
             CancellationToken cancellationToken)
         {
+            if (index < 0)
+            {
+                throw new InvalidStreamIndexException(partitionId, index);
+            }
+
             try
             {
                 var chunk = new SqlChunk()

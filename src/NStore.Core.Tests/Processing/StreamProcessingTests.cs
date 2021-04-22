@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using NStore.Core.InMemory;
 using NStore.Core.Persistence;
@@ -73,10 +74,11 @@ namespace NStore.Core.Tests.Processing
 
         private async Task<IStream> CreateStream(string streamId)
         {
-            var stream = _streams.Open(streamId);
+            var stream = _streams.OpenRandomAccess(streamId);
             for (int value = 1; value <= 10; value++)
             {
-                await stream.AppendAsync(new ValueCollected(value)).ConfigureAwait(false);
+                await stream.PersistAsync(new ValueCollected(value), value, null,CancellationToken.None)
+                    .ConfigureAwait(false);
             }
 
             return stream;

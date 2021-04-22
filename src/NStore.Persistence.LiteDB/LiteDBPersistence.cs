@@ -142,6 +142,11 @@ namespace NStore.Persistence.LiteDB
             string operationId,
             CancellationToken cancellationToken)
         {
+            if (index < 0)
+            {
+                throw new InvalidStreamIndexException(partitionId, index);
+            }
+
             var chunk = new LiteDBChunk()
             {
                 PartitionId = partitionId,

@@ -534,9 +534,18 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
             return updateResult.LastValue;
         }
 
-        public async Task<IChunk> AppendAsync(string partitionId, long index, object payload, string operationId,
+        public async Task<IChunk> AppendAsync(
+            string partitionId, 
+            long index, 
+            object payload, 
+            string operationId,
             CancellationToken cancellationToken)
         {
+            if (index < 0)
+            {
+                throw new InvalidStreamIndexException(partitionId, index);
+            }
+
             long id = await GetNextId(1, cancellationToken).ConfigureAwait(false);
             var chunk = new TChunk();
             chunk.Init(

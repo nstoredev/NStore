@@ -123,30 +123,6 @@ namespace NStore.Persistence.Mongo.Tests
         }
     }
 
-    public class When_Write_To_Same_Stream_From_Multiple_Repositories : BaseConcurrencyTests
-    {
-        [Fact()]
-        public async Task Verify_that_index_is_always_equal_to_id_when_Append_chunk_without_explicit_index()
-        {
-            // Repo1 writes to a stream (no index specified)
-            await Store.AppendAsync("test1", -1, "CHUNK1").ConfigureAwait(false);
-
-            // Repo2 writes to another stream.
-            await Store2.AppendAsync("test2", -1, "Stuff not interesting").ConfigureAwait(false);
-
-            // Repo1 write again on Test1, but in memory index is wrong. WE expect index to be ok
-            await Store.AppendAsync("test1", -1, "CHUNK2").ConfigureAwait(false);
-
-            Recorder rec = new Recorder();
-            await Store.ReadForwardAsync("test1", rec).ConfigureAwait(false);
-
-            foreach (var chunk in rec.Chunks)
-            {
-                Assert.Equal(chunk.Position, chunk.Index);
-            }
-        }
-    }
-
     public class Can_intercept_mongo_query_with_options : BasePersistenceTest
     {
         private Int32 callCount;
@@ -180,8 +156,8 @@ namespace NStore.Persistence.Mongo.Tests
         {
             callCount = 0;
 
-            // Repo1 writes to a stream (no index specified)
-            await Store.AppendAsync("test1", -1, "CHUNK1").ConfigureAwait(false);
+            // Repo1 writes to a stream
+            await Store.AppendAsync("test1", 1, "CHUNK1").ConfigureAwait(false);
 
             Assert.Equal(1, callCount);
         }
