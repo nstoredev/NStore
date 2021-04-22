@@ -10,7 +10,7 @@ namespace NStore.Core.Streams
         private IPersistence Persistence { get; }
         public string Id { get; }
         public virtual bool IsWritable => true;
-        private long _lastIndex = 0;
+        private long _lastIndex = -1;
 
         public Stream(string streamId, IPersistence persistence)
         {
@@ -39,15 +39,37 @@ namespace NStore.Core.Streams
             return Persistence.ReadSingleBackwardAsync(Id, cancellationToken);
         }
 
-        public virtual Task<IChunk> AppendAsync(
+        public virtual async Task<IChunk> AppendAsync(
             object payload,
             string operationId,
             CancellationToken cancellation
-            )
+        )
         {
-            // @@TODO FIXME -> handle last written index & retry on failure
-            var index = DateTime.UtcNow.Ticks;
-            return Persistence.AppendAsync(this.Id, index, payload, operationId, cancellation);
+            for (var retries = 0; retries < 10; retries++)
+            {
+                try
+                {
+                    if (_lastIndex == -1)
+                    {
+                        var last = await PeekAsync(cancellation).ConfigureAwait(false);
+                        _lastIndex = last?.Index ?? 0;
+                    }
+
+                    var index = _lastIndex + 1;
+
+                    var chunk = await Persistence.AppendAsync(this.Id, index, payload, operationId, cancellation)
+                        .ConfigureAwait(false);
+            
+                    _lastIndex = chunk.Index;
+                    return chunk;
+                }
+                catch (DuplicateStreamIndexException e)
+                {
+                    _lastIndex = -1;
+                }     
+            }
+
+            throw new AppendFailedException(this.Id, "Too many retries");
         }
 
         public virtual Task DeleteAsync(CancellationToken cancellation)

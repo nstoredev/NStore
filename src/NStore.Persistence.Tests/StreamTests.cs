@@ -81,6 +81,47 @@ namespace NStore.Persistence.Tests
             var opFound = await stream.ContainsOperationAsync("operation_2").ConfigureAwait(false);
             Assert.False(opFound);
         }
+
+        [Fact]
+        public async Task should_increase_index_monotonically()
+        {
+            var stream = _streams.Open("mono");
+
+            var first = await stream.AppendAsync("1");
+            var second = await stream.AppendAsync("2");
+            
+            Assert.Equal(1, first.Index);
+            Assert.Equal(2, second.Index);
+        }      
+        
+        [Fact]
+        public async Task should_increase_index_monotonically_when_appeding_on_two_istances()
+        {
+            var stream1 = _streams.Open("mono");
+            var first = await stream1.AppendAsync("1");
+
+            var stream2 = _streams.Open("mono");
+            var second = await stream2.AppendAsync("2");
+            
+            Assert.Equal(1, first.Index);
+            Assert.Equal(2, second.Index);
+        }  
+        
+        [Fact]
+        public async Task should_increase_index_on_collision()
+        {
+            var stream1 = _streams.Open("mono");
+            var stream2 = _streams.Open("mono");
+
+            var first = await stream1.AppendAsync("1");
+            var second = await stream2.AppendAsync("2");
+           
+            var third = await stream1.AppendAsync("3");
+            
+            Assert.Equal(1, first.Index);
+            Assert.Equal(2, second.Index);
+            Assert.Equal(3, third.Index);
+        }
     }
 
     public class OptimisticConcurrencyStreamTests : BasePersistenceTest
