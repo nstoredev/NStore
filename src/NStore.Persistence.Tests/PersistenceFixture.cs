@@ -90,16 +90,18 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class negative_index : BasePersistenceTest
+    public class trying_to_persist_with_negative_index : BasePersistenceTest
     {
         [Fact]
-        public async Task should_persist_with_negative_index()
+        public async Task should_throw()
         {
-            await Store.AppendAsync("Stream_Neg", -1, "payload").ConfigureAwait(false);
+            var ex = await Assert.ThrowsAsync<InvalidStreamIndexException>(async () =>
+            {
+                await Store.AppendAsync("Stream_Neg", -1, "payload").ConfigureAwait(false);
+            });
 
-            var tape = new Recorder();
-            await Store.ReadForwardAsync("Stream_Neg", -2, tape).ConfigureAwait(false);
-            Assert.Equal("payload", tape.ByIndex(-1).Payload);
+            Assert.Equal("Stream_Neg", ex.StreamId);
+            Assert.Equal(-1, ex.StreamIndex);
         }
     }
 
@@ -352,7 +354,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task with_only_one_chunk_should_be_equal_to_one()
         {
-            await Store.AppendAsync("a", -1, "last").ConfigureAwait(false);
+            await Store.AppendAsync("a", 1, "last").ConfigureAwait(false);
             var last = await Store.ReadLastPositionAsync().ConfigureAwait(false);
             Assert.Equal(1L, last);
         }

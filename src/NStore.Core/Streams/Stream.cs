@@ -10,6 +10,7 @@ namespace NStore.Core.Streams
         private IPersistence Persistence { get; }
         public string Id { get; }
         public virtual bool IsWritable => true;
+        private long _lastIndex = 0;
 
         public Stream(string streamId, IPersistence persistence)
         {
@@ -17,7 +18,10 @@ namespace NStore.Core.Streams
             this.Persistence = persistence;
         }
 
-        public Task ReadAsync(ISubscription subscription, long fromIndexInclusive, long toIndexInclusive,
+        public Task ReadAsync(
+            ISubscription subscription,
+            long fromIndexInclusive,
+            long toIndexInclusive,
             CancellationToken cancellationToken)
         {
             return Persistence.ReadForwardAsync(
@@ -41,8 +45,9 @@ namespace NStore.Core.Streams
             CancellationToken cancellation
             )
         {
-            //@@FIXME
-            return Persistence.AppendAsync(this.Id, -1, payload, operationId, cancellation);
+            // @@TODO FIXME -> handle last written index & retry on failure
+            var index = DateTime.UtcNow.Ticks;
+            return Persistence.AppendAsync(this.Id, index, payload, operationId, cancellation);
         }
 
         public virtual Task DeleteAsync(CancellationToken cancellation)
@@ -52,7 +57,7 @@ namespace NStore.Core.Streams
 
         public Task DeleteBeforeAsync(long index, CancellationToken cancellation)
         {
-            return Persistence.DeleteAsync(this.Id, 0, index-1, cancellation);
+            return Persistence.DeleteAsync(this.Id, 0, index - 1, cancellation);
         }
 
         public Task<IChunk> PersistAsync(object payload, long index, string operationId, CancellationToken cancellation)
