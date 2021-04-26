@@ -1,7 +1,6 @@
-﻿using System.Threading;
+﻿using NStore.Core.Persistence;
+using System.Threading;
 using System.Threading.Tasks;
-using NStore.Core.Persistence;
-using System;
 
 namespace NStore.Core.Streams
 {
@@ -59,14 +58,14 @@ namespace NStore.Core.Streams
 
                     var chunk = await Persistence.AppendAsync(this.Id, index, payload, operationId, cancellation)
                         .ConfigureAwait(false);
-            
+
                     _lastIndex = chunk.Index;
                     return chunk;
                 }
-                catch (DuplicateStreamIndexException e)
+                catch (DuplicateStreamIndexException)
                 {
                     _lastIndex = -1;
-                }     
+                }
             }
 
             throw new AppendFailedException(this.Id, "Too many retries");
