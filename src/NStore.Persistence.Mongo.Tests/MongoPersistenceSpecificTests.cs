@@ -221,8 +221,6 @@ namespace NStore.Persistence.Mongo.Tests
     public class Can_intercept_mongo_query_with_options : BasePersistenceTest
     {
         private Int32 callCount;
-        private Int32 failedCallCount;
-        private Int32 startCallCount;
 
         protected internal override MongoPersistenceOptions GetMongoPersistenceOptions()
         {
@@ -230,18 +228,7 @@ namespace NStore.Persistence.Mongo.Tests
             options.CustomizePartitionClientSettings = mongoClientSettings =>
                 mongoClientSettings.ClusterConfigurator = clusterConfigurator =>
                 {
-                    clusterConfigurator.Subscribe<CommandStartedEvent>(e =>
-                    {
-                        startCallCount++;
-                    });
-                    clusterConfigurator.Subscribe<CommandSucceededEvent>(e =>
-                    {
-                        callCount++;
-                    });
-                    clusterConfigurator.Subscribe<CommandFailedEvent>(e =>
-                    {
-                        failedCallCount++;
-                    });
+                    clusterConfigurator.Subscribe<CommandSucceededEvent>(_ => callCount++);
                 };
             return options;
         }
