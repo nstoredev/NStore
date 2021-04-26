@@ -18,7 +18,6 @@ namespace NStore.Persistence.LiteDB
         private LiteDatabase _db;
         private ILiteCollection<LiteDBChunk> _streams;
         private readonly INStoreLogger _logger;
-        private long _sequence = 0;
 
         public LiteDBPersistence(LiteDBPersistenceOptions options)
         {
