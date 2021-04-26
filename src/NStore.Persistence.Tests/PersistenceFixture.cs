@@ -88,7 +88,15 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task can_insert_at_first_index()
         {
-            await Store.AppendAsync("Stream_1", 1, new { data = "this is a test" }).ConfigureAwait(false);
+            var chunk = await Store.AppendAsync(
+                "Stream_1", 
+                1, 
+                new { data = "this is a test" }
+            ).ConfigureAwait(false);
+            
+            Assert.NotNull(chunk);
+            Assert.Equal(1, chunk.Index);
+            Assert.Equal("Stream_1", chunk.PartitionId);
         }
     }
 
