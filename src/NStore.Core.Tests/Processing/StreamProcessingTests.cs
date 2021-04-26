@@ -32,6 +32,7 @@ namespace NStore.Core.Tests.Processing
     {
         public int Total { get; set; }
 
+        // ReSharper disable once UnusedMember.Local
         private void On(ValueCollected data)
         {
             this.Total += data.Value;
@@ -42,6 +43,7 @@ namespace NStore.Core.Tests.Processing
     {
         public int Total { get; private set; }
 
+        // ReSharper disable once UnusedMember.Local
         private Task On(ValueCollected data)
         {
             this.Total += data.Value;

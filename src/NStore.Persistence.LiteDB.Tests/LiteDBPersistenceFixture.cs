@@ -1,18 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-using System.Threading;
-using LiteDB;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using NStore.Core.Persistence;
-using NStore.Core.Snapshots;
-using NStore.Persistence;
 using NStore.Persistence.LiteDB;
 using Xunit;
 
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
-
+// [assembly: CollectionBehavior(DisableTestParallelization = true)]
 
 // ReSharper disable CheckNamespace
 namespace NStore.Persistence.Tests
@@ -45,7 +36,7 @@ namespace NStore.Persistence.Tests
             return lite;
         }
 
-        protected void Clear(IPersistence persistence, bool drop)
+        private static void Clear(IPersistence persistence, bool drop)
         {
             var lite = (LiteDBPersistence)persistence;
             if (drop)
