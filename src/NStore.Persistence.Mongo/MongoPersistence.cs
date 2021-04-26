@@ -120,7 +120,7 @@ namespace NStore.Persistence.Mongo
             );
 
             var sort = Builders<TChunk>.Sort.Ascending(x => x.Index);
-            var options = new FindOptions<TChunk>() { Sort = sort };
+            var options = new FindOptions<TChunk>() {Sort = sort};
             if (limit != int.MaxValue)
             {
                 options.Limit = limit;
@@ -195,7 +195,7 @@ namespace NStore.Persistence.Mongo
             );
 
             var sort = Builders<TChunk>.Sort.Descending(x => x.Index);
-            var options = new FindOptions<TChunk>() { Sort = sort };
+            var options = new FindOptions<TChunk>() {Sort = sort};
             if (limit != int.MaxValue)
             {
                 options.Limit = limit;
@@ -223,7 +223,7 @@ namespace NStore.Persistence.Mongo
             );
 
             var sort = Builders<TChunk>.Sort.Descending(x => x.Index);
-            var options = new FindOptions<TChunk>() { Sort = sort, Limit = 1 };
+            var options = new FindOptions<TChunk>() {Sort = sort, Limit = 1};
 
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
             {
@@ -402,7 +402,8 @@ namespace NStore.Persistence.Mongo
                             }
 
                             //some other process steals the Position, we need to warn the user, because too many of this error could suggest to enable UseLocalSequence
-                            _logger.LogWarning($@"Error writing chunk #{chunk.Position} - Some other process already wrote position {chunk.Position}. 
+                            _logger.LogWarning(
+                                $@"Error writing chunk #{chunk.Position} - Some other process already wrote position {chunk.Position}. 
 Operation will be retried. 
 If you see too many of this kind of errors, consider enabling UseLocalSequence.
 {ex.Message} - {ex.GetType().FullName} ");
@@ -433,26 +434,33 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
             _chunks = _partitionsDb.GetCollection<TChunk>(_options.PartitionsCollectionName);
             _counters = _countersDb.GetCollection<Counter>(_options.SequenceCollectionName);
 
+            var partitionIndex = new CreateIndexModel<TChunk>(Builders<TChunk>.IndexKeys
+                    .Ascending(x => x.PartitionId)
+                    .Ascending(x => x.Index),
+                new CreateIndexOptions()
+                {
+                    Unique = true,
+                    Name = PartitionIndexIdx
+                });
+            
+            var partitionOperation = new CreateIndexModel<TChunk>(
+                Builders<TChunk>.IndexKeys
+                    .Ascending(x => x.PartitionId)
+                    .Ascending(x => x.OperationId),
+                new CreateIndexOptions()
+                {
+                    Unique = true,
+                    Name = PartitionOperationIdx
+                });
+            
             await _chunks.Indexes.CreateOneAsync(
-                    Builders<TChunk>.IndexKeys
-                        .Ascending(x => x.PartitionId)
-                        .Ascending(x => x.Index),
-                    new CreateIndexOptions()
-                    {
-                        Unique = true,
-                        Name = PartitionIndexIdx
-                    }, cancellationToken)
+                    partitionIndex, 
+                    cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
-
+            
             await _chunks.Indexes.CreateOneAsync(
-                    Builders<TChunk>.IndexKeys
-                        .Ascending(x => x.PartitionId)
-                        .Ascending(x => x.OperationId),
-                    new CreateIndexOptions()
-                    {
-                        Unique = true,
-                        Name = PartitionOperationIdx
-                    }, cancellationToken)
+                    partitionOperation, 
+                    cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
 
             if (_options.UseLocalSequence)
@@ -535,9 +543,9 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
         }
 
         public async Task<IChunk> AppendAsync(
-            string partitionId, 
-            long index, 
-            object payload, 
+            string partitionId,
+            long index,
+            object payload,
             string operationId,
             CancellationToken cancellationToken)
         {
