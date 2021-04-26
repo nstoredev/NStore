@@ -24,7 +24,7 @@ namespace NStore.Persistence.LiteDB
         {
             _options = options;
             _logger = _options.LoggerFactory.CreateLogger(_options.ConnectionString);
-            
+
             _logger.LogInformation("LiteDB Persistence on {file}", _options.ConnectionString);
         }
 
@@ -135,7 +135,7 @@ namespace NStore.Persistence.LiteDB
             return Task.FromResult((IChunk) chunk);
         }
 
-        public async Task<IChunk> AppendAsync(
+        public  Task<IChunk> AppendAsync(
             string partitionId,
             long index,
             object payload,
@@ -155,50 +155,33 @@ namespace NStore.Persistence.LiteDB
                 Payload = _options.PayloadSerializer.Serialize(payload)
             };
 
-            for (int c = 0; c <= 10; c++)
+            chunk.StreamSequence = $"{chunk.PartitionId}-{chunk.Index}";
+            chunk.StreamOperation = $"{chunk.PartitionId}-{chunk.OperationId}";
+
+            try
             {
-                if (index < 0)
+                _streams.Insert(chunk);
+                return Task.FromResult((IChunk)chunk);
+            }
+            catch (LiteException ex)
+            {
+                if (ex.ErrorCode != LiteException.INDEX_DUPLICATE_KEY)
                 {
-                    chunk.Index = Interlocked.Increment(ref _sequence);
-                }
-
-                chunk.StreamSequence = $"{chunk.PartitionId}-{chunk.Index}";
-                chunk.StreamOperation = $"{chunk.PartitionId}-{chunk.OperationId}";
-
-                try
-                {
-                    _streams.Insert(chunk);
-                    return chunk;
-                }
-                catch (LiteException ex)
-                {
-                    if (ex.ErrorCode == LiteException.INDEX_DUPLICATE_KEY)
-                    {
-                        if (ex.Message.Contains(nameof(chunk.StreamOperation)))
-                        {
-                            return null;
-                        }
-
-                        if (ex.Message.Contains(nameof(chunk.StreamSequence)))
-                        {
-                            if (index < 0)
-                            {
-                                cancellationToken.ThrowIfCancellationRequested();
-                                await Task.Delay(c * 10, cancellationToken);
-
-                                _sequence = await ReadLastPositionAsync(cancellationToken);
-                                continue;
-                            }
-
-                            throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
-                        }
-                    }
-
                     throw;
                 }
-            }
 
-            throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
+                if (ex.Message.Contains(nameof(chunk.StreamOperation)))
+                {
+                    return Task.FromResult((IChunk)null);
+                }
+
+                if (ex.Message.Contains(nameof(chunk.StreamSequence)))
+                {
+                    throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
+                }
+
+                throw;
+            }
         }
 
         public Task DeleteAsync(
