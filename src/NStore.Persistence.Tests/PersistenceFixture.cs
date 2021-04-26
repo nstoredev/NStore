@@ -120,7 +120,15 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_work()
         {
-            await Store.AppendAsync("Stream_1", long.MaxValue, new { data = "this is a test" }).ConfigureAwait(false);
+            var chunk = await Store.AppendAsync(
+                "Stream_1", 
+                long.MaxValue, 
+                new { data = "this is a test" }
+            ).ConfigureAwait(false);
+            
+            Assert.NotNull(chunk);
+            Assert.Equal(long.MaxValue, chunk.Index);
+            Assert.Equal("Stream_1", chunk.PartitionId);
         }
     }
 
@@ -492,11 +500,11 @@ namespace NStore.Persistence.Tests
 
     public class DeleteStreamTest_2 : DeleteStreamTest
     {
-
 		[Fact]
 		public async Task delete_invalid_stream_should_not_throw_exception()
 		{
 			await Store.DeleteAsync("delete_2").ConfigureAwait(false);
+            Assert.True(true,"DeleteAsync should be idempotent and ignore deleted streams");
 		}
 	}
 
