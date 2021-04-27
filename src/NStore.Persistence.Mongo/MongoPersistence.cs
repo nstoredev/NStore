@@ -120,7 +120,7 @@ namespace NStore.Persistence.Mongo
             );
 
             var sort = Builders<TChunk>.Sort.Ascending(x => x.Index);
-            var options = new FindOptions<TChunk>() {Sort = sort};
+            var options = new FindOptions<TChunk>() { Sort = sort };
             if (limit != int.MaxValue)
             {
                 options.Limit = limit;
@@ -206,7 +206,7 @@ namespace NStore.Persistence.Mongo
             );
 
             var sort = Builders<TChunk>.Sort.Descending(x => x.Index);
-            var options = new FindOptions<TChunk>() {Sort = sort};
+            var options = new FindOptions<TChunk>() { Sort = sort };
             if (limit != int.MaxValue)
             {
                 options.Limit = limit;
@@ -234,7 +234,7 @@ namespace NStore.Persistence.Mongo
             );
 
             var sort = Builders<TChunk>.Sort.Descending(x => x.Index);
-            var options = new FindOptions<TChunk>() {Sort = sort, Limit = 1};
+            var options = new FindOptions<TChunk>() { Sort = sort, Limit = 1 };
 
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
             {
@@ -371,7 +371,7 @@ namespace NStore.Persistence.Mongo
 
         private async Task<IChunk> InternalPersistAsync(
             TChunk chunk,
-            CancellationToken cancellationToken = default(CancellationToken)
+            CancellationToken cancellationToken = default
         )
         {
             while (true)
@@ -455,7 +455,7 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
                     Unique = true,
                     Name = PartitionIndexIdx
                 });
-            
+
             var partitionOperation = new CreateIndexModel<TChunk>(
                 Builders<TChunk>.IndexKeys
                     .Ascending(x => x.PartitionId)
@@ -465,14 +465,14 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
                     Unique = true,
                     Name = PartitionOperationIdx
                 });
-            
+
             await _chunks.Indexes.CreateOneAsync(
-                    partitionIndex, 
+                    partitionIndex,
                     cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
-            
+
             await _chunks.Indexes.CreateOneAsync(
-                    partitionOperation, 
+                    partitionOperation,
                     cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
 
@@ -486,7 +486,7 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
             }
         }
 
-        private async Task ReloadSequence(CancellationToken cancellationToken = default(CancellationToken))
+        private async Task ReloadSequence(CancellationToken cancellationToken = default)
         {
             var filter = Builders<TChunk>.Filter.Empty;
             var lastSequenceNumber = await _chunks
@@ -528,7 +528,7 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
             }
         }
 
-        private async Task<long> GetNextId(int size, CancellationToken cancellationToken = default(CancellationToken))
+        private async Task<long> GetNextId(int size, CancellationToken cancellationToken = default)
         {
             if (_options.UseLocalSequence)
             {
@@ -632,7 +632,6 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
                         if (err.Message.Contains(PartitionOperationIdx))
                         {
                             queue[err.Index].Failed(WriteJob.WriteResult.DuplicatedOperation);
-                            continue;
                         }
                     }
                 }
