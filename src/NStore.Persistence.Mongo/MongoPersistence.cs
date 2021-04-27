@@ -117,7 +117,7 @@ namespace NStore.Persistence.Mongo
             );
 
             var sort = Builders<TChunk>.Sort.Ascending(x => x.Index);
-            var options = new FindOptions<TChunk>() {Sort = sort};
+            var options = new FindOptions<TChunk>() { Sort = sort };
             if (limit != int.MaxValue)
             {
                 options.Limit = limit;
@@ -128,9 +128,20 @@ namespace NStore.Persistence.Mongo
                 subscription,
                 options,
                 filter,
-                false, cancellationToken).ConfigureAwait(false);
+                false,
+                cancellationToken).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Pushes a result of a query to a subscriber handling all the logic.
+        /// </summary>
+        /// <param name="start"></param>
+        /// <param name="subscription"></param>
+        /// <param name="options"></param>
+        /// <param name="filter"></param>
+        /// <param name="broadcastPosition"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         private async Task PushToSubscriber(
             long start,
             ISubscription subscription,
@@ -152,7 +163,7 @@ namespace NStore.Persistence.Mongo
                         foreach (var b in batch)
                         {
                             positionOrIndex = broadcastPosition ? b.Position : b.Index;
-                            b.ReplacePayload(_mongoPayloadSerializer.Deserialize(b.Payload));
+                            b.Deserialize(_mongoPayloadSerializer);
                             if (!await subscription.OnNextAsync(b).ConfigureAwait(false))
                             {
                                 await subscription.StoppedAsync(positionOrIndex).ConfigureAwait(false);
@@ -192,7 +203,7 @@ namespace NStore.Persistence.Mongo
             );
 
             var sort = Builders<TChunk>.Sort.Descending(x => x.Index);
-            var options = new FindOptions<TChunk>() {Sort = sort};
+            var options = new FindOptions<TChunk>() { Sort = sort };
             if (limit != int.MaxValue)
             {
                 options.Limit = limit;
@@ -220,11 +231,12 @@ namespace NStore.Persistence.Mongo
             );
 
             var sort = Builders<TChunk>.Sort.Descending(x => x.Index);
-            var options = new FindOptions<TChunk>() {Sort = sort, Limit = 1};
+            var options = new FindOptions<TChunk>() { Sort = sort, Limit = 1 };
 
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
             {
-                return await cursor.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                var chunk = await cursor.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return chunk.Deserialize(_mongoPayloadSerializer);
             }
         }
 
@@ -309,7 +321,8 @@ namespace NStore.Persistence.Mongo
                 Builders<TChunk>.Filter.Eq(x => x.OperationId, operationId)
             );
             var cursor = await _chunks.FindAsync(filter, cancellationToken: cancellationToken).ConfigureAwait(false);
-            return await cursor.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+            var chunk = await cursor.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+            return chunk.Deserialize(_mongoPayloadSerializer);
         }
 
         public async Task ReadAllByOperationIdAsync(string operationId, ISubscription subscription,
@@ -368,7 +381,7 @@ namespace NStore.Persistence.Mongo
                 catch (MongoWriteException ex)
                 {
                     //Need to understand what kind of exception we had, some of them could lead to a retry
-                    if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey) 
+                    if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
                     {
                         //Index violation, we do have a chunk that broke an unique index, we need to know if this is 
                         //at partitionId level (concurrency) or at position level (UseLocalSequence == false and multiple process/appdomain are appending to the stream).

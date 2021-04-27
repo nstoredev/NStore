@@ -11,4 +11,13 @@ namespace NStore.Persistence.Mongo
 
         void Init(long id, string partitionId, long index, object payload, string operationId);
     }
+
+    public static class MongoChunkExtension
+    {
+        public static IMongoChunk Deserialize(this IMongoChunk chunk, IMongoPayloadSerializer serializer) 
+        {
+            chunk?.ReplacePayload(serializer.Deserialize(chunk.Payload));
+            return chunk;
+        }
+    }
 }
