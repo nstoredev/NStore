@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using NStore.Core.Persistence;
 using NStore.Core.Streams;
 using Xunit;

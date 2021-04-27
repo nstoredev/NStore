@@ -1,7 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using NStore.Core.InMemory;
-using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using NStore.Core.Snapshots;
 using NStore.Domain.Experimental;

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using MongoDB.Driver;
 using NStore.Core.Logging;
 

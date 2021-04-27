@@ -1,6 +1,4 @@
-﻿using NStore.Tutorial.CartDomain;
-using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using NStore.Tutorial.Tutorials;
 
 namespace NStore.Tutorial

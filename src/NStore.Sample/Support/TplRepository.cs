@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading;
+﻿using System.Threading;
 using NStore.Core.Persistence;
 using NStore.Core.Snapshots;
 using NStore.Core.Streams;
 using NStore.Domain;
-using NStore.Persistence;
 using NStore.Tpl;
 
 namespace NStore.Sample.Support

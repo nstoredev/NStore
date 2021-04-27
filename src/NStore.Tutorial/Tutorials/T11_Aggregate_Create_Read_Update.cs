@@ -1,6 +1,5 @@
 using System.Threading.Tasks;
 using NStore.Core.Streams;
-using NStore.Domain;
 using NStore.Tutorial.CartDomain;
 
 namespace NStore.Tutorial.Tutorials

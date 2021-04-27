@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json;
 using NStore.Core.Persistence;
 using NStore.Persistence.LiteDB;
-using Xunit;
 
 // [assembly: CollectionBehavior(DisableTestParallelization = true)]
 

@@ -6,7 +6,7 @@ using NStore.Core.Snapshots;
 
 namespace NStore.Domain
 {
-	public abstract class Aggregate<TState> :
+    public abstract class Aggregate<TState> :
 		IEventSourcedAggregate,
 		ISnapshottable,
 		IAggregate
