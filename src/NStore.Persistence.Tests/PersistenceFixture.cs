@@ -1,16 +1,12 @@
-﻿using System;
+﻿using NStore.Core.Logging;
+using NStore.Core.Persistence;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using NStore.Core.Logging;
-using NStore.Core.Persistence;
 using Xunit;
-using Xunit.Abstractions;
-
-#pragma warning disable S101 // Types should be named in camel case
-#pragma warning disable IDE1006 // Naming Styles
 
 // ReSharper disable InconsistentNaming
 namespace NStore.Persistence.Tests
@@ -20,11 +16,17 @@ namespace NStore.Persistence.Tests
         public TestMisconfiguredException(string message) : base(message)
         {
         }
+
+        public TestMisconfiguredException() : base()
+        {
+        }
+
+        public TestMisconfiguredException(string message, Exception innerException) : base(message, innerException)
+        {
+        }
     }
 
-#pragma warning disable S3881 // "IDisposable" should be implemented correctly
     public abstract partial class BasePersistenceTest : IDisposable
-#pragma warning restore S3881 // "IDisposable" should be implemented correctly
     {
         private static int _staticId = 0;
         protected readonly int _testRunId;
@@ -34,7 +36,7 @@ namespace NStore.Persistence.Tests
         protected readonly INStoreLogger _logger;
         protected IEnhancedPersistence Batcher => _persistence as IEnhancedPersistence;
         protected readonly IPersistence _persistence;
-        
+
         protected BasePersistenceTest(bool autoCreateStore = true)
         {
             _testRunId = Interlocked.Increment(ref _staticId);
@@ -58,9 +60,11 @@ namespace NStore.Persistence.Tests
 
         protected virtual void Dispose(bool disposing)
         {
-            if (_disposedValue) 
+            if (_disposedValue)
+            {
                 return;
-            
+            }
+
             if (disposing)
             {
                 if (_persistence != null)
@@ -79,6 +83,7 @@ namespace NStore.Persistence.Tests
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             Dispose(true);
+            GC.SuppressFinalize(this);
         }
         #endregion
     }
@@ -89,11 +94,11 @@ namespace NStore.Persistence.Tests
         public async Task can_insert_at_first_index()
         {
             var chunk = await Store.AppendAsync(
-                "Stream_1", 
-                1, 
+                "Stream_1",
+                1,
                 new { data = "this is a test" }
             ).ConfigureAwait(false);
-            
+
             Assert.NotNull(chunk);
             Assert.Equal(1, chunk.Index);
             Assert.Equal("Stream_1", chunk.PartitionId);
@@ -121,11 +126,11 @@ namespace NStore.Persistence.Tests
         public async Task should_work()
         {
             var chunk = await Store.AppendAsync(
-                "Stream_1", 
-                long.MaxValue, 
+                "Stream_1",
+                long.MaxValue,
                 new { data = "this is a test" }
             ).ConfigureAwait(false);
-            
+
             Assert.NotNull(chunk);
             Assert.Equal(long.MaxValue, chunk.Index);
             Assert.Equal("Stream_1", chunk.PartitionId);
@@ -305,7 +310,6 @@ namespace NStore.Persistence.Tests
             Assert.True(recorder.ReadCompleted);
         }
 
-
         [Fact]
         public async Task should_read_only_last_two_chunks()
         {
@@ -478,7 +482,6 @@ namespace NStore.Persistence.Tests
 
             _logger.LogDebug("Delete test data written");
         }
-
     }
 
     public class DeleteStreamTest_1 : DeleteStreamTest
@@ -500,13 +503,13 @@ namespace NStore.Persistence.Tests
 
     public class DeleteStreamTest_2 : DeleteStreamTest
     {
-		[Fact]
-		public async Task delete_invalid_stream_should_not_throw_exception()
-		{
-			await Store.DeleteAsync("delete_2").ConfigureAwait(false);
-            Assert.True(true,"DeleteAsync should be idempotent and ignore deleted streams");
-		}
-	}
+        [Fact]
+        public async Task delete_invalid_stream_should_not_throw_exception()
+        {
+            await Store.DeleteAsync("delete_2").ConfigureAwait(false);
+            Assert.True(true, "DeleteAsync should be idempotent and ignore deleted streams");
+        }
+    }
 
     public class DeleteStreamTest_3 : DeleteStreamTest
     {
@@ -544,7 +547,6 @@ namespace NStore.Persistence.Tests
 
     public class DeleteStreamTest_5 : DeleteStreamTest
     {
-
         [Fact]
         public async Task should_delete_middle()
         {
@@ -619,7 +621,7 @@ namespace NStore.Persistence.Tests
 
     public class subscription_events_should_be_signaled : BasePersistenceTest
     {
-        private readonly ChunkProcessor _continueToEnd = c => Task.FromResult(true);
+        private readonly ChunkProcessor _continueToEnd = _ => Task.FromResult(true);
         private readonly LambdaSubscription _subscription;
         private long _startedAt = -1;
         private long _completedAt = -1;
@@ -711,7 +713,6 @@ namespace NStore.Persistence.Tests
             Assert.True(_subscription.Failed);
         }
     }
-
 
     public class strict_sequence_on_store : BasePersistenceTest
     {

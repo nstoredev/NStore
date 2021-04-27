@@ -15,3 +15,19 @@ using System.Diagnostics.CodeAnalysis;
     "S101:Types should be named in PascalCase",
     Justification = "We do not want this rule",
     Scope = "module")]
+[assembly: SuppressMessage(
+    "Design",
+    "RCS1090:Add call to 'ConfigureAwait' (or vice versa).",
+    Justification = "No need to call ConfigureAwait on test code",
+    Scope = "module")]
+[assembly: SuppressMessage(
+    "Style",
+    "IDE1006:Naming Styles",
+    Justification = "Rule is not needed.",
+    Scope = "module")]
+[assembly: SuppressMessage(
+    "Readability",
+    "RCS1098:Constant values should be placed on right side of comparisons.",
+    Justification = "Not needed in test code",
+    Scope = "module")]
+
