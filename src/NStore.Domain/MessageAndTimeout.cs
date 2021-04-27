@@ -2,7 +2,7 @@
 
 namespace NStore.Domain
 {
-	public interface IMessageAndTimeout
+    public interface IMessageAndTimeout
 	{
 		Object Message { get; }
 

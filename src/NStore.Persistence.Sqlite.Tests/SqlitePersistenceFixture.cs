@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+﻿using System.IO;
 using System.Threading;
-using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Logging;
 using NStore.Core.Persistence;
 using NStore.Persistence.Sqlite;
 using NStore.Persistence.Sqlite.Tests;

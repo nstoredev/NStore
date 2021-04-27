@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace NStore.Domain.Tests
+﻿namespace NStore.Domain.Tests
 {
     public class CounterAggregateState
     {

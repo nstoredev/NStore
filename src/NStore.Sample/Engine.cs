@@ -2,14 +2,12 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using NStore.Persistence;
 using NStore.Sample.Domain.Room;
 using NStore.Sample.Projections;
 using NStore.Sample.Support;
 using System.Diagnostics;
 using System.Threading.Tasks.Dataflow;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Console;
 using NStore.Core.InMemory;
 using NStore.Core.Logging;

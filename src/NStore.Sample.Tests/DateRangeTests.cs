@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using NStore.Sample.Domain.Room;
 using Xunit;
 // ReSharper disable InconsistentNaming

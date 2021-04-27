@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Text;
-
-namespace NStore.Sample.Support
+﻿namespace NStore.Sample.Support
 {
     public class NullReporter : IReporter
     {

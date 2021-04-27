@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using NStore.Core.Persistence;
 using NStore.Core.Streams;
 using NStore.Domain;
 

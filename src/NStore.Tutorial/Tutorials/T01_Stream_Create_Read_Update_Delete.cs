@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using NStore.Core.Streams;
 using NStore.Tutorial.Support;
-using Serilog;
 
 namespace NStore.Tutorial.Tutorials
 {

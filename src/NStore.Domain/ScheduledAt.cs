@@ -2,7 +2,7 @@
 
 namespace NStore.Domain
 {
-	public interface IScheduledAt 
+    public interface IScheduledAt 
 	{
 		Object Payload { get; }
 		DateTime At { get; }

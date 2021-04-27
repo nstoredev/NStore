@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace NStore.Domain.Tests.ProcessManagerTests
+﻿namespace NStore.Domain.Tests.ProcessManagerTests
 {
     public class ShipOrder
     {
