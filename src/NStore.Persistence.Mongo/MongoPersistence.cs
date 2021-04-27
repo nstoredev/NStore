@@ -131,9 +131,20 @@ namespace NStore.Persistence.Mongo
                 subscription,
                 options,
                 filter,
-                false, cancellationToken).ConfigureAwait(false);
+                false,
+                cancellationToken).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Pushes a result of a query to a subscriber handling all the logic.
+        /// </summary>
+        /// <param name="start"></param>
+        /// <param name="subscription"></param>
+        /// <param name="options"></param>
+        /// <param name="filter"></param>
+        /// <param name="broadcastPosition"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         private async Task PushToSubscriber(
             long start,
             ISubscription subscription,
@@ -155,7 +166,7 @@ namespace NStore.Persistence.Mongo
                         foreach (var b in batch)
                         {
                             positionOrIndex = broadcastPosition ? b.Position : b.Index;
-                            b.ReplacePayload(_mongoPayloadSerializer.Deserialize(b.Payload));
+                            _mongoPayloadSerializer.ApplyDeserialization(b);
                             if (!await subscription.OnNextAsync(b).ConfigureAwait(false))
                             {
                                 await subscription.StoppedAsync(positionOrIndex).ConfigureAwait(false);
@@ -227,7 +238,8 @@ namespace NStore.Persistence.Mongo
 
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
             {
-                return await cursor.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                var chunk = await cursor.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return _mongoPayloadSerializer.ApplyDeserialization(chunk);
             }
         }
 
@@ -312,7 +324,8 @@ namespace NStore.Persistence.Mongo
                 Builders<TChunk>.Filter.Eq(x => x.OperationId, operationId)
             );
             var cursor = await _chunks.FindAsync(filter, cancellationToken: cancellationToken).ConfigureAwait(false);
-            return await cursor.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+            var chunk = await cursor.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+            return _mongoPayloadSerializer.ApplyDeserialization(chunk);
         }
 
         public async Task ReadAllByOperationIdAsync(string operationId, ISubscription subscription,

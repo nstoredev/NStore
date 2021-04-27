@@ -51,6 +51,8 @@ namespace NStore.Persistence.Tests
             }
         }
 
+        protected ISubscription EmptySubscription => new LambdaSubscription(_ => Task.FromResult(true));
+
         #region IDisposable Support
         private bool _disposedValue = false; // To detect redundant calls
 

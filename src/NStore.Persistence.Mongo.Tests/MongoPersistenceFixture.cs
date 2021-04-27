@@ -7,6 +7,7 @@ using NStore.Core.Persistence;
 using NStore.Persistence.Mongo;
 using NStore.Persistence;
 using Xunit;
+
 #if MAP_DOMAIN
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Options;
@@ -15,7 +16,6 @@ using MongoDB.Bson.Serialization.Serializers;
 
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
 
-// ReSharper disable CheckNamespace
 namespace NStore.Persistence.Tests
 {
     public partial class BasePersistenceTest
