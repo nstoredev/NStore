@@ -7,6 +7,7 @@ using NStore.Core.Persistence;
 using NStore.Persistence.Tests;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -25,6 +26,25 @@ namespace NStore.Persistence.Mongo.Tests
         {
             this.CreateAt = new DateTime(2017, 1, 1, 10, 12, 13).ToUniversalTime();
             this.CustomHeaders["test.1"] = "a";
+        }
+    }
+
+    public class TestMongoPayloadSerializer : IMongoPayloadSerializer
+    {
+        public List<Object> SerializedPayloads { get; set; } = new List<object>();
+
+        public List<Object> DeserializedPayloads { get; set; } = new List<object>();
+
+        public object Deserialize(object payload)
+        {
+            DeserializedPayloads.Add(payload);
+            return payload;
+        }
+
+        public object Serialize(object payload)
+        {
+            SerializedPayloads.Add(payload);
+            return payload;
         }
     }
 
@@ -144,6 +164,81 @@ namespace NStore.Persistence.Mongo.Tests
             {
                 Assert.Equal(chunk.Position, chunk.Index);
             }
+        }
+    }
+
+    public class When_using_custom_payload_serializer : BasePersistenceTest
+    {
+        private TestMongoPayloadSerializer _testMongoPayloadSerializer;
+
+        protected internal override MongoPersistenceOptions GetMongoPersistenceOptions()
+        {
+            //Add your custom payload serializer.
+            var options = base.GetMongoPersistenceOptions();
+            if (_testMongoPayloadSerializer == null)
+            {
+                _testMongoPayloadSerializer = new TestMongoPayloadSerializer();
+            }
+            options.MongoPayloadSerializer = _testMongoPayloadSerializer;
+            return options;
+        }
+
+        [Fact()]
+        public async Task Verify_payload_serializer_is_called_for_basic_append_and_read()
+        {
+            // Write to a simple stream and verify that indeed the wrapping is happening.
+            await Store.AppendAsync("test1", 1, "CHUNK1").ConfigureAwait(false);
+            Assert.Equal("CHUNK1", _testMongoPayloadSerializer.SerializedPayloads.Single());
+
+            //read from the stream
+            await Store.GetAllChunksForAPartition("test1").ConfigureAwait(false);
+            Assert.Equal("CHUNK1", _testMongoPayloadSerializer.DeserializedPayloads.Single());
+        }
+
+        [Fact()]
+        public async Task Verify_payload_serializer_is_called_for_backward_read()
+        {
+            await Store.AppendAsync("test1", 1, "CHUNK1").ConfigureAwait(false);
+
+            await Store.ReadSingleBackwardAsync("test1").ConfigureAwait(false);
+            Assert.Equal("CHUNK1", _testMongoPayloadSerializer.SerializedPayloads.Single());
+
+            //verify that reading a non existent we do not throw exception and no serializer is called
+            var result = await Store.ReadSingleBackwardAsync("non-existent").ConfigureAwait(false);
+            Assert.Equal("CHUNK1", _testMongoPayloadSerializer.DeserializedPayloads.Single());
+
+            //this is useful to verify that null can be returned without throwing any null exception
+            Assert.Null(result);
+
+            //now use another api, for backward reading.
+            await Store.ReadBackwardAsync("test1", long.MaxValue, EmptySubscription).ConfigureAwait(false);
+            Assert.Equal(new List<object>() { "CHUNK1" , "CHUNK1" },  _testMongoPayloadSerializer.DeserializedPayloads);
+
+            await Store.ReadBackwardAsync("non-existent", long.MaxValue, EmptySubscription).ConfigureAwait(false);
+            Assert.Equal(new List<object>() { "CHUNK1", "CHUNK1" }, _testMongoPayloadSerializer.DeserializedPayloads);
+        }
+
+        [Fact()]
+        public async Task Verify_payload_serializer_is_called_for_read_by_operation_async()
+        {
+            var operationId = Guid.NewGuid().ToString();
+            await Store.AppendAsync("test1", 1, "CHUNK1", operationId).ConfigureAwait(false);
+
+            await Store.ReadByOperationIdAsync("test1", operationId, CancellationToken.None).ConfigureAwait(false);
+            Assert.Equal("CHUNK1", _testMongoPayloadSerializer.SerializedPayloads.Single());
+        }
+
+        [Fact()]
+        public async Task Verify_payload_serializer_is_called_for_read_all_by_operation_async()
+        {
+            var operationId = Guid.NewGuid().ToString();
+            await Store.AppendAsync("test1", 1, "CHUNK1", operationId).ConfigureAwait(false);
+            //remember to use different partition id or the second operation will be idempotent
+            await Store.AppendAsync("test3", 1, "CHUNK2", operationId).ConfigureAwait(false);
+
+            //now read all by operation id, we should have two deserialization
+            await Store.ReadAllByOperationIdAsync(operationId, EmptySubscription);
+            Assert.Equal(new List<object>() { "CHUNK1", "CHUNK2" }, _testMongoPayloadSerializer.DeserializedPayloads);
         }
     }
 

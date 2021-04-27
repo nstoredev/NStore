@@ -45,6 +45,8 @@ namespace NStore.Persistence.Tests
             Store = new LogDecorator(_persistence, LoggerFactory);
         }
 
+        protected ISubscription EmptySubscription => new LambdaSubscription(_ => Task.FromResult(true));
+
         #region IDisposable Support
         private bool disposedValue = false; // To detect redundant calls
 
