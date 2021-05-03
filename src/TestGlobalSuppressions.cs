@@ -30,4 +30,20 @@ using System.Diagnostics.CodeAnalysis;
     "RCS1098:Constant values should be placed on right side of comparisons.",
     Justification = "Not needed in test code",
     Scope = "module")]
+[assembly: SuppressMessage(
+    "Major Code Smell",
+    "S1144:Unused private types or members should be removed",
+    Justification = "No needed for testing",
+    Scope = "module")]
+[assembly: SuppressMessage(
+    "CodeQuality",
+    "IDE0051:Remove unused private members",
+    Justification = "No needed for testing",
+    Scope = "module")]
+[assembly: SuppressMessage(
+    "Redundancy",
+    "RCS1213:Remove unused member declaration.",
+    Justification = "No needed for testing",
+    Scope = "module")]
+
 
