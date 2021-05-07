@@ -13,7 +13,7 @@
     <Compile Include="..\AssemblyInfo.cs">
       <Link>AssemblyInfo.cs</Link>
     </Compile>
-    <None Include="..\..\LICENSE" pack="true" />
+    <None PackagePath="" Include="..\..\LICENSE.txt" pack="true" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />

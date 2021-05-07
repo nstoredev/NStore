@@ -16,6 +16,6 @@
       <Link>AssemblyInfo.cs</Link>
     </Compile>
     
-    <None Include="..\..\LICENSE" pack="true" />
+    <None PackagePath="" Include="..\..\LICENSE.txt" pack="true" />
   </ItemGroup>
 </Project>
