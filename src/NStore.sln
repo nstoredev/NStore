@@ -28,6 +28,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E75BC5B3-4ED8-405F-B408-7CA58328C101}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		..\LICENSE = ..\LICENSE
 		..\README.md = ..\README.md
 	EndProjectSection
 EndProject
@@ -51,7 +52,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.LoadTests", "NStore.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.BaseSqlPersistence", "NStore.BaseSqlPersistence\NStore.BaseSqlPersistence.csproj", "{A83CF5E1-B9AF-4CEC-8BC2-B9B1EA19253F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NStore.Tutorial", "NStore.Tutorial\NStore.Tutorial.csproj", "{11148E66-62F6-4BAE-A4ED-74A2C7E751A6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NStore.Tutorial", "NStore.Tutorial\NStore.Tutorial.csproj", "{11148E66-62F6-4BAE-A4ED-74A2C7E751A6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

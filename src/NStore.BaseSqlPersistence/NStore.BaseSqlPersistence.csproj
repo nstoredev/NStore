@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'false'">netstandard2.0</TargetFrameworks>
@@ -7,8 +7,12 @@
     <PackageProjectUrl>https://github.com/ProximoSrl/NStore</PackageProjectUrl>
     <RepositoryUrl>https://github.com/ProximoSrl/NStore</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
-    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE" pack="true" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
