@@ -8,7 +8,7 @@
     <PackageProjectUrl>https://github.com/ProximoSrl/NStore</PackageProjectUrl>
     <RepositoryUrl>https://github.com/ProximoSrl/NStore</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
-    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.Data.SqlClient" Version="4.4.2" />
@@ -17,7 +17,7 @@
     <Compile Include="..\AssemblyInfo.cs">
       <Link>AssemblyInfo.cs</Link>
     </Compile>
-    <None PackagePath="" Include="..\..\LICENSE.txt" pack="true" />
+    <None PackagePath="" Include="..\..\LICENSE.md" pack="true" />
   </ItemGroup>
   <ItemGroup>
 		<ProjectReference Include="..\NStore.BaseSqlPersistence\NStore.BaseSqlPersistence.csproj" />
