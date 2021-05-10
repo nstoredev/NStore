@@ -8,41 +8,30 @@ namespace NStore.Quickstart
 {
     static class Program
     {
-        static void Main(string[] args)
-        {
-            streams_api().GetAwaiter().GetResult();
-            raw_api().GetAwaiter().GetResult();
+        public record Favorited(string UserId, DateTime When);
 
+        static async Task Main()
+        {
+            // StreamsFactory setup
+            var streams = new StreamsFactory(new InMemoryPersistence());
+
+            // Open the stream in r/w
+            var post = streams.Open("post/123/favs");
+            
+            // Write to stream
+            await post.AppendAsync(new Favorited("users/200", DateTime.UtcNow));
+            await post.AppendAsync(new Favorited("users/404", DateTime.UtcNow));
+
+            // Read the stream from start
+            await post.ReadAsync(chunk =>
+            {
+                Console.WriteLine($"{chunk.PartitionId} #{chunk.Index} => {chunk.Payload}");
+                return Subscription.Continue;
+            });
+
+  
             Console.WriteLine("Press any key to exit.");
             Console.ReadKey();
-        }
-
-        private static async Task streams_api()
-        {
-            var persister = CreateYourStore();
-            var streams = new StreamsFactory(persister);
-
-            Console.WriteLine("Writing to Stream_1");
-            var stream = streams.Open("Stream_1");
-            await stream.AppendAsync(new { data = "Hello world!" }).ConfigureAwait(false);
-
-            Console.WriteLine("Reading from Stream_1");
-            await stream.ReadAsync(data =>
-            {
-                Console.WriteLine($"  index {data.Index} => {data.Payload}");
-                return Task.FromResult(true);
-            }).ConfigureAwait(false);
-        }
-
-        private static async Task raw_api()
-        {
-            var persister = CreateYourStore();
-            await persister.AppendAsync("Stream_1", 1, new { data = "Hello world!" }).ConfigureAwait(false);
-        }
-
-        private static IPersistence CreateYourStore()
-        {
-            return new InMemoryPersistence(new InMemoryPersistenceOptions());
         }
     }
 }

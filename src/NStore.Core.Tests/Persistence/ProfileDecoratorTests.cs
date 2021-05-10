@@ -23,7 +23,7 @@ namespace NStore.Core.Tests.Persistence
         }
 
         [Fact]
-        public async Task should_count_wait_time()
+        public async Task should_await_inner_task()
         {
             var pi = new TaskProfilingInfo("test");
             var sw = new Stopwatch();
@@ -31,8 +31,9 @@ namespace NStore.Core.Tests.Persistence
             await pi.CaptureAsync(() => Wait(300)).ConfigureAwait(false);
             sw.Stop();
 
-            Assert.True(sw.ElapsedMilliseconds >= 300, $"sw.ElapsedMilliseconds >= 300. Was {sw.ElapsedMilliseconds}");
-            Assert.True(pi.Elapsed.TotalMilliseconds >= 300, $"pi.Elapsed.Milliseconds >= 300. Was {pi.Elapsed.TotalMilliseconds}");
+            // 280ms isteda of 300ms to avoid timer precision issues on build servers
+            Assert.True(sw.ElapsedMilliseconds >= 280, $"sw.ElapsedMilliseconds >= 280. Was {sw.ElapsedMilliseconds}");
+            Assert.True(pi.Elapsed.TotalMilliseconds >= 280, $"pi.Elapsed.Milliseconds >= 280. Was {pi.Elapsed.TotalMilliseconds}");
         }
 
         [Fact]
