@@ -25,7 +25,7 @@ var streams = new StreamsFactory(new InMemoryPersistence());
 ```
 open the stream
 ```csharp
-var post = streams.Open("post/123/favs");
+var post = streams.Open("post/123");
 ```
 append new data
 ```csharp
@@ -38,6 +38,14 @@ await post.ReadAsync(chunk =>
     Console.WriteLine($"{chunk.PartitionId} #{chunk.Index} => {chunk.Payload}");
     return Subscription.Continue;
 });
+```
+
+Process the stream
+```csharp
+var favs = await post.AggregateAsync<UniqueFavs>();
+
+Console.WriteLine($"{favs.Count} users added '{post.Id}' as favorite");
+
 ```
 
 Full source at [src/NStore.Quickstart/Program.cs](src/NStore.Quickstart/Program.cs)
