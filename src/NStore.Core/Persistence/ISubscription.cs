@@ -22,8 +22,8 @@ namespace NStore.Core.Persistence
         /// </para>
         /// </summary>
         /// <param name="chunk"></param>
-        /// <returns>False if this component does not want any more <see cref="IChunk"/> to be
-        /// dispatched, true if it is everything ok and the caller should continue reading next <see cref="IChunk"/></returns>
+        /// <returns><see cref="Subscription.Stop"/> if this component does not want any more <see cref="IChunk"/> to be
+        /// dispatched, <see cref="Subscription.Continue"/> if it is everything ok and the caller should continue reading next <see cref="IChunk"/></returns>
         Task<bool> OnNextAsync(IChunk chunk);
 
         /// <summary>
