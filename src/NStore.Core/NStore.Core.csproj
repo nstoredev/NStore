@@ -7,6 +7,7 @@
     <PackageProjectUrl>https://github.com/ProximoSrl/NStore</PackageProjectUrl>
     <RepositoryUrl>https://github.com/ProximoSrl/NStore</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <AssemblyName>NStore.Core</AssemblyName>
     <RootNamespace>NStore.Core</RootNamespace>
   </PropertyGroup>
@@ -14,5 +15,7 @@
     <Compile Include="..\AssemblyInfo.cs">
       <Link>AssemblyInfo.cs</Link>
     </Compile>
+    
+    <None PackagePath="" Include="..\..\LICENSE.md" pack="true" />
   </ItemGroup>
 </Project>
