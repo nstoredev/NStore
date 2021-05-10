@@ -90,7 +90,7 @@ namespace NStore.Core.Tests.Processing
         public async Task should_sum_all_values()
         {
             var sequence = await CreateStream("sequence_1").ConfigureAwait(false);
-            var result = await sequence.Fold().RunAsync<Sum>().ConfigureAwait(false);
+            var result = await sequence.AggregateAsync<Sum>().ConfigureAwait(false);
             Assert.Equal(55, result.Total);
         }
 
@@ -98,7 +98,7 @@ namespace NStore.Core.Tests.Processing
         public async Task should_sum_all_values_async()
         {
             var sequence = await CreateStream("sequence_1").ConfigureAwait(false);
-            var result = await sequence.Fold().RunAsync<SumAsync>().ConfigureAwait(false);
+            var result = await sequence.AggregateAsync<SumAsync>().ConfigureAwait(false);
             Assert.Equal(55, result.Total);
         }
 
@@ -107,7 +107,7 @@ namespace NStore.Core.Tests.Processing
         {
             var sequence = await CreateStream("sequence_1").ConfigureAwait(false);
             var result = await sequence
-                .Fold()
+                .Aggregate()
                 .ToIndex(2)
                 .RunAsync<Sum>().ConfigureAwait(false);
             Assert.Equal(3, result.Total);
@@ -122,7 +122,7 @@ namespace NStore.Core.Tests.Processing
 
             var sequence = await CreateStream("sequence_1").ConfigureAwait(false);
             var result = await sequence
-                .Fold()
+                .Aggregate()
                 .WithCache(_snapshots)
                 .RunAsync<Sum>().ConfigureAwait(false);
 
@@ -142,7 +142,7 @@ namespace NStore.Core.Tests.Processing
 
             var sequence = _streams.Open("sequence_1");
             var result = await sequence
-                .Fold()
+                .Aggregate()
                 .WithCache(_snapshots)
                 .RunAsync<Sum>().ConfigureAwait(false);
 
@@ -158,7 +158,7 @@ namespace NStore.Core.Tests.Processing
 
             var sequence = _streams.Open("sequence_1");
             var result = await sequence
-                .Fold()
+                .Aggregate()
                 .ToIndex(10)
                 .WithCache(_snapshots)
                 .RunAsync<Sum>().ConfigureAwait(false);
@@ -171,7 +171,7 @@ namespace NStore.Core.Tests.Processing
         {
             var sequence = await CreateStream("sequence_1").ConfigureAwait(false);
             var result = await sequence
-                .Fold()
+                .Aggregate()
                 .WithCache(_snapshots)
                 .RunAsync<Sum>().ConfigureAwait(false);
 
@@ -187,7 +187,7 @@ namespace NStore.Core.Tests.Processing
             await _persistence.DeleteAsync(sequence.Id, 2, 9).ConfigureAwait(false);
 
             var result = await sequence
-                .Fold()
+                .Aggregate()
                 .ToIndex(10)
                 .WithCache(_snapshots)
                 .RunAsync<Sum>().ConfigureAwait(false);
@@ -206,7 +206,7 @@ namespace NStore.Core.Tests.Processing
             var missing = new List<Tuple<long, long>>();
 
             var result = await sequence
-                .Fold()
+                .Aggregate()
                 .ToIndex(10)
                 .OnMissing((from, to) =>
                 {
@@ -229,8 +229,7 @@ namespace NStore.Core.Tests.Processing
         {
             var sequence = await CreateStream("sequence_1").ConfigureAwait(false);
             var result = await sequence
-                .Fold()
-                .RunAsync<CounterProcessor>((c, o) => c.Process(o))
+                .AggregateAsync<CounterProcessor>((c, o) => c.Process(o))
                 .ConfigureAwait(false);
             
             Assert.Equal(10,result.Counter);
@@ -241,8 +240,7 @@ namespace NStore.Core.Tests.Processing
         {
             var sequence = await CreateStream("sequence_1").ConfigureAwait(false);
             var result = await sequence
-                .Fold()
-                .RunAsync<CounterProcessor>(async (c, o) =>
+                .AggregateAsync<CounterProcessor>(async (c, o) =>
                 {
                     await c.ProcessAsync(o);
                     return Task.Delay(10);
@@ -257,8 +255,7 @@ namespace NStore.Core.Tests.Processing
         {
             var sequence = await CreateStream("sequence_1").ConfigureAwait(false);
             var result = await sequence
-                .Fold()
-                .RunAsync<CounterProcessor>((c, o) =>
+                .AggregateAsync<CounterProcessor>((c, o) =>
                     c.ProcessAsync(o)
                 )
                 .ConfigureAwait(false);

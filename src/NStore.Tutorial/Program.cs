@@ -7,9 +7,11 @@ namespace NStore.Tutorial
     {
         static async Task Main(string[] args)
         {
-            TutorialRuntime.Initializer = () => TutorialRuntime.UseSqlServer(
-                "Server=localhost;Database=NStore;User Id=sa;Password=MsSqlDock3r;"
-            );
+            // TutorialRuntime.Initializer = () => TutorialRuntime.UseSqlServer(
+            //     "Server=localhost;Database=NStore;User Id=sa;Password=MsSqlDock3r;"
+            // );   
+            
+            TutorialRuntime.Initializer = TutorialRuntime.UseInMemory;
 
             // Persistence
             await new T00_Persistence_Append().ShowAsync();
