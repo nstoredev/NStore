@@ -14,11 +14,19 @@ parameters:
     default: true
     displayName: publish nuget packages to nuget.org
     type: boolean
+  
+  - name: build_configuration
+    default: release
+    values:
+      - release
+      - debug
+    type: string
 
 variables:
   DOTNETCORE_MULTITARGET: true
   nugetPublish: ${{parameters.nuget_publish}}
   cakeTarget: ReleaseBuild
+  BuildConfiguration: ${{parameters.build_configuration}}
 
 jobs:
 - job: ci_and_nuget
