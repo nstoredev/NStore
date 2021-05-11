@@ -10,14 +10,14 @@ trigger:
   batch: True
 
 parameters:
-  - name: nuget-publish
+  - name: nuget_publish
     default: true
     displayName: publish nuget packages to nuget.org
     type: boolean
 
 variables:
   DOTNETCORE_MULTITARGET: true
-  nugetPublish: ${{parameters.nuget-publish}}
+  nugetPublish: ${{parameters.nuget_publish}}
   cakeTarget: ReleaseBuild
 
 jobs:
