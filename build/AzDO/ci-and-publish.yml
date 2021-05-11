@@ -1,0 +1,130 @@
+# Variable 'NSTORE_MSSQL' was defined in the Variables tab
+
+trigger:
+  branches:
+    include:
+    - refs/heads/develop
+    - refs/heads/master
+    - refs/heads/hotfix/*
+    - refs/heads/release/*
+  batch: True
+
+parameters:
+  - name: nuget-publish
+    default: true
+    displayName: publish nuget packages to nuget.org
+    type: boolean
+
+variables:
+  DOTNETCORE_MULTITARGET: true
+  nugetPublish: ${{parameters.nuget-publish}}
+  cakeTarget: ReleaseBuild
+
+jobs:
+- job: ci_and_nuget
+  displayName: "Build test and nuget publish"
+  cancelTimeoutInMinutes: 10
+
+  # Supposed to run on on-premise pool with NStore capabilities (it has Mongodb installed and configured 
+  # as well as Sql server express to test)
+  pool:
+    name: Default
+    demands:
+    - NStore -equals true
+
+  steps:
+  - checkout: self
+
+  - task: UseDotNet@2
+    displayName: Use .NET Core sdk 5.x copy
+    inputs:
+      version: 5.x
+
+  - task: PowerShell@2
+    displayName: Run GitVersion in PowerShell
+    inputs:
+      filePath: 'gitversion.ps1 '
+      arguments: -buildPrefix "NStore - Cake"
+      errorActionPreference: continue
+
+  - task: UseDotNet@2
+    displayName: Use .NET Core sdk 1.1.14
+    inputs:
+      version: 1.1.14
+
+  - task: UseDotNet@2
+    displayName: Use .NET Core sdk 2.2.104
+    inputs:
+      version: 2.2.104
+
+  - task: DotNetCoreCLI@2
+    displayName: dotnet restore
+    inputs:
+      command: restore
+      projects: src/NStore.sln
+
+  - task: PowerShell@1
+    name: dump_environment_variable
+    displayName: "Dump used environment variables to diagnose errors"
+    enabled: false
+    inputs:
+      scriptType: inlineScript
+      inlineScript: "$var = (gci env:*).GetEnumerator() | Sort-Object Name\n$out = \"\"\nForeach ($v in $var) {$out = $out + \"`t{0,-28} = {1,-28}`n\" -f $v.Name, $v.Value}\n \nwrite-output \"dump variables on $env:BUILD_ARTIFACTSTAGINGDIRECTORY\\test.md\"\n$fileName = \"$env:BUILD_ARTIFACTSTAGINGDIRECTORY\\test.md\"\nset-content $fileName $out\n \nwrite-output \"##vso[task.addattachment type=Distributedtask.Core.Summary;name=Environment Variables;]$fileName\"\n"
+  
+  - task: PowerShell@1
+    name: run_cake
+    displayName: "Runs cake primary target with build.ps1 powershell script"
+    inputs:
+      scriptName: build.ps1
+      arguments: -ScriptArgs '--testoutput="$(Build.ArtifactStagingDirectory)\test_output"' -configuration $(BuildConfiguration) -target $(cakeTarget)
+  
+  - task: PublishTestResults@2
+    name: publish_test_results
+    displayName: "Publish Test Results *.xml"
+    condition: succeededOrFailed()
+    inputs:
+      testRunner: XUnit
+      testResultsFiles: '*.xml'
+      searchFolder: $(Build.ArtifactStagingDirectory)\test_output
+
+  - task: PowerShell@1
+    name: run_cake_nuget_publish
+    displayName: Publish Nuget with cake
+    inputs:
+      scriptName: build.ps1
+      arguments: -ScriptArgs '--nugetver="$(NugetVersion)" --artifactsRoot="$(build.artifactstagingdirectory)"'  -target pack -configuration $(BuildConfiguration)
+  
+  - task: NuGetToolInstaller@1
+    displayName: Use NuGet 5.x
+    inputs:
+      versionSpec: 5.x
+
+  - task: NuGetCommand@2
+    name: nuget_push
+    displayName: NuGet push on Nuget.org
+    condition: eq(variables['nugetPublish'], 'true')
+    inputs:
+      command: push
+      searchPatternPush: $(Build.ArtifactStagingDirectory)/nuget/*.nupkg
+      nuGetFeedType: external
+      externalEndpoint: 95458669-cd62-4602-9d75-41956ae69b89
+      allowPackageConflicts: true
+
+  - task: PublishBuildArtifacts@1
+    name: publich_artifacts_nuget
+    displayName: 'Publish Artifact: Nuget Packages'
+    inputs:
+      PathtoPublish: $(Build.ArtifactStagingDirectory)/nuget/
+      ArtifactName: Nuget Packages
+      TargetPath: '\\my\share\$(Build.DefinitionName)\$(Build.BuildNumber)'
+
+  - task: PublishBuildArtifacts@1
+    name: ClonedPublishBuildArtifacts68
+    displayName: 'Publish Artifact: Dump variable file'
+    continueOnError: True
+    enabled: false
+    inputs:
+      PathtoPublish: $(Build.ArtifactStagingDirectory)/test.md
+      ArtifactName: Nuget Packages
+      TargetPath: '\\my\share\$(Build.DefinitionName)\$(Build.BuildNumber)'
+
