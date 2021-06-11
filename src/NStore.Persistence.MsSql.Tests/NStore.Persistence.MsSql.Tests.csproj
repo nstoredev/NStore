@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'false'">net5.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'true'">net5.0;net461</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == ''">net5.0</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\NStore.Persistence.MsSql\NStore.Persistence.MsSql.csproj">
