@@ -14,6 +14,11 @@ namespace NStore.Sample.Projections
     {
         public virtual async Task Project(Changeset changes)
         {
+            if (changes?.Events == null)
+            {
+                return;
+            }
+
             foreach (var @event in changes.Events)
             {
                 var mi = GetConsumerOf("On", @event);

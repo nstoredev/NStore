@@ -172,6 +172,11 @@ namespace NStore.Core.InMemory
             {
                 foreach (var chunk in list)
                 {
+                    if (chunk == null)
+                    {
+                        continue;
+                    }
+
                     if (chunk.Deleted)
                     {
                         continue;

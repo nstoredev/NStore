@@ -43,7 +43,7 @@ namespace NStore.Sample.Projections
 
         private void StoreMetrics(Changeset changes)
         {
-            if (changes == null)
+            if (changes?.Events == null)
             {
                 this._fillersCount++;
                 return;

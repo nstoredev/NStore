@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.CommandLineUtils;
 using NStore.Core.InMemory;
 using NStore.Core.Persistence;
@@ -18,45 +19,40 @@ namespace NStore.Sample
         private static bool _quietMode = false;
         private static bool _fastMode = false;
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             ParseCommandLine(args);
 
-            var store = BuildStore(_providerName);
+            var store = await BuildStore(_providerName);
 
-            using (var app = new SampleApp(store, _providerName, _useSnapshots, _quietMode, _fastMode))
-            {
-                Console.WriteLine(
-                    "Press ENTER to start sequential stream write");
-                Console.ReadLine();
-                app.WriteSequentialStream(1000)
-                    .GetAwaiter().GetResult();
-                app.DumpMetrics();
+            using var app = new SampleApp(store, _providerName, _useSnapshots, _quietMode, _fastMode);
 
-                app.StartPolling();
+//            await app.Simple();
 
-                Console.WriteLine(
-                    "Press ENTER to start and wait projections, then press ENTER again to show data & stats.");
-                Console.ReadLine();
-                app.CreateRooms(32)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+            Console.WriteLine("Press ENTER to start sequential stream write");
+            Console.ReadLine();
+            await app.WriteSequentialStream(10);
+                
+            app.DumpMetrics();
+            app.StartPolling();
 
-                app.DumpMetrics();
+            Console.WriteLine("Press ENTER to start and wait projections, then press ENTER again to show data & stats.");
+            Console.ReadLine();
+            await app.CreateRooms(32);
 
-                app.AddSomeBookings(1_024)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
-                app.DumpMetrics();
+            app.DumpMetrics();
 
-                app.PollToEnd()
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
-                Console.ReadLine();
+            await app.AddSomeBookings(1_024);
+            app.DumpMetrics();
 
-                app.ShowRooms();
-                app.DumpMetrics();
+            await app.PollToEnd();
+            Console.ReadLine();
 
-                Console.WriteLine("Press ENTER to close.");
-                Console.ReadLine();
-            }
+            app.ShowRooms();
+            app.DumpMetrics();
+
+            Console.WriteLine("Press ENTER to close.");
+            Console.ReadLine();
         }
 
         static void ParseCommandLine(string[] args)
@@ -84,7 +80,7 @@ namespace NStore.Sample
             Cmd.Execute(args);
         }
 
-        static IPersistence BuildStore(string store)
+        static async Task<IPersistence> BuildStore(string store)
         {
             Console.WriteLine($"Selected store is {store}");
 
@@ -110,14 +106,17 @@ namespace NStore.Sample
                             PartitionsCollectionName = "partitions",
                             SequenceCollectionName = "seq",
                             DropOnInit = true,
-                            MongoPayloadSerializer = new DiagnosticSerializerWrapper(new MongoCustomMongoPayloadSerializer()),
+//                            MongoPayloadSerializer = new DiagnosticSerializerWrapper(new MongoCustomMongoPayloadSerializer()),
+//                            MongoPayloadSerializer = new MongoCustomMongoPayloadSerializer(),
                             CustomizePartitionSettings = settings =>
                             {
                                 settings.MaxConnectionPoolSize = 5000;
                             }
                         };
                         var mongo = new MongoPersistence(options);
-                        mongo.InitAsync(CancellationToken.None).GetAwaiter().GetResult();
+                        Console.WriteLine("Init mongo storage");
+                        await mongo.InitAsync(CancellationToken.None);
+                        Console.WriteLine("Mongo storage ready");
                         return mongo;
                     }
             }

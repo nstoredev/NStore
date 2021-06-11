@@ -2,7 +2,7 @@
   "profiles": {
     "NStore.Sample": {
       "commandName": "Project",
-      "commandLineArgs": "-q -s -f"
+      "commandLineArgs": "-q -s -f -m"
     }
   }
 }

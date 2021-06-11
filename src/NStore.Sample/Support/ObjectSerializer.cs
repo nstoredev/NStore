@@ -21,7 +21,8 @@ namespace NStore.Sample.Support
 
         public static object Clone(object payload)
         {
-            return Deserialize(Serialize(payload));
+            return payload;
+//            return Deserialize(Serialize(payload));
         }
     }
 }

@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Threading.Tasks.Dataflow;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
+using Microsoft.VisualBasic;
 using NStore.Core.InMemory;
 using NStore.Core.Logging;
 using NStore.Core.Persistence;
@@ -105,6 +106,8 @@ namespace NStore.Sample
             _streams = new StreamsFactory(_storeProfile);
             _aggregateFactory = new DefaultAggregateFactory();
 
+            fast = true;
+            
             var network = fast
                 ? (INetworkSimulator)new NoNetworkLatencySimulator()
                 : (INetworkSimulator)new ReliableNetworkSimulator(10, 50);
@@ -113,39 +116,37 @@ namespace NStore.Sample
 
             _poller = new PollingClient(_storeProfile, 0, _appProjections, this._loggerFactory);
 
-            if (useSnapshots)
-            {
-                _cloneProfiler = new TaskProfilingInfo("Cloning state");
+            //if (useSnapshots)
+            //{
+            //    _cloneProfiler = new TaskProfilingInfo("Cloning state");
 
-                var inMemoryPersistence = new InMemoryPersistence(new InMemoryPersistenceOptions
-                {
-                    CloneFunc = CloneSnapshot
-                });
-                _snapshotProfile = new ProfileDecorator(inMemoryPersistence);
-                _snapshots = new DefaultSnapshotStore(_snapshotProfile);
-            }
+            //    var inMemoryPersistence = new InMemoryPersistence(new InMemoryPersistenceOptions
+            //    {
+            //        CloneFunc = CloneSnapshot
+            //    });
+            //    _snapshotProfile = new ProfileDecorator(inMemoryPersistence);
+            //    _snapshots = new DefaultSnapshotStore(_snapshotProfile);
+            //}
 
             _unboundedOptions = new ExecutionDataflowBlockOptions()
             {
-                MaxDegreeOfParallelism = DataflowBlockOptions.Unbounded,
-                BoundedCapacity = DataflowBlockOptions.Unbounded,
-                EnsureOrdered = false,
-                MaxMessagesPerTask = DataflowBlockOptions.Unbounded
+                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                BoundedCapacity = 100,
+                EnsureOrdered = true
             };
 
             _boundedOptions = new ExecutionDataflowBlockOptions()
             {
-                MaxDegreeOfParallelism = Environment.ProcessorCount * 8,
+                MaxDegreeOfParallelism = 1,
                 BoundedCapacity = 500,
                 EnsureOrdered = true
             };
 
-
-            if (store is MongoPersistence)
-            {
-                _unboundedOptions.MaxDegreeOfParallelism = Environment.ProcessorCount * 4;
-                _unboundedOptions.BoundedCapacity = 2000;
-            }
+            //if (store is MongoPersistence)
+            //{
+            //    _unboundedOptions.MaxDegreeOfParallelism = Environment.ProcessorCount * 4;
+            //    _unboundedOptions.BoundedCapacity = 2000;
+            //}
         }
 
         private object CloneSnapshot(object arg)
@@ -161,20 +162,39 @@ namespace NStore.Sample
             return new TplRepository(_aggregateFactory, _streams, _snapshots);
         }
 
+        public async Task Simple()
+        {
+            var repository = GetRepository();
+
+            var room = await repository.GetByIdAsync<Room>("room/1");
+            room.EnableBookings();
+
+            await repository.SaveAsync(room, "init");
+        }
+
         public async Task WriteSequentialStream(int writes)
         {
-            var stream = _streams.Open("visits");
             var progress = new ProgressBar(40);
             progress.Report(0);
 
             int written = 0;
+            var random = new Random();
 
             async Task Write(int c)
             {
-                await stream.AppendAsync(c, c.ToString()).ConfigureAwait(false);
-                Interlocked.Increment(ref written);
-                // ReSharper disable once AccessToDisposedClosure
-                progress.Report((double)written / writes);
+                try
+                {
+                    var stream = _streams.OpenRandomAccess($"visits");
+                    await stream.AppendAsync(c, c.ToString());
+
+                    Interlocked.Increment(ref written);
+                    // ReSharper disable once AccessToDisposedClosure
+                    progress.Report((double)written / writes);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
             }
 
             var worker = new ActionBlock<int>(Write, _unboundedOptions);
