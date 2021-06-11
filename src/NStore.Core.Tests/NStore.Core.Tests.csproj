@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'false'">net5.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'true'">net5.0;net461</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == ''">net5.0</TargetFrameworks>
     <OutputType>Library</OutputType>
   </PropertyGroup>
   <ItemGroup>
@@ -15,7 +17,7 @@
     <Compile Include="..\TestGlobalSuppressions.cs" Link="TestGlobalSuppressions.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.9.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.10.0" />
     <PackageReference Include="NETStandard.Library" Version="2.0.3" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="xunit" Version="2.4.1" />

@@ -10,10 +10,10 @@ namespace NStore.Sample
 {
     static class Program
     {
-        private static string Mongo = "mongodb://localhost/NStoreSample";
+        private static string Mongo = "mongodb://admin:123456##@localhost/NStoreSample?authSource=admin";
         private static readonly CommandLineApplication Cmd = new CommandLineApplication(throwOnUnexpectedArg: false);
 
-        private static string _providerName = "memory";
+        private static string _providerName = "mongo";
         private static bool _useSnapshots = true;
         private static bool _quietMode = false;
         private static bool _fastMode = false;
