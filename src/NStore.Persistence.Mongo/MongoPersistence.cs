@@ -162,8 +162,7 @@ namespace NStore.Persistence.Mongo
                 {
                     while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
                     {
-                        var batch = cursor.Current;
-                        foreach (var b in batch)
+                        foreach (var b in cursor.Current)
                         {
                             positionOrIndex = broadcastPosition ? b.Position : b.Index;
                             _mongoPayloadSerializer.ApplyDeserialization(b);
