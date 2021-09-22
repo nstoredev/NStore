@@ -1,14 +1,14 @@
-﻿using System;
-using MongoDB.Driver;
+﻿using MongoDB.Driver;
 using NStore.Core.Logging;
+using System;
 
 namespace NStore.Persistence.Mongo
 {
     public class MongoPersistenceOptions
     {
-		public INStoreLoggerFactory LoggerFactory { get; set; }
+        public INStoreLoggerFactory LoggerFactory { get; set; }
 
-		public string PartitionsConnectionString { get; set; }
+        public string PartitionsConnectionString { get; set; }
         public string PartitionsCollectionName { get; set; } = "chunks";
 
         /// <summary>
@@ -38,7 +38,7 @@ namespace NStore.Persistence.Mongo
         /// </summary>
         public Action<MongoClientSettings> CustomizePartitionClientSettings { get; set; }
 
-        /// <summary>
+        /// <summary><
         /// This allows customization of the connection string for Sequence Data.
         /// </summary>
         public Action<MongoUrlBuilder> CustomizeSequenceSettings { get; set; }
@@ -48,6 +48,31 @@ namespace NStore.Persistence.Mongo
         /// for the Sequence Database
         /// </summary>
         public Action<MongoClientSettings> CustomizeSequenceClientSettings { get; set; }
+
+        /// <summary>
+        /// If we have a readonly user we cannot perform any update on the database so we need not
+        /// to create index and do other write/support routine. This WILL NOT PREVENT WRITING TO
+        /// THE STREAM IF THE USER USED TO CONNECT TO MONGO HAS WRITE PERMISSION
+        /// </summary>
+        public bool ReadonlyUser { get; set; }
+
+        /// <summary>
+        /// Specify to the persistence layer that we have a connection string with a readonly user
+        /// so we cannot try to create indexes on initialization or else we are not able to create a 
+        /// persistence to read data.
+        /// </summary>
+        /// <returns></returns>
+        public MongoPersistenceOptions SetReadonlyUser()
+        {
+            ReadonlyUser = true;
+            return this;
+        }
+
+        public MongoPersistenceOptions SetDropOnInit()
+        {
+            DropOnInit = true;
+            return this;
+        }
 
         public bool IsValid()
         {

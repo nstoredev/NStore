@@ -446,34 +446,7 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
             _chunks = _partitionsDb.GetCollection<TChunk>(_options.PartitionsCollectionName);
             _counters = _countersDb.GetCollection<Counter>(_options.SequenceCollectionName);
 
-            var partitionIndex = new CreateIndexModel<TChunk>(Builders<TChunk>.IndexKeys
-                    .Ascending(x => x.PartitionId)
-                    .Ascending(x => x.Index),
-                new CreateIndexOptions()
-                {
-                    Unique = true,
-                    Name = PartitionIndexIdx
-                });
-
-            var partitionOperation = new CreateIndexModel<TChunk>(
-                Builders<TChunk>.IndexKeys
-                    .Ascending(x => x.PartitionId)
-                    .Ascending(x => x.OperationId),
-                new CreateIndexOptions()
-                {
-                    Unique = true,
-                    Name = PartitionOperationIdx
-                });
-
-            await _chunks.Indexes.CreateOneAsync(
-                    partitionIndex,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
-
-            await _chunks.Indexes.CreateOneAsync(
-                    partitionOperation,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+            await CreateIndexAsync(cancellationToken).ConfigureAwait(false);
 
             if (_options.UseLocalSequence)
             {
@@ -482,6 +455,42 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
             else
             {
                 await EnsureFirstSequenceRecord().ConfigureAwait(false);
+            }
+        }
+
+        private async Task CreateIndexAsync(CancellationToken cancellationToken)
+        {
+            //Indexes are created only if connection string is not associated to a standard readonly user.
+            if (!_options.ReadonlyUser)
+            {
+                var partitionIndex = new CreateIndexModel<TChunk>(Builders<TChunk>.IndexKeys
+                        .Ascending(x => x.PartitionId)
+                        .Ascending(x => x.Index),
+                    new CreateIndexOptions()
+                    {
+                        Unique = true,
+                        Name = PartitionIndexIdx
+                    });
+
+                var partitionOperation = new CreateIndexModel<TChunk>(
+                    Builders<TChunk>.IndexKeys
+                        .Ascending(x => x.PartitionId)
+                        .Ascending(x => x.OperationId),
+                    new CreateIndexOptions()
+                    {
+                        Unique = true,
+                        Name = PartitionOperationIdx
+                    });
+
+                await _chunks.Indexes.CreateOneAsync(
+                        partitionIndex,
+                        cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
+
+                await _chunks.Indexes.CreateOneAsync(
+                        partitionOperation,
+                        cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
             }
         }
 
