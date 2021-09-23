@@ -19,7 +19,6 @@ namespace NStore.BaseSqlPersistence
             _logger = options.LoggerFactory.CreateLogger($"{GetType().FullName}-{options.StreamsTableName}");
         }
 
-        protected abstract long GenerateIndex();
         protected abstract bool IsDuplicatedStreamOperation(Exception exception);
         protected abstract bool IsDuplicatedStreamIndex(Exception exception);
 
@@ -182,13 +181,13 @@ namespace NStore.BaseSqlPersistence
             string operationId,
             CancellationToken cancellationToken)
         {
+            if (index < 0)
+            {
+                throw new InvalidStreamIndexException(partitionId, index);
+            }
+
             try
             {
-                if (index == -1)
-                {
-                    index = GenerateIndex();
-                }
-
                 var chunk = new SqlChunk()
                 {
                     PartitionId = partitionId,

@@ -57,3 +57,6 @@ jobs:
       
     - name: Run Tests - Sql Lite
       run: dotnet test src/NStore.Persistence.Sqlite.Tests/NStore.Persistence.Sqlite.Tests.csproj --configuration Release --no-build 
+
+    - name: Run Tests - LiteDb
+      run: dotnet test src/NStore.Persistence.LiteDB.Tests/NStore.Persistence.LiteDB.Tests.csproj --configuration Release --no-build 

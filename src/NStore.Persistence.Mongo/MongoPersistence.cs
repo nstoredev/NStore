@@ -162,8 +162,7 @@ namespace NStore.Persistence.Mongo
                 {
                     while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
                     {
-                        var batch = cursor.Current;
-                        foreach (var b in batch)
+                        foreach (var b in cursor.Current)
                         {
                             positionOrIndex = broadcastPosition ? b.Position : b.Index;
                             _mongoPayloadSerializer.ApplyDeserialization(b);
@@ -371,7 +370,7 @@ namespace NStore.Persistence.Mongo
 
         private async Task<IChunk> InternalPersistAsync(
             TChunk chunk,
-            CancellationToken cancellationToken = default(CancellationToken)
+            CancellationToken cancellationToken = default
         )
         {
             while (true)
@@ -415,7 +414,8 @@ namespace NStore.Persistence.Mongo
                             }
 
                             //some other process steals the Position, we need to warn the user, because too many of this error could suggest to enable UseLocalSequence
-                            _logger.LogWarning($@"Error writing chunk #{chunk.Position} - Some other process already wrote position {chunk.Position}. 
+                            _logger.LogWarning(
+                                $@"Error writing chunk #{chunk.Position} - Some other process already wrote position {chunk.Position}. 
 Operation will be retried. 
 If you see too many of this kind of errors, consider enabling UseLocalSequence.
 {ex.Message} - {ex.GetType().FullName} ");
@@ -446,27 +446,7 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
             _chunks = _partitionsDb.GetCollection<TChunk>(_options.PartitionsCollectionName);
             _counters = _countersDb.GetCollection<Counter>(_options.SequenceCollectionName);
 
-            await _chunks.Indexes.CreateOneAsync(
-                    Builders<TChunk>.IndexKeys
-                        .Ascending(x => x.PartitionId)
-                        .Ascending(x => x.Index),
-                    new CreateIndexOptions()
-                    {
-                        Unique = true,
-                        Name = PartitionIndexIdx
-                    }, cancellationToken)
-                .ConfigureAwait(false);
-
-            await _chunks.Indexes.CreateOneAsync(
-                    Builders<TChunk>.IndexKeys
-                        .Ascending(x => x.PartitionId)
-                        .Ascending(x => x.OperationId),
-                    new CreateIndexOptions()
-                    {
-                        Unique = true,
-                        Name = PartitionOperationIdx
-                    }, cancellationToken)
-                .ConfigureAwait(false);
+            await CreateIndexAsync(cancellationToken).ConfigureAwait(false);
 
             if (_options.UseLocalSequence)
             {
@@ -478,7 +458,43 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
             }
         }
 
-        private async Task ReloadSequence(CancellationToken cancellationToken = default(CancellationToken))
+        private async Task CreateIndexAsync(CancellationToken cancellationToken)
+        {
+            //Indexes are created only if connection string is not associated to a standard readonly user.
+            if (!_options.ReadonlyUser)
+            {
+                var partitionIndex = new CreateIndexModel<TChunk>(Builders<TChunk>.IndexKeys
+                        .Ascending(x => x.PartitionId)
+                        .Ascending(x => x.Index),
+                    new CreateIndexOptions()
+                    {
+                        Unique = true,
+                        Name = PartitionIndexIdx
+                    });
+
+                var partitionOperation = new CreateIndexModel<TChunk>(
+                    Builders<TChunk>.IndexKeys
+                        .Ascending(x => x.PartitionId)
+                        .Ascending(x => x.OperationId),
+                    new CreateIndexOptions()
+                    {
+                        Unique = true,
+                        Name = PartitionOperationIdx
+                    });
+
+                await _chunks.Indexes.CreateOneAsync(
+                        partitionIndex,
+                        cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
+
+                await _chunks.Indexes.CreateOneAsync(
+                        partitionOperation,
+                        cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        private async Task ReloadSequence(CancellationToken cancellationToken = default)
         {
             var filter = Builders<TChunk>.Filter.Empty;
             var lastSequenceNumber = await _chunks
@@ -520,7 +536,7 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
             }
         }
 
-        private async Task<long> GetNextId(int size, CancellationToken cancellationToken = default(CancellationToken))
+        private async Task<long> GetNextId(int size, CancellationToken cancellationToken = default)
         {
             if (_options.UseLocalSequence)
             {
@@ -547,9 +563,18 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
             return updateResult.LastValue;
         }
 
-        public async Task<IChunk> AppendAsync(string partitionId, long index, object payload, string operationId,
+        public async Task<IChunk> AppendAsync(
+            string partitionId,
+            long index,
+            object payload,
+            string operationId,
             CancellationToken cancellationToken)
         {
+            if (index < 0)
+            {
+                throw new InvalidStreamIndexException(partitionId, index);
+            }
+
             long id = await GetNextId(1, cancellationToken).ConfigureAwait(false);
             var chunk = new TChunk();
             chunk.Init(
@@ -615,7 +640,6 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
                         if (err.Message.Contains(PartitionOperationIdx))
                         {
                             queue[err.Index].Failed(WriteJob.WriteResult.DuplicatedOperation);
-                            continue;
                         }
                     }
                 }

@@ -222,6 +222,11 @@ namespace NStore.Core.InMemory
 
         public async Task<IChunk> AppendAsync(string partitionId, long index, object payload, string operationId, CancellationToken cancellationToken)
         {
+            if (index < 0)
+            {
+                throw new InvalidStreamIndexException(partitionId, index);
+            }
+
             var id = Interlocked.Increment(ref _sequence);
             var chunk = new MemoryChunk()
             {

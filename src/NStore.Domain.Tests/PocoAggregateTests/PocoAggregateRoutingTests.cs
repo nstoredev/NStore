@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading.Tasks;
 using NStore.Domain.Poco;
 using Xunit;
 

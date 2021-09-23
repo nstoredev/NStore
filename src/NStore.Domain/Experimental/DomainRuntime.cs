@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using NStore.Core.Logging;
 using NStore.Core.Persistence;
@@ -38,13 +39,18 @@ namespace NStore.Domain.Experimental
             }
         }
 
-        public Task MutateAsync<TAggregate>(string aggreagateId, Action<TAggregate> action)
+        public Task MutateAsync<TAggregate>(
+            string aggreagateId, 
+            Action<TAggregate> action)
             where TAggregate : IAggregate
         {
             return MutateAsync(aggreagateId, Guid.NewGuid().ToString(), action);
         }
 
-        public async Task MutateAsync<TAggregate>(string aggreagateId, string operationId, Action<TAggregate> action)
+        public async Task MutateAsync<TAggregate>(
+            string aggreagateId, 
+            string operationId, 
+            Action<TAggregate> action)
             where TAggregate : IAggregate
         {
             var repo = new Repository(_aggregateFactory, _streamsFactory, _snapshots);
@@ -63,16 +69,16 @@ namespace NStore.Domain.Experimental
             return _streamsFactory.OpenReadOnly(streamId);
         }
 
-        public async Task CatchUpAsync()
+        public async Task CatchUpAsync(CancellationToken cancellationToken)
         {
             if (_pollingClient == null) return;
 
-            while (true)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 long maxPos = await _persistence.ReadLastPositionAsync().ConfigureAwait(false);
                 if (maxPos > _pollingClient.Position)
                 {
-                    await Task.Delay(500).ConfigureAwait(false);
+                    await Task.Delay(500, cancellationToken).ConfigureAwait(false);
                     continue;
                 }
                 break;

@@ -1,7 +1,5 @@
 using System;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using NStore.Domain;
 using NStore.Tutorial.CartDomain;
 
 namespace NStore.Tutorial.Tutorials

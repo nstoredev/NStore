@@ -1,7 +1,6 @@
-﻿using System.Threading;
+﻿using NStore.Core.Persistence;
+using System.Threading;
 using System.Threading.Tasks;
-using NStore.Core.Persistence;
-using System;
 
 namespace NStore.Core.Streams
 {
@@ -10,6 +9,7 @@ namespace NStore.Core.Streams
         private IPersistence Persistence { get; }
         public string Id { get; }
         public virtual bool IsWritable => true;
+        private long _lastIndex = -1;
 
         public Stream(string streamId, IPersistence persistence)
         {
@@ -17,7 +17,10 @@ namespace NStore.Core.Streams
             this.Persistence = persistence;
         }
 
-        public Task ReadAsync(ISubscription subscription, long fromIndexInclusive, long toIndexInclusive,
+        public Task ReadAsync(
+            ISubscription subscription,
+            long fromIndexInclusive,
+            long toIndexInclusive,
             CancellationToken cancellationToken)
         {
             return Persistence.ReadForwardAsync(
@@ -35,13 +38,37 @@ namespace NStore.Core.Streams
             return Persistence.ReadSingleBackwardAsync(Id, cancellationToken);
         }
 
-        public virtual Task<IChunk> AppendAsync(
+        public virtual async Task<IChunk> AppendAsync(
             object payload,
             string operationId,
             CancellationToken cancellation
-            )
+        )
         {
-            return Persistence.AppendAsync(this.Id, -1, payload, operationId, cancellation);
+            for (var retries = 0; retries < 10; retries++)
+            {
+                try
+                {
+                    if (_lastIndex == -1)
+                    {
+                        var last = await PeekAsync(cancellation).ConfigureAwait(false);
+                        _lastIndex = last?.Index ?? 0;
+                    }
+
+                    var index = _lastIndex + 1;
+
+                    var chunk = await Persistence.AppendAsync(this.Id, index, payload, operationId, cancellation)
+                        .ConfigureAwait(false);
+
+                    _lastIndex = chunk.Index;
+                    return chunk;
+                }
+                catch (DuplicateStreamIndexException)
+                {
+                    _lastIndex = -1;
+                }
+            }
+
+            throw new AppendFailedException(this.Id, "Too many retries");
         }
 
         public virtual Task DeleteAsync(CancellationToken cancellation)
@@ -51,7 +78,7 @@ namespace NStore.Core.Streams
 
         public Task DeleteBeforeAsync(long index, CancellationToken cancellation)
         {
-            return Persistence.DeleteAsync(this.Id, 0, index-1, cancellation);
+            return Persistence.DeleteAsync(this.Id, 0, index - 1, cancellation);
         }
 
         public Task<IChunk> PersistAsync(object payload, long index, string operationId, CancellationToken cancellation)

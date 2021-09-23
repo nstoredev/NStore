@@ -58,7 +58,7 @@ namespace NStore.Persistence.Mongo.Tests
         [Fact]
         public async Task can_write_custom_data()
         {
-            var persisted = (CustomChunk)await Store.AppendAsync("a", "data");
+            var persisted = (CustomChunk)await Store.AppendAsync("a", 1, "data");
 
             var collection = GetCollection<CustomChunk>();
             var read_from_collection = await (await collection.FindAsync(FilterDefinition<CustomChunk>.Empty)).FirstAsync();
@@ -70,7 +70,7 @@ namespace NStore.Persistence.Mongo.Tests
         [Fact]
         public async Task can_read_custom_data()
         {
-            var persisted = (CustomChunk)await Store.AppendAsync("a", "data");
+            var persisted = (CustomChunk)await Store.AppendAsync("a", 1, "data");
             var read = (CustomChunk)await Store.ReadSingleBackwardAsync("a");
 
             Assert.Equal("a", read.CustomHeaders["test.1"]);
@@ -140,30 +140,6 @@ namespace NStore.Persistence.Mongo.Tests
                 c => Assert.Equal("op1", c.OperationId),
                 c => Assert.Equal("_2", c.OperationId)
             );
-        }
-    }
-
-    public class When_Write_To_Same_Stream_From_Multiple_Repositories : BaseConcurrencyTests
-    {
-        [Fact()]
-        public async Task Verify_that_index_is_always_equal_to_id_when_Append_chunk_without_explicit_index()
-        {
-            // Repo1 writes to a stream (no index specified)
-            await Store.AppendAsync("test1", -1, "CHUNK1").ConfigureAwait(false);
-
-            // Repo2 writes to another stream.
-            await Store2.AppendAsync("test2", -1, "Stuff not interesting").ConfigureAwait(false);
-
-            // Repo1 write again on Test1, but in memory index is wrong. WE expect index to be ok
-            await Store.AppendAsync("test1", -1, "CHUNK2").ConfigureAwait(false);
-
-            Recorder rec = new Recorder();
-            await Store.ReadForwardAsync("test1", rec).ConfigureAwait(false);
-
-            foreach (var chunk in rec.Chunks)
-            {
-                Assert.Equal(chunk.Position, chunk.Index);
-            }
         }
     }
 
@@ -245,8 +221,6 @@ namespace NStore.Persistence.Mongo.Tests
     public class Can_intercept_mongo_query_with_options : BasePersistenceTest
     {
         private Int32 callCount;
-        private Int32 failedCallCount;
-        private Int32 startCallCount;
 
         protected internal override MongoPersistenceOptions GetMongoPersistenceOptions()
         {
@@ -254,18 +228,7 @@ namespace NStore.Persistence.Mongo.Tests
             options.CustomizePartitionClientSettings = mongoClientSettings =>
                 mongoClientSettings.ClusterConfigurator = clusterConfigurator =>
                 {
-                    clusterConfigurator.Subscribe<CommandStartedEvent>(e =>
-                    {
-                        startCallCount++;
-                    });
-                    clusterConfigurator.Subscribe<CommandSucceededEvent>(e =>
-                    {
-                        callCount++;
-                    });
-                    clusterConfigurator.Subscribe<CommandFailedEvent>(e =>
-                    {
-                        failedCallCount++;
-                    });
+                    clusterConfigurator.Subscribe<CommandSucceededEvent>(_ => callCount++);
                 };
             return options;
         }
@@ -275,8 +238,8 @@ namespace NStore.Persistence.Mongo.Tests
         {
             callCount = 0;
 
-            // Repo1 writes to a stream (no index specified)
-            await Store.AppendAsync("test1", -1, "CHUNK1").ConfigureAwait(false);
+            // Repo1 writes to a stream
+            await Store.AppendAsync("test1", 1, "CHUNK1").ConfigureAwait(false);
 
             Assert.Equal(1, callCount);
         }
@@ -287,29 +250,29 @@ namespace NStore.Persistence.Mongo.Tests
     /// </summary>
     public class Sequence_generator_id_is_initialized_correctly : BasePersistenceTest
     {
-        private MongoPersistenceOptions options;
+        private MongoPersistenceOptions _options;
 
         protected internal override MongoPersistenceOptions GetMongoPersistenceOptions()
         {
-            options = base.GetMongoPersistenceOptions();
-            options.UseLocalSequence = false;
-            options.SequenceCollectionName = "sequence_test";
-            return options;
+            _options = base.GetMongoPersistenceOptions();
+            _options.UseLocalSequence = false;
+            _options.SequenceCollectionName = "sequence_test";
+            return _options;
         }
 
         [Fact()]
-        public async Task Verify_that_after_append_async_we_have_intercepted_the_call()
+        public void Verify_that_after_persistence_initialization_sequence_collection_is_populated()
         {
             // We need to be sure that the record was correctly created
-            var url = new MongoUrl(options.PartitionsConnectionString);
+            var url = new MongoUrl(_options.PartitionsConnectionString);
             var client = new MongoClient(url);
             var db = client.GetDatabase(url.DatabaseName);
-            var coll = db.GetCollection<BsonDocument>(options.SequenceCollectionName);
+            var coll = db.GetCollection<BsonDocument>(_options.SequenceCollectionName);
 
-            var single = coll.AsQueryable().SingleOrDefault();
-            Assert.NotNull(single);
-            Assert.Equal("streams", single["_id"].AsString);
-            Assert.Equal(0L, single["LastValue"].AsInt64);
+            var sequenceDocument = coll.AsQueryable().SingleOrDefault();
+            Assert.NotNull(sequenceDocument);
+            Assert.Equal("streams", sequenceDocument["_id"].AsString);
+            Assert.Equal(0L, sequenceDocument["LastValue"].AsInt64);
         }
     }
 }

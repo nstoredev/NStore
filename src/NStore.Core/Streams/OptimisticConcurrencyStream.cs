@@ -96,7 +96,7 @@ namespace NStore.Core.Streams
                 throw new AppendFailedException(Id,
                     $@"Cannot append on stream {Id}
 Append can be called only after a Read operation.
-If you don't need to read use {typeof(Stream).Name} instead of {GetType().Name}.");
+If you don't need to read use {nameof(Stream)} instead of {GetType().Name}.");
             }
 
             long desiredVersion = _version + 1;

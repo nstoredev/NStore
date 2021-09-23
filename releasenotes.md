@@ -1,3 +1,15 @@
+## vNext
+
+- Added ability to use a readonly connection on MongoDb persistence layer.
+
+### Breaking Changes
+
+- IPersistence does not support anymore the AppendAsync method, you should use a Stream class to have this behavior. This is part of removing the support of IPersistence for generation of Index value.
+
+## 0.10.4
+
+- Disabled parallelism on tests.
+
 ## 0.10.3
 
 - Updated mongodb driver to latest version

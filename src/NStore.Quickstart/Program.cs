@@ -1,50 +1,61 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using NStore.Core.InMemory;
 using NStore.Core.Persistence;
+using NStore.Core.Processing;
 using NStore.Core.Streams;
 
 namespace NStore.Quickstart
 {
     static class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        /// Our tracked event
+        /// </summary>
+        public record Favorited(string UserId, DateTime When);
+
+        /// <summary>
+        /// Counts unique favorites
+        /// </summary>
+        public class UniqueFavs
         {
-            streams_api().GetAwaiter().GetResult();
-            raw_api().GetAwaiter().GetResult();
+            private readonly HashSet<string> _users = new();
+
+            // ReSharper disable once UnusedMember.Local
+            private void On(Favorited fav) => _users.Add(fav.UserId);
+
+            public int Count => _users.Count;
+        }
+
+        static async Task Main()
+        {
+            // StreamsFactory setup
+            var streams = new StreamsFactory(new InMemoryPersistence());
+
+            // Open the stream in r/w
+            var post = streams.Open("post/123");
+            
+            // Write to stream
+            await post.AppendAsync(new Favorited("users/200", DateTime.UtcNow));
+            await post.AppendAsync(new Favorited("users/404", DateTime.UtcNow));
+            await post.AppendAsync(new Favorited("users/200", DateTime.UtcNow));
+
+            // Read the stream from start
+            await post.ReadAsync(chunk =>
+            {
+                Console.WriteLine($"{chunk.PartitionId} #{chunk.Index} => {chunk.Payload}");
+                return Subscription.Continue;
+            });
+
+            // Stream processing
+            var favs = await post.AggregateAsync<UniqueFavs>();
+            Console.WriteLine($"{favs.Count} users added '{post.Id}' as favorite");
+
 
             Console.WriteLine("Press any key to exit.");
             Console.ReadKey();
         }
-
-        private static async Task streams_api()
-        {
-            var persister = CreateYourStore();
-            var streams = new StreamsFactory(persister);
-
-            Console.WriteLine("Writing to Stream_1");
-            var stream = streams.Open("Stream_1");
-            await stream.AppendAsync(new { data = "Hello world!" }).ConfigureAwait(false);
-
-            Console.WriteLine("Reading from Stream_1");
-            await stream.ReadAsync(data =>
-            {
-                Console.WriteLine($"  index {data.Index} => {data.Payload}");
-                return Task.FromResult(true);
-            }).ConfigureAwait(false);
-        }
-
-        private static async Task raw_api()
-        {
-            var persister = CreateYourStore();
-            await persister.AppendAsync("Stream_1", new { data = "Hello world!" }).ConfigureAwait(false);
-        }
-
-        private static IPersistence CreateYourStore()
-        {
-            return new InMemoryPersistence(new InMemoryPersistenceOptions());
-        }
     }
+
 }

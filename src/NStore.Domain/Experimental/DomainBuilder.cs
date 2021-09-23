@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using NStore.Core.Persistence;
 using NStore.Core.Snapshots;
 

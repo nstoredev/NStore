@@ -130,15 +130,6 @@ namespace NStore.Core.Persistence
         public static Task<IChunk> AppendAsync(
             this IPersistence persistence,
             string partitionId,
-            object payload
-        )
-        {
-            return persistence.AppendAsync(partitionId, -1, payload, null, CancellationToken.None);
-        }
-
-        public static Task<IChunk> AppendAsync(
-            this IPersistence persistence,
-            string partitionId,
             long index,
             object payload
         )

@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using MongoDB.Driver;
 using NStore.Core.Persistence;
 using NStore.Persistence.Mongo;
-using NStore.Persistence;
 using Xunit;
 
 #if MAP_DOMAIN
@@ -91,7 +89,7 @@ namespace NStore.Persistence.Tests
             return new MongoPersistence(options);
         }
 
-        protected internal void Clear()
+        protected void Clear(IPersistence persistence, bool drop)
         {
             // nothing to do
         }

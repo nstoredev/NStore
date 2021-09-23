@@ -1,15 +1,12 @@
-﻿using System;
+﻿using NStore.Core.Logging;
+using NStore.Core.Persistence;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using NStore.Core.Logging;
-using NStore.Core.Persistence;
 using Xunit;
-
-#pragma warning disable S101 // Types should be named in camel case
-#pragma warning disable IDE1006 // Naming Styles
 
 // ReSharper disable InconsistentNaming
 namespace NStore.Persistence.Tests
@@ -19,11 +16,17 @@ namespace NStore.Persistence.Tests
         public TestMisconfiguredException(string message) : base(message)
         {
         }
+
+        public TestMisconfiguredException() : base()
+        {
+        }
+
+        public TestMisconfiguredException(string message, Exception innerException) : base(message, innerException)
+        {
+        }
     }
 
-#pragma warning disable S3881 // "IDisposable" should be implemented correctly
     public abstract partial class BasePersistenceTest : IDisposable
-#pragma warning restore S3881 // "IDisposable" should be implemented correctly
     {
         private static int _staticId = 0;
         protected readonly int _testRunId;
@@ -33,54 +36,54 @@ namespace NStore.Persistence.Tests
         protected readonly INStoreLogger _logger;
         protected IEnhancedPersistence Batcher => _persistence as IEnhancedPersistence;
         protected readonly IPersistence _persistence;
-        protected BasePersistenceTest()
+
+        protected BasePersistenceTest(bool autoCreateStore = true)
         {
             _testRunId = Interlocked.Increment(ref _staticId);
 
             LoggerFactory = new TestLoggerFactory(TestSuitePrefix + "::" + GetType().Name);
             _logger = LoggerFactory.CreateLogger(GetType().FullName);
-            _logger.LogDebug("Creating store");
-            _persistence = Create(true);
-            _logger.LogDebug("Store created");
-            Store = new LogDecorator(_persistence, LoggerFactory);
+
+            if (autoCreateStore)
+            {
+                _logger.LogDebug("Creating store");
+                _persistence = Create(true);
+                _logger.LogDebug("Store created");
+                Store = new LogDecorator(_persistence, LoggerFactory);
+            }
         }
 
         protected ISubscription EmptySubscription => new LambdaSubscription(_ => Task.FromResult(true));
 
         #region IDisposable Support
-        private bool disposedValue = false; // To detect redundant calls
+        private bool _disposedValue = false; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            if (_disposedValue)
             {
-                if (disposing)
+                return;
+            }
+
+            if (disposing)
+            {
+                if (_persistence != null)
                 {
-                    // dispose managed state (managed objects).
-                    Clear();
-                    _logger.LogDebug("Test disposed");
+                    Clear(_persistence, true);
                 }
 
-                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-                // TODO: set large fields to null.
-
-                disposedValue = true;
+                _logger.LogDebug("Test disposed");
             }
-        }
 
-        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        // ~BasePersistenceTest() {
-        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-        //   Dispose(false);
-        // }
+            _disposedValue = true;
+        }
 
         // This code added to correctly implement the disposable pattern.
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             Dispose(true);
-            // TODO: uncomment the following line if the finalizer is overridden above.
-            // GC.SuppressFinalize(this);
+            GC.SuppressFinalize(this);
         }
         #endregion
     }
@@ -90,20 +93,30 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task can_insert_at_first_index()
         {
-            await Store.AppendAsync("Stream_1", 1, new { data = "this is a test" }).ConfigureAwait(false);
+            var chunk = await Store.AppendAsync(
+                "Stream_1",
+                1,
+                new { data = "this is a test" }
+            ).ConfigureAwait(false);
+
+            Assert.NotNull(chunk);
+            Assert.Equal(1, chunk.Index);
+            Assert.Equal("Stream_1", chunk.PartitionId);
         }
     }
 
-    public class negative_index : BasePersistenceTest
+    public class trying_to_persist_with_negative_index : BasePersistenceTest
     {
         [Fact]
-        public async Task should_persist_with_chunk_id()
+        public async Task should_throw()
         {
-            await Store.AppendAsync("Stream_Neg", -1, "payload").ConfigureAwait(false);
+            var ex = await Assert.ThrowsAsync<InvalidStreamIndexException>(async () =>
+            {
+                await Store.AppendAsync("Stream_Neg", -1, "payload").ConfigureAwait(false);
+            });
 
-            var tape = new Recorder();
-            await Store.ReadForwardAsync("Stream_Neg", 0, tape).ConfigureAwait(false);
-            Assert.Equal("payload", tape.ByIndex(1).Payload);
+            Assert.Equal("Stream_Neg", ex.StreamId);
+            Assert.Equal(-1, ex.StreamIndex);
         }
     }
 
@@ -112,7 +125,15 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_work()
         {
-            await Store.AppendAsync("Stream_1", long.MaxValue, new { data = "this is a test" }).ConfigureAwait(false);
+            var chunk = await Store.AppendAsync(
+                "Stream_1",
+                long.MaxValue,
+                new { data = "this is a test" }
+            ).ConfigureAwait(false);
+
+            Assert.NotNull(chunk);
+            Assert.Equal(long.MaxValue, chunk.Index);
+            Assert.Equal("Stream_1", chunk.PartitionId);
         }
     }
 
@@ -136,7 +157,7 @@ namespace NStore.Persistence.Tests
 
     public class query_by_operation_id : BasePersistenceTest
     {
-        public query_by_operation_id()
+        public query_by_operation_id() : base()
         {
             try
             {
@@ -197,7 +218,7 @@ namespace NStore.Persistence.Tests
 
     public class ScanTest : BasePersistenceTest
     {
-        public ScanTest()
+        public ScanTest() : base()
         {
             try
             {
@@ -289,7 +310,6 @@ namespace NStore.Persistence.Tests
             Assert.True(recorder.ReadCompleted);
         }
 
-
         [Fact]
         public async Task should_read_only_last_two_chunks()
         {
@@ -356,7 +376,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task with_only_one_chunk_should_be_equal_to_one()
         {
-            await Store.AppendAsync("a", -1, "last").ConfigureAwait(false);
+            await Store.AppendAsync("a", 1, "last").ConfigureAwait(false);
             var last = await Store.ReadLastPositionAsync().ConfigureAwait(false);
             Assert.Equal(1L, last);
         }
@@ -364,8 +384,8 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task with_two_streams_of_one_chunk_should_be_two()
         {
-            await Store.AppendAsync("a", "first").ConfigureAwait(false);
-            await Store.AppendAsync("b", "second").ConfigureAwait(false);
+            await Store.AppendAsync("a", 1, "first").ConfigureAwait(false);
+            await Store.AppendAsync("b", 1, "second").ConfigureAwait(false);
             var last = await Store.ReadLastPositionAsync().ConfigureAwait(false);
             Assert.Equal(2L, last);
         }
@@ -436,7 +456,7 @@ namespace NStore.Persistence.Tests
 
     public class DeleteStreamTest : BasePersistenceTest
     {
-        protected DeleteStreamTest()
+        protected DeleteStreamTest() : base()
         {
             try
             {
@@ -462,7 +482,6 @@ namespace NStore.Persistence.Tests
 
             _logger.LogDebug("Delete test data written");
         }
-
     }
 
     public class DeleteStreamTest_1 : DeleteStreamTest
@@ -484,13 +503,13 @@ namespace NStore.Persistence.Tests
 
     public class DeleteStreamTest_2 : DeleteStreamTest
     {
-
-		[Fact]
-		public async Task delete_invalid_stream_should_not_throw_exception()
-		{
-			await Store.DeleteAsync("delete_2").ConfigureAwait(false);
-		}
-	}
+        [Fact]
+        public async Task delete_invalid_stream_should_not_throw_exception()
+        {
+            await Store.DeleteAsync("delete_2").ConfigureAwait(false);
+            Assert.True(true, "DeleteAsync should be idempotent and ignore deleted streams");
+        }
+    }
 
     public class DeleteStreamTest_3 : DeleteStreamTest
     {
@@ -528,7 +547,6 @@ namespace NStore.Persistence.Tests
 
     public class DeleteStreamTest_5 : DeleteStreamTest
     {
-
         [Fact]
         public async Task should_delete_middle()
         {
@@ -603,12 +621,12 @@ namespace NStore.Persistence.Tests
 
     public class subscription_events_should_be_signaled : BasePersistenceTest
     {
-        private readonly ChunkProcessor _continueToEnd = c => Task.FromResult(true);
+        private readonly ChunkProcessor _continueToEnd = _ => Task.FromResult(true);
         private readonly LambdaSubscription _subscription;
         private long _startedAt = -1;
         private long _completedAt = -1;
 
-        public subscription_events_should_be_signaled()
+        public subscription_events_should_be_signaled() : base()
         {
             // write stream out of order to have 
             // position 1 : index 2 
@@ -662,7 +680,7 @@ namespace NStore.Persistence.Tests
         private readonly ChunkProcessor _throw = c => throw new TimeoutException();
         private readonly LambdaSubscription _subscription;
 
-        public exceptions_should_be_signaled()
+        public exceptions_should_be_signaled() : base()
         {
             // write stream out of order to have 
             // position 1 : index 2 
@@ -695,7 +713,6 @@ namespace NStore.Persistence.Tests
             Assert.True(_subscription.Failed);
         }
     }
-
 
     public class strict_sequence_on_store : BasePersistenceTest
     {
@@ -765,7 +782,7 @@ namespace NStore.Persistence.Tests
                 payload[c] = Convert.ToByte(c % 255);
             }
 
-            await _persistence.AppendAsync("large_binary", payload).ConfigureAwait(false);
+            await _persistence.AppendAsync("large_binary", 1, payload).ConfigureAwait(false);
 
             var chunk = await _persistence.ReadSingleBackwardAsync("large_binary").ConfigureAwait(false);
             var loadedBytes = (byte[])chunk.Payload;

@@ -2,36 +2,53 @@
 
 # NStore
 
-**(Yet Another) Opinionated Event Sourcing Library**
+## (Yet Another) Opinionated Event Sourcing Library
 
-This project is a playground for experimenting with .net Standard, async and a simple API for a Sql/NoSql backed EventStore.
-Heavily inspired from NEventStore, rewritten from scratch to be simple to learn and highly extensible.
+NStore started as a playground for experimenting with .net Standard, async and a simple API for a Sql/NoSql backed EventStore.
+
+After years of experience running NEventStore in production we wrote NStore from scratch with a simpler and extensible API.
 
 ## CI Status
 
 | Build server | Platform | Build Status                                                                                                                                                           |
 | ------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| AppVeyor     | Windows  | [<img src="https://ci.appveyor.com/api/projects/status/github/proximosrl/nstore?svg=true" alt="Build status" >](https://ci.appveyor.com/project/andreabalducci/nstore) |
-| Travis       | Ubuntu   | [<img src="https://travis-ci.org/ProximoSrl/NStore.svg?branch=develop" alt="Build status" >](https://travis-ci.org/ProximoSrl/NStore)                                  |
+| AppVeyor     | Windows  | [<img src="https://ci.appveyor.com/api/projects/status/github/proximosrl/nstore?svg=true" alt="Build status" >](https://ci.appveyor.com/project/andreabalducci/nstore) |                                 |
 | GH Actions   | Linux    | [<img src="https://github.com/ProximoSrl/NStore/workflows/NStore%20CI/badge.svg" alt="Build status" >](https://github.com/ProximoSrl/NStore/blob/develop/.github/workflows/ci.yml)                                  |
 | Azdo         | Windows  | [<img src="https://dev.azure.com/gianmariaricci/Public/_apis/build/status/130" alt="Build status" >](https://dev.azure.com/gianmariaricci/Public/_build/latest?definitionId=130)                                  |
 
 ## Quickstart
 
-### Streams API
+Setup the streams factory
 
-    var persister = new InMemoryPersistence();
-    var streams = new StreamsFactory(persister);
+```csharp
+var streams = new StreamsFactory(new InMemoryPersistence());
+```
+open the stream
+```csharp
+var post = streams.Open("post/123");
+```
+append new data
+```csharp
+await post.AppendAsync(new Favorited("users/200", DateTime.UtcNow));
+```
+read the stream
+```csharp
+await post.ReadAsync(chunk =>
+{
+    Console.WriteLine($"{chunk.PartitionId} #{chunk.Index} => {chunk.Payload}");
+    return Subscription.Continue;
+});
+```
 
-    // Write to stream
-    var stream = streams.Open("Stream_1");
-    await stream.AppendAsync(new { data = "Hello world!" });
+Process the stream
+```csharp
+var favs = await post.AggregateAsync<UniqueFavs>();
 
-    // Read from stream
-    await stream.ReadAsync(data => {
-        Console.WriteLine($"  index {data.Index} => {data.Payload}");
-        return Task.FromResult(true);
-    });
+Console.WriteLine($"{favs.Count} users added '{post.Id}' as favorite");
+
+```
+
+Full source at [src/NStore.Quickstart/Program.cs](src/NStore.Quickstart/Program.cs)
 
 ---
 

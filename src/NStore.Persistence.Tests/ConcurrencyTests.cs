@@ -1,5 +1,4 @@
 ﻿using NStore.Core.Persistence;
-using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
@@ -29,7 +28,7 @@ namespace NStore.Persistence.Tests
 
     public class When_Write_To_Same_Stream_From_Multiple_Repositories_Read_Backward : BaseConcurrencyTests
     {
-        [Fact(Skip = "probably not useful by refactor")]
+        [Fact(Skip = "probably not useful by refactor. Automatic index proposition was moved to Stream")]
         public async Task Verify_that_index_is_always_equal_to_id_when_Append_chunk_without_explicit_index()
         {
             // Repo1 writes to a stream (no index specified)

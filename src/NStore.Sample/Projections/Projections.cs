@@ -3,12 +3,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using NStore.Core.InMemory;
 using NStore.Core.Persistence;
 using NStore.Domain;
-using NStore.Persistence;
 using NStore.Sample.Support;
 
 namespace NStore.Sample.Projections

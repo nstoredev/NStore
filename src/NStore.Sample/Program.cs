@@ -4,7 +4,6 @@ using Microsoft.Extensions.CommandLineUtils;
 using NStore.Core.InMemory;
 using NStore.Core.Persistence;
 using NStore.Persistence.Mongo;
-using NStore.Persistence;
 using NStore.Sample.Support;
 
 namespace NStore.Sample

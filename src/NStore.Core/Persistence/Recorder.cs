@@ -1,9 +1,8 @@
-﻿using System;
+﻿using NStore.Core.Streams;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
 using System.Threading.Tasks;
-using NStore.Core.Streams;
 
 namespace NStore.Core.Persistence
 {
@@ -22,6 +21,8 @@ namespace NStore.Core.Persistence
             return Task.FromResult(true);
         }
 
+#pragma warning disable S4144 // Methods should not have identical implementations
+
         public Task CompletedAsync(long indexOrPosition)
         {
             ReadCompleted = true;
@@ -33,6 +34,8 @@ namespace NStore.Core.Persistence
             ReadCompleted = true;
             return Task.CompletedTask;
         }
+
+#pragma warning restore S4144 // Methods should not have identical implementations
 
         public Task OnStartAsync(long indexOrPosition)
         {
@@ -82,7 +85,7 @@ namespace NStore.Core.Persistence
         public IChunk ByIndex(int index) => _map[index];
         public IEnumerable<IChunk> Chunks => _data;
     }
-    
+
     public static class RecorderExtensions
     {
         public static async Task<Recorder> RecordAsync(this IReadOnlyStream stream)

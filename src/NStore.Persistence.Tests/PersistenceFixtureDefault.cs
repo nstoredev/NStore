@@ -8,7 +8,7 @@ namespace NStore.Persistence.Tests
     {
         private const string TestSuitePrefix = "Memory";
 
-        protected internal IPersistence Create(bool dropOnInit)
+        protected IPersistence Create(bool dropOnInit)
         {
             var options = new InMemoryPersistenceOptions
             {
@@ -17,7 +17,7 @@ namespace NStore.Persistence.Tests
             return new InMemoryPersistence(options);
         }
 
-        protected internal void Clear()
+        protected void Clear(IPersistence persistence, bool drop)
         {
             // Method intentionally left empty.
         }

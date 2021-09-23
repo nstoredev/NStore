@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Data.Common;
 using System.Data.SqlClient;
-using System.Data.SqlTypes;
 using System.Threading;
 using System.Threading.Tasks;
 using NStore.BaseSqlPersistence;
@@ -12,7 +10,6 @@ namespace NStore.Persistence.MsSql
     public class MsSqlPersistence : AbstractSqlPersistence, IPersistence
     {
         private const int DuplicatedIndexExceptionErrorNumber = 2601;
-        private int REFACTOR_TO_USE_SEQUENCE_OR_NOT_STRICTLY_SEQUENTIAL_VALUE = 0;
 
         private readonly MsSqlPersistenceOptions _options;
 
@@ -63,11 +60,6 @@ namespace NStore.Persistence.MsSql
                     await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                 }
             }
-        }
-
-        protected override long GenerateIndex()
-        {
-            return Interlocked.Increment(ref REFACTOR_TO_USE_SEQUENCE_OR_NOT_STRICTLY_SEQUENTIAL_VALUE);
         }
 
         protected override bool IsDuplicatedStreamOperation(Exception exception)

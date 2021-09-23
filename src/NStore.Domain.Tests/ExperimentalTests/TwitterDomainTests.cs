@@ -1,15 +1,16 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using NStore.Core.InMemory;
+﻿using NStore.Core.InMemory;
 using NStore.Core.Persistence;
 using NStore.Core.Processing;
 using NStore.Core.Snapshots;
 using NStore.Core.Streams;
 using NStore.Domain.Experimental;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace NStore.Domain.Tests.ExperimentalTests
@@ -100,28 +101,28 @@ namespace NStore.Domain.Tests.ExperimentalTests
         }
     }
 
-    public interface ITwitterQueryModel
+    public interface ITwitterViews
     {
         Tweet TweetById(TweetId tweetId);
         Task<IEnumerable<Tuple<string, DateTime>>> FavsOfTweetAsync(TweetId tweetId);
         IEnumerable<Tweet> TimelineOf(string userId);
     }
 
-    public class TwitterViews : ITwitterQueryModel
+    public class TwitterViews : ITwitterViews
     {
         private readonly IDictionary<TweetId, Tweet> _tweets = new Dictionary<TweetId, Tweet>();
         private readonly IDictionary<string, TimeLine> _timelines = new Dictionary<string, TimeLine>();
-        private readonly Func<string, IReadOnlyStream> _streamFactory;
+        private readonly IStreamsFactory _streams;
 
-        public TwitterViews(Func<string, IReadOnlyStream> streamFactory)
+        public TwitterViews(IPersistence persistence)
         {
-            _streamFactory = streamFactory;
+            _streams = new StreamsFactory(persistence);
         }
 
-        public Task<bool> Watch(IChunk chunk)
+        public Task<bool> Process(IChunk chunk)
         {
             this.CallNonPublicIfExists("On", chunk.Payload);
-            return Task.FromResult(true);
+            return Subscription.Continue;
         }
 
         private TimeLine GetTimeline(string userId)
@@ -154,7 +155,10 @@ namespace NStore.Domain.Tests.ExperimentalTests
 
         public async Task<IEnumerable<Tuple<string, DateTime>>> FavsOfTweetAsync(TweetId tweetId)
         {
-            var recorded = await _streamFactory($"{tweetId}/favs").RecordAsync();
+            var recorded = await _streams
+                .OpenReadOnly($"{tweetId}/favs")
+                .RecordAsync();
+
             return recorded.Data
                 .Cast<TweetFavorited>()
                 .Select(f => new Tuple<string, DateTime>(f.UserId, f.When));
@@ -167,26 +171,25 @@ namespace NStore.Domain.Tests.ExperimentalTests
     }
 
     public class TwitterEngine
+        : IDisposable
     {
-        private readonly IPersistence _persistence = new InMemoryPersistence(new InMemoryPersistenceOptions());
+        private readonly InMemoryPersistence _store = new InMemoryPersistence();
+        private readonly DefaultSnapshotStore _snapshots = new DefaultSnapshotStore(new InMemoryPersistence());
+        private readonly DefaultAggregateFactory _aggregateFactory = new DefaultAggregateFactory();
+
         private readonly DomainRuntime _runtime;
         private readonly TwitterViews _views;
-        public ITwitterQueryModel Query => _views;
+        public ITwitterViews Views => _views;
 
         public TwitterEngine()
         {
-            _views = new TwitterViews(id => new ReadOnlyStream(id, _persistence));
+            _views = new TwitterViews(_store);
             _runtime = new DomainBuilder()
-                .PersistOn(() => _persistence)
-                .WithSnapshotsOn(() => new DefaultSnapshotStore(new InMemoryPersistence(new InMemoryPersistenceOptions())))
-                .CreateAggregatesWith(() => new DefaultAggregateFactory())
-                .BroadcastTo(_views.Watch)
+                .PersistOn(() => _store)
+                .WithSnapshotsOn(() => _snapshots)
+                .CreateAggregatesWith(() => _aggregateFactory)
+                .BroadcastTo(_views.Process)
                 .Build();
-        }
-
-        public Task StopAsync()
-        {
-            return _runtime.ShutdownAsync();
         }
 
         public async Task<TweetId> PostAsync(string user, string message)
@@ -201,10 +204,12 @@ namespace NStore.Domain.Tests.ExperimentalTests
             return _runtime.PushAsync($"{tweetId}/favs", new TweetFavorited(tweetId, favoritedByUserId));
         }
 
-        public Task CatchUpAsync()
+        public Task WaitForViewsUpdateAsync(CancellationToken cancellationToken = default)
         {
-            return _runtime.CatchUpAsync();
+            return _runtime.CatchUpAsync(cancellationToken);
         }
+
+        public void Dispose() => _runtime.ShutdownAsync().Wait();
     }
 
     public class TwitterDomainTests
@@ -212,27 +217,28 @@ namespace NStore.Domain.Tests.ExperimentalTests
         [Fact]
         public async Task twitter_lite()
         {
-            var twitter = new TwitterEngine();
+            using (var twitter = new TwitterEngine())
+            {
+                var tweetId = await twitter.PostAsync("user_1", "hello twitter!");
+                await twitter.FavoriteAsync(tweetId, "user_24");
+                await twitter.FavoriteAsync(tweetId, "user_26");
 
-            var tweetId = await twitter.PostAsync("user_1", "hello twitter!");
-            await twitter.FavoriteAsync(tweetId, "user_24");
-            await twitter.FavoriteAsync(tweetId, "user_26");
+                await twitter.WaitForViewsUpdateAsync();
 
-            await twitter.CatchUpAsync();
+                var favCount = twitter.Views.TweetById(tweetId).Favs;
+                var favs = await twitter.Views.FavsOfTweetAsync(tweetId);
+                var tl = twitter.Views.TimelineOf("user_1");
 
-            var favCount = twitter.Query.TweetById(tweetId).Favs;
-            var favs = await twitter.Query.FavsOfTweetAsync(tweetId);
-            var tl = twitter.Query.TimelineOf("user_1");
-            
-            Assert.Equal(2, favCount);
-            Assert.Collection(favs, 
-                fav1 => Assert.Equal("user_24", fav1.Item1),    
-                fav2 => Assert.Equal("user_26", fav2.Item1)   
-            );
-            
-            Assert.Collection(tl,
-                tweet => Assert.Equal("hello twitter!", tweet.Text)    
-            );
+                Assert.Equal(2, favCount);
+                Assert.Collection(favs,
+                    fav1 => Assert.Equal("user_24", fav1.Item1),
+                    fav2 => Assert.Equal("user_26", fav2.Item1)
+                );
+
+                Assert.Collection(tl,
+                    tweet => Assert.Equal("hello twitter!", tweet.Text)
+                );
+            }
         }
     }
 }
