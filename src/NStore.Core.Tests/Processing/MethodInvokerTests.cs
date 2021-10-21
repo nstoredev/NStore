@@ -4,23 +4,6 @@ using Xunit;
 
 namespace NStore.Core.Tests.Processing
 {
-    internal class TargetException : Exception
-    {
-    }
-
-    internal class Target
-    {
-        public void FailPublic(object p)
-        {
-            throw new TargetException();
-        }
-
-        private void FailPrivate(object p)
-        {
-            throw new TargetException();
-        }
-    }
-
     public class MethodInvokerTests
     {
         private readonly Target _target = new Target();
