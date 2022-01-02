@@ -183,7 +183,7 @@ namespace NStore.Persistence.LiteDB
             }
         }
 
-        public Task<IChunk> RewriteAsync
+        public Task<IChunk> ReplaceAsync
         (
             long position, 
             string partitionId, 

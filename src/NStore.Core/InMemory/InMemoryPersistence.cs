@@ -270,7 +270,7 @@ namespace NStore.Core.InMemory
             return chunk;
         }
 
-        public async Task<IChunk> RewriteAsync(
+        public async Task<IChunk> ReplaceAsync(
             long position, 
             string partitionId, 
             long index, 

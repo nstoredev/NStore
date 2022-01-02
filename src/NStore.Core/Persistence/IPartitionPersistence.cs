@@ -49,13 +49,6 @@ namespace NStore.Core.Persistence
             CancellationToken cancellationToken
         );
 
-        Task<IChunk> RewriteAsync(
-            long position, 
-            string partitionId,
-            long index,
-            object payload,
-            string operationId,
-            CancellationToken cancellationToken);
 
         Task DeleteAsync(
             string partitionId,

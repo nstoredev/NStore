@@ -92,7 +92,7 @@ namespace NStore.Tpl
             return await job.Task.ConfigureAwait(false);
         }
 
-        public Task<IChunk> RewriteAsync(long position, string partitionId, long index, object payload,
+        public Task<IChunk> ReplaceAsync(long position, string partitionId, long index, object payload,
             string operationId,
             CancellationToken cancellationToken)
         {

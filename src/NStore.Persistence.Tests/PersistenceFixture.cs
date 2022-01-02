@@ -910,18 +910,18 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class RewriteTest : BasePersistenceTest
+    public class ReplaceTests : BasePersistenceTest
     {
         [Fact]
-        public async Task should_rewrite_chunk()
+        public async Task should_replace_chunk()
         {
             var chunk = await Store.AppendAsync("a", 1, "payload", "op_1");
-            var rewritten = await Store.RewriteAsync(chunk.Position, "b", 1, "new payload", "op_2", CancellationToken.None);
+            var replaced = await Store.ReplaceAsync(chunk.Position, "b", 1, "new payload", "op_2", CancellationToken.None);
             var recorder = new AllPartitionsRecorder();
            
             await Store.ReadAllAsync(0, recorder);
 
-            Assert.NotSame(chunk, rewritten);
+            Assert.NotSame(chunk, replaced);
             
             Assert.Collection(recorder.Chunks, chunk =>
             {
@@ -934,10 +934,10 @@ namespace NStore.Persistence.Tests
         }
         
         [Fact]
-        public async Task rewritten_chunk_should_not_be_found_on_original_partition()
+        public async Task previous_chunk_should_not_be_found_on_original_partition()
         {
             var chunk = await Store.AppendAsync("a", 1, "payload", "op_1");
-            var rewritten = await Store.RewriteAsync(chunk.Position, "b", 1, "new payload", "op_2", CancellationToken.None);
+            var replaced = await Store.ReplaceAsync(chunk.Position, "b", 1, "new payload", "op_2", CancellationToken.None);
             var recorder = new Recorder();
 
             await Store.ReadForwardAsync("a",0, recorder);

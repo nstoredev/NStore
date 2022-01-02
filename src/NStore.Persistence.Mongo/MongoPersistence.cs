@@ -288,7 +288,7 @@ namespace NStore.Persistence.Mongo
             }
         }
 
-        public async Task<IChunk> RewriteAsync
+        public async Task<IChunk> ReplaceAsync
         (
             long position,
             string partitionId,
