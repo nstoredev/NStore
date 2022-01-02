@@ -110,6 +110,13 @@ namespace NStore.Core.Persistence
             );
         }
 
+        public Task<IChunk> RewriteAsync(long position, string partitionId, long index, object payload,
+            string operationId,
+            CancellationToken cancellationToken)
+        {
+            throw new System.NotImplementedException();
+        }
+
         public async Task DeleteAsync(
             string partitionId,
             long fromLowerIndexInclusive,

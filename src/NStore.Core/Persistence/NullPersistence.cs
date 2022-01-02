@@ -5,6 +5,13 @@ namespace NStore.Core.Persistence
 {
     public class NullPersistence : IPersistence
     {
+        public Task<IChunk> RewriteAsync(long position, string partitionId, long index, object payload,
+            string operationId,
+            CancellationToken cancellationToken)
+        {
+            throw new System.NotImplementedException();
+        }
+
         public Task DeleteAsync(
             string partitionId,
             long fromLowerIndexInclusive,

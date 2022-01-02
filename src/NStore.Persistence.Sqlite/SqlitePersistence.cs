@@ -21,6 +21,13 @@ namespace NStore.Persistence.Sqlite
 
         public bool SupportsFillers => false;
 
+        public Task<IChunk> RewriteAsync(long position, string partitionId, long index, object payload,
+            string operationId,
+            CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
         public SqlitePersistence(SqlitePersistenceOptions options) : base(options)
         {
             _options = options;

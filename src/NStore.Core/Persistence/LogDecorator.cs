@@ -83,6 +83,16 @@ namespace NStore.Core.Persistence
             return result;
         }
 
+        public async Task<IChunk> RewriteAsync(long position, string partitionId, long index, object payload,
+            string operationId,
+            CancellationToken cancellationToken)
+        {
+            _logger.LogDebug("Start RewriteAsync({position}, {partitionId}, {index})", position, partitionId, index);
+           var chunk =  await _persistence.RewriteAsync(position, partitionId, index, payload, operationId, cancellationToken);
+           _logger.LogDebug("End RewriteAsync({position}, {partitionId}, {index})", position, partitionId, index);
+           return chunk;
+        }
+
         public async Task DeleteAsync(
             string partitionId,
             long fromLowerIndexInclusive,

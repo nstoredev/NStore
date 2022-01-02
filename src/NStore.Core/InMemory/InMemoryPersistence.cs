@@ -270,6 +270,95 @@ namespace NStore.Core.InMemory
             return chunk;
         }
 
+        public async Task<IChunk> RewriteAsync(
+            long position, 
+            string partitionId, 
+            long index, 
+            object payload,
+            string operationId,
+            CancellationToken cancellationToken)
+        {
+            if (index < 0)
+            {
+                throw new InvalidStreamIndexException(partitionId, index);
+            }
+            
+            var chunk = new MemoryChunk()
+            {
+                Position = position,
+                Index = index >= 0 ? index : position,
+                OperationId = operationId ?? Guid.NewGuid().ToString(),
+                PartitionId = partitionId,
+                Payload = _cloneFunc(payload)
+            };
+
+            await _networkSimulator.Wait().ConfigureAwait(false);
+            
+            try
+            {
+                _lockSlim.EnterWriteLock();
+                var chunkIndexInGlobalArray = position - 1;
+                if (_lastWrittenPosition < chunkIndexInGlobalArray)
+                {
+                    throw new InvalidOperationException("Chunk not found");
+                }
+
+                var previousChunk = _chunks[chunkIndexInGlobalArray];
+                if (previousChunk.Position != position)
+                {
+                    throw new Exception("Internal error. InMemory Persistence Corruption");
+                }
+
+                // write new
+                var partion = _partitions.GetOrAdd(partitionId,
+                    new InMemoryPartition(partitionId, _networkSimulator, Clone)
+                );
+
+                try
+                {
+                    var chunkWritten = partion.Write(chunk);
+                    if (!chunkWritten)
+                    {
+                        //idempotency on operationId.
+                        return null;
+                    }
+                }
+                catch (DuplicateStreamIndexException)
+                {
+                    // write empty chunk
+                    // keep same id to avoid holes in the stream
+                    chunk.PartitionId = EmptyPartitionId;
+                    chunk.Index = chunk.Position;
+                    chunk.OperationId = chunk.Position.ToString();
+                    chunk.Payload = null;
+                    _emptyInMemoryPartition.Write(chunk);
+                    
+                    // update global
+                    _chunks[chunkIndexInGlobalArray] = chunk;
+
+                    // remove old
+                    _partitions[previousChunk.PartitionId]
+                        .Delete(previousChunk.Index, previousChunk.Index);
+                
+                    throw;
+                }
+                // update global
+                _chunks[chunkIndexInGlobalArray] = chunk;
+
+                // remove old
+                _partitions[previousChunk.PartitionId]
+                    .Delete(previousChunk.Index, previousChunk.Index);
+                
+                await _networkSimulator.Wait().ConfigureAwait(false);
+
+                return chunk;
+            }
+            finally
+            {
+                _lockSlim.ExitWriteLock();
+            } 
+        }
+
         private void SetChunk(MemoryChunk chunk)
         {
             int slot = (int)chunk.Position - 1;

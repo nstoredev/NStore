@@ -183,6 +183,13 @@ namespace NStore.Persistence.LiteDB
             }
         }
 
+        public Task<IChunk> RewriteAsync(long position, string partitionId, long index, object payload,
+            string operationId,
+            CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task DeleteAsync(
             string partitionId,
             long fromLowerIndexInclusive,

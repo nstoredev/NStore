@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NStore.Core.Persistence
@@ -47,6 +48,14 @@ namespace NStore.Core.Persistence
             string operationId,
             CancellationToken cancellationToken
         );
+
+        Task<IChunk> RewriteAsync(
+            long position, 
+            string partitionId,
+            long index,
+            object payload,
+            string operationId,
+            CancellationToken cancellationToken);
 
         Task DeleteAsync(
             string partitionId,
