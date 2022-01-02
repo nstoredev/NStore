@@ -274,9 +274,9 @@ namespace NStore.Persistence.Mongo
             };
 
             using (var cursor = await _chunks
-                .FindAsync(filter, options, cancellationToken)
-                .ConfigureAwait(false)
-            )
+                       .FindAsync(filter, options, cancellationToken)
+                       .ConfigureAwait(false)
+                  )
             {
                 var lastPosition = await cursor.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
                 if (lastPosition != null)
@@ -288,11 +288,37 @@ namespace NStore.Persistence.Mongo
             }
         }
 
-        public Task<IChunk> RewriteAsync(long position, string partitionId, long index, object payload,
+        public async Task<IChunk> RewriteAsync
+        (
+            long position,
+            string partitionId,
+            long index,
+            object payload,
             string operationId,
             CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            var filterByPosition = Builders<TChunk>.Filter.Eq(x => x.Position, position);
+            var chunk = new TChunk();
+            chunk.Init(
+                position,
+                partitionId,
+                index,
+                _mongoPayloadSerializer.Serialize(payload),
+                operationId ?? Guid.NewGuid().ToString()
+            );
+            
+            var result = await _chunks.ReplaceOneAsync(
+                filterByPosition,
+                chunk, 
+                (ReplaceOptions)null, 
+                cancellationToken).ConfigureAwait(false);
+
+            if (!result.IsAcknowledged)
+            {
+                throw new MongoPersistenceException("Replace not Ackowledged");
+            }
+
+            return chunk;
         }
 
         public async Task DeleteAsync(

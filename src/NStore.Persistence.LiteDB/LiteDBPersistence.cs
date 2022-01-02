@@ -183,11 +183,34 @@ namespace NStore.Persistence.LiteDB
             }
         }
 
-        public Task<IChunk> RewriteAsync(long position, string partitionId, long index, object payload,
+        public Task<IChunk> RewriteAsync
+        (
+            long position, 
+            string partitionId, 
+            long index, 
+            object payload,
             string operationId,
             CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            var chunk = new LiteDBChunk()
+            {
+                Position = position,
+                PartitionId = partitionId,
+                Index = index,
+                OperationId = operationId ?? Guid.NewGuid().ToString(),
+                Payload = _options.PayloadSerializer.Serialize(payload)
+            };
+
+            chunk.StreamSequence = $"{chunk.PartitionId}-{chunk.Index}";
+            chunk.StreamOperation = $"{chunk.PartitionId}-{chunk.OperationId}";
+
+            var updated = _streams.Update(chunk);
+            if (!updated)
+            {
+                throw new Exception("Cannot rewrite chunk");
+            }
+
+            return Task.FromResult<IChunk>(chunk);
         }
 
         public Task DeleteAsync(
