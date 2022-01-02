@@ -39,6 +39,17 @@ namespace NStore.Persistence.Sqlite
                       SELECT last_insert_rowid();
 ";
         }
+        
+        public override string GetRewriteChunkSql()
+        {
+            return $@"UPDATE [{StreamsTableName}]
+                    SET [PartitionId] = @PartitionId,
+                        [Index] = @Index,
+                        [Payload] = @Payload,
+                        [OperationId] = @OperationId,
+                        [SerializerInfo] = @SerializerInfo
+                    WHERE [Position] = @Position";
+        }
 
         public override string GetSelectChunkByStreamAndOperation()
         {

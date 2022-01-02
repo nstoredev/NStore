@@ -246,6 +246,82 @@ namespace NStore.BaseSqlPersistence
                 _logger.LogError(ex.Message);
                 throw;
             }
+        } 
+        
+        public async Task<IChunk> RewriteAsync(
+            long position,
+            string partitionId,
+            long index,
+            object payload,
+            string operationId,
+            CancellationToken cancellationToken)
+        {
+            if (index < 0)
+            {
+                throw new InvalidStreamIndexException(partitionId, index);
+            }
+
+            try
+            {
+                var chunk = new SqlChunk()
+                {
+                    Position = position,
+                    PartitionId = partitionId,
+                    Index = index,
+                    Payload = payload,
+                    OperationId = operationId
+                };
+
+                if (chunk.OperationId == null && Options.StreamIdempotencyEnabled)
+                {
+                    chunk.OperationId = Guid.NewGuid().ToString();
+                }
+
+                var bytes = Options.Serializer.Serialize(payload, out string serializerInfo);
+                chunk.SerializerInfo = serializerInfo;
+                var sql = Options.GetRewriteChunkSql();
+
+                using (var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    using (var command = context.CreateCommand(sql))
+                    {
+                        context.AddParam(command, "@Position", position);
+                        context.AddParam(command, "@PartitionId", partitionId);
+                        context.AddParam(command, "@Index", index);
+                        if (chunk.OperationId == null)
+                        {
+                            context.AddParam(command, "@OperationId", DBNull.Value);
+                        }
+                        else
+                        {
+                            context.AddParam(command, "@OperationId", chunk.OperationId);
+                        }
+                        context.AddParam(command, "@Payload", bytes);
+                        context.AddParam(command, "@SerializerInfo", serializerInfo);
+
+                        await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+                    }
+                }
+
+                return chunk;
+            }
+            catch (Exception ex)
+            {
+                if (IsDuplicatedStreamIndex(ex))
+                {
+                    throw new DuplicateStreamIndexException(partitionId, index);
+                }
+
+                if (IsDuplicatedStreamOperation(ex))
+                {
+                    _logger.LogInformation(
+                        $"Skipped duplicated chunk on '{partitionId}' by operation id '{operationId}'");
+                    return null;
+                }
+
+                _logger.LogError(ex.Message);
+                throw;
+            }
         }
 
         protected async Task EnsureTable(CancellationToken cancellationToken)

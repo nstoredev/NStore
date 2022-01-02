@@ -23,7 +23,7 @@ namespace NStore.Persistence.MsSql
             string idempotencyConstraint = StreamIdempotencyEnabled
                 ? "NOT NULL"
                 : "NULL";
-            
+
             return $@"CREATE TABLE [{StreamsTableName}](
                 [Position] BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
                 [PartitionId] NVARCHAR(255) NOT NULL,
@@ -44,6 +44,17 @@ namespace NStore.Persistence.MsSql
                       ([PartitionId], [Index], [Payload], [OperationId], [SerializerInfo])
                       OUTPUT INSERTED.[Position] 
                       VALUES (@PartitionId, @Index, @Payload, @OperationId, @SerializerInfo)";
+        }
+
+        public override string GetRewriteChunkSql()
+        {
+            return $@"UPDATE [{StreamsTableName}]
+                    SET [PartitionId] = @PartitionId,
+                        [Index] = @Index,
+                        [Payload] = @Payload,
+                        [OperationId] = @OperationId,
+                        [SerializerInfo] = @SerializerInfo
+                    WHERE [Position] = @Position";
         }
 
         public override string GetDeleteStreamChunksSql()
