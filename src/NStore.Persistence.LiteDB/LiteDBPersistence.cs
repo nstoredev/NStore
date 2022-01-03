@@ -70,7 +70,7 @@ namespace NStore.Persistence.LiteDB
 
                     if (chunk.Payload != null)
                     {
-                        chunk.Payload = _options.PayloadSerializer.Deserialize((string) chunk.Payload);
+                        chunk.Payload = _options.PayloadSerializer.Deserialize((string)chunk.Payload);
                     }
 
                     var ok = await subscription.OnNextAsync(chunk).ConfigureAwait(false);
@@ -128,13 +128,13 @@ namespace NStore.Persistence.LiteDB
 
             if (chunk?.Payload != null)
             {
-                chunk.Payload = _options.PayloadSerializer.Deserialize((string) chunk.Payload);
+                chunk.Payload = _options.PayloadSerializer.Deserialize((string)chunk.Payload);
             }
 
-            return Task.FromResult((IChunk) chunk);
+            return Task.FromResult((IChunk)chunk);
         }
 
-        public  Task<IChunk> AppendAsync(
+        public Task<IChunk> AppendAsync(
             string partitionId,
             long index,
             object payload,
@@ -185,9 +185,9 @@ namespace NStore.Persistence.LiteDB
 
         public Task<IChunk> ReplaceAsync
         (
-            long position, 
-            string partitionId, 
-            long index, 
+            long position,
+            string partitionId,
+            long index,
             object payload,
             string operationId,
             CancellationToken cancellationToken)
@@ -203,14 +203,36 @@ namespace NStore.Persistence.LiteDB
 
             chunk.StreamSequence = $"{chunk.PartitionId}-{chunk.Index}";
             chunk.StreamOperation = $"{chunk.PartitionId}-{chunk.OperationId}";
-
-            var updated = _streams.Update(chunk);
-            if (!updated)
+            
+            try
             {
-                throw new Exception("Cannot rewrite chunk");
-            }
+                var updated = _streams.Update(chunk);
+                if (!updated)
+                {
+                    throw new Exception("Cannot rewrite chunk");
+                }
 
-            return Task.FromResult<IChunk>(chunk);
+                return Task.FromResult<IChunk>(chunk);
+            }
+            catch (LiteException ex)
+            {
+                if (ex.ErrorCode != LiteException.INDEX_DUPLICATE_KEY)
+                {
+                    throw;
+                }
+
+                if (ex.Message.Contains(nameof(chunk.StreamOperation)))
+                {
+                    return Task.FromResult((IChunk)null);
+                }
+
+                if (ex.Message.Contains(nameof(chunk.StreamSequence)))
+                {
+                    throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
+                }
+
+                throw;
+            }
         }
 
         public Task DeleteAsync(

@@ -944,5 +944,20 @@ namespace NStore.Persistence.Tests
 
             Assert.True(recorder.IsEmpty);
         }
+        
+        [Fact]
+        public async Task rewriting_partition_id_should_check_duplicate_index()
+        {
+            var chunk = await Store.AppendAsync("a", 1, "payload", "op_1");
+            await Store.AppendAsync("b", 1, "payload", "op_2");
+
+            var ex = await Assert.ThrowsAsync<DuplicateStreamIndexException>(async () =>
+            {
+                await Store.ReplaceAsync(chunk.Position, "b", 1, "new payload", "op_1", CancellationToken.None);
+            });
+            
+            Assert.Equal("b", ex.StreamId);
+            Assert.Equal(1, ex.StreamIndex);
+        }
     }
 }
