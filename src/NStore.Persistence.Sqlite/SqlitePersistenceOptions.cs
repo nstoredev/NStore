@@ -86,6 +86,16 @@ namespace NStore.Persistence.Sqlite
                       LIMIT 1";
         }
 
+        public override string GetChunkByPositionSql()
+        {
+            return $@"SELECT  
+                        [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
+                      FROM 
+                        [{this.StreamsTableName}] 
+                      WHERE 
+                          [Position] = @Position";
+        }
+        
         public override string GetCreateTableIfMissingSql()
         {
             return GetCreateTableSql();

@@ -288,7 +288,7 @@ namespace NStore.Persistence.Mongo
             }
         }
 
-        public async Task<IChunk> ReplaceAsync
+        public async Task<IChunk> ReplaceOneAsync
         (
             long position,
             string partitionId,
@@ -348,6 +348,14 @@ namespace NStore.Persistence.Mongo
 
                 throw;
             }
+        }
+
+        public async Task<IChunk> ReadOneAsync(long position, CancellationToken cancellationToken)
+        {
+            var filterByPosition = Builders<TChunk>.Filter.Eq(x => x.Position, position);
+            var cursor = await _chunks.FindAsync(filterByPosition, cancellationToken: cancellationToken);
+            var chunk = await cursor.FirstOrDefaultAsync(cancellationToken: cancellationToken);
+            return chunk;
         }
 
         public async Task DeleteAsync(

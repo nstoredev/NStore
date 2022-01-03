@@ -248,7 +248,7 @@ namespace NStore.BaseSqlPersistence
             }
         } 
         
-        public async Task<IChunk> ReplaceAsync(
+        public async Task<IChunk> ReplaceOneAsync(
             long position,
             string partitionId,
             long index,
@@ -412,6 +412,27 @@ namespace NStore.BaseSqlPersistence
                 subscription: subscription,
                 cancellationToken: cancellationToken
             ).ConfigureAwait(false);
+        }
+
+        public async Task<IChunk> ReadOneAsync(long position, CancellationToken cancellationToken)
+        {
+            using (var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false))
+            {
+                using (var command = context.CreateCommand(Options.GetChunkByPositionSql()))
+                {
+                    context.AddParam(command, "@Position", position);
+                    using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
+                    {
+                        if (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                        {
+                            var chunk = ReadChunk(reader);
+                            return chunk;
+                        }
+
+                        return null;
+                    }
+                }
+            }
         }
     }
 }

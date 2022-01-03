@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Data;
+using System.Threading;
 using System.Threading.Tasks;
 using NStore.Core.Logging;
 
@@ -83,14 +84,22 @@ namespace NStore.Core.Persistence
             return result;
         }
 
-        public async Task<IChunk> ReplaceAsync(long position, string partitionId, long index, object payload,
+        public async Task<IChunk> ReplaceOneAsync(long position, string partitionId, long index, object payload,
             string operationId,
             CancellationToken cancellationToken)
         {
             _logger.LogDebug("Start RewriteAsync({position}, {partitionId}, {index})", position, partitionId, index);
-           var chunk =  await _persistence.ReplaceAsync(position, partitionId, index, payload, operationId, cancellationToken);
+           var chunk =  await _persistence.ReplaceOneAsync(position, partitionId, index, payload, operationId, cancellationToken);
            _logger.LogDebug("End RewriteAsync({position}, {partitionId}, {index})", position, partitionId, index);
            return chunk;
+        }
+
+        public async Task<IChunk> ReadOneAsync(long position, CancellationToken cancellationToken)
+        {
+            _logger.LogDebug("Start ReadOneAsync({position})", position);
+            var chunk =  await _persistence.ReadOneAsync(position, cancellationToken);
+            _logger.LogDebug("End ReadOneAsync({position})", position);
+            return chunk;
         }
 
         public async Task DeleteAsync(

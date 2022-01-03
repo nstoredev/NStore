@@ -5,11 +5,16 @@ namespace NStore.Core.Persistence
 {
     public class NullPersistence : IPersistence
     {
-        public Task<IChunk> ReplaceAsync(long position, string partitionId, long index, object payload,
+        public Task<IChunk> ReplaceOneAsync(long position, string partitionId, long index, object payload,
             string operationId,
             CancellationToken cancellationToken)
         {
-            throw new System.NotImplementedException();
+            return Task.FromResult<IChunk>(null);
+        }
+
+        public Task<IChunk> ReadOneAsync(long position, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<IChunk>(null);
         }
 
         public Task DeleteAsync(

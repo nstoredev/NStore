@@ -33,7 +33,8 @@ namespace NStore.BaseSqlPersistence
         public abstract string GetRewriteChunkSql();
         public abstract string GetCreateTableIfMissingSql();
         public abstract string GetReadAllChunksSql(int limit);
-
+        public abstract string GetChunkByPositionSql();
+        
         public abstract string GetRangeSelectChunksSql(
             long upperIndexInclusive,
             long lowerIndexInclusive,

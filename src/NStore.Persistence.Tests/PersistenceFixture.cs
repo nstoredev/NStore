@@ -910,13 +910,47 @@ namespace NStore.Persistence.Tests
         }
     }
 
+    public class FindOneTests : BasePersistenceTest
+    {
+        [Fact]
+        public async Task should_return_null_on_chunk_not_found()
+        {
+            var notFound = await Store.ReadOneAsync(1, CancellationToken.None);
+            Assert.Null(notFound);
+        }
+
+        [Fact]
+        public async Task should_return_chunk_by_position()
+        {
+            var first = await Store.AppendAsync("s", 1, "payload");
+            var second= await Store.AppendAsync("s", 2, "payload");
+            var found = await Store.ReadOneAsync(second.Position, CancellationToken.None);
+            
+            Assert.NotNull(found);
+            Assert.Equal(second.Position, found.Position);
+            Assert.Equal("s", found.PartitionId);
+            Assert.Equal(2, found.Index);
+        }
+
+        [Fact]
+        public async Task should_not_find_deleted_chunk()
+        {
+            var first = await Store.AppendAsync("s", 1, "payload");
+            await Store.DeleteAsync("s", 1, 1);
+
+            var notFound = await Store.ReadOneAsync(first.Position, CancellationToken.None);
+            
+            Assert.Null(notFound);
+        }
+    }
+
     public class ReplaceTests : BasePersistenceTest
     {
         [Fact]
         public async Task should_replace_chunk()
         {
             var chunk = await Store.AppendAsync("a", 1, "payload", "op_1");
-            var replaced = await Store.ReplaceAsync(chunk.Position, "b", 1, "new payload", "op_2", CancellationToken.None);
+            var replaced = await Store.ReplaceOneAsync(chunk.Position, "b", 1, "new payload", "op_2", CancellationToken.None);
             var recorder = new AllPartitionsRecorder();
            
             await Store.ReadAllAsync(0, recorder);
@@ -937,7 +971,7 @@ namespace NStore.Persistence.Tests
         public async Task previous_chunk_should_not_be_found_on_original_partition()
         {
             var chunk = await Store.AppendAsync("a", 1, "payload", "op_1");
-            var replaced = await Store.ReplaceAsync(chunk.Position, "b", 1, "new payload", "op_2", CancellationToken.None);
+            var replaced = await Store.ReplaceOneAsync(chunk.Position, "b", 1, "new payload", "op_2", CancellationToken.None);
             var recorder = new Recorder();
 
             await Store.ReadForwardAsync("a",0, recorder);
@@ -953,11 +987,31 @@ namespace NStore.Persistence.Tests
 
             var ex = await Assert.ThrowsAsync<DuplicateStreamIndexException>(async () =>
             {
-                await Store.ReplaceAsync(chunk.Position, "b", 1, "new payload", "op_1", CancellationToken.None);
+                await Store.ReplaceOneAsync(chunk.Position, "b", 1, "new payload", "op_1", CancellationToken.None);
             });
             
             Assert.Equal("b", ex.StreamId);
             Assert.Equal(1, ex.StreamIndex);
+        }
+        
+        [Fact]
+        public async Task rewriting_partition_id_should_check_operation_id()
+        {
+            var chunk = await Store.AppendAsync("a", 1, "payload", "op_1");
+            await Store.AppendAsync("b", 2, "payload", "op_2");
+            
+            var replaced = await Store.ReplaceOneAsync(chunk.Position, "b", 1, "new payload", "op_2", CancellationToken.None);
+            var original = await Store.ReadOneAsync(chunk.Position, CancellationToken.None);
+
+            Assert.Null(replaced);
+
+            Assert.NotNull(original);
+            Assert.NotSame(chunk, original);
+            Assert.Equal(chunk.Position, original.Position);
+            Assert.Equal("a", original.PartitionId);
+            Assert.Equal(1, original.Index);
+            Assert.Equal("payload", original.Payload as string);
+            Assert.Equal("op_1", original.OperationId);
         }
     }
 }

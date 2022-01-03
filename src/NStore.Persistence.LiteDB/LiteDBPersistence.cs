@@ -183,7 +183,7 @@ namespace NStore.Persistence.LiteDB
             }
         }
 
-        public Task<IChunk> ReplaceAsync
+        public Task<IChunk> ReplaceOneAsync
         (
             long position,
             string partitionId,
@@ -250,13 +250,30 @@ namespace NStore.Persistence.LiteDB
             return Task.CompletedTask;
         }
 
-        public Task<IChunk> ReadByOperationIdAsync(string partitionId, string operationId,
+        public Task<IChunk> ReadByOperationIdAsync(
+            string partitionId, 
+            string operationId,
             CancellationToken cancellationToken)
         {
             var key = $"{partitionId}-{operationId}";
 
-            IChunk chunk = _streams.Query().Where(x => x.StreamOperation == key).FirstOrDefault();
-            return Task.FromResult(chunk);
+            var chunk = _streams.Query().Where(x => x.StreamOperation == key).FirstOrDefault();
+            if (chunk?.Payload != null)
+            {
+                chunk.Payload = _options.PayloadSerializer.Deserialize((string)chunk.Payload);
+            }
+            
+            return Task.FromResult<IChunk>(chunk);
+        }
+
+        public Task<IChunk> ReadOneAsync(long position, CancellationToken cancellationToken)
+        {
+            var chunk = _streams.Query().Where(x => x.Position == position).FirstOrDefault();
+            if (chunk?.Payload != null)
+            {
+                chunk.Payload = _options.PayloadSerializer.Deserialize((string)chunk.Payload);
+            }
+            return Task.FromResult<IChunk>(chunk);
         }
 
         public async Task ReadAllAsync

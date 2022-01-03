@@ -183,6 +183,17 @@ END
                           [Position]";
         }
 
+        public override string GetChunkByPositionSql()
+        {
+            return $@"SELECT  
+                        [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
+                      FROM 
+                        [{this.StreamsTableName}] 
+                      WHERE 
+                          [Position] = @Position";
+        }
+
+
         public override string GetSelectLastPositionSql()
         {
             return $@"SELECT TOP 1

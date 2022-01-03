@@ -17,9 +17,13 @@ namespace NStore.Core.Persistence
             StoreScanCounter = new TaskProfilingInfo("Store Scan", "chunks read");
             ReadLastCounter = new TaskProfilingInfo("Read last position", "lastposition");
             ReadSingleBackwardCounter = new TaskProfilingInfo("Read single backward");
+            ReadOneCounter = new TaskProfilingInfo("Read one");
+            ReplaceOneCounter = new TaskProfilingInfo("Replace one");
         }
 
         public TaskProfilingInfo PersistCounter { get; }
+        public TaskProfilingInfo ReplaceOneCounter { get; }
+        public TaskProfilingInfo ReadOneCounter { get; }
         public TaskProfilingInfo ReadSingleBackwardCounter { get; }
         public TaskProfilingInfo DeleteCounter { get; }
         public TaskProfilingInfo StoreScanCounter { get; }
@@ -110,11 +114,24 @@ namespace NStore.Core.Persistence
             );
         }
 
-        public Task<IChunk> ReplaceAsync(long position, string partitionId, long index, object payload,
+        public Task<IChunk> ReplaceOneAsync(
+            long position, 
+            string partitionId, 
+            long index, 
+            object payload,
             string operationId,
             CancellationToken cancellationToken)
         {
-            throw new System.NotImplementedException();
+            return ReplaceOneCounter.CaptureAsync(() =>
+                _persistence.ReplaceOneAsync(position, partitionId, index, payload, operationId, cancellationToken)
+            );
+        }
+
+        public Task<IChunk> ReadOneAsync(long position, CancellationToken cancellationToken)
+        {
+            return ReadOneCounter.CaptureAsync(() =>
+                _persistence.ReadOneAsync(position, cancellationToken)
+            );
         }
 
         public async Task DeleteAsync(

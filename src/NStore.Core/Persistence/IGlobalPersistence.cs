@@ -33,12 +33,23 @@ namespace NStore.Core.Persistence
         /// <param name="operationId">New Opeartion Id</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns></returns>
-        Task<IChunk> ReplaceAsync(
+        Task<IChunk> ReplaceOneAsync(
             long position, 
             string partitionId,
             long index,
             object payload,
             string operationId,
+            CancellationToken cancellationToken
+        );
+
+        /// <summary>
+        /// Read a single chunk given the global position
+        /// </summary>
+        /// <param name="position">Global position</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns>Chunk at Global Position</returns>
+        Task<IChunk> ReadOneAsync(
+            long position,
             CancellationToken cancellationToken
         );
     }

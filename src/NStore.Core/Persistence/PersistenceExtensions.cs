@@ -206,7 +206,7 @@ namespace NStore.Core.Persistence
             object payload
         )
         {
-            return persistence.ReplaceAsync(position, partitionId, index, payload, null, CancellationToken.None);
+            return persistence.ReplaceOneAsync(position, partitionId, index, payload, null, CancellationToken.None);
         }
 
     }
