@@ -915,7 +915,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_return_null_on_chunk_not_found()
         {
-            var notFound = await Store.ReadOneAsync(1, CancellationToken.None);
+            var notFound = await Store.ReadOneAsync(1);
             Assert.Null(notFound);
         }
 
@@ -924,7 +924,7 @@ namespace NStore.Persistence.Tests
         {
             var first = await Store.AppendAsync("s", 1, "payload");
             var second= await Store.AppendAsync("s", 2, "payload");
-            var found = await Store.ReadOneAsync(second.Position, CancellationToken.None);
+            var found = await Store.ReadOneAsync(second.Position);
             
             Assert.NotNull(found);
             Assert.Equal(second.Position, found.Position);
@@ -938,7 +938,7 @@ namespace NStore.Persistence.Tests
             var first = await Store.AppendAsync("s", 1, "payload");
             await Store.DeleteAsync("s", 1, 1);
 
-            var notFound = await Store.ReadOneAsync(first.Position, CancellationToken.None);
+            var notFound = await Store.ReadOneAsync(first.Position);
             
             Assert.Null(notFound);
         }
@@ -1001,7 +1001,7 @@ namespace NStore.Persistence.Tests
             await Store.AppendAsync("b", 2, "payload", "op_2");
             
             var replaced = await Store.ReplaceOneAsync(chunk.Position, "b", 1, "new payload", "op_2", CancellationToken.None);
-            var original = await Store.ReadOneAsync(chunk.Position, CancellationToken.None);
+            var original = await Store.ReadOneAsync(chunk.Position);
 
             Assert.Null(replaced);
 

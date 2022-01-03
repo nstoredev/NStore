@@ -198,7 +198,7 @@ namespace NStore.Core.Persistence
             return persistence.ReadAllByOperationIdAsync(operationId, subscription, CancellationToken.None);
         }
         
-        public static Task<IChunk> RewriteAsync(
+        public static Task<IChunk> ReplaceOneAsync(
             this IPersistence persistence,
             long position,
             string partitionId,
@@ -209,5 +209,12 @@ namespace NStore.Core.Persistence
             return persistence.ReplaceOneAsync(position, partitionId, index, payload, null, CancellationToken.None);
         }
 
+        public static Task<IChunk> ReadOneAsync(
+            this IPersistence persistence,
+            long position
+        )
+        {
+            return persistence.ReadOneAsync(position, CancellationToken.None);
+        }
     }
 }
