@@ -56,6 +56,7 @@ namespace NStore.Persistence.Tests
         protected ISubscription EmptySubscription => new LambdaSubscription(_ => Task.FromResult(true));
 
         #region IDisposable Support
+
         private bool _disposedValue = false; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
@@ -85,6 +86,7 @@ namespace NStore.Persistence.Tests
             Dispose(true);
             GC.SuppressFinalize(this);
         }
+
         #endregion
     }
 
@@ -173,14 +175,16 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_return_null_on_missing_operation()
         {
-            var chunk = await Store.ReadByOperationIdAsync("stream_1", "nop", CancellationToken.None).ConfigureAwait(false);
+            var chunk = await Store.ReadByOperationIdAsync("stream_1", "nop", CancellationToken.None)
+                .ConfigureAwait(false);
             Assert.Null(chunk);
         }
 
         [Fact]
         public async Task should_return_index_1_for_operation_1()
         {
-            var chunk = await Store.ReadByOperationIdAsync("stream_1", "operation_1", CancellationToken.None).ConfigureAwait(false);
+            var chunk = await Store.ReadByOperationIdAsync("stream_1", "operation_1", CancellationToken.None)
+                .ConfigureAwait(false);
             Assert.NotNull(chunk);
             Assert.Equal(1, chunk.Index);
         }
@@ -188,7 +192,8 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_return_index_2_for_operation_2()
         {
-            var chunk = await Store.ReadByOperationIdAsync("stream_1", "operation_2", CancellationToken.None).ConfigureAwait(false);
+            var chunk = await Store.ReadByOperationIdAsync("stream_1", "operation_2", CancellationToken.None)
+                .ConfigureAwait(false);
             Assert.NotNull(chunk);
             Assert.Equal(2, chunk.Index);
         }
@@ -197,7 +202,8 @@ namespace NStore.Persistence.Tests
         public async Task should_find_operation_on_stream_1_2_3()
         {
             var recorder = new Recorder();
-            await Store.ReadAllByOperationIdAsync("operation_1", recorder, CancellationToken.None).ConfigureAwait(false);
+            await Store.ReadAllByOperationIdAsync("operation_1", recorder, CancellationToken.None)
+                .ConfigureAwait(false);
 
             Assert.Collection(recorder.Chunks,
                 chunk => Assert.Equal("p1", chunk.Payload),
@@ -396,7 +402,8 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task InsertByteArray()
         {
-            await Store.AppendAsync("BA", 0, System.Text.Encoding.UTF8.GetBytes("this is a test")).ConfigureAwait(false);
+            await Store.AppendAsync("BA", 0, System.Text.Encoding.UTF8.GetBytes("this is a test"))
+                .ConfigureAwait(false);
 
             byte[] payload = null;
             await Store.ReadForwardAsync("BA", 0, new LambdaSubscription(data =>
@@ -661,7 +668,8 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task on_read_forward()
         {
-            await Store.ReadForwardAsync("a", fromLowerIndexInclusive: 1, subscription: _subscription).ConfigureAwait(false);
+            await Store.ReadForwardAsync("a", fromLowerIndexInclusive: 1, subscription: _subscription)
+                .ConfigureAwait(false);
             Assert.True(1 == _startedAt, _testRunId + ": start position " + _startedAt);
             Assert.True(2 == _completedAt, _testRunId + ": complete position " + _completedAt);
         }
@@ -669,7 +677,8 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task on_read_backward()
         {
-            await Store.ReadBackwardAsync("a", fromUpperIndexInclusive: 100, subscription: _subscription).ConfigureAwait(false);
+            await Store.ReadBackwardAsync("a", fromUpperIndexInclusive: 100, subscription: _subscription)
+                .ConfigureAwait(false);
             Assert.True(100 == _startedAt, _testRunId + ": start position " + _startedAt);
             Assert.True(1 == _completedAt, _testRunId + ": complete position " + _completedAt);
         }
@@ -800,7 +809,8 @@ namespace NStore.Persistence.Tests
         [InlineData(8, true)]
         public async Task polling_client_should_not_miss_data(int parallelism, bool autopolling)
         {
-            _logger.LogDebug("Starting with {Parallelism} workers and Autopolling {Autopolling}", parallelism, autopolling);
+            _logger.LogDebug("Starting with {Parallelism} workers and Autopolling {Autopolling}", parallelism,
+                autopolling);
 
             var sequenceChecker = new StrictSequenceChecker($"Workers {parallelism} autopolling {autopolling}");
             var poller = new PollingClient(Store, 0, sequenceChecker, this.LoggerFactory)
@@ -817,13 +827,12 @@ namespace NStore.Persistence.Tests
 
             const int range = 1000;
 
-            var producer = new ActionBlock<int>(async i =>
-            {
-                await Store.AppendAsync("p", i, "demo", "op#" + i).ConfigureAwait(false);
-            }, new ExecutionDataflowBlockOptions()
-            {
-                MaxDegreeOfParallelism = parallelism
-            });
+            var producer = new ActionBlock<int>(
+                async i => { await Store.AppendAsync("p", i, "demo", "op#" + i).ConfigureAwait(false); },
+                new ExecutionDataflowBlockOptions()
+                {
+                    MaxDegreeOfParallelism = parallelism
+                });
 
             _logger.LogDebug("Started pushing data: {elements} elements", range);
 
@@ -849,7 +858,8 @@ namespace NStore.Persistence.Tests
             await poller.Poll(timeout.Token).ConfigureAwait(false);
             _logger.LogDebug("Polling to end - done");
 
-            Assert.True(poller.Position == sequenceChecker.Position, "Sequence " + sequenceChecker.Position + " != Position " + poller.Position);
+            Assert.True(poller.Position == sequenceChecker.Position,
+                "Sequence " + sequenceChecker.Position + " != Position " + poller.Position);
             Assert.True(range == poller.Position, "Poller @" + poller.Position);
             Assert.True(range == sequenceChecker.Position, "Sequence @" + sequenceChecker.Position);
         }
@@ -897,6 +907,111 @@ namespace NStore.Persistence.Tests
         {
             Console.WriteLine($"Error [{_configMessage}]: {ex.Message}\n{ex.StackTrace}");
             throw ex;
+        }
+    }
+
+    public class FindOneTests : BasePersistenceTest
+    {
+        [Fact]
+        public async Task should_return_null_on_chunk_not_found()
+        {
+            var notFound = await Store.ReadOneAsync(1);
+            Assert.Null(notFound);
+        }
+
+        [Fact]
+        public async Task should_return_chunk_by_position()
+        {
+            var first = await Store.AppendAsync("s", 1, "payload");
+            var second= await Store.AppendAsync("s", 2, "payload");
+            var found = await Store.ReadOneAsync(second.Position);
+            
+            Assert.NotNull(found);
+            Assert.Equal(second.Position, found.Position);
+            Assert.Equal("s", found.PartitionId);
+            Assert.Equal(2, found.Index);
+        }
+
+        [Fact]
+        public async Task should_not_find_deleted_chunk()
+        {
+            var first = await Store.AppendAsync("s", 1, "payload");
+            await Store.DeleteAsync("s", 1, 1);
+
+            var notFound = await Store.ReadOneAsync(first.Position);
+            
+            Assert.Null(notFound);
+        }
+    }
+
+    public class ReplaceTests : BasePersistenceTest
+    {
+        [Fact]
+        public async Task should_replace_chunk()
+        {
+            var chunk = await Store.AppendAsync("a", 1, "payload", "op_1");
+            var replaced = await Store.ReplaceOneAsync(chunk.Position, "b", 1, "new payload", "op_2", CancellationToken.None);
+            var recorder = new AllPartitionsRecorder();
+           
+            await Store.ReadAllAsync(0, recorder);
+
+            Assert.NotSame(chunk, replaced);
+            
+            Assert.Collection(recorder.Chunks, c =>
+            {
+                Assert.Equal(1, c.Position);
+                Assert.Equal("b", c.PartitionId);
+                Assert.Equal(1, c.Index);
+                Assert.Equal("new payload", c.Payload as string);
+                Assert.Equal("op_2", c.OperationId );
+            });
+        }
+        
+        [Fact]
+        public async Task previous_chunk_should_not_be_found_on_original_partition()
+        {
+            var chunk = await Store.AppendAsync("a", 1, "payload", "op_1");
+            var replaced = await Store.ReplaceOneAsync(chunk.Position, "b", 1, "new payload", "op_2", CancellationToken.None);
+            var recorder = new Recorder();
+
+            await Store.ReadForwardAsync("a",0, recorder);
+
+            Assert.True(recorder.IsEmpty);
+        }
+        
+        [Fact]
+        public async Task rewriting_partition_id_should_check_duplicate_index()
+        {
+            var chunk = await Store.AppendAsync("a", 1, "payload", "op_1");
+            await Store.AppendAsync("b", 1, "payload", "op_2");
+
+            var ex = await Assert.ThrowsAsync<DuplicateStreamIndexException>(async () =>
+            {
+                await Store.ReplaceOneAsync(chunk.Position, "b", 1, "new payload", "op_1", CancellationToken.None);
+            });
+            
+            Assert.Equal("b", ex.StreamId);
+            Assert.Equal(1, ex.StreamIndex);
+        }
+        
+        [Fact]
+        public async Task rewriting_partition_id_should_check_operation_id()
+        {
+            var chunk = await Store.AppendAsync("a", 1, "payload", "op_1");
+            await Store.AppendAsync("b", 2, "payload", "op_2");
+            
+            var replaced = await Store.ReplaceOneAsync(chunk.Position, "b", 1, "new payload", "op_2", CancellationToken.None);
+            var original = await Store.ReadOneAsync(chunk.Position);
+
+            Assert.Null(replaced);
+
+            Assert.NotNull(original);
+            Assert.NotSame(chunk, original);
+            Assert.Equal(chunk.Position, original.Position);
+            Assert.Equal("a", original.PartitionId);
+            Assert.Equal(1, original.Index);
+            Assert.Equal("payload", original.Payload as string);
+            Assert.Equal("op_1", original.OperationId);
         }
     }
 }

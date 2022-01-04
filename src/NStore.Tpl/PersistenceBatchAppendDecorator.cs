@@ -92,6 +92,18 @@ namespace NStore.Tpl
             return await job.Task.ConfigureAwait(false);
         }
 
+        public Task<IChunk> ReplaceOneAsync(long position, string partitionId, long index, object payload,
+            string operationId,
+            CancellationToken cancellationToken)
+        {
+            return _persistence.ReplaceOneAsync(position, partitionId, index, payload, operationId, cancellationToken);
+        }
+
+        public Task<IChunk> ReadOneAsync(long position, CancellationToken cancellationToken)
+        {
+            return _persistence.ReadOneAsync(position, cancellationToken);
+        }
+
         public Task DeleteAsync(string partitionId, long fromLowerIndexInclusive, long toUpperIndexInclusive,
             CancellationToken cancellationToken)
         {

@@ -70,7 +70,7 @@ namespace NStore.Persistence.LiteDB
 
                     if (chunk.Payload != null)
                     {
-                        chunk.Payload = _options.PayloadSerializer.Deserialize((string) chunk.Payload);
+                        chunk.Payload = _options.PayloadSerializer.Deserialize((string)chunk.Payload);
                     }
 
                     var ok = await subscription.OnNextAsync(chunk).ConfigureAwait(false);
@@ -128,13 +128,13 @@ namespace NStore.Persistence.LiteDB
 
             if (chunk?.Payload != null)
             {
-                chunk.Payload = _options.PayloadSerializer.Deserialize((string) chunk.Payload);
+                chunk.Payload = _options.PayloadSerializer.Deserialize((string)chunk.Payload);
             }
 
-            return Task.FromResult((IChunk) chunk);
+            return Task.FromResult((IChunk)chunk);
         }
 
-        public  Task<IChunk> AppendAsync(
+        public Task<IChunk> AppendAsync(
             string partitionId,
             long index,
             object payload,
@@ -183,6 +183,58 @@ namespace NStore.Persistence.LiteDB
             }
         }
 
+        public Task<IChunk> ReplaceOneAsync
+        (
+            long position,
+            string partitionId,
+            long index,
+            object payload,
+            string operationId,
+            CancellationToken cancellationToken)
+        {
+            var chunk = new LiteDBChunk()
+            {
+                Position = position,
+                PartitionId = partitionId,
+                Index = index,
+                OperationId = operationId ?? Guid.NewGuid().ToString(),
+                Payload = _options.PayloadSerializer.Serialize(payload)
+            };
+
+            chunk.StreamSequence = $"{chunk.PartitionId}-{chunk.Index}";
+            chunk.StreamOperation = $"{chunk.PartitionId}-{chunk.OperationId}";
+            
+            try
+            {
+                var updated = _streams.Update(chunk);
+                if (!updated)
+                {
+                    throw new Exception("Cannot rewrite chunk");
+                }
+
+                return Task.FromResult<IChunk>(chunk);
+            }
+            catch (LiteException ex)
+            {
+                if (ex.ErrorCode != LiteException.INDEX_DUPLICATE_KEY)
+                {
+                    throw;
+                }
+
+                if (ex.Message.Contains(nameof(chunk.StreamOperation)))
+                {
+                    return Task.FromResult((IChunk)null);
+                }
+
+                if (ex.Message.Contains(nameof(chunk.StreamSequence)))
+                {
+                    throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
+                }
+
+                throw;
+            }
+        }
+
         public Task DeleteAsync(
             string partitionId,
             long fromLowerIndexInclusive,
@@ -198,13 +250,30 @@ namespace NStore.Persistence.LiteDB
             return Task.CompletedTask;
         }
 
-        public Task<IChunk> ReadByOperationIdAsync(string partitionId, string operationId,
+        public Task<IChunk> ReadByOperationIdAsync(
+            string partitionId, 
+            string operationId,
             CancellationToken cancellationToken)
         {
             var key = $"{partitionId}-{operationId}";
 
-            IChunk chunk = _streams.Query().Where(x => x.StreamOperation == key).FirstOrDefault();
-            return Task.FromResult(chunk);
+            var chunk = _streams.Query().Where(x => x.StreamOperation == key).FirstOrDefault();
+            if (chunk?.Payload != null)
+            {
+                chunk.Payload = _options.PayloadSerializer.Deserialize((string)chunk.Payload);
+            }
+            
+            return Task.FromResult<IChunk>(chunk);
+        }
+
+        public Task<IChunk> ReadOneAsync(long position, CancellationToken cancellationToken)
+        {
+            var chunk = _streams.Query().Where(x => x.Position == position).FirstOrDefault();
+            if (chunk?.Payload != null)
+            {
+                chunk.Payload = _options.PayloadSerializer.Deserialize((string)chunk.Payload);
+            }
+            return Task.FromResult<IChunk>(chunk);
         }
 
         public async Task ReadAllAsync

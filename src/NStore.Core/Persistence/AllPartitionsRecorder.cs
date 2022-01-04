@@ -8,7 +8,7 @@ namespace NStore.Core.Persistence
     {
         private readonly IList<IChunk> _data = new List<IChunk>();
         public int Length => _data.Count;
-
+        public IEnumerable<IChunk> Chunks => _data;
         public void Replay(Action<long, string, long, object> action)
         {
             Replay(action, 0);
