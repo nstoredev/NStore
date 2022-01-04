@@ -46,7 +46,7 @@ namespace NStore.Persistence.MsSql
                       VALUES (@PartitionId, @Index, @Payload, @OperationId, @SerializerInfo)";
         }
 
-        public override string GetRewriteChunkSql()
+        public override string GetReplaceChunkSql()
         {
             return $@"UPDATE [{StreamsTableName}]
                     SET [PartitionId] = @PartitionId,

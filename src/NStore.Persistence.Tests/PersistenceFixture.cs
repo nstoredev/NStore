@@ -957,13 +957,13 @@ namespace NStore.Persistence.Tests
 
             Assert.NotSame(chunk, replaced);
             
-            Assert.Collection(recorder.Chunks, chunk =>
+            Assert.Collection(recorder.Chunks, c =>
             {
-                Assert.Equal(1, chunk.Position);
-                Assert.Equal("b", chunk.PartitionId);
-                Assert.Equal(1, chunk.Index);
-                Assert.Equal("new payload", chunk.Payload as string);
-                Assert.Equal("op_2", chunk.OperationId );
+                Assert.Equal(1, c.Position);
+                Assert.Equal("b", c.PartitionId);
+                Assert.Equal(1, c.Index);
+                Assert.Equal("new payload", c.Payload as string);
+                Assert.Equal("op_2", c.OperationId );
             });
         }
         

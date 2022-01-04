@@ -40,7 +40,7 @@ namespace NStore.Persistence.Sqlite
 ";
         }
         
-        public override string GetRewriteChunkSql()
+        public override string GetReplaceChunkSql()
         {
             return $@"UPDATE [{StreamsTableName}]
                     SET [PartitionId] = @PartitionId,

@@ -279,7 +279,7 @@ namespace NStore.BaseSqlPersistence
 
                 var bytes = Options.Serializer.Serialize(payload, out string serializerInfo);
                 chunk.SerializerInfo = serializerInfo;
-                var sql = Options.GetRewriteChunkSql();
+                var sql = Options.GetReplaceChunkSql();
 
                 using (var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false))
                 {
