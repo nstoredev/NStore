@@ -18,7 +18,8 @@ namespace NStore.Domain.Tests
         protected IStreamsFactory Streams => _streams ?? (_streams = new StreamsFactory(Persistence));
         protected IPersistence _persistence;
         protected IPersistence Persistence => _persistence ?? (_persistence = new InMemoryPersistence(new InMemoryPersistenceOptions()));
-        private IAggregateFactory AggregateFactory { get; }
+        protected IAggregateFactory AggregateFactory { get; set; }
+
         protected ISnapshotStore Snapshots { get; set; }
         private IRepository _repository;
         protected IRepository Repository => _repository ?? (_repository = CreateRepository());
@@ -401,6 +402,47 @@ namespace NStore.Domain.Tests
         }
     }
 
+    /// <summary>
+    /// Verify that we can clear the repository when a concurrency exception is thrown
+    /// and we can re-use the same instance to reload the aggregate e retry the operation.
+    /// </summary>
+    public class with_wrong_aggregate_factory : BaseRepositoryTest
+    {
+        private class MyAggregateFactory : IAggregateFactory
+        {
+            private readonly Ticket _aggregateToReturn;
+
+            public MyAggregateFactory(Ticket aggregateToReturn)
+            {
+                _aggregateToReturn = aggregateToReturn;
+            }
+
+            public T Create<T>() where T : IAggregate
+            {
+                throw new NotImplementedException();
+            }
+
+            public IAggregate Create(Type aggregateType)
+            {
+                return _aggregateToReturn;
+            }
+        }
+
+        [Fact]
+        public async Task when_factory_gives_wrong_aggregate()
+        {
+            //Arrange, for some error aggregate factory will return an initialized aggregate with an id.
+            base.AggregateFactory = new MyAggregateFactory(Ticket.CreateNew("Ticket_2"));
+
+            //Act and assert, we are trying to retrieve Ticket_1 but the factory will return a fully aggregate with id Ticket_2
+            //we expect an exception to be thrown.
+            await Assert.ThrowsAsync<AggregateAlreadyInitializedException>(async () =>
+            {
+                await Repository.GetByIdAsync<Ticket>("Ticket_1").ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
+    }
+
     public class with_repository : BaseRepositoryTest
     {
         [Fact]
@@ -409,7 +451,7 @@ namespace NStore.Domain.Tests
             // arrange
             var ticket = Ticket.CreateNew("Ticket_1");
             ticket.Sale();
-            
+
             // act
             await Repository.SaveAsync(ticket, "new");
 
@@ -428,19 +470,19 @@ namespace NStore.Domain.Tests
             var ticket = Ticket.CreateNew("Ticket_1");
             ticket.Sale();
             await Repository.SaveAsync(ticket, "new");
-            
+
             // act
             ticket.Refund();
             await Repository.SaveAsync(ticket, "update");
-            
+
             // assert
             var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
 
             Assert.NotNull(chunk);
             Assert.IsType<Changeset>(chunk.Payload);
             Assert.Equal(2, ((Changeset)chunk.Payload).AggregateVersion);
-            
         }
     }
 }
+
 #pragma warning restore S101 // Types should be named in camel case

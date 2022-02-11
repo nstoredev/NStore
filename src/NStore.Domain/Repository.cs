@@ -65,6 +65,14 @@ namespace NStore.Domain
             {
                 aggregate.Init(id);
             }
+            else
+            {
+                // factory gave us already initialized aggregate?, it is strange, lets check the id.
+                if (aggregate.Id != id)
+                {
+                    throw new AggregateAlreadyInitializedException(aggregateType, id);
+                }
+            }
 
             _trackingAggregates.Add(id, aggregate);
             var stream = OpenStream(id);
