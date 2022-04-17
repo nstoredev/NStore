@@ -14,8 +14,8 @@
       <Link>DefaultSnapshotStoreTests.cs</Link>
     </Compile>
     <Compile Include="..\NStore.Persistence.Tests\PersistenceDebugExtensions.cs" Link="PersistenceDebugExtensions.cs" />
-    <Compile Include="..\NStore.Persistence.Tests\PersistenceFixture.cs">
-      <Link>PersistenceFixture.cs</Link>
+    <Compile Include="..\NStore.Persistence.Tests\StoreFixture.cs">
+      <Link>StoreFixture.cs</Link>
     </Compile>
     <Compile Include="..\NStore.Persistence.Tests\StreamTests.cs">
       <Link>StreamTests.cs</Link>

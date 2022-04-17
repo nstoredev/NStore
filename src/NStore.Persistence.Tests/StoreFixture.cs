@@ -26,7 +26,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public abstract partial class BasePersistenceTest : IDisposable
+    public abstract partial class BaseStoreTest : IDisposable
     {
         private static int _staticId = 0;
         protected readonly int _testRunId;
@@ -37,7 +37,7 @@ namespace NStore.Persistence.Tests
         protected IEnhancedPersistence Batcher => _store as IEnhancedPersistence;
         protected readonly IPersistence _store;
 
-        protected BasePersistenceTest(bool autoCreateStore = true)
+        protected BaseStoreTest(bool autoCreateStore = true)
         {
             _testRunId = Interlocked.Increment(ref _staticId);
 
@@ -90,7 +90,7 @@ namespace NStore.Persistence.Tests
         #endregion
     }
 
-    public class WriteTests : BasePersistenceTest
+    public class WriteTests : BaseStoreTest
     {
         [Fact]
         public async Task can_insert_at_first_index()
@@ -107,7 +107,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class trying_to_persist_with_negative_index : BasePersistenceTest
+    public class trying_to_persist_with_negative_index : BaseStoreTest
     {
         [Fact]
         public async Task should_throw()
@@ -122,7 +122,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class insert_at_last_index : BasePersistenceTest
+    public class insert_at_last_index : BaseStoreTest
     {
         [Fact]
         public async Task should_work()
@@ -139,7 +139,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class insert_duplicate_chunk_index : BasePersistenceTest
+    public class insert_duplicate_chunk_index : BaseStoreTest
     {
         [Fact]
         public async Task should_throw()
@@ -157,7 +157,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class query_by_operation_id : BasePersistenceTest
+    public class query_by_operation_id : BaseStoreTest
     {
         public query_by_operation_id() : base()
         {
@@ -222,7 +222,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class ScanTest : BasePersistenceTest
+    public class ScanTest : BaseStoreTest
     {
         public ScanTest() : base()
         {
@@ -370,7 +370,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class read_last_position : BasePersistenceTest
+    public class read_last_position : BaseStoreTest
     {
         [Fact]
         public async Task on_empty_store_should_be_equal_zero()
@@ -397,7 +397,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class ByteArrayPersistenceTest : BasePersistenceTest
+    public class ByteArrayStoreTest : BaseStoreTest
     {
         [Fact]
         public async Task InsertByteArray()
@@ -417,7 +417,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class IdempotencyTest : BasePersistenceTest
+    public class IdempotencyTest : BaseStoreTest
     {
         [Fact]
         public async Task cannot_append_same_operation_twice_on_same_stream()
@@ -461,7 +461,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class DeleteStreamTest : BasePersistenceTest
+    public class DeleteStreamTest : BaseStoreTest
     {
         protected DeleteStreamTest() : base()
         {
@@ -567,7 +567,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class deleted_chunks_management : BasePersistenceTest
+    public class deleted_chunks_management : BaseStoreTest
     {
         [Fact]
         public async Task deleted_chunks_should_be_hidden_from_scan()
@@ -626,7 +626,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class subscription_events_should_be_signaled : BasePersistenceTest
+    public class subscription_events_should_be_signaled : BaseStoreTest
     {
         private readonly ChunkProcessor _continueToEnd = _ => Task.FromResult(true);
         private readonly LambdaSubscription _subscription;
@@ -684,7 +684,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class exceptions_should_be_signaled : BasePersistenceTest
+    public class exceptions_should_be_signaled : BaseStoreTest
     {
         private readonly ChunkProcessor _throw = c => throw new TimeoutException();
         private readonly LambdaSubscription _subscription;
@@ -723,7 +723,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class strict_sequence_on_store : BasePersistenceTest
+    public class strict_sequence_on_store : BaseStoreTest
     {
         [Fact]
         public async Task on_concurrency_exception_holes_are_filled_with_empty_chunks()
@@ -757,7 +757,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class polling_client_tests : BasePersistenceTest
+    public class polling_client_tests : BaseStoreTest
     {
         [Theory]
         [InlineData(0, 3)]
@@ -780,7 +780,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class large_payload_tests : BasePersistenceTest
+    public class large_payload_tests : BaseStoreTest
     {
         [Fact]
         public async Task can_write_and_read_large_payload()
@@ -800,7 +800,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class concurrency_test : BasePersistenceTest
+    public class concurrency_test : BaseStoreTest
     {
         [Theory]
         [InlineData(1, false)]
@@ -910,7 +910,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class FindOneTests : BasePersistenceTest
+    public class FindOneTests : BaseStoreTest
     {
         [Fact]
         public async Task should_return_null_on_chunk_not_found()
@@ -944,7 +944,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class ReplaceTests : BasePersistenceTest
+    public class ReplaceTests : BaseStoreTest
     {
         [Fact]
         public async Task should_replace_chunk()

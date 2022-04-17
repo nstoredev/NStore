@@ -118,8 +118,8 @@ namespace NStore.Tutorial
         /// <returns>Runtime</returns>
         public static async Task<TutorialRuntime> UseInMemory()
         {
-            var persistence = await PersistenceFactory.CreateInMemoryAsync();
-            var snapshots = await PersistenceFactory.CreateInMemoryAsync();
+            var persistence = await StoreFactory.CreateInMemoryAsync();
+            var snapshots = await StoreFactory.CreateInMemoryAsync();
 
             var runtime = new TutorialRuntime(persistence, snapshots);
 
@@ -128,14 +128,14 @@ namespace NStore.Tutorial
 
         public static async Task<TutorialRuntime> UseSqlServer(string connectionString)
         {
-            var persistence = await PersistenceFactory.CreateSqlServerAsync
+            var persistence = await StoreFactory.CreateSqlServerAsync
             (
                 connectionString,
                 "streams",
                 NStoreNullLoggerFactory.Instance
             );
             
-            var snapshots = await PersistenceFactory.CreateSqlServerAsync
+            var snapshots = await StoreFactory.CreateSqlServerAsync
             (
                 connectionString,
                 "snapshots",

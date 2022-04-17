@@ -7,7 +7,7 @@ using Xunit;
 
 namespace NStore.Persistence.MsSql.Tests
 {
-    public class AsyncContextMsSqlContextTests : BasePersistenceTest
+    public class AsyncContextMsSqlContextTests : BaseStoreTest
     {
         private AsyncContextMsSqlPersistenceOptions _contextConnectionOptions;
         private IMsSqlAsyncContext _mssqlcontext;

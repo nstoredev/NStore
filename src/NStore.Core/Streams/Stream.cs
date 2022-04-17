@@ -6,15 +6,15 @@ namespace NStore.Core.Streams
 {
     public class Stream : IRandomAccessStream
     {
-        private IPersistence Persistence { get; }
+        private IPersistence Store { get; }
         public string Id { get; }
         public virtual bool IsWritable => true;
         private long _lastIndex = -1;
 
-        public Stream(string streamId, IPersistence persistence)
+        public Stream(string streamId, IPersistence store)
         {
             this.Id = streamId;
-            this.Persistence = persistence;
+            this.Store = store;
         }
 
         public Task ReadAsync(
@@ -23,7 +23,7 @@ namespace NStore.Core.Streams
             long toIndexInclusive,
             CancellationToken cancellationToken)
         {
-            return Persistence.ReadForwardAsync(
+            return Store.ReadForwardAsync(
                 Id,
                 fromIndexInclusive,
                 subscription,
@@ -35,7 +35,7 @@ namespace NStore.Core.Streams
 
         public Task<IChunk> PeekAsync(CancellationToken cancellationToken)
         {
-            return Persistence.ReadSingleBackwardAsync(Id, cancellationToken);
+            return Store.ReadSingleBackwardAsync(Id, cancellationToken);
         }
 
         public virtual async Task<IChunk> AppendAsync(
@@ -56,7 +56,7 @@ namespace NStore.Core.Streams
 
                     var index = _lastIndex + 1;
 
-                    var chunk = await Persistence.AppendAsync(this.Id, index, payload, operationId, cancellation)
+                    var chunk = await Store.AppendAsync(this.Id, index, payload, operationId, cancellation)
                         .ConfigureAwait(false);
 
                     _lastIndex = chunk.Index;
@@ -73,27 +73,27 @@ namespace NStore.Core.Streams
 
         public virtual Task DeleteAsync(CancellationToken cancellation)
         {
-            return Persistence.DeleteAsync(this.Id, 0, long.MaxValue, cancellation);
+            return Store.DeleteAsync(this.Id, 0, long.MaxValue, cancellation);
         }
 
         public Task DeleteBeforeAsync(long index, CancellationToken cancellation)
         {
-            return Persistence.DeleteAsync(this.Id, 0, index - 1, cancellation);
+            return Store.DeleteAsync(this.Id, 0, index - 1, cancellation);
         }
 
         public Task<IChunk> PersistAsync(object payload, long index, string operationId, CancellationToken cancellation)
         {
-            return Persistence.AppendAsync(this.Id, index, payload, operationId, cancellation);
+            return Store.AppendAsync(this.Id, index, payload, operationId, cancellation);
         }
 
         public async Task<bool> IsEmpty(CancellationToken cancellationToken)
         {
-            return await Persistence.ReadSingleBackwardAsync(this.Id, cancellationToken).ConfigureAwait(false) == null;
+            return await Store.ReadSingleBackwardAsync(this.Id, cancellationToken).ConfigureAwait(false) == null;
         }
 
         public async Task<bool> ContainsOperationAsync(string operationId, CancellationToken cancellationToken)
         {
-            var chunk = await Persistence.ReadByOperationIdAsync(this.Id, operationId, cancellationToken)
+            var chunk = await Store.ReadByOperationIdAsync(this.Id, operationId, cancellationToken)
                 .ConfigureAwait(false);
             return chunk != null;
         }

@@ -8,7 +8,7 @@ using NStore.Persistence.MsSql.Tests;
 // ReSharper disable CheckNamespace
 namespace NStore.Persistence.Tests
 {
-    public partial class BasePersistenceTest
+    public partial class BaseStoreTest
     {
         private string _connectionString;
         private const string TestSuitePrefix = "Mssql";

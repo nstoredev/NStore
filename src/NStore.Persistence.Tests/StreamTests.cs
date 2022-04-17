@@ -5,7 +5,7 @@ using Xunit;
 
 namespace NStore.Persistence.Tests
 {
-    public class StreamTests : BasePersistenceTest
+    public class StreamTests : BaseStoreTest
     {
         private readonly IStreamsFactory _streams;
 
@@ -123,7 +123,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class OptimisticConcurrencyStreamTests : BasePersistenceTest
+    public class OptimisticConcurrencyStreamTests : BaseStoreTest
     {
         private readonly IStreamsFactory _streams;
 
@@ -358,7 +358,7 @@ namespace NStore.Persistence.Tests
         }
     }
 
-    public class ReadOnlyStreamTests : BasePersistenceTest
+    public class ReadOnlyStreamTests : BaseStoreTest
     {
         private readonly IStreamsFactory _streams;
 

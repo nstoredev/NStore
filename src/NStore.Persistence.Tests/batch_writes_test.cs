@@ -11,7 +11,7 @@ using Xunit;
 // ReSharper disable InconsistentNaming
 namespace NStore.Persistence.Tests
 {
-    public class batch_writes_test : BasePersistenceTest
+    public class batch_writes_test : BaseStoreTest
     {
         [Fact]
         public async Task should_add_many()
@@ -107,7 +107,7 @@ namespace NStore.Persistence.Tests
                 return;
 
             var cts = new CancellationTokenSource(10_000);
-            var batcher = new PersistenceBatchAppendDecorator(_store, 512,10);
+            var batcher = new StoreBatchAppendDecorator(_store, 512,10);
             //            batcher.Cancel(10_000);
 
             await batcher.AppendAsync("a", 1, "first", null, cts.Token);

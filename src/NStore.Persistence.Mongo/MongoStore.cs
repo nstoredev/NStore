@@ -9,19 +9,41 @@ using System.Threading.Tasks;
 
 namespace NStore.Persistence.Mongo
 {
-    public interface IMongoPersistence : IPersistence
+    [Obsolete(message:"Use IMongoStore")]
+    public interface IMongoPersistence2 : IMongoStore
     {
-        Task InitAsync(CancellationToken cancellationToken);
     }
 
-    public class MongoPersistence : MongoPersistence<MongoChunk>
+    [Obsolete(message:"Use MongoStore")]
+    public class MongoPersistence : MongoStore
+    {
+        public MongoPersistence(MongoPersistenceOptions options) : base(options)
+        {
+        }
+    }
+    
+    [Obsolete(message:"Use MongoStore")]
+    public class  MongoPersistence<TChunk> : MongoStore<TChunk> where TChunk : IMongoChunk, new()
     {
         public MongoPersistence(MongoPersistenceOptions options) : base(options)
         {
         }
     }
 
-    public class MongoPersistence<TChunk> : IMongoPersistence, IEnhancedPersistence
+
+    public interface IMongoStore : IPersistence
+    {
+        Task InitAsync(CancellationToken cancellationToken);
+    }
+
+    public class MongoStore : MongoStore<MongoChunk>
+    {
+        public MongoStore(MongoPersistenceOptions options) : base(options)
+        {
+        }
+    }
+
+    public class MongoStore<TChunk> : IMongoStore, IEnhancedPersistence
         where TChunk : IMongoChunk, new()
     {
         private IMongoDatabase _partitionsDb;
@@ -47,7 +69,7 @@ namespace NStore.Persistence.Mongo
 
         public bool SupportsFillers => true;
 
-        public MongoPersistence(MongoPersistenceOptions options)
+        public MongoStore(MongoPersistenceOptions options)
         {
             if (options == null || !options.IsValid())
             {

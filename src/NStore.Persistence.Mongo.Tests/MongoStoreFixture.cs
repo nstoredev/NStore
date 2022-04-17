@@ -16,10 +16,10 @@ using MongoDB.Bson.Serialization.Serializers;
 
 namespace NStore.Persistence.Tests
 {
-    public partial class BasePersistenceTest
+    public partial class BaseStoreTest
     {
         protected string _mongoConnectionString;
-        protected IMongoPersistence _mongoStore;
+        protected IMongoStore _mongoStore;
         private MongoPersistenceOptions _options;
         private const string TestSuitePrefix = "Mongo";
 
@@ -84,9 +84,9 @@ namespace NStore.Persistence.Tests
             return collection;
         }
 
-        protected virtual IMongoPersistence CreatePersistence(MongoPersistenceOptions options)
+        protected virtual IMongoStore CreatePersistence(MongoPersistenceOptions options)
         {
-            return new MongoPersistence(options);
+            return new MongoStore(options);
         }
 
         protected void Clear(IPersistence persistence, bool drop)

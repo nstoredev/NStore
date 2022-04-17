@@ -48,11 +48,11 @@ namespace NStore.Persistence.Mongo.Tests
         }
     }
 
-    public class mongo_persistence_with_custom_chunk_type : BasePersistenceTest
+    public class MongoStoreWithCustomChunkType : BaseStoreTest
     {
-        protected override IMongoPersistence CreatePersistence(MongoPersistenceOptions options)
+        protected override IMongoStore CreatePersistence(MongoPersistenceOptions options)
         {
-            return new MongoPersistence<CustomChunk>(options);
+            return new MongoStore<CustomChunk>(options);
         }
 
         [Fact]
@@ -78,7 +78,7 @@ namespace NStore.Persistence.Mongo.Tests
         }
     }
 
-    public class empty_payload_serialization : BasePersistenceTest
+    public class empty_payload_serialization : BaseStoreTest
     {
         public class SerializerSpy : IMongoPayloadSerializer
         {
@@ -100,11 +100,11 @@ namespace NStore.Persistence.Mongo.Tests
 
         private SerializerSpy _serializer;
 
-        protected override IMongoPersistence CreatePersistence(MongoPersistenceOptions options)
+        protected override IMongoStore CreatePersistence(MongoPersistenceOptions options)
         {
             _serializer = new SerializerSpy();
             options.MongoPayloadSerializer = _serializer;
-            return new MongoPersistence(options);
+            return new MongoStore(options);
         }
 
         [Fact]
@@ -123,7 +123,7 @@ namespace NStore.Persistence.Mongo.Tests
         }
     }
 
-    public class filler_tests : BasePersistenceTest
+    public class filler_tests : BaseStoreTest
     {
         [Fact]
         public async Task filler_should_regenerate_operation_id()
@@ -143,7 +143,7 @@ namespace NStore.Persistence.Mongo.Tests
         }
     }
 
-    public class When_using_custom_payload_serializer : BasePersistenceTest
+    public class When_using_custom_payload_serializer : BaseStoreTest
     {
         private TestMongoPayloadSerializer _testMongoPayloadSerializer;
 
@@ -218,7 +218,7 @@ namespace NStore.Persistence.Mongo.Tests
         }
     }
 
-    public class Can_intercept_mongo_query_with_options : BasePersistenceTest
+    public class Can_intercept_mongo_query_with_options : BaseStoreTest
     {
         private Int32 callCount;
 
@@ -248,7 +248,7 @@ namespace NStore.Persistence.Mongo.Tests
     /// <summary>
     /// Correctly initialize the seed when you want to use the sequence generated it
     /// </summary>
-    public class Sequence_generator_id_is_initialized_correctly : BasePersistenceTest
+    public class Sequence_generator_id_is_initialized_correctly : BaseStoreTest
     {
         private MongoPersistenceOptions _options;
 

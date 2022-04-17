@@ -6,7 +6,7 @@ using Xunit;
 
 namespace NStore.Persistence.MsSql.Tests
 {
-    public class IdempotencyTests : BasePersistenceTest
+    public class IdempotencyTests : BaseStoreTest
     {
         protected override MsSqlPersistenceOptions CreateOptions()
         {

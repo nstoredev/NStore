@@ -141,7 +141,7 @@ namespace NStore.Sample
             };
 
 
-            if (store is MongoPersistence)
+            if (store is MongoStore)
             {
                 _unboundedOptions.MaxDegreeOfParallelism = Environment.ProcessorCount * 4;
                 _unboundedOptions.BoundedCapacity = 2000;

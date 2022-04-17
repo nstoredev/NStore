@@ -8,7 +8,7 @@ namespace NStore.Core.Streams
     //@@REVIEW: could be refactored as a Decorator on Stream?
     public class OptimisticConcurrencyStream : IStream
     {
-        private IPersistence Persistence { get; }
+        private IPersistence Store { get; }
 
         private long _version = -1;
         public string Id { get; }
@@ -16,11 +16,11 @@ namespace NStore.Core.Streams
 
         public OptimisticConcurrencyStream(
             string streamId,
-            IPersistence persistence
+            IPersistence store
         )
         {
             Id = streamId;
-            Persistence = persistence;
+            Store = store;
         }
 
         public void MarkAsNew()
@@ -46,7 +46,7 @@ namespace NStore.Core.Streams
                 };
             }
 
-            return Persistence.ReadForwardAsync(
+            return Store.ReadForwardAsync(
                 Id,
                 fromIndexInclusive,
                 readConsumer,
@@ -58,7 +58,7 @@ namespace NStore.Core.Streams
 
         public async Task<IChunk> PeekAsync(CancellationToken cancellationToken)
         {
-            var chunk = await Persistence.ReadSingleBackwardAsync(Id, cancellationToken).ConfigureAwait(false);
+            var chunk = await Store.ReadSingleBackwardAsync(Id, cancellationToken).ConfigureAwait(false);
             _version = chunk?.Index ?? 0; //if we have no chunk version is zero.
             return chunk;
         }
@@ -66,7 +66,7 @@ namespace NStore.Core.Streams
         public async Task<bool> IsEmpty(CancellationToken cancellationToken)
         {
             // @@REVIEW: check version to avoid db roundtrip
-            return await Persistence.ReadSingleBackwardAsync(Id, cancellationToken)
+            return await Store.ReadSingleBackwardAsync(Id, cancellationToken)
                        .ConfigureAwait(false) != null;
         }
 
@@ -75,7 +75,7 @@ namespace NStore.Core.Streams
             CancellationToken cancellationToken
         )
         {
-            var chunk = await Persistence.ReadByOperationIdAsync(
+            var chunk = await Store.ReadByOperationIdAsync(
                 Id,
                 operationId,
                 cancellationToken
@@ -102,7 +102,7 @@ If you don't need to read use {nameof(Stream)} instead of {GetType().Name}.");
             long desiredVersion = _version + 1;
             try
             {
-                chunk = await Persistence.AppendAsync(
+                chunk = await Store.AppendAsync(
                     Id,
                     desiredVersion,
                     payload,
@@ -121,12 +121,12 @@ If you don't need to read use {nameof(Stream)} instead of {GetType().Name}.");
 
         public Task DeleteAsync(CancellationToken cancellation)
         {
-            return Persistence.DeleteAsync(Id, 0, long.MaxValue, cancellation);
+            return Store.DeleteAsync(Id, 0, long.MaxValue, cancellation);
         }
 
         public Task DeleteBeforeAsync(long index, CancellationToken cancellation)
         {
-            return Persistence.DeleteAsync(Id, 0, index-1, cancellation);
+            return Store.DeleteAsync(Id, 0, index-1, cancellation);
         }
     }
 }

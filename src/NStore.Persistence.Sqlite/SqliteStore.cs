@@ -11,7 +11,7 @@ using NStore.Core.Persistence;
 
 namespace NStore.Persistence.Sqlite
 {
-    public class SqlitePersistence : AbstractSqlPersistence, IPersistence, IEnhancedPersistence
+    public class SqliteStore : AbstractSqlPersistence, IPersistence, IEnhancedPersistence
     {
         private const int DUPLICATED_INDEX_EXCEPTION = 19;
 
@@ -21,14 +21,14 @@ namespace NStore.Persistence.Sqlite
 
         public bool SupportsFillers => false;
 
-        public SqlitePersistence(SqlitePersistenceOptions options) : base(options)
+        public SqliteStore(SqlitePersistenceOptions options) : base(options)
         {
             _options = options;
             _logger = _options.LoggerFactory.CreateLogger($"SqlitePersistence-{options.StreamsTableName}");
 
             if (_options.Serializer == null)
             {
-                throw new SqlitePersistenceException("SqliteOptions should provide a custom Serializer");
+                throw new SqliteStoreException("SqliteOptions should provide a custom Serializer");
             }
         }
 

@@ -116,7 +116,7 @@ namespace NStore.Sample
                                 settings.MaxConnectionPoolSize = 5000;
                             }
                         };
-                        var mongo = new MongoPersistence(options);
+                        var mongo = new MongoStore(options);
                         mongo.InitAsync(CancellationToken.None).GetAwaiter().GetResult();
                         return mongo;
                     }

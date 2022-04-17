@@ -7,7 +7,7 @@ using NStore.Persistence.LiteDB;
 // ReSharper disable CheckNamespace
 namespace NStore.Persistence.Tests
 {
-    public partial class BasePersistenceTest
+    public partial class BaseStoreTest
     {
         private const string TestSuitePrefix = "LiteDB";
 

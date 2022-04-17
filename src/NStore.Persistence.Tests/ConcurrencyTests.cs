@@ -5,7 +5,7 @@ using Xunit;
 
 namespace NStore.Persistence.Tests
 {
-    public abstract partial class BaseConcurrencyTests : BasePersistenceTest
+    public abstract partial class BaseConcurrencyTests : BaseStoreTest
     {
         private readonly IPersistence _store2;
         protected IPersistence Store2 { get; }

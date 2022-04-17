@@ -17,7 +17,7 @@ namespace NStore.Persistence.Tests
         }
     }
     
-    public class DefaultSnapshotStoreTests : BasePersistenceTest
+    public class DefaultSnapshotStoreTests : BaseStoreTest
     {
         private readonly ISnapshotStore _snapshots;
 

@@ -7,7 +7,7 @@ using NStore.Persistence.MsSql;
 
 namespace NStore.Tutorial.Support
 {
-    public static class PersistenceFactory
+    public static class StoreFactory
     {
         public static Task<IPersistence> CreateInMemoryAsync()
         {

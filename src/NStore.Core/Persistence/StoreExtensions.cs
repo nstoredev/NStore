@@ -3,15 +3,15 @@ using System.Threading.Tasks;
 
 namespace NStore.Core.Persistence
 {
-    public static class PersistenceExtensions
+    public static class StoreExtensions
     {
         public static Task ReadForwardAsync(
-            this IPersistence persistence,
+            this IPersistence store,
             string partitionId,
             ISubscription subscription
         )
         {
-            return persistence.ReadForwardAsync(
+            return store.ReadForwardAsync(
                 partitionId,
                 0,
                 subscription,
@@ -22,13 +22,13 @@ namespace NStore.Core.Persistence
         }
 
         public static Task ReadForwardAsync(
-            this IPersistence persistence,
+            this IPersistence store,
             string partitionId,
             long fromLowerIndexInclusive,
             ISubscription subscription
         )
         {
-            return persistence.ReadForwardAsync(
+            return store.ReadForwardAsync(
                 partitionId,
                 fromLowerIndexInclusive,
                 subscription,
@@ -39,14 +39,14 @@ namespace NStore.Core.Persistence
         }
 
         public static Task ReadForwardAsync(
-            this IPersistence persistence,
+            this IPersistence store,
             string partitionId,
             long fromLowerIndexInclusive,
             ISubscription subscription,
             long toUpperIndexInclusive
         )
         {
-            return persistence.ReadForwardAsync(
+            return store.ReadForwardAsync(
                 partitionId,
                 fromLowerIndexInclusive,
                 subscription,

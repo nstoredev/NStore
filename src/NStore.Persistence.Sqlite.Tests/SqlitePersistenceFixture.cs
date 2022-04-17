@@ -8,7 +8,7 @@ using NStore.Persistence.Sqlite.Tests;
 // ReSharper disable CheckNamespace
 namespace NStore.Persistence.Tests
 {
-    public partial class BasePersistenceTest
+    public partial class BaseStoreTest
     {
         private string ConnectionString;
         private const string TestSuitePrefix = "Sqlite";
@@ -37,7 +37,7 @@ namespace NStore.Persistence.Tests
                 Serializer = new JsonSqliteSerializer()
             };
 
-            var sqlPersistence = new SqlitePersistence(options);
+            var sqlPersistence = new SqliteStore(options);
             if (dropOnInit)
             {
                 sqlPersistence.DestroyAllAsync(CancellationToken.None).Wait();
@@ -55,7 +55,7 @@ namespace NStore.Persistence.Tests
                 return;
             }
 
-            var sql = (SqlitePersistence) persistence;
+            var sql = (SqliteStore) persistence;
             _logger.LogInformation("Cleaning up test #{number}", _testRunId);
             sql.DestroyAllAsync(CancellationToken.None).Wait();
             _logger.LogInformation("Cleanup test #{number} done", _testRunId);
