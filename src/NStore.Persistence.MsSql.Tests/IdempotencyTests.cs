@@ -53,7 +53,7 @@ namespace NStore.Persistence.MsSql.Tests
         [Fact]
         public async Task reading_stream_by_operation_id_should_throw()
         {
-            var ex = await Assert.ThrowsAsync<MsSqlPersistenceException>(async () =>
+            var ex = await Assert.ThrowsAsync<MsSqlStoreException>(async () =>
             {
                 await Store.ReadByOperationIdAsync("partition", "anyop", CancellationToken.None);
             });
@@ -64,7 +64,7 @@ namespace NStore.Persistence.MsSql.Tests
         [Fact]
         public async Task reading_store_by_operation_id_should_throw()
         {
-            var ex = await Assert.ThrowsAsync<MsSqlPersistenceException>(async () =>
+            var ex = await Assert.ThrowsAsync<MsSqlStoreException>(async () =>
             {
                 await Store.ReadAllByOperationIdAsync("anyop", NullSubscription.Instance, CancellationToken.None);
             });

@@ -14,8 +14,8 @@ namespace NStore.Tutorial
             TutorialRuntime.Initializer = TutorialRuntime.UseInMemory;
 
             // Persistence
-            await new T00_Persistence_Append().ShowAsync();
-            await new T01_Persistence_Append_with_idempotency().ShowAsync();
+            await new T00_Store_Append().ShowAsync();
+            await new T01_Store_Append_with_idempotency().ShowAsync();
 
             // Streams
             await new T01_Stream_Create_Read_Update_Delete().ShowAsync();

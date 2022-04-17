@@ -150,7 +150,7 @@ namespace NStore.Domain.Tests
         }
 
         [Fact]
-        public void persister_should_create_changeset_with_new_events()
+        public void store_should_create_changeset_with_new_events()
         {
             var ticket = TicketTestFactory.Sold();
             var persister = (IEventSourcedAggregate)ticket;
@@ -162,7 +162,7 @@ namespace NStore.Domain.Tests
         }
 
         [Fact]
-        public void persister_should_create_changeset_only_with_new_events()
+        public void store_should_create_changeset_only_with_new_events()
         {
             var ticket = TicketTestFactory.ForTest();
             var persister = (IEventSourcedAggregate)ticket;

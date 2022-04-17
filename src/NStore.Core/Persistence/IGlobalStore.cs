@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace NStore.Core.Persistence
 {
-    public interface IGlobalPersistence
+    public interface IGlobalStore
     {
         Task ReadAllAsync(
             long fromPositionInclusive,

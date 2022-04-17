@@ -68,7 +68,7 @@ namespace NStore.Persistence.MsSql
         {
             if (!StreamIdempotencyEnabled)
             {
-                throw new MsSqlPersistenceException("Stream idempotency is disabled. Cannot search by OperationId");
+                throw new MsSqlStoreException("Stream idempotency is disabled. Cannot search by OperationId");
             }
 
             return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
@@ -80,7 +80,7 @@ namespace NStore.Persistence.MsSql
         {
             if (!StreamIdempotencyEnabled)
             {
-                throw new MsSqlPersistenceException("Stream idempotency is disabled. Cannot search by OperationId");
+                throw new MsSqlStoreException("Stream idempotency is disabled. Cannot search by OperationId");
             }
 
             return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]

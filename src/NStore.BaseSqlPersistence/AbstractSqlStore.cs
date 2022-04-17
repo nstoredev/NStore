@@ -7,13 +7,13 @@ using NStore.Core.Persistence;
 
 namespace NStore.BaseSqlPersistence
 {
-    public abstract class AbstractSqlPersistence
+    public abstract class AbstractSqlStore
     {
         private readonly INStoreLogger _logger;
 
         private BaseSqlStoreOptions Options { get; }
 
-        protected AbstractSqlPersistence(BaseSqlStoreOptions options)
+        protected AbstractSqlStore(BaseSqlStoreOptions options)
         {
             Options = options;
             _logger = options.LoggerFactory.CreateLogger($"{GetType().FullName}-{options.StreamsTableName}");

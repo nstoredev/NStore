@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace NStore.Core.Persistence
 {
-    public interface IPartitionPersistence
+    public interface IPartitionStore
     {
         bool SupportsFillers { get; }
 

@@ -6,7 +6,7 @@ using NStore.Tutorial.Support;
 
 namespace NStore.Tutorial.Tutorials
 {
-    public class T00_Persistence_Append : AbstractTutorial
+    public class T00_Store_Append : AbstractTutorial
     {
         protected override async Task RunAsync()
         {
@@ -38,7 +38,7 @@ namespace NStore.Tutorial.Tutorials
         }
     }
     
-    public class T01_Persistence_Append_with_idempotency : AbstractTutorial
+    public class T01_Store_Append_with_idempotency : AbstractTutorial
     {
         protected override async Task RunAsync()
         {

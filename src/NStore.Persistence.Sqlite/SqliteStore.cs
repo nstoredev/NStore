@@ -11,7 +11,7 @@ using NStore.Core.Persistence;
 
 namespace NStore.Persistence.Sqlite
 {
-    public class SqliteStore : AbstractSqlPersistence, IStore, IEnhancedPersistence
+    public class SqliteStore : AbstractSqlStore, IStore, IEnhancedStore
     {
         private const int DUPLICATED_INDEX_EXCEPTION = 19;
 

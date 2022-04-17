@@ -21,7 +21,7 @@ namespace NStore.Persistence.Mongo
         }
     }
 
-    public class MongoStore<TChunk> : IMongoStore, IEnhancedPersistence
+    public class MongoStore<TChunk> : IMongoStore, IEnhancedStore
         where TChunk : IMongoChunk, new()
     {
         private IMongoDatabase _partitionsDb;
@@ -51,7 +51,7 @@ namespace NStore.Persistence.Mongo
         {
             if (options == null || !options.IsValid())
             {
-                throw new MongoPersistenceException("Invalid options");
+                throw new MongoStoreException("Invalid options");
             }
 
             _options = options;
@@ -317,7 +317,7 @@ namespace NStore.Persistence.Mongo
 
                 if (!result.IsAcknowledged)
                 {
-                    throw new MongoPersistenceException("Replace not Ackowledged");
+                    throw new MongoStoreException("Replace not Ackowledged");
                 }
 
                 return chunk;

@@ -15,7 +15,7 @@ namespace NStore.Tpl
         public StoreBatchAppendDecorator(IStore store, int batchSize, int flushTimeout)
         {
             _cts = new CancellationTokenSource();
-            var batcher = (IEnhancedPersistence) store;
+            var batcher = (IEnhancedStore) store;
             _batch = new BatchBlock<AsyncWriteJob>(batchSize, new GroupingDataflowBlockOptions()
             {
 //                BoundedCapacity = 1024,

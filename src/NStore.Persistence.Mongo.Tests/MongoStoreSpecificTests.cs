@@ -261,7 +261,7 @@ namespace NStore.Persistence.Mongo.Tests
         }
 
         [Fact()]
-        public void Verify_that_after_persistence_initialization_sequence_collection_is_populated()
+        public void Verify_that_after_store_initialization_sequence_collection_is_populated()
         {
             // We need to be sure that the record was correctly created
             var url = new MongoUrl(_options.PartitionsConnectionString);

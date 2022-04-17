@@ -34,7 +34,7 @@ namespace NStore.Persistence.Tests
         protected IStore Store { get; }
         protected readonly TestLoggerFactory LoggerFactory;
         protected readonly INStoreLogger _logger;
-        protected IEnhancedPersistence Batcher => _store as IEnhancedPersistence;
+        protected IEnhancedStore Batcher => _store as IEnhancedStore;
         protected readonly IStore _store;
 
         protected BaseStoreTest(bool autoCreateStore = true)

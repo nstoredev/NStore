@@ -7,7 +7,7 @@ using NStore.Core.Persistence;
 
 namespace NStore.Persistence.MsSql
 {
-    public class MsSqlStore : AbstractSqlPersistence, IStore
+    public class MsSqlStore : AbstractSqlStore, IStore
     {
         private const int DuplicatedIndexExceptionErrorNumber = 2601;
 
@@ -21,7 +21,7 @@ namespace NStore.Persistence.MsSql
 
             if (_options.Serializer == null)
             {
-                throw new MsSqlPersistenceException("MsSqlOptions should provide a custom Serializer");
+                throw new MsSqlStoreException("MsSqlOptions should provide a custom Serializer");
             }
         }
 
