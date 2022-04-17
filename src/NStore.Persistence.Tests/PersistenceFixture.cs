@@ -34,8 +34,8 @@ namespace NStore.Persistence.Tests
         protected IPersistence Store { get; }
         protected readonly TestLoggerFactory LoggerFactory;
         protected readonly INStoreLogger _logger;
-        protected IEnhancedPersistence Batcher => _persistence as IEnhancedPersistence;
-        protected readonly IPersistence _persistence;
+        protected IEnhancedPersistence Batcher => _store as IEnhancedPersistence;
+        protected readonly IPersistence _store;
 
         protected BasePersistenceTest(bool autoCreateStore = true)
         {
@@ -47,9 +47,9 @@ namespace NStore.Persistence.Tests
             if (autoCreateStore)
             {
                 _logger.LogDebug("Creating store");
-                _persistence = Create(true);
+                _store = Create(true);
                 _logger.LogDebug("Store created");
-                Store = new LogDecorator(_persistence, LoggerFactory);
+                Store = new LogDecorator(_store, LoggerFactory);
             }
         }
 
@@ -68,9 +68,9 @@ namespace NStore.Persistence.Tests
 
             if (disposing)
             {
-                if (_persistence != null)
+                if (_store != null)
                 {
-                    Clear(_persistence, true);
+                    Clear(_store, true);
                 }
 
                 _logger.LogDebug("Test disposed");
@@ -791,9 +791,9 @@ namespace NStore.Persistence.Tests
                 payload[c] = Convert.ToByte(c % 255);
             }
 
-            await _persistence.AppendAsync("large_binary", 1, payload).ConfigureAwait(false);
+            await _store.AppendAsync("large_binary", 1, payload).ConfigureAwait(false);
 
-            var chunk = await _persistence.ReadSingleBackwardAsync("large_binary").ConfigureAwait(false);
+            var chunk = await _store.ReadSingleBackwardAsync("large_binary").ConfigureAwait(false);
             var loadedBytes = (byte[])chunk.Payload;
 
             Assert.Equal(payload, loadedBytes);

@@ -29,10 +29,10 @@ namespace NStore.Persistence.MsSql.Tests
         [Fact]
         public async Task should_use_own_connection()
         {
-            await this._persistence.AppendAsync("test", 0, "payload", "op1", CancellationToken.None)
+            await this._store.AppendAsync("test", 0, "payload", "op1", CancellationToken.None)
                 .ConfigureAwait(false);
 
-            var recorder = await this._persistence.RecordAsync("test").ConfigureAwait(false);
+            var recorder = await this._store.RecordAsync("test").ConfigureAwait(false);
             Assert.Equal(1, recorder.Length);
         }
 
@@ -40,7 +40,7 @@ namespace NStore.Persistence.MsSql.Tests
         public async Task should_use_external_connection()
         {
             // write with automatic connection
-            await this._persistence.AppendAsync("test", 0, "payload", "op1", CancellationToken.None)
+            await this._store.AppendAsync("test", 0, "payload", "op1", CancellationToken.None)
                 .ConfigureAwait(false);
 
             // write with custom connection & transaction
@@ -52,10 +52,10 @@ namespace NStore.Persistence.MsSql.Tests
                 {
                     _mssqlcontext.Join(connection, transaction);
 
-                    await this._persistence.AppendAsync("test", 1, "payload", "op2", CancellationToken.None)
+                    await this._store.AppendAsync("test", 1, "payload", "op2", CancellationToken.None)
                         .ConfigureAwait(false);
 
-                    var contextrecorder = await this._persistence.RecordAsync("test").ConfigureAwait(false);
+                    var contextrecorder = await this._store.RecordAsync("test").ConfigureAwait(false);
                     Assert.Equal(2, contextrecorder.Length);
 
                     transaction.Rollback();
@@ -64,7 +64,7 @@ namespace NStore.Persistence.MsSql.Tests
 
             // read back
             _contextConnectionOptions.ClearAsyncContext();
-            var recorder = await this._persistence.RecordAsync("test").ConfigureAwait(false);
+            var recorder = await this._store.RecordAsync("test").ConfigureAwait(false);
             Assert.Equal(1, recorder.Length);
         }
     }
