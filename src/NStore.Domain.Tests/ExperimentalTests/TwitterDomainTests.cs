@@ -173,8 +173,8 @@ namespace NStore.Domain.Tests.ExperimentalTests
     public class TwitterEngine
         : IDisposable
     {
-        private readonly InMemoryPersistence _store = new InMemoryPersistence();
-        private readonly DefaultSnapshotStore _snapshots = new DefaultSnapshotStore(new InMemoryPersistence());
+        private readonly InMemoryStore _store = new InMemoryStore();
+        private readonly DefaultSnapshotStore _snapshots = new DefaultSnapshotStore(new InMemoryStore());
         private readonly DefaultAggregateFactory _aggregateFactory = new DefaultAggregateFactory();
 
         private readonly DomainRuntime _runtime;

@@ -10,27 +10,27 @@ namespace NStore.Domain.Experimental
 {
     public class DomainRuntime
     {
-        private readonly IPersistence _persistence;
+        private readonly IPersistence _store;
         private readonly IAggregateFactory _aggregateFactory;
         private readonly IStreamsFactory _streamsFactory;
         private readonly ISnapshotStore _snapshots;
         private readonly PollingClient _pollingClient;
 
         public DomainRuntime(
-            IPersistence persistence,
+            IPersistence store,
             IAggregateFactory aggregateFactory,
             ISnapshotStore snapshots,
             ChunkProcessor processor)
         {
-            _persistence = persistence;
+            _store = store;
             _aggregateFactory = aggregateFactory;
             _snapshots = snapshots;
-            _streamsFactory = new StreamsFactory(persistence);
+            _streamsFactory = new StreamsFactory(store);
 
             if (processor != null)
             {
                 _pollingClient = new PollingClient(
-                    persistence, 
+                    store, 
                     0, // <----- TODO: read from state?
                     new LambdaSubscription(processor),
                     NStoreNullLoggerFactory.Instance
@@ -75,7 +75,7 @@ namespace NStore.Domain.Experimental
 
             while (!cancellationToken.IsCancellationRequested)
             {
-                long maxPos = await _persistence.ReadLastPositionAsync().ConfigureAwait(false);
+                long maxPos = await _store.ReadLastPositionAsync().ConfigureAwait(false);
                 if (maxPos > _pollingClient.Position)
                 {
                     await Task.Delay(500, cancellationToken).ConfigureAwait(false);

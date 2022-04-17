@@ -63,15 +63,15 @@ namespace NStore.Core.Tests.Processing
 
     public class StreamProcessingTests
     {
-        private readonly IPersistence _persistence;
+        private readonly IPersistence _store;
         private readonly StreamsFactory _streams;
         private readonly ISnapshotStore _snapshots;
 
 		public StreamProcessingTests()
 		{
-			_persistence = new InMemoryPersistence(new InMemoryPersistenceOptions());
-			_streams = new StreamsFactory(_persistence);
-			_snapshots = new DefaultSnapshotStore(new InMemoryPersistence(new InMemoryPersistenceOptions()));
+			_store = new InMemoryStore(new InMemoryPersistenceOptions());
+			_streams = new StreamsFactory(_store);
+			_snapshots = new DefaultSnapshotStore(new InMemoryStore(new InMemoryPersistenceOptions()));
 		}
 
         private async Task<IStream> CreateStream(string streamId)
@@ -184,7 +184,7 @@ namespace NStore.Core.Tests.Processing
         public async Task should_skip_holes()
         {
             var sequence = await CreateStream("sequence_1").ConfigureAwait(false);
-            await _persistence.DeleteAsync(sequence.Id, 2, 9).ConfigureAwait(false);
+            await _store.DeleteAsync(sequence.Id, 2, 9).ConfigureAwait(false);
 
             var result = await sequence
                 .Aggregate()
@@ -199,9 +199,9 @@ namespace NStore.Core.Tests.Processing
         public async Task should_signal_holes()
         {
             var sequence = await CreateStream("sequence_1").ConfigureAwait(false);
-            await _persistence.DeleteAsync(sequence.Id, 1, 1).ConfigureAwait(false);
-            await _persistence.DeleteAsync(sequence.Id, 3, 4).ConfigureAwait(false);
-            await _persistence.DeleteAsync(sequence.Id, 6, 7).ConfigureAwait(false);
+            await _store.DeleteAsync(sequence.Id, 1, 1).ConfigureAwait(false);
+            await _store.DeleteAsync(sequence.Id, 3, 4).ConfigureAwait(false);
+            await _store.DeleteAsync(sequence.Id, 6, 7).ConfigureAwait(false);
 
             var missing = new List<Tuple<long, long>>();
 

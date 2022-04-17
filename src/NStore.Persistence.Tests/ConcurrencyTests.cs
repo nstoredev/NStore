@@ -7,13 +7,13 @@ namespace NStore.Persistence.Tests
 {
     public abstract partial class BaseConcurrencyTests : BasePersistenceTest
     {
-        protected readonly IPersistence _persistence2;
+        private readonly IPersistence _store2;
         protected IPersistence Store2 { get; }
 
         protected BaseConcurrencyTests() : base()
         {
-            _persistence2 = Create(false);
-            Store2 = new LogDecorator(_persistence2, LoggerFactory);
+            _store2 = Create(false);
+            Store2 = new LogDecorator(_store2, LoggerFactory);
         }
 
         protected override void Dispose(bool disposing)

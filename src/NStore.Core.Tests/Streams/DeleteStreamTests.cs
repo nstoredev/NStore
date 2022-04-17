@@ -13,7 +13,7 @@ namespace NStore.Core.Tests.Streams
 
         public DeleteStreamTests()
         {
-            var persistence = new ProfileDecorator(new InMemoryPersistence());
+            var persistence = new ProfileDecorator(new InMemoryStore());
             _stream = new Stream("stream", persistence);
         }
 

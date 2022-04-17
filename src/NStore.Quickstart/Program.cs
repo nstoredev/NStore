@@ -31,7 +31,7 @@ namespace NStore.Quickstart
         static async Task Main()
         {
             // StreamsFactory setup
-            var streams = new StreamsFactory(new InMemoryPersistence());
+            var streams = new StreamsFactory(new InMemoryStore());
 
             // Open the stream in r/w
             var post = streams.Open("post/123");

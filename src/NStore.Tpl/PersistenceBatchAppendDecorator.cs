@@ -8,14 +8,14 @@ namespace NStore.Tpl
 {
     public class PersistenceBatchAppendDecorator : IPersistence, IDisposable
     {
-        private readonly IPersistence _persistence;
+        private readonly IPersistence _store;
         private readonly BatchBlock<AsyncWriteJob> _batch;
         private readonly CancellationTokenSource _cts;
 
-        public PersistenceBatchAppendDecorator(IPersistence persistence, int batchSize, int flushTimeout)
+        public PersistenceBatchAppendDecorator(IPersistence store, int batchSize, int flushTimeout)
         {
             _cts = new CancellationTokenSource();
-            var batcher = (IEnhancedPersistence) persistence;
+            var batcher = (IEnhancedPersistence) store;
             _batch = new BatchBlock<AsyncWriteJob>(batchSize, new GroupingDataflowBlockOptions()
             {
 //                BoundedCapacity = 1024,
@@ -47,40 +47,40 @@ namespace NStore.Tpl
                 PropagateCompletion = true,
             });
 
-            _persistence = persistence;
+            _store = store;
         }
 
-        public bool SupportsFillers => _persistence.SupportsFillers;
+        public bool SupportsFillers => _store.SupportsFillers;
 
         public Task ReadForwardAsync(string partitionId, long fromLowerIndexInclusive, ISubscription subscription,
             long toUpperIndexInclusive, int limit, CancellationToken cancellationToken)
         {
-            return _persistence.ReadForwardAsync(partitionId, fromLowerIndexInclusive, subscription,
+            return _store.ReadForwardAsync(partitionId, fromLowerIndexInclusive, subscription,
                 toUpperIndexInclusive, limit, cancellationToken);
         }
 
         public Task ReadBackwardAsync(string partitionId, long fromUpperIndexInclusive, ISubscription subscription,
             long toLowerIndexInclusive, int limit, CancellationToken cancellationToken)
         {
-            return _persistence.ReadBackwardAsync(partitionId, fromUpperIndexInclusive, subscription,
+            return _store.ReadBackwardAsync(partitionId, fromUpperIndexInclusive, subscription,
                 toLowerIndexInclusive, limit, cancellationToken);
         }
 
         public Task<IChunk> ReadSingleBackwardAsync(string partitionId, long fromUpperIndexInclusive,
             CancellationToken cancellationToken)
         {
-            return _persistence.ReadSingleBackwardAsync(partitionId, fromUpperIndexInclusive, cancellationToken);
+            return _store.ReadSingleBackwardAsync(partitionId, fromUpperIndexInclusive, cancellationToken);
         }
 
         public Task ReadAllAsync(long fromPositionInclusive, ISubscription subscription, int limit,
             CancellationToken cancellationToken)
         {
-            return _persistence.ReadAllAsync(fromPositionInclusive, subscription, limit, cancellationToken);
+            return _store.ReadAllAsync(fromPositionInclusive, subscription, limit, cancellationToken);
         }
 
         public Task<long> ReadLastPositionAsync(CancellationToken cancellationToken)
         {
-            return _persistence.ReadLastPositionAsync(cancellationToken);
+            return _store.ReadLastPositionAsync(cancellationToken);
         }
 
         public async Task<IChunk> AppendAsync(string partitionId, long index, object payload, string operationId,
@@ -96,29 +96,29 @@ namespace NStore.Tpl
             string operationId,
             CancellationToken cancellationToken)
         {
-            return _persistence.ReplaceOneAsync(position, partitionId, index, payload, operationId, cancellationToken);
+            return _store.ReplaceOneAsync(position, partitionId, index, payload, operationId, cancellationToken);
         }
 
         public Task<IChunk> ReadOneAsync(long position, CancellationToken cancellationToken)
         {
-            return _persistence.ReadOneAsync(position, cancellationToken);
+            return _store.ReadOneAsync(position, cancellationToken);
         }
 
         public Task DeleteAsync(string partitionId, long fromLowerIndexInclusive, long toUpperIndexInclusive,
             CancellationToken cancellationToken)
         {
-            return _persistence.DeleteAsync(partitionId, fromLowerIndexInclusive, toUpperIndexInclusive,
+            return _store.DeleteAsync(partitionId, fromLowerIndexInclusive, toUpperIndexInclusive,
                 cancellationToken);
         }
 
         public Task<IChunk> ReadByOperationIdAsync(string partitionId, string operationId, CancellationToken cancellationToken)
         {
-            return _persistence.ReadByOperationIdAsync(partitionId, operationId, cancellationToken);
+            return _store.ReadByOperationIdAsync(partitionId, operationId, cancellationToken);
         }
 
         public Task ReadAllByOperationIdAsync(string operationId, ISubscription subscription, CancellationToken cancellationToken)
         {
-            return _persistence.ReadAllByOperationIdAsync(operationId, subscription, cancellationToken);
+            return _store.ReadAllByOperationIdAsync(operationId, subscription, cancellationToken);
         }
 
         public void Dispose()

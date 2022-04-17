@@ -98,7 +98,7 @@ namespace NStore.Sample
                             CloneFunc = ObjectSerializer.Clone,
                             NetworkSimulator = network
                         };
-                        return new InMemoryPersistence(options);
+                        return new InMemoryStore(options);
                     }
 
                 case "mongo":

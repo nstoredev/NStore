@@ -15,13 +15,13 @@ namespace NStore.Domain.Tests
     public abstract class BaseRepositoryTest
     {
         protected IStreamsFactory _streams;
-        protected IStreamsFactory Streams => _streams ?? (_streams = new StreamsFactory(Persistence));
-        protected IPersistence _persistence;
-        protected IPersistence Persistence => _persistence ?? (_persistence = new InMemoryPersistence(new InMemoryPersistenceOptions()));
+        protected IStreamsFactory Streams => _streams ??= new StreamsFactory(Store);
+        protected IPersistence _store;
+        protected IPersistence Store => _store ??= new InMemoryStore(new InMemoryPersistenceOptions());
         private IAggregateFactory AggregateFactory { get; }
         protected ISnapshotStore Snapshots { get; set; }
         private IRepository _repository;
-        protected IRepository Repository => _repository ?? (_repository = CreateRepository());
+        protected IRepository Repository => _repository ??= CreateRepository();
 
         protected BaseRepositoryTest()
         {
@@ -104,8 +104,8 @@ namespace NStore.Domain.Tests
     {
         public with_populated_stream()
         {
-            Persistence.AppendAsync("Ticket_1", 1, new Changeset(1, new object[] { new TicketSold() })).Wait();
-            Persistence.AppendAsync("Ticket_1", 2, new Changeset(2, new object[] { new TicketRefunded() })).Wait();
+            Store.AppendAsync("Ticket_1", 1, new Changeset(1, new object[] { new TicketSold() })).Wait();
+            Store.AppendAsync("Ticket_1", 2, new Changeset(2, new object[] { new TicketRefunded() })).Wait();
         }
 
         [Fact]
@@ -143,10 +143,10 @@ namespace NStore.Domain.Tests
     {
         public with_snapshots()
         {
-            Snapshots = new DefaultSnapshotStore(new InMemoryPersistence(new InMemoryPersistenceOptions()));
+            Snapshots = new DefaultSnapshotStore(new InMemoryStore(new InMemoryPersistenceOptions()));
 
-            Persistence.AppendAsync("Ticket_1", 1, new Changeset(1, new object[] { new TicketSold() })).Wait();
-            Persistence.AppendAsync("Ticket_1", 2, new Changeset(2, new object[] { new TicketRefunded() })).Wait();
+            Store.AppendAsync("Ticket_1", 1, new Changeset(1, new object[] { new TicketSold() })).Wait();
+            Store.AppendAsync("Ticket_1", 2, new Changeset(2, new object[] { new TicketRefunded() })).Wait();
         }
 
         [Fact]
@@ -189,7 +189,7 @@ namespace NStore.Domain.Tests
     {
         public with_snapshots_and_idempotent_command()
         {
-            Snapshots = new DefaultSnapshotStore(new InMemoryPersistence(new InMemoryPersistenceOptions()));
+            Snapshots = new DefaultSnapshotStore(new InMemoryStore(new InMemoryPersistenceOptions()));
         }
 
         [Fact]
@@ -212,7 +212,7 @@ namespace NStore.Domain.Tests
             await newRepository.SaveAsync(ticket, operationId).ConfigureAwait(false); //idempotent
 
             //Verify that the aggregate is in version 2
-            var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
+            var chunk = await Store.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
             Assert.NotNull(chunk);
             Assert.IsType<Changeset>(chunk.Payload);
             Assert.Equal(2, ((Changeset)chunk.Payload).AggregateVersion);
@@ -233,7 +233,7 @@ namespace NStore.Domain.Tests
     {
         public with_snapshot_only()
         {
-            Snapshots = new DefaultSnapshotStore(new InMemoryPersistence(new InMemoryPersistenceOptions()));
+            Snapshots = new DefaultSnapshotStore(new InMemoryStore(new InMemoryPersistenceOptions()));
         }
 
         [Fact]
@@ -260,7 +260,7 @@ namespace NStore.Domain.Tests
             var ticket = await Repository.GetByIdAsync<Ticket>("Ticket_1").ConfigureAwait(false);
             await Repository.SaveAsync(ticket, "empty").ConfigureAwait(false);
 
-            var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
+            var chunk = await Store.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
 
             Assert.Null(chunk);
         }
@@ -275,7 +275,7 @@ namespace NStore.Domain.Tests
             var ticket = await Repository.GetByIdAsync<Ticket>("Ticket_1").ConfigureAwait(false);
             await Repository.SaveAsync(ticket, "empty").ConfigureAwait(false);
 
-            var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
+            var chunk = await Store.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
 
             Assert.NotNull(chunk);
             Assert.IsType<Changeset>(chunk.Payload);
@@ -305,13 +305,13 @@ namespace NStore.Domain.Tests
             {
                 NetworkSimulator = networkSimulator
             };
-            var persistence = new InMemoryPersistence(options);
+            var persistence = new InMemoryStore(options);
             return persistence;
         }
 
         private async Task Setup()
         {
-            _persistence = CreatePersistence();
+            _store = CreatePersistence();
             var counter = await Repository.GetByIdAsync<CounterAggregate>("Counter_1").ConfigureAwait(false);
             counter.Increment();
             await Repository.SaveAsync(counter, "inc_1").ConfigureAwait(false);
@@ -393,7 +393,7 @@ namespace NStore.Domain.Tests
             ticket2.DoSomething();
             await repository2.SaveAsync(ticket2, Guid.NewGuid().ToString()).ConfigureAwait(false);
 
-            var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
+            var chunk = await Store.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
 
             Assert.NotNull(chunk);
             Assert.IsType<Changeset>(chunk.Payload);
@@ -414,7 +414,7 @@ namespace NStore.Domain.Tests
             await Repository.SaveAsync(ticket, "new");
 
             // assert
-            var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
+            var chunk = await Store.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
 
             Assert.NotNull(chunk);
             Assert.IsType<Changeset>(chunk.Payload);
@@ -434,7 +434,7 @@ namespace NStore.Domain.Tests
             await Repository.SaveAsync(ticket, "update");
             
             // assert
-            var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
+            var chunk = await Store.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
 
             Assert.NotNull(chunk);
             Assert.IsType<Changeset>(chunk.Payload);

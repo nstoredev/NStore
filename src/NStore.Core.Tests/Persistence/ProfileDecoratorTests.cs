@@ -13,7 +13,7 @@ namespace NStore.Core.Tests.Persistence
 
         public ProfileDecoratorTests()
         {
-            var nullStore = new NullPersistence();
+            var nullStore = new NullStore();
             _store = _profile = new ProfileDecorator(nullStore);
         }
 

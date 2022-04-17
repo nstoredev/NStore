@@ -7,21 +7,20 @@ namespace NStore.Core.Tests.Streams
 {
     public class StreamTests
     {
-        private readonly ProfileDecorator _persistence;
+        private readonly ProfileDecorator _store;
         private readonly Stream _stream;
 
         public StreamTests()
         {
-            _persistence = new ProfileDecorator(new NullPersistence());
-            _stream = new Stream("stream", _persistence);
+            _store = new ProfileDecorator(new NullStore());
+            _stream = new Stream("stream", _store);
         }
 
         [Fact]
         public async Task peek_should_read_last_chunk()
         {
             await _stream.PeekAsync().ConfigureAwait(false);
-            Assert.Equal(1, _persistence.ReadSingleBackwardCounter.Calls);
+            Assert.Equal(1, _store.ReadSingleBackwardCounter.Calls);
         }
-
     }
 }

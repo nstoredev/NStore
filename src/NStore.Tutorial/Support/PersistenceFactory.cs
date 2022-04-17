@@ -15,7 +15,7 @@ namespace NStore.Tutorial.Support
             // data between snapshots, aggregates, streams.
             //
             // Mimic (de)serialization of other persistence providers
-            return Task.FromResult<IPersistence>(new InMemoryPersistence(SerializationHelper.DeepClone));
+            return Task.FromResult<IPersistence>(new InMemoryStore(SerializationHelper.DeepClone));
         }
 
         public static async Task<IPersistence> CreateSqlServerAsync(

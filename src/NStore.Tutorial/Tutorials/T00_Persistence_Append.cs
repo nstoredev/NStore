@@ -19,7 +19,7 @@ namespace NStore.Tutorial.Tutorials
             //    has a global monotonic Position
             //    has partitions with own Index
             //
-            var persistence = _runtime.Instrument(new InMemoryPersistence(), "memory-streams");
+            var persistence = _runtime.Instrument(new InMemoryStore(), "memory-streams");
 
             //
             // Act
@@ -51,7 +51,7 @@ namespace NStore.Tutorial.Tutorials
             //    has a global monotonic Position
             //    has partitions with own Index
             //
-            var persistence = _runtime.Instrument(new InMemoryPersistence(), "memory-streams");
+            var persistence = _runtime.Instrument(new InMemoryStore(), "memory-streams");
 
             //
             // Act

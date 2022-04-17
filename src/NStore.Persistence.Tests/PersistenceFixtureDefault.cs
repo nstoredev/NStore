@@ -14,7 +14,7 @@ namespace NStore.Persistence.Tests
             {
                 CloneFunc = Clone,
             };
-            return new InMemoryPersistence(options);
+            return new InMemoryStore(options);
         }
 
         protected void Clear(IPersistence persistence, bool drop)

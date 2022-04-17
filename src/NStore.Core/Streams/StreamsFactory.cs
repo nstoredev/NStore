@@ -5,11 +5,11 @@ namespace NStore.Core.Streams
 {
     public class StreamsFactory : IStreamsFactory
     {
-        private readonly IPersistence _persistence;
+        private readonly IPersistence _store;
 
         public StreamsFactory(IPersistence persistence)
         {
-            _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
+            _store = persistence ?? throw new ArgumentNullException(nameof(persistence));
         }
 
         public IRandomAccessStream OpenRandomAccess(string streamId)
@@ -20,19 +20,19 @@ namespace NStore.Core.Streams
         public IStream Open(string streamId)
         {
             if (streamId == null) throw new ArgumentNullException(nameof(streamId));
-            return new Stream(streamId, _persistence);
+            return new Stream(streamId, _store);
         }
 
         public IStream OpenOptimisticConcurrency(string streamId)
         {
             if (streamId == null) throw new ArgumentNullException(nameof(streamId));
-            return new OptimisticConcurrencyStream(streamId, _persistence);
+            return new OptimisticConcurrencyStream(streamId, _store);
         }
 
         public IStream OpenReadOnly(string streamId)
         {
             if (streamId == null) throw new ArgumentNullException(nameof(streamId));
-            return new ReadOnlyStream(streamId, _persistence);
+            return new ReadOnlyStream(streamId, _store);
         }
     }
 }

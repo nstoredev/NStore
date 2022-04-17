@@ -19,7 +19,7 @@ namespace NStore.Persistence.Tests
     public partial class BasePersistenceTest
     {
         protected string _mongoConnectionString;
-        protected IMongoPersistence _mongoPersistence;
+        protected IMongoPersistence _mongoStore;
         private MongoPersistenceOptions _options;
         private const string TestSuitePrefix = "Mongo";
 
@@ -46,11 +46,11 @@ namespace NStore.Persistence.Tests
             {
                 _options.DropOnInit = true;
             }
-            _mongoPersistence = CreatePersistence(_options);
+            _mongoStore = CreatePersistence(_options);
 
-            _mongoPersistence.InitAsync(CancellationToken.None).Wait();
+            _mongoStore.InitAsync(CancellationToken.None).Wait();
 
-            return _mongoPersistence;
+            return _mongoStore;
         }
 
         protected virtual internal MongoPersistenceOptions GetMongoPersistenceOptions()
@@ -77,10 +77,10 @@ namespace NStore.Persistence.Tests
 
         protected IMongoCollection<TChunk> GetCollection<TChunk>()
         {
-            var fieldInfo = _mongoPersistence.GetType()
+            var fieldInfo = _mongoStore.GetType()
                 .GetField("_chunks", BindingFlags.NonPublic | BindingFlags.Instance);
 
-            var collection = (IMongoCollection<TChunk>)fieldInfo.GetValue(_mongoPersistence);
+            var collection = (IMongoCollection<TChunk>)fieldInfo.GetValue(_mongoStore);
             return collection;
         }
 
