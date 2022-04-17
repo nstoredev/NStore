@@ -10,7 +10,7 @@ namespace NStore.Persistence.Tests
 
         protected IStore Create(bool dropOnInit)
         {
-            var options = new InMemoryPersistenceOptions
+            var options = new InMemoryStoreOptions
             {
                 CloneFunc = Clone,
             };

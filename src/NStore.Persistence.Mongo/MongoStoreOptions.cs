@@ -4,7 +4,7 @@ using System;
 
 namespace NStore.Persistence.Mongo
 {
-    public class MongoPersistenceOptions
+    public class MongoStoreOptions
     {
         public INStoreLoggerFactory LoggerFactory { get; set; }
 
@@ -62,13 +62,13 @@ namespace NStore.Persistence.Mongo
         /// persistence to read data.
         /// </summary>
         /// <returns></returns>
-        public MongoPersistenceOptions SetReadonlyUser()
+        public MongoStoreOptions SetReadonlyUser()
         {
             ReadonlyUser = true;
             return this;
         }
 
-        public MongoPersistenceOptions SetDropOnInit()
+        public MongoStoreOptions SetDropOnInit()
         {
             DropOnInit = true;
             return this;
@@ -79,7 +79,7 @@ namespace NStore.Persistence.Mongo
             return !String.IsNullOrWhiteSpace(PartitionsConnectionString);
         }
 
-        public MongoPersistenceOptions()
+        public MongoStoreOptions()
         {
 #pragma warning disable RCS1163 // Unused parameter.
             this.CustomizePartitionSettings = settings => { };

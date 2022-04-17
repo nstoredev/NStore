@@ -20,7 +20,7 @@ namespace NStore.Persistence.Tests
     {
         protected string _mongoConnectionString;
         protected IMongoStore _mongoStore;
-        private MongoPersistenceOptions _options;
+        private MongoStoreOptions _options;
         private const string TestSuitePrefix = "Mongo";
 
 #if MAP_DOMAIN
@@ -41,21 +41,21 @@ namespace NStore.Persistence.Tests
         protected internal IStore Create(bool dropOnInit)
         {
             _mongoConnectionString = GetPartitionsConnectionString();
-            _options = GetMongoPersistenceOptions();
+            _options = GetMongoStoreOptions();
             if (dropOnInit)
             {
                 _options.DropOnInit = true;
             }
-            _mongoStore = CreatePersistence(_options);
+            _mongoStore = CreateStore(_options);
 
             _mongoStore.InitAsync(CancellationToken.None).Wait();
 
             return _mongoStore;
         }
 
-        protected virtual internal MongoPersistenceOptions GetMongoPersistenceOptions()
+        protected virtual internal MongoStoreOptions GetMongoStoreOptions()
         {
-            return new MongoPersistenceOptions
+            return new MongoStoreOptions
             {
                 PartitionsConnectionString = _mongoConnectionString,
                 UseLocalSequence = true,
@@ -84,7 +84,7 @@ namespace NStore.Persistence.Tests
             return collection;
         }
 
-        protected virtual IMongoStore CreatePersistence(MongoPersistenceOptions options)
+        protected virtual IMongoStore CreateStore(MongoStoreOptions options)
         {
             return new MongoStore(options);
         }

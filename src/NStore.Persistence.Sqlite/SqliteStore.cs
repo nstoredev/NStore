@@ -15,13 +15,13 @@ namespace NStore.Persistence.Sqlite
     {
         private const int DUPLICATED_INDEX_EXCEPTION = 19;
 
-        private readonly SqlitePersistenceOptions _options;
+        private readonly SqliteStoreOptions _options;
         private readonly INStoreLogger _logger;
 
 
         public bool SupportsFillers => false;
 
-        public SqliteStore(SqlitePersistenceOptions options) : base(options)
+        public SqliteStore(SqliteStoreOptions options) : base(options)
         {
             _options = options;
             _logger = _options.LoggerFactory.CreateLogger($"SqlitePersistence-{options.StreamsTableName}");

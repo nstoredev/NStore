@@ -23,7 +23,7 @@ namespace NStore.Tutorial.Support
             string tablename,
             INStoreLoggerFactory loggerFactory)
         {
-            var options = new MsSqlPersistenceOptions(loggerFactory)
+            var options = new MsSqlStoreOptions(loggerFactory)
             {
                 ConnectionString = connectionString,
                 StreamsTableName = tablename,

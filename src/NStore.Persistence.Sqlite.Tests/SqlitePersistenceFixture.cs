@@ -30,7 +30,7 @@ namespace NStore.Persistence.Tests
 
             _logger.LogInformation("Starting test #{number}", _testRunId);
 
-            var options = new SqlitePersistenceOptions(LoggerFactory)
+            var options = new SqliteStoreOptions(LoggerFactory)
             {
                 ConnectionString = ConnectionString,
                 StreamsTableName = "streams_" + _testRunId + "_" + GetType().Name,

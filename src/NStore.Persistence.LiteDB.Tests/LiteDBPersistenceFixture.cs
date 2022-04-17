@@ -17,7 +17,7 @@ namespace NStore.Persistence.Tests
 
             _logger.LogInformation("Starting test #{number}", _testRunId);
             var serializer = new LiteDBSerializer();
-            var options = new LiteDBPersistenceOptions(serializer, LoggerFactory)
+            var options = new LiteDBStoreOptions(serializer, LoggerFactory)
             {
                 ConnectionString = pathToFile,
                 StreamsCollectionName = "streams"

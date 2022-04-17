@@ -4,7 +4,7 @@ using NStore.Core.Logging;
 
 namespace NStore.BaseSqlPersistence
 {
-    public abstract class BaseSqlPersistenceOptions
+    public abstract class BaseSqlStoreOptions
     {
         public INStoreLoggerFactory LoggerFactory { get; set; }
         public string ConnectionString { get; set; }
@@ -18,7 +18,7 @@ namespace NStore.BaseSqlPersistence
         public bool StreamIdempotencyEnabled { get; set; } = true;
         public ISqlPayloadSerializer Serializer { get; set; }
 
-        protected BaseSqlPersistenceOptions(INStoreLoggerFactory loggerFactory)
+        protected BaseSqlStoreOptions(INStoreLoggerFactory loggerFactory)
         {
             LoggerFactory = loggerFactory;
             StreamsTableName = "Streams";

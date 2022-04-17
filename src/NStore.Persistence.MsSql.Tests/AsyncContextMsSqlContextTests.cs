@@ -9,13 +9,13 @@ namespace NStore.Persistence.MsSql.Tests
 {
     public class AsyncContextMsSqlContextTests : BaseStoreTest
     {
-        private AsyncContextMsSqlPersistenceOptions _contextConnectionOptions;
+        private AsyncContextMsSqlStoreOptions _contextConnectionOptions;
         private IMsSqlAsyncContext _mssqlcontext;
-        protected override MsSqlPersistenceOptions CreateOptions()
+        protected override MsSqlStoreOptions CreateOptions()
         {
             var options = base.CreateOptions();
 
-            _contextConnectionOptions = new AsyncContextMsSqlPersistenceOptions(options.LoggerFactory)
+            _contextConnectionOptions = new AsyncContextMsSqlStoreOptions(options.LoggerFactory)
             {
                 ConnectionString = options.ConnectionString,
                 Serializer = options.Serializer,

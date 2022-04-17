@@ -21,22 +21,22 @@ namespace NStore.Core.InMemory
         private readonly INetworkSimulator _networkSimulator;
         private readonly InMemoryPartition _emptyInMemoryPartition;
         private readonly ReaderWriterLockSlim _lockSlim = new ReaderWriterLockSlim();
-        private readonly InMemoryPersistenceOptions _options;
+        private readonly InMemoryStoreOptions _options;
         private const string EmptyPartitionId = "::empty";
 
         public bool SupportsFillers => true;
 
-        public InMemoryStore() : this(new InMemoryPersistenceOptions())
+        public InMemoryStore() : this(new InMemoryStoreOptions())
         {
         }
 
         public InMemoryStore(INetworkSimulator networkSimulator)
-            : this(new InMemoryPersistenceOptions(null, networkSimulator))
+            : this(new InMemoryStoreOptions(null, networkSimulator))
         {
         }
 
         public InMemoryStore(Func<object, object> cloneFunc)
-            : this(new InMemoryPersistenceOptions(cloneFunc, null))
+            : this(new InMemoryStoreOptions(cloneFunc, null))
         {
         }
 
@@ -45,7 +45,7 @@ namespace NStore.Core.InMemory
         /// </summary>
         public IEnumerable<string> PartitionIds => _partitions.Keys.Where(x => x != EmptyPartitionId);
 
-        public InMemoryStore(InMemoryPersistenceOptions options)
+        public InMemoryStore(InMemoryStoreOptions options)
         {
             _chunks = new MemoryChunk[1024 * 1024];
             _options = options;

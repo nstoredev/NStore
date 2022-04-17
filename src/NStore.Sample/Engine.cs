@@ -117,7 +117,7 @@ namespace NStore.Sample
             {
                 _cloneProfiler = new TaskProfilingInfo("Cloning state");
 
-                var inMemoryPersistence = new InMemoryStore(new InMemoryPersistenceOptions
+                var inMemoryPersistence = new InMemoryStore(new InMemoryStoreOptions
                 {
                     CloneFunc = CloneSnapshot
                 });

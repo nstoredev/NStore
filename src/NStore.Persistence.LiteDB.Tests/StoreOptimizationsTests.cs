@@ -10,11 +10,11 @@ using Xunit.Abstractions;
 
 namespace NStore.Persistence.LiteDB.Tests
 {
-    public class PersistenceOptimizationsTests
+    public class StoreOptimizationsTests
     {
         private readonly ITestOutputHelper _output;
 
-        public PersistenceOptimizationsTests(ITestOutputHelper output)
+        public StoreOptimizationsTests(ITestOutputHelper output)
         {
             _output = output;
         }
@@ -33,7 +33,7 @@ namespace NStore.Persistence.LiteDB.Tests
                 .Field(x => x.StreamSequence, "se")
                 .Field(x => x.Payload, "pa");
 
-            var options = new LiteDBPersistenceOptions
+            var options = new LiteDBStoreOptions
             (
                 new LiteDBSerializer(),
                 NStoreNullLoggerFactory.Instance,

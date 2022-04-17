@@ -8,7 +8,7 @@ namespace NStore.Persistence.MsSql.Tests
 {
     public class IdempotencyTests : BaseStoreTest
     {
-        protected override MsSqlPersistenceOptions CreateOptions()
+        protected override MsSqlStoreOptions CreateOptions()
         {
             var opts = base.CreateOptions();
             opts.StreamIdempotencyEnabled = false;

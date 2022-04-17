@@ -40,7 +40,7 @@ namespace NStore.Domain.Tests.ExperimentalTests
 
     public class DomainBuilderTests
     {
-        private readonly IStore _memory = new InMemoryStore(new InMemoryPersistenceOptions());
+        private readonly IStore _memory = new InMemoryStore(new InMemoryStoreOptions());
 
         [Fact]
         public async Task syntactic_sugar_comes_at_rescue()
@@ -65,7 +65,7 @@ namespace NStore.Domain.Tests.ExperimentalTests
         {
             var strangerStreams = new DomainBuilder()
                 .PersistOn(() => _memory)
-                .WithSnapshotsOn(() => new DefaultSnapshotStore(new InMemoryStore(new InMemoryPersistenceOptions())))
+                .WithSnapshotsOn(() => new DefaultSnapshotStore(new InMemoryStore(new InMemoryStoreOptions())))
                 .CreateAggregatesWith(() => new DefaultAggregateFactory())
                 .Build();
 
@@ -85,7 +85,7 @@ namespace NStore.Domain.Tests.ExperimentalTests
 
             var strangerStreams = new DomainBuilder()
                 .PersistOn(() => _memory)
-                .WithSnapshotsOn(() => new DefaultSnapshotStore(new InMemoryStore(new InMemoryPersistenceOptions())))
+                .WithSnapshotsOn(() => new DefaultSnapshotStore(new InMemoryStore(new InMemoryStoreOptions())))
                 .CreateAggregatesWith(() => new DefaultAggregateFactory())
                 .BroadcastTo(Watcher)
                 .Build();

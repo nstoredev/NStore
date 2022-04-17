@@ -50,7 +50,7 @@ namespace NStore.Persistence.Mongo.Tests
 
     public class MongoStoreWithCustomChunkType : BaseStoreTest
     {
-        protected override IMongoStore CreatePersistence(MongoPersistenceOptions options)
+        protected override IMongoStore CreateStore(MongoStoreOptions options)
         {
             return new MongoStore<CustomChunk>(options);
         }
@@ -100,7 +100,7 @@ namespace NStore.Persistence.Mongo.Tests
 
         private SerializerSpy _serializer;
 
-        protected override IMongoStore CreatePersistence(MongoPersistenceOptions options)
+        protected override IMongoStore CreateStore(MongoStoreOptions options)
         {
             _serializer = new SerializerSpy();
             options.MongoPayloadSerializer = _serializer;
@@ -147,10 +147,10 @@ namespace NStore.Persistence.Mongo.Tests
     {
         private TestMongoPayloadSerializer _testMongoPayloadSerializer;
 
-        protected internal override MongoPersistenceOptions GetMongoPersistenceOptions()
+        protected internal override MongoStoreOptions GetMongoStoreOptions()
         {
             //Add your custom payload serializer.
-            var options = base.GetMongoPersistenceOptions();
+            var options = base.GetMongoStoreOptions();
             if (_testMongoPayloadSerializer == null)
             {
                 _testMongoPayloadSerializer = new TestMongoPayloadSerializer();
@@ -222,9 +222,9 @@ namespace NStore.Persistence.Mongo.Tests
     {
         private Int32 callCount;
 
-        protected internal override MongoPersistenceOptions GetMongoPersistenceOptions()
+        protected internal override MongoStoreOptions GetMongoStoreOptions()
         {
-            var options = base.GetMongoPersistenceOptions();
+            var options = base.GetMongoStoreOptions();
             options.CustomizePartitionClientSettings = mongoClientSettings =>
                 mongoClientSettings.ClusterConfigurator = clusterConfigurator =>
                 {
@@ -250,11 +250,11 @@ namespace NStore.Persistence.Mongo.Tests
     /// </summary>
     public class Sequence_generator_id_is_initialized_correctly : BaseStoreTest
     {
-        private MongoPersistenceOptions _options;
+        private MongoStoreOptions _options;
 
-        protected internal override MongoPersistenceOptions GetMongoPersistenceOptions()
+        protected internal override MongoStoreOptions GetMongoStoreOptions()
         {
-            _options = base.GetMongoPersistenceOptions();
+            _options = base.GetMongoStoreOptions();
             _options.UseLocalSequence = false;
             _options.SequenceCollectionName = "sequence_test";
             return _options;

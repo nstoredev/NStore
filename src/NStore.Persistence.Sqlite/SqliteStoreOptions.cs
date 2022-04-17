@@ -8,9 +8,9 @@ using NStore.Core.Logging;
 
 namespace NStore.Persistence.Sqlite
 {
-    public class SqlitePersistenceOptions : BaseSqlPersistenceOptions
+    public class SqliteStoreOptions : BaseSqlStoreOptions
     {
-        public SqlitePersistenceOptions(INStoreLoggerFactory loggerFactory) : base(loggerFactory)
+        public SqliteStoreOptions(INStoreLoggerFactory loggerFactory) : base(loggerFactory)
         {
         }
 

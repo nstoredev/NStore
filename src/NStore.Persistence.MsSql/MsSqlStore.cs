@@ -11,11 +11,11 @@ namespace NStore.Persistence.MsSql
     {
         private const int DuplicatedIndexExceptionErrorNumber = 2601;
 
-        private readonly MsSqlPersistenceOptions _options;
+        private readonly MsSqlStoreOptions _options;
 
         public bool SupportsFillers => false;
 
-        public MsSqlStore(MsSqlPersistenceOptions options) : base(options)
+        public MsSqlStore(MsSqlStoreOptions options) : base(options)
         {
             _options = options;
 

@@ -17,7 +17,7 @@ namespace NStore.Domain.Tests
         protected IStreamsFactory _streams;
         protected IStreamsFactory Streams => _streams ??= new StreamsFactory(Store);
         protected IStore _store;
-        protected IStore Store => _store ??= new InMemoryStore(new InMemoryPersistenceOptions());
+        protected IStore Store => _store ??= new InMemoryStore(new InMemoryStoreOptions());
         private IAggregateFactory AggregateFactory { get; }
         protected ISnapshotStore Snapshots { get; set; }
         private IRepository _repository;
@@ -143,7 +143,7 @@ namespace NStore.Domain.Tests
     {
         public with_snapshots()
         {
-            Snapshots = new DefaultSnapshotStore(new InMemoryStore(new InMemoryPersistenceOptions()));
+            Snapshots = new DefaultSnapshotStore(new InMemoryStore(new InMemoryStoreOptions()));
 
             Store.AppendAsync("Ticket_1", 1, new Changeset(1, new object[] { new TicketSold() })).Wait();
             Store.AppendAsync("Ticket_1", 2, new Changeset(2, new object[] { new TicketRefunded() })).Wait();
@@ -189,7 +189,7 @@ namespace NStore.Domain.Tests
     {
         public with_snapshots_and_idempotent_command()
         {
-            Snapshots = new DefaultSnapshotStore(new InMemoryStore(new InMemoryPersistenceOptions()));
+            Snapshots = new DefaultSnapshotStore(new InMemoryStore(new InMemoryStoreOptions()));
         }
 
         [Fact]
@@ -233,7 +233,7 @@ namespace NStore.Domain.Tests
     {
         public with_snapshot_only()
         {
-            Snapshots = new DefaultSnapshotStore(new InMemoryStore(new InMemoryPersistenceOptions()));
+            Snapshots = new DefaultSnapshotStore(new InMemoryStore(new InMemoryStoreOptions()));
         }
 
         [Fact]
@@ -298,10 +298,10 @@ namespace NStore.Domain.Tests
         }
 
         AlwaysThrowsNetworkSimulator networkSimulator;
-        protected IStore CreatePersistence()
+        protected IStore CreateStore()
         {
             networkSimulator = new AlwaysThrowsNetworkSimulator();
-            var options = new InMemoryPersistenceOptions
+            var options = new InMemoryStoreOptions
             {
                 NetworkSimulator = networkSimulator
             };
@@ -311,7 +311,7 @@ namespace NStore.Domain.Tests
 
         private async Task Setup()
         {
-            _store = CreatePersistence();
+            _store = CreateStore();
             var counter = await Repository.GetByIdAsync<CounterAggregate>("Counter_1").ConfigureAwait(false);
             counter.Increment();
             await Repository.SaveAsync(counter, "inc_1").ConfigureAwait(false);

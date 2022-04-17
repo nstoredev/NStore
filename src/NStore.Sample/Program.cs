@@ -93,7 +93,7 @@ namespace NStore.Sample
                 case "memory":
                     {
                         var network = new ReliableNetworkSimulator(2, 10);
-                        var options = new InMemoryPersistenceOptions
+                        var options = new InMemoryStoreOptions
                         {
                             CloneFunc = ObjectSerializer.Clone,
                             NetworkSimulator = network
@@ -103,7 +103,7 @@ namespace NStore.Sample
 
                 case "mongo":
                     {
-                        var options = new MongoPersistenceOptions
+                        var options = new MongoStoreOptions
                         {
                             PartitionsConnectionString = Mongo,
                             UseLocalSequence = true,

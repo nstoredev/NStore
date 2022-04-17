@@ -11,9 +11,9 @@ namespace NStore.BaseSqlPersistence
     {
         private readonly INStoreLogger _logger;
 
-        private BaseSqlPersistenceOptions Options { get; }
+        private BaseSqlStoreOptions Options { get; }
 
-        protected AbstractSqlPersistence(BaseSqlPersistenceOptions options)
+        protected AbstractSqlPersistence(BaseSqlStoreOptions options)
         {
             Options = options;
             _logger = options.LoggerFactory.CreateLogger($"{GetType().FullName}-{options.StreamsTableName}");

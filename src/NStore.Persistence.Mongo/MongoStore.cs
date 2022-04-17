@@ -9,28 +9,6 @@ using System.Threading.Tasks;
 
 namespace NStore.Persistence.Mongo
 {
-    [Obsolete(message:"Use IMongoStore")]
-    public interface IMongoPersistence2 : IMongoStore
-    {
-    }
-
-    [Obsolete(message:"Use MongoStore")]
-    public class MongoPersistence : MongoStore
-    {
-        public MongoPersistence(MongoPersistenceOptions options) : base(options)
-        {
-        }
-    }
-    
-    [Obsolete(message:"Use MongoStore")]
-    public class  MongoPersistence<TChunk> : MongoStore<TChunk> where TChunk : IMongoChunk, new()
-    {
-        public MongoPersistence(MongoPersistenceOptions options) : base(options)
-        {
-        }
-    }
-
-
     public interface IMongoStore : IStore
     {
         Task InitAsync(CancellationToken cancellationToken);
@@ -38,7 +16,7 @@ namespace NStore.Persistence.Mongo
 
     public class MongoStore : MongoStore<MongoChunk>
     {
-        public MongoStore(MongoPersistenceOptions options) : base(options)
+        public MongoStore(MongoStoreOptions options) : base(options)
         {
         }
     }
@@ -52,7 +30,7 @@ namespace NStore.Persistence.Mongo
         private IMongoCollection<TChunk> _chunks;
         private IMongoCollection<Counter> _counters;
         private readonly IMongoPayloadSerializer _mongoPayloadSerializer;
-        private readonly MongoPersistenceOptions _options;
+        private readonly MongoStoreOptions _options;
         private readonly INStoreLogger _logger;
 
         private long _sequence = 0;
@@ -69,7 +47,7 @@ namespace NStore.Persistence.Mongo
 
         public bool SupportsFillers => true;
 
-        public MongoStore(MongoPersistenceOptions options)
+        public MongoStore(MongoStoreOptions options)
         {
             if (options == null || !options.IsValid())
             {

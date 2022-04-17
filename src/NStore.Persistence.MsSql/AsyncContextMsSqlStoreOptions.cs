@@ -12,12 +12,12 @@ namespace NStore.Persistence.MsSql
         void Join(DbConnection conn, SqlTransaction transaction);
     }
 
-    public class AsyncContextMsSqlPersistenceOptions : MsSqlPersistenceOptions, IMsSqlAsyncContext
+    public class AsyncContextMsSqlStoreOptions : MsSqlStoreOptions, IMsSqlAsyncContext
     {
         private readonly AsyncLocal<DbConnection> _connection = new AsyncLocal<DbConnection>();
         private readonly AsyncLocal<SqlTransaction> _transaction = new AsyncLocal<SqlTransaction>();
 
-        public AsyncContextMsSqlPersistenceOptions(INStoreLoggerFactory loggerFactory) : base((INStoreLoggerFactory) loggerFactory)
+        public AsyncContextMsSqlStoreOptions(INStoreLoggerFactory loggerFactory) : base((INStoreLoggerFactory) loggerFactory)
         {
         }
 

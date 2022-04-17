@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace NStore.Persistence.Tests
 {
-    public static class PersistenceDebugExtensions
+    public static class StoreDebugExtensions
     {
         public static async Task<AllPartitionsRecorder> GetAllEventForAPartition(this IStore store, String partitionId)
         {

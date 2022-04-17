@@ -8,9 +8,9 @@ using NStore.Core.Logging;
 
 namespace NStore.Persistence.MsSql
 {
-    public class MsSqlPersistenceOptions : BaseSqlPersistenceOptions
+    public class MsSqlStoreOptions : BaseSqlStoreOptions
     {
-        public MsSqlPersistenceOptions(INStoreLoggerFactory loggerFactory) : base(loggerFactory)
+        public MsSqlStoreOptions(INStoreLoggerFactory loggerFactory) : base(loggerFactory)
         {
         }
 

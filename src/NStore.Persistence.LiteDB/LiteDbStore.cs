@@ -14,12 +14,12 @@ namespace NStore.Persistence.LiteDB
     /// </summary>
     public class LiteDbStore : IStore, IDisposable
     {
-        private readonly LiteDBPersistenceOptions _options;
+        private readonly LiteDBStoreOptions _options;
         private LiteDatabase _db;
         private ILiteCollection<LiteDBChunk> _streams;
         private readonly INStoreLogger _logger;
 
-        public LiteDbStore(LiteDBPersistenceOptions options)
+        public LiteDbStore(LiteDBStoreOptions options)
         {
             _options = options;
             _logger = _options.LoggerFactory.CreateLogger(_options.ConnectionString);

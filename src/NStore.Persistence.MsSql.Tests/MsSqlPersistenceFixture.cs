@@ -32,9 +32,9 @@ namespace NStore.Persistence.Tests
             }
         }
 
-        protected virtual MsSqlPersistenceOptions CreateOptions()
+        protected virtual MsSqlStoreOptions CreateOptions()
         {
-            return new MsSqlPersistenceOptions(LoggerFactory)
+            return new MsSqlStoreOptions(LoggerFactory)
             {
                 ConnectionString = _connectionString,
                 StreamsTableName = "streams_" + _testRunId + "_" + GetType().Name,

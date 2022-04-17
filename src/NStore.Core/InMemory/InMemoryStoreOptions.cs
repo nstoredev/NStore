@@ -2,14 +2,14 @@
 
 namespace NStore.Core.InMemory
 {
-    public class InMemoryPersistenceOptions
+    public class InMemoryStoreOptions
     {
-        public InMemoryPersistenceOptions() : this(null, null)
+        public InMemoryStoreOptions() : this(null, null)
         {
 
         }
 
-        public InMemoryPersistenceOptions(Func<object, object> cloneFunc, INetworkSimulator networkSimulator)
+        public InMemoryStoreOptions(Func<object, object> cloneFunc, INetworkSimulator networkSimulator)
         {
             CloneFunc = cloneFunc;
             NetworkSimulator = networkSimulator; 

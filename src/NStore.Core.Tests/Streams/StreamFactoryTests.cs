@@ -6,7 +6,7 @@ namespace NStore.Core.Tests.Streams
 {
     public class StreamFactoryTests
     {
-        private readonly IStreamsFactory _store = new StreamsFactory(new InMemoryStore(new InMemoryPersistenceOptions()));
+        private readonly IStreamsFactory _store = new StreamsFactory(new InMemoryStore(new InMemoryStoreOptions()));
 
         [Fact]
         public void open_should_return_stream()
