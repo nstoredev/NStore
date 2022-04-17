@@ -5,12 +5,12 @@ using NStore.Core.Logging;
 
 namespace NStore.Core.Persistence
 {
-    public class LogDecorator : IPersistence
+    public class LogDecorator : IStore
     {
-        private readonly IPersistence _store;
+        private readonly IStore _store;
         private readonly INStoreLogger _logger;
 
-        public LogDecorator(IPersistence store, INStoreLoggerFactory inStoreLoggerFactory, string categoryName = "Persistence")
+        public LogDecorator(IStore store, INStoreLoggerFactory inStoreLoggerFactory, string categoryName = "Persistence")
         {
             _store = store;
             _logger = inStoreLoggerFactory.CreateLogger(categoryName);

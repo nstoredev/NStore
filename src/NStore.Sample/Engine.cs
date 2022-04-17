@@ -95,7 +95,7 @@ namespace NStore.Sample
         private readonly ExecutionDataflowBlockOptions _boundedOptions;
         private readonly INStoreLoggerFactory _loggerFactory = new ConsoleLoggerFactory();
 
-        public SampleApp(IPersistence store, string name, bool useSnapshots, bool quiet, bool fast)
+        public SampleApp(IStore store, string name, bool useSnapshots, bool quiet, bool fast)
         {
             _quiet = quiet;
             _name = name;

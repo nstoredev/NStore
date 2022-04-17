@@ -6,7 +6,7 @@ namespace NStore.Domain.Experimental
 {
     public class DomainBuilder
     {
-        private Func<IPersistence> _storeFactory;
+        private Func<IStore> _storeFactory;
         private Func<IAggregateFactory> _aggregateFactoryFactory;
         private Func<ISnapshotStore> _snapshotStoreFactory = () => null;
         private ChunkProcessor _chunkProcessor;
@@ -21,7 +21,7 @@ namespace NStore.Domain.Experimental
             );
         }
 
-        public DomainBuilder PersistOn(Func<IPersistence> persistenceFactory)
+        public DomainBuilder PersistOn(Func<IStore> persistenceFactory)
         {
             _storeFactory = persistenceFactory;
             return this;

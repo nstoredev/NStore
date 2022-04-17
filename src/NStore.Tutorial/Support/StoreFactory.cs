@@ -9,16 +9,16 @@ namespace NStore.Tutorial.Support
 {
     public static class StoreFactory
     {
-        public static Task<IPersistence> CreateInMemoryAsync()
+        public static Task<IStore> CreateInMemoryAsync()
         {
             // Cloning function allow safe operations avoiding shared 
             // data between snapshots, aggregates, streams.
             //
             // Mimic (de)serialization of other persistence providers
-            return Task.FromResult<IPersistence>(new InMemoryStore(SerializationHelper.DeepClone));
+            return Task.FromResult<IStore>(new InMemoryStore(SerializationHelper.DeepClone));
         }
 
-        public static async Task<IPersistence> CreateSqlServerAsync(
+        public static async Task<IStore> CreateSqlServerAsync(
             string connectionString,
             string tablename,
             INStoreLoggerFactory loggerFactory)
@@ -29,7 +29,7 @@ namespace NStore.Tutorial.Support
                 StreamsTableName = tablename,
                 Serializer = new JsonMsSqlSerializer()
             };
-            var persistence = new MsSqlPersistence(options);
+            var persistence = new MsSqlStore(options);
 
             await persistence.DestroyAllAsync(CancellationToken.None);
             await persistence.InitAsync(CancellationToken.None);

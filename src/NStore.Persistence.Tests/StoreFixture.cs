@@ -31,11 +31,11 @@ namespace NStore.Persistence.Tests
         private static int _staticId = 0;
         protected readonly int _testRunId;
 
-        protected IPersistence Store { get; }
+        protected IStore Store { get; }
         protected readonly TestLoggerFactory LoggerFactory;
         protected readonly INStoreLogger _logger;
         protected IEnhancedPersistence Batcher => _store as IEnhancedPersistence;
-        protected readonly IPersistence _store;
+        protected readonly IStore _store;
 
         protected BaseStoreTest(bool autoCreateStore = true)
         {

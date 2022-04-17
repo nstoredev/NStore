@@ -9,7 +9,7 @@ namespace NStore.Core.Tests.Persistence
     public class ProfileDecoratorTests
     {
         private readonly ProfileDecorator _profile;
-        private readonly IPersistence _store;
+        private readonly IStore _store;
 
         public ProfileDecoratorTests()
         {

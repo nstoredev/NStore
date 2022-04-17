@@ -5,11 +5,11 @@ namespace NStore.Core.Streams
 {
     public class StreamsFactory : IStreamsFactory
     {
-        private readonly IPersistence _store;
+        private readonly IStore _store;
 
-        public StreamsFactory(IPersistence persistence)
+        public StreamsFactory(IStore store)
         {
-            _store = persistence ?? throw new ArgumentNullException(nameof(persistence));
+            _store = store ?? throw new ArgumentNullException(nameof(store));
         }
 
         public IRandomAccessStream OpenRandomAccess(string streamId)

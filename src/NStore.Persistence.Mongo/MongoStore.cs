@@ -31,7 +31,7 @@ namespace NStore.Persistence.Mongo
     }
 
 
-    public interface IMongoStore : IPersistence
+    public interface IMongoStore : IStore
     {
         Task InitAsync(CancellationToken cancellationToken);
     }

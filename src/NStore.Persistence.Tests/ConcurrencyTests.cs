@@ -7,8 +7,8 @@ namespace NStore.Persistence.Tests
 {
     public abstract partial class BaseConcurrencyTests : BaseStoreTest
     {
-        private readonly IPersistence _store2;
-        protected IPersistence Store2 { get; }
+        private readonly IStore _store2;
+        protected IStore Store2 { get; }
 
         protected BaseConcurrencyTests() : base()
         {

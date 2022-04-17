@@ -38,7 +38,7 @@ namespace NStore.Persistence.Tests
             });
         }
 #endif
-        protected internal IPersistence Create(bool dropOnInit)
+        protected internal IStore Create(bool dropOnInit)
         {
             _mongoConnectionString = GetPartitionsConnectionString();
             _options = GetMongoPersistenceOptions();
@@ -89,7 +89,7 @@ namespace NStore.Persistence.Tests
             return new MongoStore(options);
         }
 
-        protected void Clear(IPersistence persistence, bool drop)
+        protected void Clear(IStore store, bool drop)
         {
             // nothing to do
         }

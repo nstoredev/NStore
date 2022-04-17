@@ -48,7 +48,7 @@ namespace NStore.Persistence.LiteDB.Tests
                 File.Delete(options.ConnectionString);
             }
 
-            var store = new LiteDBPersistence(options);
+            var store = new LiteDbStore(options);
             store.DeleteDataFiles();
 
             store.Init();

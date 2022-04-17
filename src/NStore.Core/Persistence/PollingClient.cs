@@ -80,7 +80,7 @@ namespace NStore.Core.Persistence
         }
 
         private CancellationTokenSource _source;
-        private readonly IPersistence _store;
+        private readonly IStore _store;
         public int PollingIntervalMilliseconds { get; set; }
         public int HoleDetectionTimeout { get; set; }
         public long Position => _sequencer.Position;
@@ -94,7 +94,7 @@ namespace NStore.Core.Persistence
         public bool IsPolling => IsActive;
         public bool IsActive => !_stopped;
 
-        public PollingClient(IPersistence store, long lastPosition, ISubscription subscription, INStoreLoggerFactory inStoreLoggerFactory)
+        public PollingClient(IStore store, long lastPosition, ISubscription subscription, INStoreLoggerFactory inStoreLoggerFactory)
         {
             this._logger = inStoreLoggerFactory.CreateLogger(GetType().FullName);
 

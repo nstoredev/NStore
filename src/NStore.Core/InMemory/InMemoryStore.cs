@@ -8,7 +8,7 @@ using NStore.Core.Persistence;
 
 namespace NStore.Core.InMemory
 {
-    public class InMemoryStore : IPersistence
+    public class InMemoryStore : IStore
     {
         private readonly Func<object, object> _cloneFunc;
         private readonly MemoryChunk[] _chunks;

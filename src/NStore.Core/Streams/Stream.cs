@@ -6,12 +6,12 @@ namespace NStore.Core.Streams
 {
     public class Stream : IRandomAccessStream
     {
-        private IPersistence Store { get; }
+        private IStore Store { get; }
         public string Id { get; }
         public virtual bool IsWritable => true;
         private long _lastIndex = -1;
 
-        public Stream(string streamId, IPersistence store)
+        public Stream(string streamId, IStore store)
         {
             this.Id = streamId;
             this.Store = store;

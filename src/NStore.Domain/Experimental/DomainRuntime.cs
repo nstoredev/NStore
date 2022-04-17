@@ -10,14 +10,14 @@ namespace NStore.Domain.Experimental
 {
     public class DomainRuntime
     {
-        private readonly IPersistence _store;
+        private readonly IStore _store;
         private readonly IAggregateFactory _aggregateFactory;
         private readonly IStreamsFactory _streamsFactory;
         private readonly ISnapshotStore _snapshots;
         private readonly PollingClient _pollingClient;
 
         public DomainRuntime(
-            IPersistence store,
+            IStore store,
             IAggregateFactory aggregateFactory,
             ISnapshotStore snapshots,
             ChunkProcessor processor)

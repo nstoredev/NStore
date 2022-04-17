@@ -3,11 +3,11 @@ using System.Threading.Tasks;
 
 namespace NStore.Core.Persistence
 {
-    public class ProfileDecorator : IPersistence
+    public class ProfileDecorator : IStore
     {
-        private readonly IPersistence _store;
+        private readonly IStore _store;
 
-        public ProfileDecorator(IPersistence store)
+        public ProfileDecorator(IStore store)
         {
             _store = store;
             PersistCounter = new TaskProfilingInfo("Persist");

@@ -6,9 +6,9 @@ namespace NStore.Core.Snapshots
 {
     public class DefaultSnapshotStore : ISnapshotStore
     {
-        private readonly IPersistence _store;
+        private readonly IStore _store;
 
-        public DefaultSnapshotStore(IPersistence store)
+        public DefaultSnapshotStore(IStore store)
         {
             _store = store;
         }

@@ -6,13 +6,13 @@ using NStore.Core.Persistence;
 
 namespace NStore.Tpl
 {
-    public class StoreBatchAppendDecorator : IPersistence, IDisposable
+    public class StoreBatchAppendDecorator : IStore, IDisposable
     {
-        private readonly IPersistence _store;
+        private readonly IStore _store;
         private readonly BatchBlock<AsyncWriteJob> _batch;
         private readonly CancellationTokenSource _cts;
 
-        public StoreBatchAppendDecorator(IPersistence store, int batchSize, int flushTimeout)
+        public StoreBatchAppendDecorator(IStore store, int batchSize, int flushTimeout)
         {
             _cts = new CancellationTokenSource();
             var batcher = (IEnhancedPersistence) store;

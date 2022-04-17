@@ -16,8 +16,8 @@ namespace NStore.Domain.Tests
     {
         protected IStreamsFactory _streams;
         protected IStreamsFactory Streams => _streams ??= new StreamsFactory(Store);
-        protected IPersistence _store;
-        protected IPersistence Store => _store ??= new InMemoryStore(new InMemoryPersistenceOptions());
+        protected IStore _store;
+        protected IStore Store => _store ??= new InMemoryStore(new InMemoryPersistenceOptions());
         private IAggregateFactory AggregateFactory { get; }
         protected ISnapshotStore Snapshots { get; set; }
         private IRepository _repository;
@@ -298,7 +298,7 @@ namespace NStore.Domain.Tests
         }
 
         AlwaysThrowsNetworkSimulator networkSimulator;
-        protected IPersistence CreatePersistence()
+        protected IStore CreatePersistence()
         {
             networkSimulator = new AlwaysThrowsNetworkSimulator();
             var options = new InMemoryPersistenceOptions

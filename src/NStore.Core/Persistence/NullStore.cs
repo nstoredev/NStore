@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace NStore.Core.Persistence
 {
-    public class NullStore : IPersistence
+    public class NullStore : IStore
     {
         public Task<IChunk> ReplaceOneAsync(long position, string partitionId, long index, object payload,
             string operationId,

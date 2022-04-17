@@ -42,7 +42,7 @@ namespace NStore.Persistence.Tests
             };
         }
 
-        protected IPersistence Create(bool dropOnInit)
+        protected IStore Create(bool dropOnInit)
         {
             Connect();
 
@@ -50,7 +50,7 @@ namespace NStore.Persistence.Tests
 
             var options = CreateOptions();
 
-            var sqlPersistence = new MsSqlPersistence(options);
+            var sqlPersistence = new MsSqlStore(options);
             if (dropOnInit)
             {
                 sqlPersistence.DestroyAllAsync(CancellationToken.None).Wait();
@@ -60,9 +60,9 @@ namespace NStore.Persistence.Tests
             return sqlPersistence;
         }
 
-        protected void Clear(IPersistence persistence, bool drop)
+        protected void Clear(IStore store, bool drop)
         {
-            var sql = (MsSqlPersistence) persistence;
+            var sql = (MsSqlStore) store;
             if (drop)
             {
                 _logger.LogInformation("Cleaning up test #{number}", _testRunId);

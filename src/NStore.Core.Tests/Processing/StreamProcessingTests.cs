@@ -63,7 +63,7 @@ namespace NStore.Core.Tests.Processing
 
     public class StreamProcessingTests
     {
-        private readonly IPersistence _store;
+        private readonly IStore _store;
         private readonly StreamsFactory _streams;
         private readonly ISnapshotStore _snapshots;
 

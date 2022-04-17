@@ -18,9 +18,9 @@ namespace NStore.Tutorial
     /// </summary>
     public class TutorialRuntime
     {
-        public IPersistence StreamsPersistence { get; }
+        public IStore StreamsStore { get; }
 
-        public IPersistence SnapshotsPersistence { get; }
+        public IStore SnapshotsStore { get; }
         //
         // Core stuff
         //
@@ -46,10 +46,10 @@ namespace NStore.Tutorial
 
         public ILogger<TutorialRuntime> Logger { get; private set; }
 
-        private TutorialRuntime(IPersistence streamsPersistence, IPersistence snapshotsPersistence)
+        private TutorialRuntime(IStore streamsStore, IStore snapshotsStore)
         {
-            StreamsPersistence = streamsPersistence;
-            SnapshotsPersistence = snapshotsPersistence;
+            StreamsStore = streamsStore;
+            SnapshotsStore = snapshotsStore;
             Configure();
 
             Logger.LogInformation("Runtime Started");
@@ -59,13 +59,13 @@ namespace NStore.Tutorial
                 aggregateType => (IAggregate) this._serviceProvider.GetService(aggregateType)
             );
 
-            _streamsFactory = new StreamsFactory(Instrument(streamsPersistence, "streams"));
-            _snapshotStore = new DefaultSnapshotStore(Instrument(snapshotsPersistence, "snapshots"));
+            _streamsFactory = new StreamsFactory(Instrument(streamsStore, "streams"));
+            _snapshotStore = new DefaultSnapshotStore(Instrument(snapshotsStore, "snapshots"));
         }
 
-        public IPersistence Instrument(IPersistence persistence, string name)
+        public IStore Instrument(IStore store, string name)
         {
-            return new LogDecorator(persistence, _loggerFactory, name);
+            return new LogDecorator(store, _loggerFactory, name);
         }
 
         public void Shutdown()

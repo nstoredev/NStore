@@ -95,10 +95,10 @@ namespace NStore.Core.Persistence
             return recorder;
         }
 
-        public static async Task<Recorder> RecordAsync(this IPersistence persistence, string partitionId)
+        public static async Task<Recorder> RecordAsync(this IStore store, string partitionId)
         {
             var recorder = new Recorder();
-            await persistence.ReadForwardAsync(partitionId, recorder).ConfigureAwait(false);
+            await store.ReadForwardAsync(partitionId, recorder).ConfigureAwait(false);
             return recorder;
         }
     }

@@ -8,7 +8,7 @@ namespace NStore.Core.Streams
     //@@REVIEW: could be refactored as a Decorator on Stream?
     public class OptimisticConcurrencyStream : IStream
     {
-        private IPersistence Store { get; }
+        private IStore Store { get; }
 
         private long _version = -1;
         public string Id { get; }
@@ -16,7 +16,7 @@ namespace NStore.Core.Streams
 
         public OptimisticConcurrencyStream(
             string streamId,
-            IPersistence store
+            IStore store
         )
         {
             Id = streamId;

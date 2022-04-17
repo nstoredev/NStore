@@ -11,7 +11,7 @@ namespace NStore.Persistence.Tests
     {
         private const string TestSuitePrefix = "LiteDB";
 
-        protected IPersistence Create(bool dropOnInit)
+        protected IStore Create(bool dropOnInit)
         {
             var pathToFile = $"{_testRunId}.litedb";
 
@@ -23,7 +23,7 @@ namespace NStore.Persistence.Tests
                 StreamsCollectionName = "streams"
             };
 
-            var lite = new LiteDBPersistence(options);
+            var lite = new LiteDbStore(options);
 
             if (dropOnInit)
             {
@@ -35,9 +35,9 @@ namespace NStore.Persistence.Tests
             return lite;
         }
 
-        private static void Clear(IPersistence persistence, bool drop)
+        private static void Clear(IStore store, bool drop)
         {
-            var lite = (LiteDBPersistence)persistence;
+            var lite = (LiteDbStore)store;
             if (drop)
             {
                 lite.DeleteDataFiles();

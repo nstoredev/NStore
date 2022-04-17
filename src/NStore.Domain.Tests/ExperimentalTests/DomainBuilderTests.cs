@@ -40,7 +40,7 @@ namespace NStore.Domain.Tests.ExperimentalTests
 
     public class DomainBuilderTests
     {
-        private readonly IPersistence _memory = new InMemoryStore(new InMemoryPersistenceOptions());
+        private readonly IStore _memory = new InMemoryStore(new InMemoryPersistenceOptions());
 
         [Fact]
         public async Task syntactic_sugar_comes_at_rescue()

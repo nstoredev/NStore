@@ -6,24 +6,24 @@ namespace NStore.Persistence.Tests
 {
     public static class PersistenceDebugExtensions
     {
-        public static async Task<AllPartitionsRecorder> GetAllEventForAPartition(this IPersistence persistence, String partitionId)
+        public static async Task<AllPartitionsRecorder> GetAllEventForAPartition(this IStore store, String partitionId)
         {
             var tape = new AllPartitionsRecorder();
-            await persistence.ReadForwardAsync(partitionId, tape).ConfigureAwait(false);
+            await store.ReadForwardAsync(partitionId, tape).ConfigureAwait(false);
             return tape;
         }
 
-        public static async Task<AllPartitionsRecorder> GetAllEvents(this IPersistence persistence)
+        public static async Task<AllPartitionsRecorder> GetAllEvents(this IStore store)
         {
             var tape = new AllPartitionsRecorder();
-            await persistence.ReadAllAsync(0, tape).ConfigureAwait(false);
+            await store.ReadAllAsync(0, tape).ConfigureAwait(false);
             return tape;
         }
 
-        public static async Task<Recorder> GetAllChunksForAPartition(this IPersistence persistence, String partitionId)
+        public static async Task<Recorder> GetAllChunksForAPartition(this IStore store, String partitionId)
         {
             var tape = new Recorder();
-            await persistence.ReadForwardAsync(partitionId, tape).ConfigureAwait(false);
+            await store.ReadForwardAsync(partitionId, tape).ConfigureAwait(false);
             return tape;
         }
     }

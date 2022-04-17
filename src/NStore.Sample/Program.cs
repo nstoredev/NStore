@@ -84,7 +84,7 @@ namespace NStore.Sample
             Cmd.Execute(args);
         }
 
-        static IPersistence BuildStore(string store)
+        static IStore BuildStore(string store)
         {
             Console.WriteLine($"Selected store is {store}");
 

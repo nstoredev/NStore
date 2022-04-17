@@ -7,7 +7,7 @@ using NStore.Core.Persistence;
 
 namespace NStore.Persistence.MsSql
 {
-    public class MsSqlPersistence : AbstractSqlPersistence, IPersistence
+    public class MsSqlStore : AbstractSqlPersistence, IStore
     {
         private const int DuplicatedIndexExceptionErrorNumber = 2601;
 
@@ -15,7 +15,7 @@ namespace NStore.Persistence.MsSql
 
         public bool SupportsFillers => false;
 
-        public MsSqlPersistence(MsSqlPersistenceOptions options) : base(options)
+        public MsSqlStore(MsSqlPersistenceOptions options) : base(options)
         {
             _options = options;
 

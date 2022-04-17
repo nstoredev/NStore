@@ -24,7 +24,7 @@ namespace NStore.Persistence.Tests
             }
         }
 
-        protected IPersistence Create(bool dropOnInit)
+        protected IStore Create(bool dropOnInit)
         {
             Connect();
 
@@ -48,14 +48,14 @@ namespace NStore.Persistence.Tests
             return sqlPersistence;
         }
 
-        protected void Clear(IPersistence persistence, bool drop)
+        protected void Clear(IStore store, bool drop)
         {
             if (!drop)
             {
                 return;
             }
 
-            var sql = (SqliteStore) persistence;
+            var sql = (SqliteStore) store;
             _logger.LogInformation("Cleaning up test #{number}", _testRunId);
             sql.DestroyAllAsync(CancellationToken.None).Wait();
             _logger.LogInformation("Cleanup test #{number} done", _testRunId);

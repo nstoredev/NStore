@@ -114,9 +114,9 @@ namespace NStore.Domain.Tests.ExperimentalTests
         private readonly IDictionary<string, TimeLine> _timelines = new Dictionary<string, TimeLine>();
         private readonly IStreamsFactory _streams;
 
-        public TwitterViews(IPersistence persistence)
+        public TwitterViews(IStore store)
         {
-            _streams = new StreamsFactory(persistence);
+            _streams = new StreamsFactory(store);
         }
 
         public Task<bool> Process(IChunk chunk)
