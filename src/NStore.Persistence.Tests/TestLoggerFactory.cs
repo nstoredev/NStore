@@ -1,6 +1,7 @@
 ﻿using System;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
+using Microsoft.Extensions.Options;
 using NStore.Core.Logging;
 using NStore.Core.Persistence;
 
@@ -39,22 +40,39 @@ namespace NStore.Persistence.Tests
                 return NStoreNullLogger.Instance;
             }
 
-            return new ConsoleLoggerWrapper(new ConsoleLogger(
-                _provider + "::" + categoryName,
-                filter,
-                true
-            ));
+            var provider = new ConsoleLoggerProvider(new OptionsMonitor<ConsoleLoggerOptions>(new ConsoleLoggerOptions()));
+            return new ConsoleLoggerWrapper(provider);
         }
     }
 
+    public class OptionsMonitor<T> : IOptionsMonitor<T>
+    {
+        private readonly T options;
+
+        public OptionsMonitor(T options)
+        {
+            this.options = options;
+        }
+
+        public T CurrentValue => options;
+
+        public T Get(string name) => options;
+
+        public IDisposable OnChange(Action<T, string> listener) => new NullDisposable();
+
+        private class NullDisposable : IDisposable
+        {
+            public void Dispose() { }
+        }
+    }
 
     public class ConsoleLoggerWrapper : INStoreLogger
     {
-        private readonly ConsoleLogger _logger;
+        private ILogger _logger;
 
-        public ConsoleLoggerWrapper(ConsoleLogger logger)
+        public ConsoleLoggerWrapper(ConsoleLoggerProvider logger)
         {
-            _logger = logger;
+            _logger = logger.CreateLogger("default-console");
         }
 
         public bool IsDebugEnabled => _logger.IsEnabled(LogLevel.Debug);

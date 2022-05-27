@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'false'">net5.0</TargetFrameworks>
-    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'true'">net5.0;net462</TargetFrameworks>
-    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == ''">net5.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'false'">net6.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'true'">net6.0;net462</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == ''">net6.0</TargetFrameworks>
 	</PropertyGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\NStore.Domain\NStore.Domain.csproj" />
@@ -13,7 +13,7 @@
 		<ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
 		<PackageReference Include="Microsoft.Extensions.CommandLineUtils" Version="1.1.1">
 		</PackageReference>
 		<PackageReference Include="NETStandard.Library" Version="2.0.3" />

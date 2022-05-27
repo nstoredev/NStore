@@ -16,6 +16,7 @@ using NStore.Core.Snapshots;
 using NStore.Core.Streams;
 using NStore.Domain;
 using NStore.Persistence.Mongo;
+using Microsoft.Extensions.Options;
 
 namespace NStore.Sample
 {
@@ -26,19 +27,39 @@ namespace NStore.Sample
             if (categoryName == typeof(PollingClient).FullName)
                 return NStoreNullLogger.Instance;
 
-            return new ConsoleLoggerWrapper(
-                new ConsoleLogger(categoryName, (s, level) => true, true)
-            );
+            var provider = new ConsoleLoggerProvider(new OptionsMonitor<ConsoleLoggerOptions>(new ConsoleLoggerOptions()));
+            return new ConsoleLoggerWrapper(provider);
         }
     }
 
-    internal class ConsoleLoggerWrapper : INStoreLogger
+    public class OptionsMonitor<T> : IOptionsMonitor<T>
     {
-        private readonly ConsoleLogger _logger;
+        private readonly T options;
 
-        public ConsoleLoggerWrapper(ConsoleLogger logger)
+        public OptionsMonitor(T options)
         {
-            _logger = logger;
+            this.options = options;
+        }
+
+        public T CurrentValue => options;
+
+        public T Get(string name) => options;
+
+        public IDisposable OnChange(Action<T, string> listener) => new NullDisposable();
+
+        private class NullDisposable : IDisposable
+        {
+            public void Dispose() { }
+        }
+    }
+
+    public class ConsoleLoggerWrapper : INStoreLogger
+    {
+        private ILogger _logger;
+
+        public ConsoleLoggerWrapper(ConsoleLoggerProvider logger)
+        {
+            _logger = logger.CreateLogger("default-console");
         }
 
         public bool IsDebugEnabled => _logger.IsEnabled(LogLevel.Debug);
