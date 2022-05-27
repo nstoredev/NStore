@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'false'">net6.0</TargetFrameworks>
-        <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'true'">net6.0;net461</TargetFrameworks>
-        <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == ''">net6.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'false'">net5.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'true'">net5.0;net462</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == ''">net5.0</TargetFrameworks>
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="..\NStore.Persistence.Sqlite\NStore.Persistence.Sqlite.csproj">
