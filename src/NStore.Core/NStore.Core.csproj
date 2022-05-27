@@ -10,12 +10,14 @@
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <AssemblyName>NStore.Core</AssemblyName>
     <RootNamespace>NStore.Core</RootNamespace>
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\AssemblyInfo.cs">
       <Link>AssemblyInfo.cs</Link>
     </Compile>
-    
+
     <None PackagePath="" Include="..\..\LICENSE.md" pack="true" />
   </ItemGroup>
 </Project>
