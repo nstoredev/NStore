@@ -10,10 +10,24 @@
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <AssemblyName>NStore.Core</AssemblyName>
     <RootNamespace>NStore.Core</RootNamespace>
-    <DebugType>full</DebugType>
-    <DebugSymbols>true</DebugSymbols>
     <LangVersion>latest</LangVersion>
+
   </PropertyGroup>
+
+ <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Include source link libraries for github -->
+  <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1-*" PrivateAssets="All"/>
+
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Include="..\AssemblyInfo.cs">
       <Link>AssemblyInfo.cs</Link>
