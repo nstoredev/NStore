@@ -39,6 +39,17 @@ namespace NStore.Persistence.Sqlite
                       SELECT last_insert_rowid();
 ";
         }
+        
+        public override string GetReplaceChunkSql()
+        {
+            return $@"UPDATE [{StreamsTableName}]
+                    SET [PartitionId] = @PartitionId,
+                        [Index] = @Index,
+                        [Payload] = @Payload,
+                        [OperationId] = @OperationId,
+                        [SerializerInfo] = @SerializerInfo
+                    WHERE [Position] = @Position";
+        }
 
         public override string GetSelectChunkByStreamAndOperation()
         {
@@ -75,6 +86,16 @@ namespace NStore.Persistence.Sqlite
                       LIMIT 1";
         }
 
+        public override string GetChunkByPositionSql()
+        {
+            return $@"SELECT  
+                        [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
+                      FROM 
+                        [{this.StreamsTableName}] 
+                      WHERE 
+                          [Position] = @Position";
+        }
+        
         public override string GetCreateTableIfMissingSql()
         {
             return GetCreateTableSql();

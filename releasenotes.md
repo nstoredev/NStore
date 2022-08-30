@@ -1,4 +1,11 @@
-## vNext
+# vNext
+
+## 0.12.0
+
+- Updated references
+- Bumped full framework to 4.8
+
+## 0.11.x
 
 - Added ability to use a readonly connection on MongoDb persistence layer.
 

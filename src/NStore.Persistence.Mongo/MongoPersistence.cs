@@ -274,9 +274,9 @@ namespace NStore.Persistence.Mongo
             };
 
             using (var cursor = await _chunks
-                .FindAsync(filter, options, cancellationToken)
-                .ConfigureAwait(false)
-            )
+                       .FindAsync(filter, options, cancellationToken)
+                       .ConfigureAwait(false)
+                  )
             {
                 var lastPosition = await cursor.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
                 if (lastPosition != null)
@@ -286,6 +286,76 @@ namespace NStore.Persistence.Mongo
 
                 return 0;
             }
+        }
+
+        public async Task<IChunk> ReplaceOneAsync
+        (
+            long position,
+            string partitionId,
+            long index,
+            object payload,
+            string operationId,
+            CancellationToken cancellationToken)
+        {
+            var filterByPosition = Builders<TChunk>.Filter.Eq(x => x.Position, position);
+            var chunk = new TChunk();
+            chunk.Init(
+                position,
+                partitionId,
+                index,
+                _mongoPayloadSerializer.Serialize(payload),
+                operationId ?? Guid.NewGuid().ToString()
+            );
+
+            try
+            {
+                var result = await _chunks.ReplaceOneAsync(
+                    filterByPosition,
+                    chunk,
+                    (ReplaceOptions)null,
+                    cancellationToken).ConfigureAwait(false);
+
+                if (!result.IsAcknowledged)
+                {
+                    throw new MongoPersistenceException("Replace not Ackowledged");
+                }
+
+                return chunk;
+            }
+            catch (MongoWriteException ex)
+            {
+                //Need to understand what kind of exception we had, some of them could lead to a retry
+                if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+                {
+                    //Index violation, we do have a chunk that broke an unique index, we need to know if this is 
+                    //at partitionId level (concurrency) or at position level (UseLocalSequence == false and multiple process/appdomain are appending to the stream).
+                    if (ex.Message.Contains(PartitionIndexIdx))
+                    {
+                        _logger.LogInformation($"DuplicateStreamIndexException: {ex.Message}.\n{ex.ToString()}");
+                        throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
+                    }
+
+                    if (ex.Message.Contains(PartitionOperationIdx))
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                        }
+
+                        return null;
+                    }
+                }
+
+                throw;
+            }
+        }
+
+        public async Task<IChunk> ReadOneAsync(long position, CancellationToken cancellationToken)
+        {
+            var filterByPosition = Builders<TChunk>.Filter.Eq(x => x.Position, position);
+            var cursor = await _chunks.FindAsync(filterByPosition, cancellationToken: cancellationToken);
+            var chunk = await cursor.FirstOrDefaultAsync(cancellationToken: cancellationToken);
+            return chunk;
         }
 
         public async Task DeleteAsync(
@@ -322,7 +392,8 @@ namespace NStore.Persistence.Mongo
                 Builders<TChunk>.Filter.Eq(x => x.PartitionId, partitionId),
                 Builders<TChunk>.Filter.Eq(x => x.OperationId, operationId)
             );
-            var cursor = await _chunks.FindAsync(filter, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var cursor = await _chunks.FindAsync(filter, cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
             var chunk = await cursor.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
             return _mongoPayloadSerializer.ApplyDeserialization(chunk);
         }
@@ -336,7 +407,8 @@ namespace NStore.Persistence.Mongo
                 Sort = Builders<TChunk>.Sort.Ascending(x => x.Position)
             };
 
-            await PushToSubscriber(0, subscription, options, filter, true, cancellationToken).ConfigureAwait(false);
+            await PushToSubscriber(0, subscription, options, filter, true, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         private async Task PersistAsEmptyAsync(
@@ -377,7 +449,8 @@ namespace NStore.Persistence.Mongo
             {
                 try
                 {
-                    await _chunks.InsertOneAsync(chunk, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    await _chunks.InsertOneAsync(chunk, cancellationToken: cancellationToken)
+                        .ConfigureAwait(false);
                     return chunk;
                 }
                 catch (MongoWriteException ex)
@@ -390,7 +463,8 @@ namespace NStore.Persistence.Mongo
                         if (ex.Message.Contains(PartitionIndexIdx))
                         {
                             await PersistAsEmptyAsync(chunk, cancellationToken).ConfigureAwait(false);
-                            _logger.LogInformation($"DuplicateStreamIndexException: {ex.Message}.\n{ex.ToString()}");
+                            _logger.LogInformation(
+                                $"DuplicateStreamIndexException: {ex.Message}.\n{ex.ToString()}");
                             throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
                         }
 

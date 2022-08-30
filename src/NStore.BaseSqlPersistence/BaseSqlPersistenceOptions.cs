@@ -30,9 +30,11 @@ namespace NStore.BaseSqlPersistence
         public abstract string GetSelectChunkByStreamAndOperation();
         public abstract string GetSelectAllChunksByOperationSql();
         public abstract string GetInsertChunkSql();
+        public abstract string GetReplaceChunkSql();
         public abstract string GetCreateTableIfMissingSql();
         public abstract string GetReadAllChunksSql(int limit);
-
+        public abstract string GetChunkByPositionSql();
+        
         public abstract string GetRangeSelectChunksSql(
             long upperIndexInclusive,
             long lowerIndexInclusive,

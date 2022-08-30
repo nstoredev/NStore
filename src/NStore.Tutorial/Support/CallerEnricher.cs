@@ -21,7 +21,7 @@ namespace NStore.Tutorial.Support
                 }
 
                 var method = EnhancedStackTrace.GetMethodDisplayString(stack.GetMethod());
-                var caller = method.DeclaringTypeName;
+                var caller = method.DeclaringType.Name;
                 if (!caller.StartsWith("Serilog") &&
                     !caller.StartsWith("Microsoft") &&
                     !caller.StartsWith("NStore.Tutorial.Support.ConsoleLoggerAdapter") &&

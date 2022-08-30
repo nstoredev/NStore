@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NStore.Core.Persistence
@@ -25,6 +26,7 @@ namespace NStore.Core.Persistence
             CancellationToken cancellationToken
         );
 
+        /// Rename to ReadFirstBackwardAsync?
         Task<IChunk> ReadSingleBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,
@@ -40,6 +42,9 @@ namespace NStore.Core.Persistence
         /// <param name="operationId"></param>
         /// <param name="cancellationToken"></param>
         /// <returns>Chunk appended, or null if idempotency of command does not save anything. </returns>
+        ///
+        /// Rename to AddAsync / WriteAsync ?
+        /// 
         Task<IChunk> AppendAsync(
             string partitionId,
             long index,
@@ -47,6 +52,7 @@ namespace NStore.Core.Persistence
             string operationId,
             CancellationToken cancellationToken
         );
+
 
         Task DeleteAsync(
             string partitionId,

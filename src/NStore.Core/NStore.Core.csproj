@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'false'">netstandard2.0</TargetFrameworks>
-    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'true'">netstandard2.0;net462</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'true'">netstandard2.0;net48</TargetFrameworks>
     <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == ''">netstandard2.0</TargetFrameworks>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <PackageProjectUrl>https://github.com/ProximoSrl/NStore</PackageProjectUrl>
@@ -12,6 +12,7 @@
     <RootNamespace>NStore.Core</RootNamespace>
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\AssemblyInfo.cs">
