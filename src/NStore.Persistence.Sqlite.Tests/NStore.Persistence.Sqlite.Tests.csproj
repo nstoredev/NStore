@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'false'">net5.0</TargetFrameworks>
-        <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'true'">net5.0;net462</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'true'">net5.0;net48</TargetFrameworks>
         <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == ''">net5.0</TargetFrameworks>
     </PropertyGroup>
     <ItemGroup>
@@ -27,12 +27,12 @@
         <Compile Include="..\TestGlobalSuppressions.cs" Link="TestGlobalSuppressions.cs" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.3" />
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.8" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.0.0" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.2.0" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.0" />
         <PackageReference Include="NETStandard.Library" Version="2.0.3" />
         <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.0" />
-        <PackageReference Include="xunit" Version="2.4.1" />
+        <PackageReference Include="xunit" Version="2.4.2" />
         <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.0-beta1-build3642" />
         <DotNetCliToolReference Include="Microsoft.DotNet.Watcher.Tools" Version="1.0.0" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
