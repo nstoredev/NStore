@@ -1,5 +1,7 @@
 # vNext
 
+## 0.12.0
+
 - Updated references
 - Bumped full framework to 4.8
 
