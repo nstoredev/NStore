@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'false'">net5.0</TargetFrameworks>
-    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'true'">net5.0;net48</TargetFrameworks>
-    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == ''">net5.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'false'">Net6.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'true'">Net6.0;net48</TargetFrameworks>
+    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == ''">Net6.0</TargetFrameworks>
 	</PropertyGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\NStore.Domain\NStore.Domain.csproj" />

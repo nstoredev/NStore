@@ -1,5 +1,9 @@
 # vNext
 
+## 0.12.1
+
+- Fixed github action CI.
+
 ## 0.12.0
 
 - Updated references
