@@ -83,6 +83,34 @@ namespace NStore.Core.InMemory
             );
         }
 
+        public async Task ReadForwardMultiplePartitionsAsync(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            ISubscription subscription,
+            long toUpperIndexInclusive,
+            CancellationToken cancellationToken)
+        {
+            if (partitionIdsList is null)
+            {
+                throw new ArgumentNullException(nameof(partitionIdsList));
+            }
+
+            if (!partitionIdsList.Any())
+            {
+                return;
+            }
+
+            var result = _partitions
+                .Where(c => partitionIdsList.Any(p => c.Key == p))
+                .Select(c => c.Value)
+                .ToList();
+
+            foreach (var partition in result)
+            {
+                await partition.ReadForward(fromLowerIndexInclusive, subscription, toUpperIndexInclusive, Int32.MaxValue, cancellationToken);
+            }
+        }
+
         public Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,

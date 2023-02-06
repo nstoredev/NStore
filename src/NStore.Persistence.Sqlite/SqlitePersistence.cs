@@ -18,7 +18,6 @@ namespace NStore.Persistence.Sqlite
         private readonly SqlitePersistenceOptions _options;
         private readonly INStoreLogger _logger;
 
-
         public bool SupportsFillers => false;
 
         public SqlitePersistence(SqlitePersistenceOptions options) : base(options)
@@ -140,7 +139,6 @@ namespace NStore.Persistence.Sqlite
             }
         }
 
-
         public async Task AppendBatchAsync(WriteJob[] queue, CancellationToken cancellationToken)
         {
             var chunks = queue.Select(x =>
@@ -218,7 +216,5 @@ namespace NStore.Persistence.Sqlite
                 }
             }
         }
-
-
     }
 }

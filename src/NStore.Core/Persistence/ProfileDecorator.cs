@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -57,6 +58,28 @@ namespace NStore.Core.Persistence
                 )).ConfigureAwait(false);
         }
 
+        public async Task ReadForwardMultiplePartitionsAsync(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            ISubscription subscription,
+            long toUpperIndexInclusive,
+            CancellationToken cancellationToken)
+        {
+            var counter = new SubscriptionWrapper(subscription)
+            {
+                BeforeOnNext = data => ReadForwardCounter.IncCounter1()
+            };
+
+            await ReadForwardCounter.CaptureAsync(() =>
+                _persistence.ReadForwardMultiplePartitionsAsync(
+                    partitionIdsList,
+                    fromLowerIndexInclusive,
+                    counter,
+                    toUpperIndexInclusive,
+                    cancellationToken
+                )).ConfigureAwait(false);
+        }
+
         public async Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,
@@ -102,7 +125,7 @@ namespace NStore.Core.Persistence
 
         public async Task<long> ReadLastPositionAsync(CancellationToken cancellationToken)
         {
-            return await ReadLastCounter.CaptureAsync(()=>
+            return await ReadLastCounter.CaptureAsync(() =>
                 _persistence.ReadLastPositionAsync(cancellationToken)
             ).ConfigureAwait(false);
         }
@@ -115,9 +138,9 @@ namespace NStore.Core.Persistence
         }
 
         public Task<IChunk> ReplaceOneAsync(
-            long position, 
-            string partitionId, 
-            long index, 
+            long position,
+            string partitionId,
+            long index,
             object payload,
             string operationId,
             CancellationToken cancellationToken)

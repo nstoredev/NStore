@@ -45,7 +45,7 @@ namespace NStore.Core.InMemory
             _lockSlim.ExitReadLock();
             await PushToSubscriber(fromLowerIndexInclusive, subscription, result, cancellationToken).ConfigureAwait(false);
         }
-
+        
         public Task ReadBackward(
             long fromUpperIndexInclusive,
             ISubscription subscription,

@@ -1,8 +1,9 @@
-﻿using System;
+﻿using NStore.Core.Persistence;
+using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
-using NStore.Core.Persistence;
 
 namespace NStore.Tpl
 {
@@ -15,10 +16,10 @@ namespace NStore.Tpl
         public PersistenceBatchAppendDecorator(IPersistence persistence, int batchSize, int flushTimeout)
         {
             _cts = new CancellationTokenSource();
-            var batcher = (IEnhancedPersistence) persistence;
+            var batcher = (IEnhancedPersistence)persistence;
             _batch = new BatchBlock<AsyncWriteJob>(batchSize, new GroupingDataflowBlockOptions()
             {
-//                BoundedCapacity = 1024,
+                //                BoundedCapacity = 1024,
                 CancellationToken = _cts.Token
             });
 
@@ -33,7 +34,7 @@ namespace NStore.Tpl
 
             var processor = new ActionBlock<AsyncWriteJob[]>
             (
-                queue => batcher.AppendBatchAsync(queue, CancellationToken.None), 
+                queue => batcher.AppendBatchAsync(queue, CancellationToken.None),
                 new ExecutionDataflowBlockOptions()
                 {
                     MaxDegreeOfParallelism = Environment.ProcessorCount,
@@ -57,6 +58,21 @@ namespace NStore.Tpl
         {
             return _persistence.ReadForwardAsync(partitionId, fromLowerIndexInclusive, subscription,
                 toUpperIndexInclusive, limit, cancellationToken);
+        }
+
+        public Task ReadForwardMultiplePartitionsAsync(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            ISubscription subscription,
+            long toUpperIndexInclusive,
+            CancellationToken cancellationToken)
+        {
+            return _persistence.ReadForwardMultiplePartitionsAsync(
+                partitionIdsList,
+                fromLowerIndexInclusive,
+                subscription,
+                toUpperIndexInclusive,
+                cancellationToken);
         }
 
         public Task ReadBackwardAsync(string partitionId, long fromUpperIndexInclusive, ISubscription subscription,

@@ -1,9 +1,11 @@
-﻿using System;
+﻿using NStore.Core.Logging;
+using NStore.Core.Persistence;
+using System;
+using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using NStore.Core.Logging;
-using NStore.Core.Persistence;
 
 namespace NStore.BaseSqlPersistence
 {
@@ -35,7 +37,7 @@ namespace NStore.BaseSqlPersistence
                     if (result == null)
                         return 0;
 
-                    return (long) result;
+                    return (long)result;
                 }
             }
         }
@@ -223,7 +225,7 @@ namespace NStore.BaseSqlPersistence
                         context.AddParam(command, "@SerializerInfo", serializerInfo);
 
                         chunk.Position =
-                            (long) await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+                            (long)await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
                     }
                 }
 
@@ -246,8 +248,8 @@ namespace NStore.BaseSqlPersistence
                 _logger.LogError(ex.Message);
                 throw;
             }
-        } 
-        
+        }
+
         public async Task<IChunk> ReplaceOneAsync(
             long position,
             string partitionId,
@@ -347,11 +349,10 @@ namespace NStore.BaseSqlPersistence
             CancellationToken cancellationToken)
         {
             var sql = Options.GetRangeSelectChunksSql(
-                upperIndexInclusive: upperIndexInclusive,
                 lowerIndexInclusive: lowerIndexInclusive,
+                upperIndexInclusive: upperIndexInclusive,
                 limit: limit,
-                @descending: descending
-            );
+                descending: descending);
 
             using (var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false))
             {
@@ -392,6 +393,75 @@ namespace NStore.BaseSqlPersistence
                 @descending: false,
                 subscription: subscription,
                 cancellationToken: cancellationToken
+            ).ConfigureAwait(false);
+        }
+
+        protected async Task ScanRange(
+            IEnumerable<string> partitionIdsList,
+            long lowerIndexInclusive,
+            long upperIndexInclusive,
+            bool descending,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            var sql = Options.GetRangeMultiplePartitionSelectChunksSql(
+                partitionIdsList,
+                lowerIndexInclusive: lowerIndexInclusive,
+                upperIndexInclusive: upperIndexInclusive,
+                descending: descending);
+
+            using (var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false))
+            {
+                using (var command = context.CreateCommand(sql))
+                {
+                    int i = 1;
+                    foreach (var id in partitionIdsList)
+                    {
+                        context.AddParam(command, $"@p{i++}", id);
+                    }
+
+                    if (lowerIndexInclusive > 0 && lowerIndexInclusive != Int64.MaxValue)
+                    {
+                        context.AddParam(command, "@lowerIndexInclusive", lowerIndexInclusive);
+                    }
+
+                    if (upperIndexInclusive > 0 && upperIndexInclusive != Int64.MaxValue)
+                    {
+                        context.AddParam(command, "@upperIndexInclusive", upperIndexInclusive);
+                    }
+
+                    await PushToSubscriber(command, descending ? upperIndexInclusive : lowerIndexInclusive,
+                            subscription, false, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+            }
+        }
+
+        public async Task ReadForwardMultiplePartitionsAsync(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            ISubscription subscription,
+            long toUpperIndexInclusive,
+            CancellationToken cancellationToken)
+        {
+            if (partitionIdsList is null)
+            {
+                throw new ArgumentNullException(nameof(partitionIdsList));
+            }
+
+            if (!partitionIdsList.Any())
+            {
+                return;
+            }
+
+            await ScanRange(
+                    partitionIdsList: partitionIdsList,
+                    lowerIndexInclusive: fromLowerIndexInclusive,
+                    upperIndexInclusive: toUpperIndexInclusive,
+
+                    @descending: false,
+                    subscription: subscription,
+                    cancellationToken: cancellationToken
             ).ConfigureAwait(false);
         }
 

@@ -1,10 +1,12 @@
-using System;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using NStore.BaseSqlPersistence;
 using NStore.Core.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace NStore.Persistence.Sqlite
 {
@@ -39,7 +41,7 @@ namespace NStore.Persistence.Sqlite
                       SELECT last_insert_rowid();
 ";
         }
-        
+
         public override string GetReplaceChunkSql()
         {
             return $@"UPDATE [{StreamsTableName}]
@@ -95,7 +97,7 @@ namespace NStore.Persistence.Sqlite
                       WHERE 
                           [Position] = @Position";
         }
-        
+
         public override string GetCreateTableIfMissingSql()
         {
             return GetCreateTableSql();
@@ -113,7 +115,7 @@ namespace NStore.Persistence.Sqlite
                           [Position] LIMIT {limit}";
         }
 
-        public override string GetRangeSelectChunksSql(long upperIndexInclusive, long lowerIndexInclusive, int limit, bool descending)
+        public override string GetRangeSelectChunksSql(long lowerIndexInclusive, long upperIndexInclusive, int limit, bool descending)
         {
             var sb = new StringBuilder("SELECT ");
             sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo] ");
@@ -142,12 +144,12 @@ namespace NStore.Persistence.Sqlite
 
         public override async Task<AbstractSqlContext> GetContextAsync(CancellationToken cancellationToken)
         {
-            var connection =  new SqliteConnection(ConnectionString);
+            var connection = new SqliteConnection(ConnectionString);
             try
             {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception )
+            catch (Exception)
             {
                 connection.Dispose();
                 throw;
@@ -164,6 +166,33 @@ namespace NStore.Persistence.Sqlite
                       ORDER BY 
                           [Position] DESC
                       LIMIT 1";
+        }
+
+        public override string GetRangeMultiplePartitionSelectChunksSql(
+            IEnumerable<string> partitionIdsList,
+            long lowerIndexInclusive,
+            long upperIndexInclusive,
+            bool descending)
+        {
+            var sb = new StringBuilder("SELECT ");
+            sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo] ");
+            sb.Append($"FROM {StreamsTableName} ");
+            //Generate a query like [PartitionId] in (@p1, @p2, @p3) based on how many parameter we have
+            sb.Append($"WHERE [PartitionId] in ({String.Join(",", Enumerable.Range(1, partitionIdsList.Count()).Select(n => $"@p{n}"))}) ");
+
+            if (lowerIndexInclusive > 0 && lowerIndexInclusive != Int64.MinValue)
+            {
+                sb.Append("AND [Index] >= @lowerIndexInclusive ");
+            }
+
+            if (upperIndexInclusive > 0 && upperIndexInclusive != Int64.MaxValue)
+            {
+                sb.Append("AND [Index] <= @upperIndexInclusive ");
+            }
+
+            sb.Append(descending ? "ORDER BY [Index] DESC" : "ORDER BY [Index]");
+
+            return sb.ToString();
         }
     }
 }
