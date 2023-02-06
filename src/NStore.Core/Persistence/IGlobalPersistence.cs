@@ -21,8 +21,7 @@ namespace NStore.Core.Persistence
             ISubscription subscription,
             CancellationToken cancellationToken
         );
-        
-        
+
         /// <summary>
         /// Replace the chunk at a given position
         /// </summary>
@@ -34,7 +33,7 @@ namespace NStore.Core.Persistence
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns></returns>
         Task<IChunk> ReplaceOneAsync(
-            long position, 
+            long position,
             string partitionId,
             long index,
             object payload,

@@ -1,4 +1,6 @@
-﻿using System.Data;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
 using NStore.Core.Logging;
@@ -29,6 +31,18 @@ namespace NStore.Core.Persistence
             _logger.LogDebug("Start ReadPartitionForward(Partition {PartitionId}, from: {from})", partitionId, fromLowerIndexInclusive);
             await _persistence.ReadForwardAsync(partitionId, fromLowerIndexInclusive, subscription, toUpperIndexInclusive, limit, cancellationToken).ConfigureAwait(false);
             _logger.LogDebug("End ReadPartitionForward(Partition {PartitionId}, from: {from})", partitionId, fromLowerIndexInclusive);
+        }
+
+        public async Task ReadForwardMultiplePartitionsAsync(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            ISubscription subscription,
+            long toUpperIndexInclusive,
+            CancellationToken cancellationToken)
+        {
+            _logger.LogDebug("Start ReadForwardMultiplePartitionsAsync(Partition {PartitionId}, from: {from})", string.Join(",", partitionIdsList), fromLowerIndexInclusive);
+            await _persistence.ReadForwardMultiplePartitionsAsync(partitionIdsList, fromLowerIndexInclusive, subscription, toUpperIndexInclusive, cancellationToken).ConfigureAwait(false);
+            _logger.LogDebug("End ReadForwardMultiplePartitionsAsync(Partition {PartitionId}, from: {from})", string.Join(",", partitionIdsList), fromLowerIndexInclusive);
         }
 
         public async Task ReadBackwardAsync(
@@ -89,15 +103,15 @@ namespace NStore.Core.Persistence
             CancellationToken cancellationToken)
         {
             _logger.LogDebug("Start RewriteAsync({position}, {partitionId}, {index})", position, partitionId, index);
-           var chunk =  await _persistence.ReplaceOneAsync(position, partitionId, index, payload, operationId, cancellationToken);
-           _logger.LogDebug("End RewriteAsync({position}, {partitionId}, {index})", position, partitionId, index);
-           return chunk;
+            var chunk = await _persistence.ReplaceOneAsync(position, partitionId, index, payload, operationId, cancellationToken);
+            _logger.LogDebug("End RewriteAsync({position}, {partitionId}, {index})", position, partitionId, index);
+            return chunk;
         }
 
         public async Task<IChunk> ReadOneAsync(long position, CancellationToken cancellationToken)
         {
             _logger.LogDebug("Start ReadOneAsync({position})", position);
-            var chunk =  await _persistence.ReadOneAsync(position, cancellationToken);
+            var chunk = await _persistence.ReadOneAsync(position, cancellationToken);
             _logger.LogDebug("End ReadOneAsync({position})", position);
             return chunk;
         }

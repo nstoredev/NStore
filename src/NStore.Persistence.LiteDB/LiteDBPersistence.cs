@@ -1,11 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using LiteDB;
+﻿using LiteDB;
 using NStore.Core.Logging;
 using NStore.Core.Persistence;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace NStore.Persistence.LiteDB
 {
@@ -45,6 +46,24 @@ namespace NStore.Persistence.LiteDB
                 .OrderBy(x => x.Index)
                 .Limit(limit)
                 .ToList();
+
+            await PublishAsync(chunks, fromLowerIndexInclusive, subscription, false, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        public async Task ReadForwardMultiplePartitionsAsync(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            ISubscription subscription,
+            long toUpperIndexInclusive,
+            CancellationToken cancellationToken)
+        {
+            var chunks = _streams.Query()
+               .Where(x => partitionIdsList.Contains(x.PartitionId)
+                           && x.Index >= fromLowerIndexInclusive
+                           && x.Index <= toUpperIndexInclusive)
+               .OrderBy(x => x.Index)
+               .ToList();
 
             await PublishAsync(chunks, fromLowerIndexInclusive, subscription, false, cancellationToken)
                 .ConfigureAwait(false);
@@ -203,7 +222,7 @@ namespace NStore.Persistence.LiteDB
 
             chunk.StreamSequence = $"{chunk.PartitionId}-{chunk.Index}";
             chunk.StreamOperation = $"{chunk.PartitionId}-{chunk.OperationId}";
-            
+
             try
             {
                 var updated = _streams.Update(chunk);
@@ -251,7 +270,7 @@ namespace NStore.Persistence.LiteDB
         }
 
         public Task<IChunk> ReadByOperationIdAsync(
-            string partitionId, 
+            string partitionId,
             string operationId,
             CancellationToken cancellationToken)
         {
@@ -262,7 +281,7 @@ namespace NStore.Persistence.LiteDB
             {
                 chunk.Payload = _options.PayloadSerializer.Deserialize((string)chunk.Payload);
             }
-            
+
             return Task.FromResult<IChunk>(chunk);
         }
 

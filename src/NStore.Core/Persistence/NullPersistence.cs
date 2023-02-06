@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NStore.Core.Persistence
@@ -60,11 +61,21 @@ namespace NStore.Core.Persistence
             return Task.CompletedTask;
         }
 
-        public Task ReadBackwardAsync(
-            string partitionId, 
-            long fromUpperIndexInclusive, 
+        public Task ReadForwardMultiplePartitionsAsync(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
             ISubscription subscription,
-            long toLowerIndexInclusive, 
+            long toUpperIndexInclusive,
+            CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task ReadBackwardAsync(
+            string partitionId,
+            long fromUpperIndexInclusive,
+            ISubscription subscription,
+            long toLowerIndexInclusive,
             int limit,
             CancellationToken cancellationToken)
         {

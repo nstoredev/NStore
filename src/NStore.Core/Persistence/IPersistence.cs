@@ -1,6 +1,6 @@
 ﻿namespace NStore.Core.Persistence
 {
-    public interface IPersistence : IPartitionPersistence, IGlobalPersistence
+    public interface IPersistence : IPartitionPersistence, IGlobalPersistence, IMultiPartitionPersistenceReader
     {
     }
 }

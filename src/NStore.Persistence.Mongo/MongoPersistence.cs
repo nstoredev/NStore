@@ -3,6 +3,8 @@ using MongoDB.Driver;
 using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -125,6 +127,31 @@ namespace NStore.Persistence.Mongo
             {
                 options.Limit = limit;
             }
+
+            await PushToSubscriber(
+                fromLowerIndexInclusive,
+                subscription,
+                options,
+                filter,
+                false,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        public async Task ReadForwardMultiplePartitionsAsync(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            ISubscription subscription,
+            long toUpperIndexInclusive,
+            CancellationToken cancellationToken)
+        {
+            var filter = Builders<TChunk>.Filter.And(
+                Builders<TChunk>.Filter.In(x => x.PartitionId, partitionIdsList),
+                Builders<TChunk>.Filter.Gte(x => x.Index, fromLowerIndexInclusive),
+                Builders<TChunk>.Filter.Lte(x => x.Index, toUpperIndexInclusive)
+            );
+
+            var sort = Builders<TChunk>.Sort.Ascending(x => x.Index);
+            var options = new FindOptions<TChunk>() { Sort = sort };
 
             await PushToSubscriber(
                 fromLowerIndexInclusive,

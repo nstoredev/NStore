@@ -1,6 +1,8 @@
-﻿using System.Threading;
+﻿using NStore.Core.Logging;
+using System.Collections;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
-using NStore.Core.Logging;
 
 namespace NStore.BaseSqlPersistence
 {
@@ -34,11 +36,18 @@ namespace NStore.BaseSqlPersistence
         public abstract string GetCreateTableIfMissingSql();
         public abstract string GetReadAllChunksSql(int limit);
         public abstract string GetChunkByPositionSql();
-        
+
         public abstract string GetRangeSelectChunksSql(
-            long upperIndexInclusive,
             long lowerIndexInclusive,
+            long upperIndexInclusive,
             int limit,
+            bool descending
+        );
+
+        public abstract string GetRangeMultiplePartitionSelectChunksSql(
+            IEnumerable<string> partitionIdsList,
+            long lowerIndexInclusive,
+            long upperIndexInclusive,
             bool descending
         );
 
