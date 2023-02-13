@@ -1,5 +1,9 @@
 # vNext
 
+## 0.13.0
+
+- Added multi partition read.
+
 ## 0.12.1
 
 - Fixed github action CI.
