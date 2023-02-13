@@ -1,8 +1,13 @@
-﻿using System.Threading;
+﻿using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NStore.Core.Persistence
 {
+    /// <summary>
+    /// Extension functions that allow for a simpler API than using the
+    /// basic <see cref="IPersistence.ReadForwardAsync"/> base function.
+    /// </summary>
     public static class PersistenceExtensions
     {
         public static Task ReadForwardAsync(
@@ -21,6 +26,21 @@ namespace NStore.Core.Persistence
             );
         }
 
+        public static Task ReadForwardMultiplePartitionsAsync(
+            this IMultiPartitionPersistenceReader persistence,
+            IEnumerable<string> partitionIdsList,
+            ISubscription subscription
+        )
+        {
+            return persistence.ReadForwardMultiplePartitionsAsync(
+                partitionIdsList: partitionIdsList,
+                fromLowerIndexInclusive: 0,
+                subscription: subscription,
+                toUpperIndexInclusive: long.MaxValue,
+                cancellationToken: CancellationToken.None
+            );
+        }
+
         public static Task ReadForwardAsync(
             this IPersistence persistence,
             string partitionId,
@@ -35,6 +55,22 @@ namespace NStore.Core.Persistence
                 long.MaxValue,
                 int.MaxValue,
                 CancellationToken.None
+            );
+        }
+
+        public static Task ReadForwardMultiplePartitionsAsync(
+            this IMultiPartitionPersistenceReader persistence,
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            ISubscription subscription
+        )
+        {
+            return persistence.ReadForwardMultiplePartitionsAsync(
+                partitionIdsList: partitionIdsList,
+                fromLowerIndexInclusive: fromLowerIndexInclusive,
+                subscription: subscription,
+                toUpperIndexInclusive: long.MaxValue,
+                cancellationToken: CancellationToken.None
             );
         }
 
@@ -53,6 +89,23 @@ namespace NStore.Core.Persistence
                 toUpperIndexInclusive,
                 int.MaxValue,
                 CancellationToken.None
+            );
+        }
+
+        public static Task ReadForwardMultiplePartitionsAsync(
+            this IMultiPartitionPersistenceReader persistence,
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            ISubscription subscription,
+            long toUpperIndexInclusive
+        )
+        {
+            return persistence.ReadForwardMultiplePartitionsAsync(
+                partitionIdsList,
+                fromLowerIndexInclusive: fromLowerIndexInclusive,
+                subscription: subscription,
+                toUpperIndexInclusive: toUpperIndexInclusive,
+                cancellationToken: CancellationToken.None
             );
         }
 
@@ -136,7 +189,7 @@ namespace NStore.Core.Persistence
         {
             return persistence.AppendAsync(partitionId, index, payload, null, CancellationToken.None);
         }
-        
+
         public static Task<IChunk> AppendAsync(
             this IPersistence persistence,
             string partitionId,
@@ -197,7 +250,7 @@ namespace NStore.Core.Persistence
         {
             return persistence.ReadAllByOperationIdAsync(operationId, subscription, CancellationToken.None);
         }
-        
+
         public static Task<IChunk> ReplaceOneAsync(
             this IPersistence persistence,
             long position,

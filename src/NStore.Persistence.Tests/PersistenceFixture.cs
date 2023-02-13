@@ -923,9 +923,9 @@ namespace NStore.Persistence.Tests
         public async Task should_return_chunk_by_position()
         {
             var first = await Store.AppendAsync("s", 1, "payload");
-            var second= await Store.AppendAsync("s", 2, "payload");
+            var second = await Store.AppendAsync("s", 2, "payload");
             var found = await Store.ReadOneAsync(second.Position);
-            
+
             Assert.NotNull(found);
             Assert.Equal(second.Position, found.Position);
             Assert.Equal("s", found.PartitionId);
@@ -939,7 +939,7 @@ namespace NStore.Persistence.Tests
             await Store.DeleteAsync("s", 1, 1);
 
             var notFound = await Store.ReadOneAsync(first.Position);
-            
+
             Assert.Null(notFound);
         }
     }
@@ -952,21 +952,21 @@ namespace NStore.Persistence.Tests
             var chunk = await Store.AppendAsync("a", 1, "payload", "op_1");
             var replaced = await Store.ReplaceOneAsync(chunk.Position, "b", 1, "new payload", "op_2", CancellationToken.None);
             var recorder = new AllPartitionsRecorder();
-           
+
             await Store.ReadAllAsync(0, recorder);
 
             Assert.NotSame(chunk, replaced);
-            
+
             Assert.Collection(recorder.Chunks, c =>
             {
                 Assert.Equal(1, c.Position);
                 Assert.Equal("b", c.PartitionId);
                 Assert.Equal(1, c.Index);
                 Assert.Equal("new payload", c.Payload as string);
-                Assert.Equal("op_2", c.OperationId );
+                Assert.Equal("op_2", c.OperationId);
             });
         }
-        
+
         [Fact]
         public async Task previous_chunk_should_not_be_found_on_original_partition()
         {
@@ -974,11 +974,11 @@ namespace NStore.Persistence.Tests
             var replaced = await Store.ReplaceOneAsync(chunk.Position, "b", 1, "new payload", "op_2", CancellationToken.None);
             var recorder = new Recorder();
 
-            await Store.ReadForwardAsync("a",0, recorder);
+            await Store.ReadForwardAsync("a", 0, recorder);
 
             Assert.True(recorder.IsEmpty);
         }
-        
+
         [Fact]
         public async Task rewriting_partition_id_should_check_duplicate_index()
         {
@@ -989,17 +989,17 @@ namespace NStore.Persistence.Tests
             {
                 await Store.ReplaceOneAsync(chunk.Position, "b", 1, "new payload", "op_1", CancellationToken.None);
             });
-            
+
             Assert.Equal("b", ex.StreamId);
             Assert.Equal(1, ex.StreamIndex);
         }
-        
+
         [Fact]
         public async Task rewriting_partition_id_should_check_operation_id()
         {
             var chunk = await Store.AppendAsync("a", 1, "payload", "op_1");
             await Store.AppendAsync("b", 2, "payload", "op_2");
-            
+
             var replaced = await Store.ReplaceOneAsync(chunk.Position, "b", 1, "new payload", "op_2", CancellationToken.None);
             var original = await Store.ReadOneAsync(chunk.Position);
 
@@ -1012,6 +1012,129 @@ namespace NStore.Persistence.Tests
             Assert.Equal(1, original.Index);
             Assert.Equal("payload", original.Payload as string);
             Assert.Equal("op_1", original.OperationId);
+        }
+    }
+
+    public class MultiPartitionBasicRead : BasePersistenceTest
+    {
+        public MultiPartitionBasicRead()
+        {
+            int seed = 0;
+            Store.AppendAsync("mbpra", 1, "payload", $"op_{seed++}").Wait();
+            Store.AppendAsync("mbprb", 1, "payload", $"op_{seed++}").Wait();
+            Store.AppendAsync("mbpra", 2, "payload", $"op_{seed++}").Wait();
+            Store.AppendAsync("mbpra", 3, "payload", $"op_{seed++}").Wait();
+            Store.AppendAsync("mbprc", 1, "payload", $"op_{seed++}").Wait();
+            Store.AppendAsync("mbprb", 2, "payload", $"op_{seed++}").Wait();
+            Store.AppendAsync("mbprz", 1, "payload", $"op_{seed++}").Wait();
+        }
+
+        [Fact]
+        public async Task read_multiple_partition()
+        {
+            var tape = new Recorder();
+            await Store.ReadForwardMultiplePartitionsAsync(new[] { "mbpra", "mbprb" }, 1, tape, Int32.MaxValue, CancellationToken.None);
+
+            AssertForBasicRead(tape, 5);
+        }
+
+        [Fact]
+        public async Task read_no_partitions()
+        {
+            var tape = new Recorder();
+
+            //Read empty list 
+            await Store.ReadForwardMultiplePartitionsAsync(Array.Empty<string>(), 1, tape, Int32.MaxValue, CancellationToken.None);
+
+            Assert.Empty(tape.Chunks);
+        }
+
+        [Fact]
+        public async Task read_with_extensions()
+        {
+            var tape = new Recorder();
+            await Store.ReadForwardMultiplePartitionsAsync(new[] { "mbpra", "mbprb" }, tape);
+
+            AssertForBasicRead(tape, 5);
+        }
+
+        [Fact]
+        public async Task read_multiple_partition_can_read_single_partition()
+        {
+            var tape = new Recorder();
+            await Store.ReadForwardMultiplePartitionsAsync(new[] { "mbpra" }, 1, tape, Int32.MaxValue, CancellationToken.None);
+
+            Assert.Equal(3, tape.Chunks.Count());
+            //we could not assume ordering, but clearly b1, is less than b2.
+            var chunks = tape.Chunks.ToArray();
+            Dictionary<string, long> checker = new Dictionary<string, long>()
+            {
+                ["mbpra"] = 0,
+            };
+
+            foreach (var chunk in chunks)
+            {
+                //Verify that actual chunk is greater than the previous on same partition
+                //then update the dictionary.
+                Assert.True(chunk.Index > checker[chunk.PartitionId]);
+                checker[chunk.PartitionId] = chunk.Index;
+            }
+        }
+
+        [Fact]
+        public async Task read_limit_version()
+        {
+            var tape = new Recorder();
+            await Store.ReadForwardMultiplePartitionsAsync(new[] { "mbpra", "mbprb" }, 1, tape, 2, CancellationToken.None);
+
+            AssertForBasicRead(tape, 4);
+        }
+
+        [Fact]
+        public async Task read_not_from_first_version()
+        {
+            var tape = new Recorder();
+            await Store.ReadForwardMultiplePartitionsAsync(new[] { "mbpra", "mbprb" }, 2, tape, 2, CancellationToken.None);
+
+            AssertForBasicRead(tape, 2);
+        }
+
+        [Fact]
+        public async Task read_non_exiting_partition()
+        {
+            var tape = new Recorder();
+            await Store.ReadForwardMultiplePartitionsAsync(new[] { "mbpra", "does-not-exists" }, 2, tape, 2, CancellationToken.None);
+
+            AssertForBasicRead(tape, 1);
+        }
+
+        [Fact]
+        public async Task read_multiple_partition_can_read_no_partition()
+        {
+            var tape = new Recorder();
+            await Store.ReadForwardMultiplePartitionsAsync(Array.Empty<string>(), 1, tape, Int32.MaxValue, CancellationToken.None);
+
+            Assert.Empty(tape.Chunks);
+        }
+
+        private static void AssertForBasicRead(Recorder tape, int expectedCount)
+        {
+            Assert.Equal(expectedCount, tape.Chunks.Count());
+            //we could not assume ordering, but clearly b1, is less than b2.
+            var chunks = tape.Chunks.ToArray();
+            Dictionary<string, long> checker = new Dictionary<string, long>()
+            {
+                ["mbpra"] = 0,
+                ["mbprb"] = 0,
+            };
+
+            foreach (var chunk in chunks)
+            {
+                //Verify that actual chunk is greater than the previous on same partition
+                //then update the dictionary.
+                Assert.True(chunk.Index > checker[chunk.PartitionId]);
+                checker[chunk.PartitionId] = chunk.Index;
+            }
         }
     }
 }
