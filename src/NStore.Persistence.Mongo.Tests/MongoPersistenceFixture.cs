@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Reflection;
 using System.Threading;
+using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using NStore.Core.Persistence;
 using NStore.Persistence.Mongo;
@@ -22,6 +24,13 @@ namespace NStore.Persistence.Tests
         protected IMongoPersistence _mongoPersistence;
         private MongoPersistenceOptions _options;
         private const string TestSuitePrefix = "Mongo";
+
+        static BasePersistenceTest()
+        {
+            // https://github.com/mongodb/mongo-csharp-driver/releases/tag/v2.19.0 
+            var objectSerializer = new ObjectSerializer(type => ObjectSerializer.AllAllowedTypes(type));
+            BsonSerializer.RegisterSerializer(objectSerializer);
+        }
 
 #if MAP_DOMAIN
         static BasePersistenceTest()
