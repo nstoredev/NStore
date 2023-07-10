@@ -6,12 +6,25 @@
     <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == ''">netstandard2.0</TargetFrameworks>
     <PackageProjectUrl>https://github.com/ProximoSrl/NStore</PackageProjectUrl>
     <RepositoryUrl>https://github.com/ProximoSrl/NStore</RepositoryUrl>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+   <Deterministic>true</Deterministic>
+   <ContinuousIntegrationBuild Condition="'$(TF_BUILD)' == 'true'">True</ContinuousIntegrationBuild>
+   <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">True</ContinuousIntegrationBuild> 
     <RepositoryType>Git</RepositoryType>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
   </PropertyGroup>
 
   <ItemGroup>
     <None PackagePath="" Include="..\..\LICENSE.md" pack="true" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>

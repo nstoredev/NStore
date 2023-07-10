@@ -3,7 +3,6 @@ using MongoDB.Driver;
 using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -72,6 +71,13 @@ namespace NStore.Persistence.Mongo
             _options.CustomizePartitionSettings(partitionsBuild);
 
             var settings = MongoClientSettings.FromUrl(partitionsBuild.ToMongoUrl());
+
+            //by default we will use LINQv2. There are bugs in older version of mongo < 4.4
+            //and we feel safer to use the old LINQ provider.
+            settings.LinqProvider = MongoDB.Driver.Linq.LinqProvider.V2;
+
+            //The caller has the option to force the use of other link provider due to customization
+            //of the partition client settings. 
             _options.CustomizePartitionClientSettings(settings);
 
             var partitionsClient = new MongoClient(settings);
@@ -472,6 +478,7 @@ namespace NStore.Persistence.Mongo
             CancellationToken cancellationToken = default
         )
         {
+            int retry = 0;
             while (true)
             {
                 try
@@ -482,6 +489,13 @@ namespace NStore.Persistence.Mongo
                 }
                 catch (MongoWriteException ex)
                 {
+                    //Circuit breaker, if for same reason we cannot write the chunk, we need to stop the process not retrying infiinte times.
+                    if (retry++ > 100)
+                    {
+                        _logger.LogError($"Error During InternalPersistAsync. Reached number of max {retry} retry count: {ex.Message}.\n{ex}");
+                        throw;
+                    }
+
                     //Need to understand what kind of exception we had, some of them could lead to a retry
                     if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
                     {
@@ -526,7 +540,7 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
                         }
                     }
 
-                    _logger.LogError($"Error During InternalPersistAsync: {ex.Message}.\n{ex.ToString()}");
+                    _logger.LogError($"Error During InternalPersistAsync: {ex.Message}.\n{ex}");
                     throw;
                 }
             }
@@ -598,15 +612,17 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
         private async Task ReloadSequence(CancellationToken cancellationToken = default)
         {
             var filter = Builders<TChunk>.Filter.Empty;
-            var lastSequenceNumber = await _chunks
+            var lastRecord = await _chunks
                 .Find(filter)
                 .SortByDescending(x => x.Position)
-                .Project(x => x.Position)
+                .Project(Builders<TChunk>.Projection.Include("_id"))
                 .Limit(1)
-                .FirstOrDefaultAsync(cancellationToken: cancellationToken)
+                .ToCursorAsync()
                 .ConfigureAwait(false);
 
-            this._sequence = lastSequenceNumber;
+            var record = await lastRecord.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+            this._sequence = record == null ? 0 : record["_id"].AsInt64;
         }
 
         private async Task EnsureFirstSequenceRecord()

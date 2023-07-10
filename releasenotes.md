@@ -1,5 +1,14 @@
 # vNext
 
+## 0.15.1
+
+- Forced Mongodb drivers to use LINQ 2 provider due to excessive number of bugs for LINQ 3
+- Added support for symbol server outside of azure devops with internal builds.
+
+## 0.14-0.15
+
+- Mostly driver updates.
+
 ## 0.13.0
 
 - Added multi partition read.
