@@ -245,6 +245,50 @@ namespace NStore.Persistence.Mongo.Tests
         }
     }
 
+    public abstract class insert_id_already_existing_base : BasePersistenceTest
+    {
+        protected internal override MongoPersistenceOptions GetMongoPersistenceOptions()
+        {
+            var options = base.GetMongoPersistenceOptions();
+            options.UseLocalSequence = GetUseLocalSequence();
+            options.SequenceCollectionName = "sequence_test";
+            return options;
+        }
+
+        protected abstract bool GetUseLocalSequence();
+
+        [Fact]
+        public async Task resilient_to_multiple_persistence_write_concurrently()
+        {
+            IPersistence store2 = Create(false);
+            string partition1 = Guid.NewGuid().ToString();
+            string partition2 = Guid.NewGuid().ToString();
+
+            await Store.AppendAsync(partition1, 1, new { data = "first attempt" }).ConfigureAwait(false);
+            //now store2 inserts a chunk with another id 
+            await store2.AppendAsync(partition2, 1, new { data = "first attempt" }).ConfigureAwait(false);
+
+            var chunk = await Store.AppendAsync(partition1, 2, new { data = "second data" }).ConfigureAwait(false);
+            Assert.Equal(3, chunk.Position);
+        }
+    }
+
+    public class insert_id_already_existing_base_local_sequence : insert_id_already_existing_base
+    {
+        protected override bool GetUseLocalSequence()
+        {
+            return true;
+        }
+    }
+
+    public class insert_id_already_existing_base_db_sequence : insert_id_already_existing_base
+    {
+        protected override bool GetUseLocalSequence()
+        {
+            return false;
+        }
+    }
+
     /// <summary>
     /// Correctly initialize the seed when you want to use the sequence generated it
     /// </summary>
