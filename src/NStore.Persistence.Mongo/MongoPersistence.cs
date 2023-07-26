@@ -80,7 +80,7 @@ namespace NStore.Persistence.Mongo
             //of the partition client settings. 
             _options.CustomizePartitionClientSettings(settings);
 
-            var partitionsClient = new MongoClient(settings);
+            var partitionsClient = _options.CreateClientFunction(settings);
 
             this._partitionsDb = partitionsClient.GetDatabase(partitionsBuild.DatabaseName);
 
@@ -96,7 +96,7 @@ namespace NStore.Persistence.Mongo
                 var countersSettings = MongoClientSettings.FromUrl(countersUrlBuilder.ToMongoUrl());
                 _options.CustomizeSequenceClientSettings(countersSettings);
 
-                var countersClient = new MongoClient(countersSettings);
+                var countersClient = _options.CreateClientFunction(countersSettings);
                 this._countersDb = countersClient.GetDatabase(countersUrlBuilder.DatabaseName);
             }
         }
@@ -548,11 +548,6 @@ If you see too many of this kind of errors, consider enabling UseLocalSequence.
 
         public async Task InitAsync(CancellationToken cancellationToken)
         {
-            if (_partitionsDb == null)
-            {
-                Connect();
-            }
-
             if (_options.DropOnInit)
             {
                 Drop(cancellationToken).Wait(cancellationToken);

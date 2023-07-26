@@ -23,7 +23,7 @@ namespace NStore.Persistence.Mongo
         public string SequenceCollectionName { get; set; } = "seq";
         public string SequenceId { get; set; } = "streams";
         public bool UseLocalSequence { get; set; } = false;
-        public bool DropOnInit { get; set; } = false;
+        internal bool DropOnInit { get; set; } = false;
 
         public IMongoPayloadSerializer MongoPayloadSerializer { get; set; }
 
@@ -48,6 +48,12 @@ namespace NStore.Persistence.Mongo
         /// for the Sequence Database
         /// </summary>
         public Action<MongoClientSettings> CustomizeSequenceClientSettings { get; set; }
+
+        /// <summary>
+        /// This function allows callers to override the <see cref="IMongoClient"/> creation
+        /// function to avoid creating too much IMongoClient.
+        /// </summary>
+        public Func<MongoClientSettings, IMongoClient> CreateClientFunction { get; set; } = settings => new MongoClient(settings);
 
         /// <summary>
         /// If we have a readonly user we cannot perform any update on the database so we need not

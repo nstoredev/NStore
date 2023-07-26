@@ -1,5 +1,7 @@
 # vNext
 
+- Externalized creation of Mongodb client to allow the creation of a single MongoClient
+
 ## 0.15.1
 
 - Forced Mongodb drivers to use LINQ 2 provider due to excessive number of bugs for LINQ 3
