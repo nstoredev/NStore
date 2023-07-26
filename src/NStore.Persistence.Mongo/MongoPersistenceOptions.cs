@@ -50,6 +50,12 @@ namespace NStore.Persistence.Mongo
         public Action<MongoClientSettings> CustomizeSequenceClientSettings { get; set; }
 
         /// <summary>
+        /// This function allows callers to override the <see cref="IMongoClient"/> creation
+        /// function to avoid creating too much IMongoClient.
+        /// </summary>
+        public Func<MongoClientSettings, IMongoClient> CreateClientFunction { get; set; } = settings => new MongoClient(settings);
+
+        /// <summary>
         /// If we have a readonly user we cannot perform any update on the database so we need not
         /// to create index and do other write/support routine. This WILL NOT PREVENT WRITING TO
         /// THE STREAM IF THE USER USED TO CONNECT TO MONGO HAS WRITE PERMISSION
