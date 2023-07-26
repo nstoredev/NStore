@@ -109,7 +109,7 @@ namespace NStore.Sample
                             UseLocalSequence = true,
                             PartitionsCollectionName = "partitions",
                             SequenceCollectionName = "seq",
-                            DropOnInit = true,
+                            //DropOnInit = true,
                             MongoPayloadSerializer = new DiagnosticSerializerWrapper(new MongoCustomMongoPayloadSerializer()),
                             CustomizePartitionSettings = settings =>
                             {
