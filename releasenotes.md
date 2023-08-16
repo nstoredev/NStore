@@ -1,4 +1,6 @@
-# vNext
+## vNext
+
+## 0.16.0
 
 - Externalized creation of Mongodb client to allow the creation of a single MongoClient
 
