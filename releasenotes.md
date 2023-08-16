@@ -1,4 +1,9 @@
-# vNext
+## 0.16.1
+
+- Updated Mongodb driver to 1.21
+- Updated libraries for test (xunit, test runner)
+
+## 0.16.0
 
 - Externalized creation of Mongodb client to allow the creation of a single MongoClient
 
