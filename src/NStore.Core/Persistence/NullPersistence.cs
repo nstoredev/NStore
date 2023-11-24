@@ -61,11 +61,11 @@ namespace NStore.Core.Persistence
             return Task.CompletedTask;
         }
 
-        public Task ReadForwardMultiplePartitionsAsync(
+        public Task ReadForwardMultiplePartitionsByGlobalPositionAsync(
             IEnumerable<string> partitionIdsList,
-            long fromLowerIndexInclusive,
+            long fromLowerPositionInclusive,
             ISubscription subscription,
-            long toUpperIndexInclusive,
+            long toUpperPositionInclusive,
             CancellationToken cancellationToken)
         {
             return Task.CompletedTask;

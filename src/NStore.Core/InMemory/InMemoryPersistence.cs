@@ -83,11 +83,11 @@ namespace NStore.Core.InMemory
             );
         }
 
-        public async Task ReadForwardMultiplePartitionsAsync(
+        public async Task ReadForwardMultiplePartitionsByGlobalPositionAsync(
             IEnumerable<string> partitionIdsList,
-            long fromLowerIndexInclusive,
+            long fromLowerPositionInclusive,
             ISubscription subscription,
-            long toUpperIndexInclusive,
+            long toUpperPositionInclusive,
             CancellationToken cancellationToken)
         {
             if (partitionIdsList is null)
@@ -107,7 +107,7 @@ namespace NStore.Core.InMemory
 
             foreach (var partition in result)
             {
-                await partition.ReadForward(fromLowerIndexInclusive, subscription, toUpperIndexInclusive, Int32.MaxValue, cancellationToken);
+                await partition.ReadForwardByPosition(fromLowerPositionInclusive, subscription, toUpperPositionInclusive, Int32.MaxValue, cancellationToken);
             }
         }
 

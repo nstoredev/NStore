@@ -1,4 +1,6 @@
-## vNext
+## 0.17.1
+
+- Changed logic for MultiPartitionRead because it used index not global position and it is not correct.
 
 ## 0.17.0
 

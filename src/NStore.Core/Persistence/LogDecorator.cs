@@ -33,16 +33,16 @@ namespace NStore.Core.Persistence
             _logger.LogDebug("End ReadPartitionForward(Partition {PartitionId}, from: {from})", partitionId, fromLowerIndexInclusive);
         }
 
-        public async Task ReadForwardMultiplePartitionsAsync(
+        public async Task ReadForwardMultiplePartitionsByGlobalPositionAsync(
             IEnumerable<string> partitionIdsList,
-            long fromLowerIndexInclusive,
+            long fromLowerPositionInclusive,
             ISubscription subscription,
-            long toUpperIndexInclusive,
+            long toUpperPositionInclusive,
             CancellationToken cancellationToken)
         {
-            _logger.LogDebug("Start ReadForwardMultiplePartitionsAsync(Partition {PartitionId}, from: {from})", string.Join(",", partitionIdsList), fromLowerIndexInclusive);
-            await _persistence.ReadForwardMultiplePartitionsAsync(partitionIdsList, fromLowerIndexInclusive, subscription, toUpperIndexInclusive, cancellationToken).ConfigureAwait(false);
-            _logger.LogDebug("End ReadForwardMultiplePartitionsAsync(Partition {PartitionId}, from: {from})", string.Join(",", partitionIdsList), fromLowerIndexInclusive);
+            _logger.LogDebug("Start ReadForwardMultiplePartitionsByGlobalPositionAsync(Partition {PartitionId}, from: {from})", string.Join(",", partitionIdsList), fromLowerPositionInclusive);
+            await _persistence.ReadForwardMultiplePartitionsByGlobalPositionAsync(partitionIdsList, fromLowerPositionInclusive, subscription, toUpperPositionInclusive, cancellationToken).ConfigureAwait(false);
+            _logger.LogDebug("End ReadForwardMultiplePartitionsByGlobalPositionAsync(Partition {PartitionId}, from: {from})", string.Join(",", partitionIdsList), fromLowerPositionInclusive);
         }
 
         public async Task ReadBackwardAsync(
