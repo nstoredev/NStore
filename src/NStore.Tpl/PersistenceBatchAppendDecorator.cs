@@ -60,18 +60,18 @@ namespace NStore.Tpl
                 toUpperIndexInclusive, limit, cancellationToken);
         }
 
-        public Task ReadForwardMultiplePartitionsAsync(
+        public Task ReadForwardMultiplePartitionsByGlobalPositionAsync(
             IEnumerable<string> partitionIdsList,
-            long fromLowerIndexInclusive,
+            long fromLowerPositionInclusive,
             ISubscription subscription,
-            long toUpperIndexInclusive,
+            long toUpperPositionInclusive,
             CancellationToken cancellationToken)
         {
-            return _persistence.ReadForwardMultiplePartitionsAsync(
+            return _persistence.ReadForwardMultiplePartitionsByGlobalPositionAsync(
                 partitionIdsList,
-                fromLowerIndexInclusive,
+                fromLowerPositionInclusive,
                 subscription,
-                toUpperIndexInclusive,
+                toUpperPositionInclusive,
                 cancellationToken);
         }
 

@@ -26,17 +26,17 @@ namespace NStore.Core.Persistence
             );
         }
 
-        public static Task ReadForwardMultiplePartitionsAsync(
+        public static Task ReadForwardMultiplePartitionsByGlobalPositionAsync(
             this IMultiPartitionPersistenceReader persistence,
             IEnumerable<string> partitionIdsList,
             ISubscription subscription
         )
         {
-            return persistence.ReadForwardMultiplePartitionsAsync(
+            return persistence.ReadForwardMultiplePartitionsByGlobalPositionAsync(
                 partitionIdsList: partitionIdsList,
-                fromLowerIndexInclusive: 0,
+                fromLowerPositionInclusive: 0,
                 subscription: subscription,
-                toUpperIndexInclusive: long.MaxValue,
+                toUpperPositionInclusive: long.MaxValue,
                 cancellationToken: CancellationToken.None
             );
         }
@@ -65,11 +65,11 @@ namespace NStore.Core.Persistence
             ISubscription subscription
         )
         {
-            return persistence.ReadForwardMultiplePartitionsAsync(
+            return persistence.ReadForwardMultiplePartitionsByGlobalPositionAsync(
                 partitionIdsList: partitionIdsList,
-                fromLowerIndexInclusive: fromLowerIndexInclusive,
+                fromLowerPositionInclusive: fromLowerIndexInclusive,
                 subscription: subscription,
-                toUpperIndexInclusive: long.MaxValue,
+                toUpperPositionInclusive: long.MaxValue,
                 cancellationToken: CancellationToken.None
             );
         }
@@ -100,11 +100,11 @@ namespace NStore.Core.Persistence
             long toUpperIndexInclusive
         )
         {
-            return persistence.ReadForwardMultiplePartitionsAsync(
+            return persistence.ReadForwardMultiplePartitionsByGlobalPositionAsync(
                 partitionIdsList,
-                fromLowerIndexInclusive: fromLowerIndexInclusive,
+                fromLowerPositionInclusive: fromLowerIndexInclusive,
                 subscription: subscription,
-                toUpperIndexInclusive: toUpperIndexInclusive,
+                toUpperPositionInclusive: toUpperIndexInclusive,
                 cancellationToken: CancellationToken.None
             );
         }

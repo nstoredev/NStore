@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace NStore.Core.Persistence
 {
@@ -18,9 +16,9 @@ namespace NStore.Core.Persistence
         /// This is the same as <see cref="IPersistence.ReadForwardAsync"/> but for multiple partitions.
         /// </summary>
         /// <param name="partitionIdsList">List of all partition id I want to read.</param>
-        /// <param name="fromLowerIndexInclusive"></param>
+        /// <param name="fromLowerPositionInclusive">Lower global position to perform a read (included)</param>
         /// <param name="subscription"></param>
-        /// <param name="toUpperIndexInclusive"></param>
+        /// <param name="toUpperPositionInclusive">Upper global position to perform a read (included)</param>
         /// <param name="cancellationToken"></param>
         /// <remarks><para>
         /// We have ZERO guarantee on the order of partition list, we can only assume that
@@ -42,11 +40,11 @@ namespace NStore.Core.Persistence
         /// return a different order.
         /// </para>
         /// </remarks>
-        Task ReadForwardMultiplePartitionsAsync(
+        Task ReadForwardMultiplePartitionsByGlobalPositionAsync(
             IEnumerable<string> partitionIdsList,
-            long fromLowerIndexInclusive,
+            long fromLowerPositionInclusive,
             ISubscription subscription,
-            long toUpperIndexInclusive,
+            long toUpperPositionInclusive,
             CancellationToken cancellationToken
         );
     }

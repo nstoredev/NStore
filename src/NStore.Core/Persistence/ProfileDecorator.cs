@@ -58,11 +58,11 @@ namespace NStore.Core.Persistence
                 )).ConfigureAwait(false);
         }
 
-        public async Task ReadForwardMultiplePartitionsAsync(
+        public async Task ReadForwardMultiplePartitionsByGlobalPositionAsync(
             IEnumerable<string> partitionIdsList,
-            long fromLowerIndexInclusive,
+            long fromLowerPositionInclusive,
             ISubscription subscription,
-            long toUpperIndexInclusive,
+            long toUpperPositionInclusive,
             CancellationToken cancellationToken)
         {
             var counter = new SubscriptionWrapper(subscription)
@@ -71,11 +71,11 @@ namespace NStore.Core.Persistence
             };
 
             await ReadForwardCounter.CaptureAsync(() =>
-                _persistence.ReadForwardMultiplePartitionsAsync(
+                _persistence.ReadForwardMultiplePartitionsByGlobalPositionAsync(
                     partitionIdsList,
-                    fromLowerIndexInclusive,
+                    fromLowerPositionInclusive,
                     counter,
-                    toUpperIndexInclusive,
+                    toUpperPositionInclusive,
                     cancellationToken
                 )).ConfigureAwait(false);
         }

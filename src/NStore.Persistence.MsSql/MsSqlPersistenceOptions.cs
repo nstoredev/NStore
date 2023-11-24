@@ -221,15 +221,15 @@ END
 
             if (lowerIndexInclusive > 0 && lowerIndexInclusive != Int64.MinValue)
             {
-                sb.Append("AND [Index] >= @lowerIndexInclusive ");
+                sb.Append("AND [Position] >= @lowerIndexInclusive ");
             }
 
             if (upperIndexInclusive > 0 && upperIndexInclusive != Int64.MaxValue)
             {
-                sb.Append("AND [Index] <= @upperIndexInclusive ");
+                sb.Append("AND [Position] <= @upperIndexInclusive ");
             }
 
-            sb.Append(@descending ? "ORDER BY [Index] DESC" : "ORDER BY [Index]");
+            sb.Append(@descending ? "ORDER BY [Position] DESC" : "ORDER BY [Position]");
 
             return sb.ToString();
         }

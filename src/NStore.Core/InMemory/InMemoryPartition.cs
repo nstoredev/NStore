@@ -45,7 +45,25 @@ namespace NStore.Core.InMemory
             _lockSlim.ExitReadLock();
             await PushToSubscriber(fromLowerIndexInclusive, subscription, result, cancellationToken).ConfigureAwait(false);
         }
-        
+
+        public async Task ReadForwardByPosition(
+            long fromLowerPositionInclusive,
+            ISubscription subscription,
+            long toUpperPositionInclusive,
+            int limit,
+            CancellationToken cancellationToken)
+        {
+            _lockSlim.EnterReadLock();
+
+            var result = Chunks
+                .Where(x => x.Position >= fromLowerPositionInclusive && x.Position <= toUpperPositionInclusive)
+                .Take(limit)
+                .ToArray();
+
+            _lockSlim.ExitReadLock();
+            await PushToSubscriber(fromLowerPositionInclusive, subscription, result, cancellationToken).ConfigureAwait(false);
+        }
+
         public Task ReadBackward(
             long fromUpperIndexInclusive,
             ISubscription subscription,

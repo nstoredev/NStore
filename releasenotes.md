@@ -1,3 +1,7 @@
+## 0.16.2
+
+- Changed logic for MultiPartitionRead because it used index not global position and it is not correct.
+
 ## 0.16.1
 
 - Updated Mongodb driver to 1.21

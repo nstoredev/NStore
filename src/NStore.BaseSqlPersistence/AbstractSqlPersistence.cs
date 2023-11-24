@@ -398,16 +398,16 @@ namespace NStore.BaseSqlPersistence
 
         protected async Task ScanRange(
             IEnumerable<string> partitionIdsList,
-            long lowerIndexInclusive,
-            long upperIndexInclusive,
+            long lowerPositionInclusive,
+            long upperPositionInclusive,
             bool descending,
             ISubscription subscription,
             CancellationToken cancellationToken)
         {
             var sql = Options.GetRangeMultiplePartitionSelectChunksSql(
                 partitionIdsList,
-                lowerIndexInclusive: lowerIndexInclusive,
-                upperIndexInclusive: upperIndexInclusive,
+                lowerIndexInclusive: lowerPositionInclusive,
+                upperIndexInclusive: upperPositionInclusive,
                 descending: descending);
 
             using (var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false))
@@ -420,28 +420,28 @@ namespace NStore.BaseSqlPersistence
                         context.AddParam(command, $"@p{i++}", id);
                     }
 
-                    if (lowerIndexInclusive > 0 && lowerIndexInclusive != Int64.MaxValue)
+                    if (lowerPositionInclusive > 0 && lowerPositionInclusive != Int64.MaxValue)
                     {
-                        context.AddParam(command, "@lowerIndexInclusive", lowerIndexInclusive);
+                        context.AddParam(command, "@lowerIndexInclusive", lowerPositionInclusive);
                     }
 
-                    if (upperIndexInclusive > 0 && upperIndexInclusive != Int64.MaxValue)
+                    if (upperPositionInclusive > 0 && upperPositionInclusive != Int64.MaxValue)
                     {
-                        context.AddParam(command, "@upperIndexInclusive", upperIndexInclusive);
+                        context.AddParam(command, "@upperIndexInclusive", upperPositionInclusive);
                     }
 
-                    await PushToSubscriber(command, descending ? upperIndexInclusive : lowerIndexInclusive,
+                    await PushToSubscriber(command, descending ? upperPositionInclusive : lowerPositionInclusive,
                             subscription, false, cancellationToken)
                         .ConfigureAwait(false);
                 }
             }
         }
 
-        public async Task ReadForwardMultiplePartitionsAsync(
+        public async Task ReadForwardMultiplePartitionsByGlobalPositionAsync(
             IEnumerable<string> partitionIdsList,
-            long fromLowerIndexInclusive,
+            long fromLowerPositionInclusive,
             ISubscription subscription,
-            long toUpperIndexInclusive,
+            long toUpperPositionInclusive,
             CancellationToken cancellationToken)
         {
             if (partitionIdsList is null)
@@ -456,8 +456,8 @@ namespace NStore.BaseSqlPersistence
 
             await ScanRange(
                     partitionIdsList: partitionIdsList,
-                    lowerIndexInclusive: fromLowerIndexInclusive,
-                    upperIndexInclusive: toUpperIndexInclusive,
+                    lowerPositionInclusive: fromLowerPositionInclusive,
+                    upperPositionInclusive: toUpperPositionInclusive,
 
                     @descending: false,
                     subscription: subscription,

@@ -143,24 +143,24 @@ namespace NStore.Persistence.Mongo
                 cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task ReadForwardMultiplePartitionsAsync(
+        public async Task ReadForwardMultiplePartitionsByGlobalPositionAsync(
             IEnumerable<string> partitionIdsList,
-            long fromLowerIndexInclusive,
+            long fromLowerPositionInclusive,
             ISubscription subscription,
-            long toUpperIndexInclusive,
+            long toUpperPositionInclusive,
             CancellationToken cancellationToken)
         {
             var filter = Builders<TChunk>.Filter.And(
                 Builders<TChunk>.Filter.In(x => x.PartitionId, partitionIdsList),
-                Builders<TChunk>.Filter.Gte(x => x.Index, fromLowerIndexInclusive),
-                Builders<TChunk>.Filter.Lte(x => x.Index, toUpperIndexInclusive)
+                Builders<TChunk>.Filter.Gte(x => x.Position, fromLowerPositionInclusive),
+                Builders<TChunk>.Filter.Lte(x => x.Position, toUpperPositionInclusive)
             );
 
-            var sort = Builders<TChunk>.Sort.Ascending(x => x.Index);
+            var sort = Builders<TChunk>.Sort.Ascending(x => x.Position);
             var options = new FindOptions<TChunk>() { Sort = sort };
 
             await PushToSubscriber(
-                fromLowerIndexInclusive,
+                fromLowerPositionInclusive,
                 subscription,
                 options,
                 filter,
