@@ -1,6 +1,13 @@
+## vNext
+
+## 0.17.0
+
+- Updated Mongodb Drivers to 2.23.1
+- Updated some basic dependencies.
+
 ## 0.16.1
 
-- Updated Mongodb driver to 1.21
+- Updated Mongodb driver to 2.21
 - Updated libraries for test (xunit, test runner)
 
 ## 0.16.0
