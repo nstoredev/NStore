@@ -26,17 +26,23 @@ namespace NStore.Sample
             if (categoryName == typeof(PollingClient).FullName)
                 return NStoreNullLogger.Instance;
 
-            return new ConsoleLoggerWrapper(
-                new ConsoleLogger(categoryName, (s, level) => true, true)
-            );
+
+            var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder.AddConsole();
+            });
+
+            var logger = loggerFactory.CreateLogger(categoryName);
+
+            return new ConsoleLoggerWrapper(logger);
         }
     }
 
     internal class ConsoleLoggerWrapper : INStoreLogger
     {
-        private readonly ConsoleLogger _logger;
+        private readonly ILogger _logger;
 
-        public ConsoleLoggerWrapper(ConsoleLogger logger)
+        public ConsoleLoggerWrapper(ILogger logger)
         {
             _logger = logger;
         }
