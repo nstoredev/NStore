@@ -51,21 +51,21 @@ namespace NStore.Persistence.LiteDB
                 .ConfigureAwait(false);
         }
 
-        public async Task ReadForwardMultiplePartitionsAsync(
+        public async Task ReadForwardMultiplePartitionsByGlobalPositionAsync(
             IEnumerable<string> partitionIdsList,
-            long fromLowerIndexInclusive,
+            long fromLowerPositionInclusive,
             ISubscription subscription,
-            long toUpperIndexInclusive,
+            long toUpperPositionInclusive,
             CancellationToken cancellationToken)
         {
             var chunks = _streams.Query()
                .Where(x => partitionIdsList.Contains(x.PartitionId)
-                           && x.Index >= fromLowerIndexInclusive
-                           && x.Index <= toUpperIndexInclusive)
-               .OrderBy(x => x.Index)
+                           && x.Position >= fromLowerPositionInclusive
+                           && x.Position <= toUpperPositionInclusive)
+               .OrderBy(x => x.Position)
                .ToList();
 
-            await PublishAsync(chunks, fromLowerIndexInclusive, subscription, false, cancellationToken)
+            await PublishAsync(chunks, fromLowerPositionInclusive, subscription, false, cancellationToken)
                 .ConfigureAwait(false);
         }
 

@@ -1033,7 +1033,7 @@ namespace NStore.Persistence.Tests
         public async Task read_multiple_partition()
         {
             var tape = new Recorder();
-            await Store.ReadForwardMultiplePartitionsAsync(new[] { "mbpra", "mbprb" }, 1, tape, Int32.MaxValue, CancellationToken.None);
+            await Store.ReadForwardMultiplePartitionsByGlobalPositionAsync(new[] { "mbpra", "mbprb" }, 1, tape, Int32.MaxValue, CancellationToken.None);
 
             AssertForBasicRead(tape, 5);
         }
@@ -1044,7 +1044,7 @@ namespace NStore.Persistence.Tests
             var tape = new Recorder();
 
             //Read empty list 
-            await Store.ReadForwardMultiplePartitionsAsync(Array.Empty<string>(), 1, tape, Int32.MaxValue, CancellationToken.None);
+            await Store.ReadForwardMultiplePartitionsByGlobalPositionAsync(Array.Empty<string>(), 1, tape, Int32.MaxValue, CancellationToken.None);
 
             Assert.Empty(tape.Chunks);
         }
@@ -1053,7 +1053,7 @@ namespace NStore.Persistence.Tests
         public async Task read_with_extensions()
         {
             var tape = new Recorder();
-            await Store.ReadForwardMultiplePartitionsAsync(new[] { "mbpra", "mbprb" }, tape);
+            await Store.ReadForwardMultiplePartitionsByGlobalPositionAsync(new[] { "mbpra", "mbprb" }, tape);
 
             AssertForBasicRead(tape, 5);
         }
@@ -1062,7 +1062,7 @@ namespace NStore.Persistence.Tests
         public async Task read_multiple_partition_can_read_single_partition()
         {
             var tape = new Recorder();
-            await Store.ReadForwardMultiplePartitionsAsync(new[] { "mbpra" }, 1, tape, Int32.MaxValue, CancellationToken.None);
+            await Store.ReadForwardMultiplePartitionsByGlobalPositionAsync(new[] { "mbpra" }, 1, tape, Int32.MaxValue, CancellationToken.None);
 
             Assert.Equal(3, tape.Chunks.Count());
             //we could not assume ordering, but clearly b1, is less than b2.
@@ -1085,26 +1085,27 @@ namespace NStore.Persistence.Tests
         public async Task read_limit_version()
         {
             var tape = new Recorder();
-            await Store.ReadForwardMultiplePartitionsAsync(new[] { "mbpra", "mbprb" }, 1, tape, 2, CancellationToken.None);
+            await Store.ReadForwardMultiplePartitionsByGlobalPositionAsync(new[] { "mbpra", "mbprb" }, 1, tape, 4, CancellationToken.None);
 
             AssertForBasicRead(tape, 4);
         }
 
         [Fact]
-        public async Task read_not_from_first_version()
+        public async Task read_single_checkpoint()
         {
             var tape = new Recorder();
-            await Store.ReadForwardMultiplePartitionsAsync(new[] { "mbpra", "mbprb" }, 2, tape, 2, CancellationToken.None);
+            await Store.ReadForwardMultiplePartitionsByGlobalPositionAsync(new[] { "mbpra", "mbprb" }, 2, tape, 2, CancellationToken.None);
 
-            AssertForBasicRead(tape, 2);
+            AssertForBasicRead(tape, 1);
         }
 
         [Fact]
         public async Task read_non_exiting_partition()
         {
             var tape = new Recorder();
-            await Store.ReadForwardMultiplePartitionsAsync(new[] { "mbpra", "does-not-exists" }, 2, tape, 2, CancellationToken.None);
+            await Store.ReadForwardMultiplePartitionsByGlobalPositionAsync(new[] { "mbpra", "does-not-exists" }, 1, tape, 2, CancellationToken.None);
 
+            //read only single chunk of mbpra because the second chunk is from mbprb
             AssertForBasicRead(tape, 1);
         }
 
@@ -1112,7 +1113,7 @@ namespace NStore.Persistence.Tests
         public async Task read_multiple_partition_can_read_no_partition()
         {
             var tape = new Recorder();
-            await Store.ReadForwardMultiplePartitionsAsync(Array.Empty<string>(), 1, tape, Int32.MaxValue, CancellationToken.None);
+            await Store.ReadForwardMultiplePartitionsByGlobalPositionAsync(Array.Empty<string>(), 1, tape, Int32.MaxValue, CancellationToken.None);
 
             Assert.Empty(tape.Chunks);
         }
