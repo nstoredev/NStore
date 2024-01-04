@@ -1,5 +1,7 @@
 ## vNext
 
+## 0.17.0
+
 - Updated Mongodb Drivers to 2.23.1
 - Updated some basic dependencies.
 
