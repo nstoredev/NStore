@@ -9,6 +9,7 @@ permissions:
   
 jobs:
   build:
+    timeout-minutes: 8
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
