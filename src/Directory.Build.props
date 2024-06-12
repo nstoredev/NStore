@@ -1,0 +1,5 @@
+<Project>
+    <PropertyGroup>
+        <NoWarn>xUnit1030;</NoWarn>
+    </PropertyGroup>
+</Project>

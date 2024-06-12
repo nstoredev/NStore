@@ -3,16 +3,17 @@
     <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'false'">netstandard2.0</TargetFrameworks>
     <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'true'">netstandard2.0;net48</TargetFrameworks>
     <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == ''">netstandard2.0</TargetFrameworks>
-    
+
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <PackageProjectUrl>https://github.com/ProximoSrl/NStore</PackageProjectUrl>
     <RepositoryUrl>https://github.com/ProximoSrl/NStore</RepositoryUrl>
-        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-   <Deterministic>true</Deterministic>
-   <ContinuousIntegrationBuild Condition="'$(TF_BUILD)' == 'true'">True</ContinuousIntegrationBuild>
-   <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">True</ContinuousIntegrationBuild> 
+    <Deterministic>true</Deterministic>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <ContinuousIntegrationBuild Condition="'$(TF_BUILD)' == 'true'">True</ContinuousIntegrationBuild>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">True</ContinuousIntegrationBuild>
     <RepositoryType>Git</RepositoryType>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <DebugType>full</DebugType>
@@ -26,12 +27,12 @@
     <PackageReference Include="MongoDB.Driver" Version="2.23.1" />
   </ItemGroup>
   <ItemGroup>
-		<Compile Include="..\AssemblyInfo.cs">
-			<Link>AssemblyInfo.cs</Link>
-		</Compile>
+    <Compile Include="..\AssemblyInfo.cs">
+      <Link>AssemblyInfo.cs</Link>
+    </Compile>
     <None PackagePath="" Include="..\..\LICENSE.md" pack="true" />
   </ItemGroup>
   <ItemGroup>
-	  <ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
+    <ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
   </ItemGroup>
 </Project>

@@ -2,6 +2,11 @@ name: NStore CI
 
 on: [push]
 
+permissions:
+  id-token: write
+  contents: read
+  attestations: write
+  
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -36,9 +41,11 @@ jobs:
         NSTORE_MONGODB: mongodb://localhost/nstore
         NSTORE_MSSQL: Server=localhost;user id=sa;password=sqlPw3$secure
       run: |
-        ./newbuild.ps1 -nugetPublish $false -nugetApiKey ${{ secrets.NUGET_API_KEY }}
+        ./newbuild.ps1 -nugetPublish $true -nugetApiKey ${{ secrets.NUGET_API_KEY }}
 
     - name: Generate artifact attestation
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
       uses: actions/attest-build-provenance@v1
       with:
         subject-path: 'artifacts/NuGet'
