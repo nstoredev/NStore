@@ -12,6 +12,7 @@
     <RepositoryType>Git</RepositoryType>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(TF_BUILD)' == 'true'">True</ContinuousIntegrationBuild>
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">True</ContinuousIntegrationBuild>
@@ -28,6 +29,7 @@
       <Link>AssemblyInfo.cs</Link>
     </Compile>
     <None PackagePath="" Include="..\..\LICENSE.md" pack="true" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\NStore.BaseSqlPersistence\NStore.BaseSqlPersistence.csproj" />
