@@ -42,7 +42,7 @@ Write-Host "\n\n*******************TESTING SOLUTION*******************"
 dotnet test "$runningDirectory/src/NStore.sln" `
     --collect:"XPlat Code Coverage" `
     --results-directory TestResults/ `
-    --logger "trx;LogFileName=unittests.trx" `
+    --logger "trx;LogFilePrefix=testResults" `
     --no-restore `
     -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
 
