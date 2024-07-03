@@ -2,8 +2,14 @@ name: NStore CI
 
 on: [push]
 
+permissions:
+  id-token: write
+  contents: read
+  attestations: write
+  
 jobs:
   build:
+    timeout-minutes: 8
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -20,10 +26,7 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: ${{ matrix.dotnet }}
-      
-    - name: Build with dotnet
-      run: dotnet build src/NStore.sln --configuration Release
-    
+         
     - name: Start Docker for MSSSql
       run: docker run -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=sqlPw3$secure' -e 'MSSQL_PID=Developer' -p 1433:1433 --name msssql -d mcr.microsoft.com/mssql/server:2017-latest-ubuntu
       
@@ -33,30 +36,24 @@ jobs:
     - name: Dump mssql docker logs
       run: docker logs msssql
       
-    - name: Run Tests - Core
-      run: dotnet test src/NStore.Core.Tests/NStore.Core.Tests.csproj --configuration Release --no-build
-
-    - name: Run Tests - Domain
-      run: dotnet test src/NStore.Domain.Tests/NStore.Domain.Tests.csproj --configuration Release --no-build
-    
-    - name: Run Tests - MongoDb
+    - name: Running Build script
+      shell: pwsh
       env:
         NSTORE_MONGODB: mongodb://localhost/nstore
-      run: dotnet test src/NStore.Persistence.Mongo.Tests/NStore.Persistence.Mongo.Tests.csproj --configuration Release --no-build
-      
-   #- name: Try to connect to mssql from inside the image
-   #   run: docker exec -it msssql /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P sqlPw3$secure
-      
-    - name: Run Tests - MsSql
-      env:
         NSTORE_MSSQL: Server=localhost;user id=sa;password=sqlPw3$secure
-      run: dotnet test src/NStore.Persistence.MsSql.Tests/NStore.Persistence.MsSql.Tests.csproj --configuration Release --no-build
-    
-    - name: Dump mssql docker logs after tests
-      run: docker logs msssql
-      
-    - name: Run Tests - Sql Lite
-      run: dotnet test src/NStore.Persistence.Sqlite.Tests/NStore.Persistence.Sqlite.Tests.csproj --configuration Release --no-build 
+      run: |
+        ./newbuild.ps1 -nugetPublish $true -nugetApiKey ${{ secrets.NUGET_API_KEY }}
 
-    - name: Run Tests - LiteDb
-      run: dotnet test src/NStore.Persistence.LiteDB.Tests/NStore.Persistence.LiteDB.Tests.csproj --configuration Release --no-build 
+    - name: Generate artifact attestation
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+      uses: actions/attest-build-provenance@v1
+      with:
+        subject-path: 'artifacts/NuGet'
+          
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: nuget-packages
+        path: artifacts/NuGet
+

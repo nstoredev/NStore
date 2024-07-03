@@ -13,16 +13,16 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Ben.Demystifier" Version="0.4.1" />
-      <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
-      <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
+      <PackageReference Include="Microsoft.SourceLink.GitHub">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
-      <PackageReference Include="NETStandard.Library" Version="2.0.3" />
-      <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-      <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
-      <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+      <PackageReference Include="Ben.Demystifier"  />
+      <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+      <PackageReference Include="Newtonsoft.Json" />
+      <PackageReference Include="Serilog.Extensions.Logging"  />
+      <PackageReference Include="Serilog.Sinks.Console"  />
+
     </ItemGroup>
 
 </Project>

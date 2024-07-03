@@ -1,38 +1,37 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'false'">netstandard2.0</TargetFrameworks>
-    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == 'true'">netstandard2.0;net48</TargetFrameworks>
-    <TargetFrameworks Condition="'$(DOTNETCORE_MULTITARGET)' == ''">netstandard2.0</TargetFrameworks>
-    
+    <TargetFramework>netstandard2.0</TargetFramework>
+
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <PackageProjectUrl>https://github.com/ProximoSrl/NStore</PackageProjectUrl>
     <RepositoryUrl>https://github.com/ProximoSrl/NStore</RepositoryUrl>
-        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-   <Deterministic>true</Deterministic>
-   <ContinuousIntegrationBuild Condition="'$(TF_BUILD)' == 'true'">True</ContinuousIntegrationBuild>
-   <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">True</ContinuousIntegrationBuild> 
+    <Deterministic>true</Deterministic>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <ContinuousIntegrationBuild Condition="'$(TF_BUILD)' == 'true'">True</ContinuousIntegrationBuild>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">True</ContinuousIntegrationBuild>
     <RepositoryType>Git</RepositoryType>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
-    <DebugType>full</DebugType>
-    <DebugSymbols>true</DebugSymbols>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
+    <PackageReference Include="Microsoft.SourceLink.GitHub">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="System.Data.SqlClient" Version="4.8.5" />
+    <PackageReference Include="System.Data.SqlClient" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\AssemblyInfo.cs">
       <Link>AssemblyInfo.cs</Link>
     </Compile>
     <None PackagePath="" Include="..\..\LICENSE.md" pack="true" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
   <ItemGroup>
-		<ProjectReference Include="..\NStore.BaseSqlPersistence\NStore.BaseSqlPersistence.csproj" />
-		<ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
+    <ProjectReference Include="..\NStore.BaseSqlPersistence\NStore.BaseSqlPersistence.csproj" />
+    <ProjectReference Include="..\NStore.Core\NStore.Core.csproj" />
   </ItemGroup>
 </Project>
