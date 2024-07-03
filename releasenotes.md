@@ -1,4 +1,4 @@
-## vNext
+## 0.18.0
 
 - Updated Testing libraries.
 - Updated System.Data.SqlClient
