@@ -2,6 +2,9 @@
 
 - Updated Testing libraries.
 - Updated System.Data.SqlClient
+- Updated MongodbDrivers
+- Centralized package management for nuget.
+- Fixed build and symbol indexing.
 
 ## 0.17.0
 
