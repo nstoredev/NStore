@@ -532,7 +532,8 @@ namespace NStore.Persistence.Mongo
                             _logger.LogWarning(
                                 $@"Error writing chunk #{chunk.Position} - Some other process already wrote position {chunk.Position}. 
 Operation will be retried. 
-If you see too many of this kind of errors, consider enabling UseLocalSequence.
+If you see too many of this kind of errors, consider disabling UseLocalSequence because multiple processes are using the very same counter.
+Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.OperationId} chunk payload {chunk.Payload?.GetType().Name}
 {ex.Message} - {ex.GetType().FullName} ");
                             await ReloadSequence(cancellationToken).ConfigureAwait(false);
                             chunk.RewritePosition(await GetNextId(1, cancellationToken).ConfigureAwait(false));
