@@ -1,3 +1,7 @@
+## 0.18.1
+
+- Better error message when race position happens.
+
 ## 0.18.0
 
 - Updated Testing libraries.
