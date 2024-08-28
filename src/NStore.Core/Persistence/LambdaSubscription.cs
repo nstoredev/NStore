@@ -1,14 +1,15 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NStore.Core.Persistence
 {
     public class LambdaSubscription : ISubscription
     {
-        public delegate Task OnErrorDelegate(long position, Exception ex);
-        public delegate Task OnStartDelegate(long position);
-        public delegate Task OnCompleteDelegate(long position);
-        public delegate Task OnStopDelegate(long position);
+        public delegate Task OnErrorDelegate(long position, Exception ex, CancellationToken cancellationToken);
+        public delegate Task OnStartDelegate(long position, CancellationToken cancellationToken);
+        public delegate Task OnCompleteDelegate(long position, CancellationToken cancellationToken);
+        public delegate Task OnStopDelegate(long position, CancellationToken cancellationToken);
 
         private readonly ChunkProcessor _fn;
         private Exception _failed;
@@ -29,42 +30,42 @@ namespace NStore.Core.Persistence
             _fn = fn;
         }
 
-        public Task<bool> OnNextAsync(IChunk chunk)
+        public Task<bool> OnNextAsync(IChunk chunk, CancellationToken cancellationToken)
         {
             return this._fn(chunk);
         }
 
-        public Task OnStartAsync(long indexOrPosition)
+        public Task OnStartAsync(long indexOrPosition, CancellationToken cancellationToken)
         {
             return OnStart != null
-                ? OnStart(indexOrPosition)
+                ? OnStart(indexOrPosition, cancellationToken)
                 : Task.CompletedTask;
         }
 
-        public Task CompletedAsync(long indexOrPosition)
+        public Task CompletedAsync(long indexOrPosition, CancellationToken cancellationToken)
         {
             this.ReadCompleted = true;
 
             return OnComplete != null
-                ? OnComplete(indexOrPosition)
+                ? OnComplete(indexOrPosition, cancellationToken)
                 : Task.CompletedTask;
         }
 
-        public Task StoppedAsync(long indexOrPosition)
+        public Task StoppedAsync(long indexOrPosition, CancellationToken cancellationToken)
         {
             this.ReadCompleted = true;
             return OnStop != null
-                ? OnStop(indexOrPosition)
+                ? OnStop(indexOrPosition, cancellationToken)
                 : Task.CompletedTask;
         }
 
-        public Task OnErrorAsync(long indexOrPosition, Exception ex)
+        public Task OnErrorAsync(long indexOrPosition, Exception ex, CancellationToken cancellationToken)
         {
             _failed = ex;
             _failedPosition = indexOrPosition;
 
             return OnError != null
-                ? OnError(indexOrPosition, ex)
+                ? OnError(indexOrPosition, ex, cancellationToken)
                 : Task.CompletedTask;
         }
     }

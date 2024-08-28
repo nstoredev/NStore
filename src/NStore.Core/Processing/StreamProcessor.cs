@@ -28,13 +28,13 @@ namespace NStore.Core.Processing
                 _processor = payloadProcessor;
             }
 
-            public Task OnStartAsync(long indexOrPosition)
+            public Task OnStartAsync(long indexOrPosition, CancellationToken cancellationToken)
             {
                 _nextExpectedIndex = indexOrPosition;
                 return Task.CompletedTask;
             }
 
-            public async Task<bool> OnNextAsync(IChunk chunk)
+            public async Task<bool> OnNextAsync(IChunk chunk, CancellationToken cancellationToken)
             {
                 if (chunk.Index != _nextExpectedIndex
                     && _onMissing != null
@@ -56,18 +56,18 @@ namespace NStore.Core.Processing
                 return true;
             }
 
-            public Task CompletedAsync(long indexOrPosition)
+            public Task CompletedAsync(long indexOrPosition, CancellationToken cancellationToken)
             {
                 LastIndex = indexOrPosition;
                 return Task.CompletedTask;
             }
 
-            public Task StoppedAsync(long indexOrPosition)
+            public Task StoppedAsync(long indexOrPosition, CancellationToken cancellationToken)
             {
                 return Task.CompletedTask;
             }
 
-            public Task OnErrorAsync(long indexOrPosition, Exception ex)
+            public Task OnErrorAsync(long indexOrPosition, Exception ex, CancellationToken cancellationToken)
             {
                 throw ex;
             }

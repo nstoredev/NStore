@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NStore.Core.Persistence
@@ -12,8 +13,9 @@ namespace NStore.Core.Persistence
         /// </para>
         /// </summary>
         /// <param name="indexOrPosition"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task OnStartAsync(long indexOrPosition);
+        Task OnStartAsync(long indexOrPosition, CancellationToken cancellationToken);
 
         /// <summary>
         /// <para>
@@ -22,9 +24,10 @@ namespace NStore.Core.Persistence
         /// </para>
         /// </summary>
         /// <param name="chunk"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns><see cref="Subscription.Stop"/> if this component does not want any more <see cref="IChunk"/> to be
         /// dispatched, <see cref="Subscription.Continue"/> if it is everything ok and the caller should continue reading next <see cref="IChunk"/></returns>
-        Task<bool> OnNextAsync(IChunk chunk);
+        Task<bool> OnNextAsync(IChunk chunk, CancellationToken cancellationToken);
 
         /// <summary>
         /// <para>
@@ -32,8 +35,9 @@ namespace NStore.Core.Persistence
         /// </para>
         /// </summary>
         /// <param name="indexOrPosition"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task CompletedAsync(long indexOrPosition);
+        Task CompletedAsync(long indexOrPosition, CancellationToken cancellationToken);
 
         /// <summary>
         /// <para>
@@ -42,8 +46,9 @@ namespace NStore.Core.Persistence
         /// </para>
         /// </summary>
         /// <param name="indexOrPosition"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task StoppedAsync(long indexOrPosition);
+        Task StoppedAsync(long indexOrPosition, CancellationToken cancellationToken);
 
         /// <summary>
         /// <para>
@@ -54,8 +59,9 @@ namespace NStore.Core.Persistence
         /// </summary>
         /// <param name="indexOrPosition"></param>
         /// <param name="ex"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task OnErrorAsync(long indexOrPosition, Exception ex);
+        Task OnErrorAsync(long indexOrPosition, Exception ex, CancellationToken cancellationToken);
     }
 
     public delegate Task<bool> ChunkProcessor(IChunk chunk);

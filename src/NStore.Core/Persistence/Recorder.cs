@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NStore.Core.Persistence
@@ -14,7 +15,7 @@ namespace NStore.Core.Persistence
         public int Length => _data.Count;
         public bool ReadCompleted { get; private set; }
 
-        public Task<bool> OnNextAsync(IChunk chunk)
+        public Task<bool> OnNextAsync(IChunk chunk, CancellationToken cancellationToken)
         {
             _data.Add(chunk);
             _map[chunk.Index] = chunk;
@@ -23,13 +24,13 @@ namespace NStore.Core.Persistence
 
 #pragma warning disable S4144 // Methods should not have identical implementations
 
-        public Task CompletedAsync(long indexOrPosition)
+        public Task CompletedAsync(long indexOrPosition, CancellationToken cancellationToken)
         {
             ReadCompleted = true;
             return Task.CompletedTask;
         }
 
-        public Task StoppedAsync(long indexOrPosition)
+        public Task StoppedAsync(long indexOrPosition, CancellationToken cancellationToken)
         {
             ReadCompleted = true;
             return Task.CompletedTask;
@@ -37,12 +38,12 @@ namespace NStore.Core.Persistence
 
 #pragma warning restore S4144 // Methods should not have identical implementations
 
-        public Task OnStartAsync(long indexOrPosition)
+        public Task OnStartAsync(long indexOrPosition, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
-        public Task OnErrorAsync(long indexOrPosition, Exception ex)
+        public Task OnErrorAsync(long indexOrPosition, Exception ex, CancellationToken cancellationToken)
         {
             throw ex;
         }

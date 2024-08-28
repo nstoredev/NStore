@@ -28,36 +28,36 @@ namespace NStore.Tpl
         {
             if (_isRunning)
             {
-                _isRunning = await _consumer.OnNextAsync(chunk).ConfigureAwait(false);
+                _isRunning = await _consumer.OnNextAsync(chunk, CancellationToken.None).ConfigureAwait(false);
             }
         }
 
-        public Task OnStartAsync(long indexOrPosition)
+        public Task OnStartAsync(long indexOrPosition, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
-        public async Task<bool> OnNextAsync(IChunk chunk)
+        public async Task<bool> OnNextAsync(IChunk chunk, CancellationToken cancellationToken)
         {
             await _producer.SendAsync(chunk).ConfigureAwait(false);
             return _isRunning;
         }
 
-        public async Task CompletedAsync(long indexOrPosition)
+        public async Task CompletedAsync(long indexOrPosition, CancellationToken cancellationToken)
         {
             _producer.Complete();
             await _producer.Completion.ConfigureAwait(false);
             _isRunning = false;
         }
 
-        public async Task StoppedAsync(long indexOrPosition)
+        public async Task StoppedAsync(long indexOrPosition, CancellationToken cancellationToken)
         {
             _producer.Complete();
             await _producer.Completion.ConfigureAwait(false);
             _isRunning = false;
         }
 
-        public Task OnErrorAsync(long indexOrPosition, Exception ex)
+        public Task OnErrorAsync(long indexOrPosition, Exception ex, CancellationToken cancellationToken)
         {
             _isRunning = false;
             return Task.CompletedTask;
