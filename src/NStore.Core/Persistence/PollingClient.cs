@@ -23,7 +23,7 @@ namespace NStore.Core.Persistence
                 _logger = logger;
             }
 
-            public Task<bool> OnNextAsync(IChunk chunk)
+            public Task<bool> OnNextAsync(IChunk chunk, CancellationToken cancellationToken)
             {
                 _logger.LogDebug("OnNext {Position}", chunk.Position);
 
@@ -42,20 +42,20 @@ namespace NStore.Core.Persistence
                 _stopOnHole = true;
                 Position = chunk.Position;
                 Processed++;
-                return _subscription.OnNextAsync(chunk);
+                return _subscription.OnNextAsync(chunk, cancellationToken);
             }
 
-            public Task OnStartAsync(long indexOrPosition)
+            public Task OnStartAsync(long indexOrPosition, CancellationToken cancellationToken)
             {
                 _logger.LogDebug("OnStart({Position})", indexOrPosition);
 
                 Position = indexOrPosition - 1;
                 Processed = 0;
                 _stopOnHole = RetriesOnHole < 5;
-                return _subscription.OnStartAsync(indexOrPosition);
+                return _subscription.OnStartAsync(indexOrPosition, cancellationToken);
             }
 
-            public Task CompletedAsync(long indexOrPosition)
+            public Task CompletedAsync(long indexOrPosition, CancellationToken cancellationToken)
             {
                 _logger.LogDebug("Completed({Position})", indexOrPosition);
 
@@ -64,18 +64,18 @@ namespace NStore.Core.Persistence
                     Position = indexOrPosition;
                 }
 
-                return _subscription.CompletedAsync(indexOrPosition);
+                return _subscription.CompletedAsync(indexOrPosition, cancellationToken);
             }
 
-            public Task StoppedAsync(long indexOrPosition)
+            public Task StoppedAsync(long indexOrPosition, CancellationToken cancellationToken)
             {
                 _logger.LogDebug("Stopped({Position})", indexOrPosition);
-                return _subscription.StoppedAsync(indexOrPosition);
+                return _subscription.StoppedAsync(indexOrPosition, cancellationToken);
             }
 
-            public Task OnErrorAsync(long indexOrPosition, Exception ex)
+            public Task OnErrorAsync(long indexOrPosition, Exception ex, CancellationToken cancellationToken)
             {
-                return _subscription.OnErrorAsync(indexOrPosition, ex);
+                return _subscription.OnErrorAsync(indexOrPosition, ex, cancellationToken);
             }
         }
 
