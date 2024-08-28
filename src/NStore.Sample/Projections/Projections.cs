@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using NStore.Core.InMemory;
 using NStore.Core.Persistence;
@@ -76,7 +77,7 @@ namespace NStore.Sample.Projections
             _reporter.Report($"  Fillers    => {_fillersCount}");
         }
 
-        public async Task<bool> OnNextAsync(IChunk chunk)
+        public async Task<bool> OnNextAsync(IChunk chunk, CancellationToken cancellationToken)
         {
             if (chunk.Position != Position + 1)
             {
@@ -131,22 +132,22 @@ namespace NStore.Sample.Projections
             return true;
         }
 
-        public Task CompletedAsync(long indexOrPosition)
+        public Task CompletedAsync(long indexOrPosition, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
-        public Task StoppedAsync(long indexOrPosition)
+        public Task StoppedAsync(long indexOrPosition, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
-        public Task OnStartAsync(long indexOrPosition)
+        public Task OnStartAsync(long indexOrPosition, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
-        public Task OnErrorAsync(long indexOrPosition, Exception ex)
+        public Task OnErrorAsync(long indexOrPosition, Exception ex, CancellationToken cancellationToken)
         {
             _reporter.Report($"ERROR on position {indexOrPosition}: {ex.Message}");
             return Task.CompletedTask;

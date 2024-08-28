@@ -877,12 +877,12 @@ namespace NStore.Persistence.Tests
 
         public int Position => _expectedPosition - 1;
 
-        public Task OnStartAsync(long indexOrPosition)
+        public Task OnStartAsync(long indexOrPosition, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
-        public Task<bool> OnNextAsync(IChunk chunk)
+        public Task<bool> OnNextAsync(IChunk chunk, CancellationToken cancellationToken)
         {
             if (_expectedPosition != chunk.Position)
             {
@@ -893,17 +893,17 @@ namespace NStore.Persistence.Tests
             return Task.FromResult(true);
         }
 
-        public Task CompletedAsync(long indexOrPosition)
+        public Task CompletedAsync(long indexOrPosition, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
-        public Task StoppedAsync(long indexOrPosition)
+        public Task StoppedAsync(long indexOrPosition, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
 
-        public Task OnErrorAsync(long indexOrPosition, Exception ex)
+        public Task OnErrorAsync(long indexOrPosition, Exception ex, CancellationToken cancellationToken)
         {
             Console.WriteLine($"Error [{_configMessage}]: {ex.Message}\n{ex.StackTrace}");
             throw ex;
