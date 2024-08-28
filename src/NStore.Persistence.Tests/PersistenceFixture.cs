@@ -1,4 +1,4 @@
-﻿using NStore.Core.Logging;
+using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using System;
 using System.Collections.Generic;
@@ -644,14 +644,14 @@ namespace NStore.Persistence.Tests
 
             _subscription = new LambdaSubscription(_continueToEnd)
             {
-                OnStart = p =>
+                OnStart = (position, cancellationToken) =>
                 {
-                    _startedAt = p;
+                    _startedAt = position;
                     return Task.CompletedTask;
                 },
-                OnComplete = p =>
+                OnComplete = (position, cancellationToken) =>
                 {
-                    _completedAt = p;
+                    _completedAt = position;
                     return Task.CompletedTask;
                 }
             };

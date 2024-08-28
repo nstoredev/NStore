@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Threading;
 using System.Threading.Tasks;
 using NStore.Core.Persistence;
 using Xunit;
@@ -26,7 +27,7 @@ namespace NStore.Core.Tests.Persistence
             var subscription = new LambdaSubscription(_empty);
 
             var ex = new Exception("message");
-            await subscription.OnErrorAsync(1, ex).ConfigureAwait(false);
+            await subscription.OnErrorAsync(1, ex, CancellationToken.None).ConfigureAwait(false);
 
             Assert.True(subscription.Failed);
             Assert.Same(ex, subscription.LastError);
@@ -40,7 +41,7 @@ namespace NStore.Core.Tests.Persistence
             long trackedPosition = 0;
             var subscription = new LambdaSubscription(_empty)
             {
-                OnError = (position, exception) =>
+                OnError = (position, exception, cancellationToken) =>
                 {
                     trackedException = exception;
                     trackedPosition = position;
@@ -49,7 +50,7 @@ namespace NStore.Core.Tests.Persistence
             };
 
             var ex = new Exception("message");
-            await subscription.OnErrorAsync(1, ex).ConfigureAwait(false);
+            await subscription.OnErrorAsync(1, ex, CancellationToken.None).ConfigureAwait(false);
 
             Assert.True(subscription.Failed);
             Assert.Same(ex, trackedException);
@@ -62,14 +63,14 @@ namespace NStore.Core.Tests.Persistence
             long trackedPosition = 0;
             var subscription = new LambdaSubscription(_empty)
             {
-                OnStart = position =>
+                OnStart = (position, cancellationToken) =>
                 {
                     trackedPosition = position;
                     return Task.CompletedTask;
                 }
             };
 
-            await subscription.OnStartAsync(1).ConfigureAwait(false);
+            await subscription.OnStartAsync(1, CancellationToken.None).ConfigureAwait(false);
             Assert.Equal(1, trackedPosition);
         }
 
@@ -79,14 +80,14 @@ namespace NStore.Core.Tests.Persistence
             long trackedPosition = 0;
             var subscription = new LambdaSubscription(_empty)
             {
-                OnStop = position =>
-                 {
-                     trackedPosition = position;
-                     return Task.CompletedTask;
-                 }
+                OnStop = (position, cancellationToken) =>
+                {
+                    trackedPosition = position;
+                    return Task.CompletedTask;
+                }
             };
 
-            await subscription.StoppedAsync(1).ConfigureAwait(false);
+            await subscription.StoppedAsync(1, CancellationToken.None).ConfigureAwait(false);
             Assert.Equal(1, trackedPosition);
             Assert.True(subscription.ReadCompleted);
         }
@@ -97,14 +98,14 @@ namespace NStore.Core.Tests.Persistence
             long trackedPosition = 0;
             var subscription = new LambdaSubscription(_empty)
             {
-                OnComplete = position =>
+                OnComplete = (position, cancellationToken) =>
                 {
                     trackedPosition = position;
                     return Task.CompletedTask;
                 }
             };
 
-            await subscription.CompletedAsync(1).ConfigureAwait(false);
+            await subscription.CompletedAsync(1, CancellationToken.None).ConfigureAwait(false);
 
             Assert.Equal(1, trackedPosition);
             Assert.True(subscription.ReadCompleted);
