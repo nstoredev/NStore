@@ -1,3 +1,7 @@
+## 0.18.2
+
+- Updated mongodb driver to 2.28 (first version that is signed)
+
 ## 0.18.1
 
 - Better error message when race position happens.
