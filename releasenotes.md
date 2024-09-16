@@ -1,3 +1,7 @@
+## 0.18.3
+
+- Updated workflow for CI (uses v2 of the upload artifacts that was deprecated.)
+
 ## 0.18.2
 
 - Updated mongodb driver to 2.28 (first version that is signed)
