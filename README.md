@@ -55,7 +55,3 @@ Full source at [src/NStore.Quickstart/Program.cs](src/NStore.Quickstart/Program.
 ## Learn
 
 The source comes with a [Sample App](https://github.com/ProximoSrl/NStore/tree/develop/src/NStore.Sample) to illustrate some basic stuff you can do.
-
-## Status
-
-In production (MongoDB & SqlServer) since 2017 on two major products.
