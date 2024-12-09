@@ -72,10 +72,6 @@ namespace NStore.Persistence.Mongo
 
             var settings = MongoClientSettings.FromUrl(partitionsBuild.ToMongoUrl());
 
-            //by default we will use LINQv2. There are bugs in older version of mongo < 4.4
-            //and we feel safer to use the old LINQ provider.
-            settings.LinqProvider = MongoDB.Driver.Linq.LinqProvider.V2;
-
             //The caller has the option to force the use of other link provider due to customization
             //of the partition client settings. 
             _options.CustomizePartitionClientSettings(settings);
