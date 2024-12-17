@@ -1,5 +1,9 @@
 ## vNext
 
+## 0.20.0
+
+- Upgraded MongoDb Driver to 3.1.0.
+
 ## 0.19.0
 
 - Upgraded MongoDb Driver to 2.30 to easy transition to V3 https://github.com/mongodb/mongo-csharp-driver/releases/tag/v2.30.0
