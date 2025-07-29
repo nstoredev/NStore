@@ -1,5 +1,9 @@
 ## vNext
 
+## 0.20.1
+
+- Upgraded MongoDb Driver to 3.4.2.
+
 ## 0.20.0
 
 - Upgraded MongoDb Driver to 3.1.0.
