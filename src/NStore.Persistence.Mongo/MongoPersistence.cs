@@ -122,6 +122,30 @@ namespace NStore.Persistence.Mongo
             }
         }
 
+        /// <summary>
+        /// Configures FindOptions with cursor batch size if specified in options.
+        /// This centralizes batch size configuration to ensure consistent behavior across all read operations.
+        /// </summary>
+        private void ConfigureFindOptions<T>(FindOptions<T> findOptions)
+        {
+            if (_options.CursorBatchSize.HasValue)
+            {
+                findOptions.BatchSize = _options.CursorBatchSize.Value;
+            }
+        }
+
+        /// <summary>
+        /// Configures FindOptions with cursor batch size if specified in options.
+        /// This centralizes batch size configuration to ensure consistent behavior across all read operations.
+        /// </summary>
+        private void ConfigureFindOptions<T, TProjection>(FindOptions<T, TProjection> findOptions)
+        {
+            if (_options.CursorBatchSize.HasValue)
+            {
+                findOptions.BatchSize = _options.CursorBatchSize.Value;
+            }
+        }
+
         public async Task Drop(CancellationToken cancellationToken)
         {
             await this._partitionsDb
@@ -154,6 +178,7 @@ namespace NStore.Persistence.Mongo
             {
                 options.Limit = limit;
             }
+            ConfigureFindOptions(options);
 
             await PushToSubscriber(
                 fromLowerIndexInclusive,
@@ -182,6 +207,7 @@ namespace NStore.Persistence.Mongo
                 Builders<TChunk>.Sort.Ascending(x => x.Index)
             );
             var options = new FindOptions<TChunk>() { Sort = sort };
+            ConfigureFindOptions(options);
 
             await PushToSubscriber(
                 fromLowerIndexInclusive,
@@ -211,6 +237,7 @@ namespace NStore.Persistence.Mongo
                 Builders<TChunk>.Sort.Ascending(x => x.Index)
             );
             var options = new FindOptions<TChunk>() { Sort = sort };
+            ConfigureFindOptions(options);
 
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
             {
@@ -279,6 +306,7 @@ namespace NStore.Persistence.Mongo
                     Builders<TChunk>.Sort.Ascending(x => x.Index)
                 );
                 var options = new FindOptions<TChunk>() { Sort = sort };
+                ConfigureFindOptions(options);
 
                 // Use the minimum from index as the starting position for subscription
                 var startIndex = requests.Min(r => r.FromPartitionIndexInclusive);
@@ -354,6 +382,7 @@ namespace NStore.Persistence.Mongo
                     Builders<TChunk>.Sort.Ascending(x => x.Index)
                 );
                 var options = new FindOptions<TChunk>() { Sort = sort };
+                ConfigureFindOptions(options);
 
                 using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
                 {
@@ -449,6 +478,7 @@ namespace NStore.Persistence.Mongo
             {
                 options.Limit = limit;
             }
+            ConfigureFindOptions(options);
 
             await PushToSubscriber(
                 fromUpperIndexInclusive,
@@ -473,6 +503,7 @@ namespace NStore.Persistence.Mongo
 
             var sort = Builders<TChunk>.Sort.Descending(x => x.Index);
             var options = new FindOptions<TChunk>() { Sort = sort, Limit = 1 };
+            ConfigureFindOptions(options);
 
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
             {
@@ -495,6 +526,7 @@ namespace NStore.Persistence.Mongo
             {
                 options.Limit = limit;
             }
+            ConfigureFindOptions(options);
 
             await PushToSubscriber(fromPositionInclusive, subscription, options, filter, true, cancellationToken)
                 .ConfigureAwait(false);
@@ -511,6 +543,7 @@ namespace NStore.Persistence.Mongo
                 Limit = 1,
                 Projection = projection
             };
+            ConfigureFindOptions(options);
 
             using (var cursor = await _chunks
                        .FindAsync(filter, options, cancellationToken)
@@ -654,6 +687,7 @@ namespace NStore.Persistence.Mongo
             {
                 Sort = Builders<TChunk>.Sort.Ascending(x => x.Position)
             };
+            ConfigureFindOptions(options);
 
             await PushToSubscriber(0, subscription, options, filter, true, cancellationToken)
                 .ConfigureAwait(false);
