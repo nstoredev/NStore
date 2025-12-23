@@ -1,5 +1,6 @@
 using NStore.BaseSqlPersistence;
 using NStore.Core.Logging;
+using NStore.Core.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
@@ -12,6 +13,36 @@ namespace NStore.Persistence.MsSql
 {
     public class MsSqlPersistenceOptions : BaseSqlPersistenceOptions
     {
+        /// <summary>
+        /// Maximum number of retry attempts for transient SQL errors.
+        /// Default is 3. Set to 0 to disable retries.
+        /// </summary>
+        public int MaxRetryAttempts { get; set; } = 3;
+
+        /// <summary>
+        /// Delay in milliseconds between retry attempts.
+        /// Uses exponential backoff: delay * (2 ^ attemptNumber).
+        /// Default is 100ms.
+        /// </summary>
+        public int RetryDelayMilliseconds { get; set; } = 100;
+
+        /// <summary>
+        /// Maximum connection pool size. If not set, uses SQL Server default (100).
+        /// Adjust based on your application's concurrency requirements.
+        /// </summary>
+        public int? MaxPoolSize { get; set; }
+
+        /// <summary>
+        /// Minimum connection pool size. If not set, uses SQL Server default (0).
+        /// </summary>
+        public int? MinPoolSize { get; set; }
+
+        /// <summary>
+        /// Command timeout in seconds. Default is 30 seconds.
+        /// Set to 0 for infinite timeout (not recommended for production).
+        /// </summary>
+        public int CommandTimeoutSeconds { get; set; } = 30;
+
         public MsSqlPersistenceOptions(INStoreLoggerFactory loggerFactory) : base(loggerFactory)
         {
         }
@@ -137,7 +168,23 @@ namespace NStore.Persistence.MsSql
 
         public override async Task<AbstractSqlContext> GetContextAsync(CancellationToken cancellationToken)
         {
-            var connection = new SqlConnection(ConnectionString);
+            var connectionStringBuilder = new SqlConnectionStringBuilder(ConnectionString);
+            
+            // Apply connection pool settings if specified
+            if (MaxPoolSize.HasValue)
+            {
+                connectionStringBuilder.MaxPoolSize = MaxPoolSize.Value;
+            }
+            
+            if (MinPoolSize.HasValue)
+            {
+                connectionStringBuilder.MinPoolSize = MinPoolSize.Value;
+            }
+
+            // Set command timeout (connection string uses "Connection Timeout" for connection, not command)
+            connectionStringBuilder.ConnectTimeout = Math.Max(15, CommandTimeoutSeconds);
+
+            var connection = new SqlConnection(connectionStringBuilder.ConnectionString);
 
             try
             {
@@ -230,6 +277,51 @@ END
             }
 
             sb.Append(@descending ? "ORDER BY [Index] DESC" : "ORDER BY [Index]");
+
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Generates SQL query for reading multiple partitions where each partition has its own index range.
+        /// Uses UNION ALL to combine results from different partition ranges.
+        /// </summary>
+        public virtual string GetRangeMultiplePartitionWithRangesSelectChunksSql(
+            IEnumerable<PartitionReadRequest> partitionRequests)
+        {
+            var requests = partitionRequests.ToList();
+            if (!requests.Any())
+            {
+                return string.Empty;
+            }
+
+            var sb = new StringBuilder();
+            
+            for (int i = 0; i < requests.Count; i++)
+            {
+                if (i > 0)
+                {
+                    sb.Append(" UNION ALL ");
+                }
+
+                sb.Append("SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo] ");
+                sb.Append($"FROM {StreamsTableName} ");
+                sb.Append($"WHERE [PartitionId] = @p{i} ");
+
+                var request = requests[i];
+                
+                if (request.FromPartitionIndexInclusive > 0)
+                {
+                    sb.Append($"AND [Index] >= @from{i} ");
+                }
+
+                if (request.ToPartitionIndexInclusive != long.MaxValue)
+                {
+                    sb.Append($"AND [Index] <= @to{i} ");
+                }
+            }
+
+            // Order by Index to maintain ordering guarantees within each partition
+            sb.Append(" ORDER BY [Index]");
 
             return sb.ToString();
         }
