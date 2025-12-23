@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>Net8.0</TargetFramework>
+    <TargetFramework>Net10.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\NStore.Persistence.MsSql\NStore.Persistence.MsSql.csproj">
