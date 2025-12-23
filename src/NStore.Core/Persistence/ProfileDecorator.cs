@@ -100,6 +100,35 @@ namespace NStore.Core.Persistence
         }
 #endif
 
+        public async Task ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            var counter = new SubscriptionWrapper(subscription)
+            {
+                BeforeOnNext = data => ReadForwardCounter.IncCounter1()
+            };
+
+            await ReadForwardCounter.CaptureAsync(() =>
+                _persistence.ReadForwardMultiplePartitionsWithRangesAsync(
+                    partitionRequests,
+                    counter,
+                    cancellationToken
+                )).ConfigureAwait(false);
+        }
+
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await foreach (var chunk in _persistence.ReadForwardMultiplePartitionsWithRangesAsync(partitionRequests, cancellationToken).ConfigureAwait(false))
+            {
+                ReadForwardCounter.IncCounter1();
+                yield return chunk;
+            }
+        }
+
         public async Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,

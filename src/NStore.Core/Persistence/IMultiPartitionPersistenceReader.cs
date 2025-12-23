@@ -1,11 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 
 namespace NStore.Core.Persistence
 {
+    /// <summary>
+    /// Represents a read request for a single partition with its specific index range.
+    /// </summary>
+    /// <param name="PartitionId">The partition identifier. Must not be null or whitespace.</param>
+    /// <param name="FromPartitionIndexInclusive">Starting index (inclusive) within the partition.</param>
+    /// <param name="ToPartitionIndexInclusive">Ending index (inclusive) within the partition. Must be >= FromPartitionIndexInclusive.</param>
+    public readonly record struct PartitionReadRequest(
+        string PartitionId,
+        long FromPartitionIndexInclusive,
+        long ToPartitionIndexInclusive = long.MaxValue
+    );
+
     /// <summary>
     /// Sometimes it is necessary to query the store not only for
     /// a single partition but for a series of partitions. This is needed
@@ -86,5 +99,44 @@ namespace NStore.Core.Persistence
             CancellationToken cancellationToken
         );
 #endif
+
+        /// <summary>
+        /// Reads multiple partitions where each partition can have its own index range.
+        /// </summary>
+        /// <param name="partitionRequests">List of partition read requests, each with its own range.</param>
+        /// <param name="subscription">Subscriber that will receive chunks.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <remarks>
+        /// <para>
+        /// <strong>Index Semantics:</strong> All index values (FromPartitionIndexInclusive, ToPartitionIndexInclusive) 
+        /// refer to the <strong>partition-local index</strong>, NOT the global position in the store.
+        /// </para>
+        /// <para>
+        /// <strong>Ordering Guarantees:</strong> Chunks within the SAME partition are ordered by partition index.
+        /// NO temporal ordering is guaranteed between different partitions (same as ReadForwardMultiplePartitionsAsync).
+        /// </para>
+        /// <para>
+        /// <strong>Use Case:</strong> Designed for IBatchStream where loading multiple aggregates 
+        /// requires different historical ranges per aggregate (e.g., load last 10 events from Order-123, 
+        /// last 5 events from Customer-456).
+        /// </para>
+        /// </remarks>
+        Task ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken
+        );
+
+        /// <summary>
+        /// Asynchronously enumerates chunks for multiple partitions where each partition can have its own index range.
+        /// Consumers can use `await foreach` and stop enumeration early to signal the producer to stop.
+        /// </summary>
+        /// <param name="partitionRequests">List of partition read requests, each with its own range.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>An async sequence of <see cref="IChunk"/> instances.</returns>
+        IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            CancellationToken cancellationToken = default
+        );
     }
 }

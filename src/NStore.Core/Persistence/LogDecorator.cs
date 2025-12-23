@@ -63,6 +63,30 @@ namespace NStore.Core.Persistence
         }
 #endif
 
+        public async Task ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            _logger.LogDebug("Start ReadForwardMultiplePartitionsWithRangesAsync(PartitionRequests {Requests})", string.Join(",", partitionRequests));
+            await _persistence.ReadForwardMultiplePartitionsWithRangesAsync(partitionRequests, subscription, cancellationToken).ConfigureAwait(false);
+            _logger.LogDebug("End ReadForwardMultiplePartitionsWithRangesAsync(PartitionRequests {Requests})", string.Join(",", partitionRequests));
+        }
+
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            _logger.LogDebug("Start ReadForwardMultiplePartitionsWithRangesAsync Enumerable(PartitionRequests {Requests})", string.Join(",", partitionRequests));
+
+            await foreach (var chunk in _persistence.ReadForwardMultiplePartitionsWithRangesAsync(partitionRequests, cancellationToken).ConfigureAwait(false))
+            {
+                yield return chunk;
+            }
+
+            _logger.LogDebug("End ReadForwardMultiplePartitionsWithRangesAsync Enumerable(PartitionRequests {Requests})", string.Join(",", partitionRequests));
+        }
+
         public async Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,
