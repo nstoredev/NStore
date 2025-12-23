@@ -181,36 +181,113 @@ namespace NStore.Persistence.Mongo
             var sort = Builders<TChunk>.Sort.Ascending(x => x.Index);
             var options = new FindOptions<TChunk>() { Sort = sort };
 
-            var recorder = new Recorder();
+            using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
+            {
+                while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    foreach (var chunk in cursor.Current)
+                    {
+                        _mongoPayloadSerializer.ApplyDeserialization(chunk);
+                        yield return chunk;
+                    }
+                }
+            }
+        }
+#endif
+
+        public async Task ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            if (partitionRequests is null)
+            {
+                throw new ArgumentNullException(nameof(partitionRequests));
+            }
+
+            var requests = partitionRequests.ToList();
+            if (!requests.Any())
+            {
+                return;
+            }
+
+            // Validate partition requests
+            foreach (var request in requests)
+            {
+                if (string.IsNullOrWhiteSpace(request.PartitionId))
+                {
+                    throw new ArgumentException("PartitionId cannot be null or whitespace", nameof(partitionRequests));
+                }
+
+                if (request.ToPartitionIndexInclusive < request.FromPartitionIndexInclusive)
+                {
+                    throw new ArgumentException(
+                        $"ToPartitionIndexInclusive ({request.ToPartitionIndexInclusive}) must be >= FromPartitionIndexInclusive ({request.FromPartitionIndexInclusive}) for partition {request.PartitionId}",
+                        nameof(partitionRequests));
+                }
+            }
+
+            // Build filter for each partition request and combine them with OR
+            var partitionFilters = new List<FilterDefinition<TChunk>>();
+            foreach (var request in requests)
+            {
+                var partitionFilter = Builders<TChunk>.Filter.And(
+                    Builders<TChunk>.Filter.Eq(x => x.PartitionId, request.PartitionId),
+                    Builders<TChunk>.Filter.Gte(x => x.Index, request.FromPartitionIndexInclusive),
+                    Builders<TChunk>.Filter.Lte(x => x.Index, request.ToPartitionIndexInclusive)
+                );
+                partitionFilters.Add(partitionFilter);
+            }
+
+            var filter = Builders<TChunk>.Filter.Or(partitionFilters);
+            var sort = Builders<TChunk>.Sort.Ascending(x => x.Index);
+            var options = new FindOptions<TChunk>() { Sort = sort };
+
+            // Use the minimum from index as the starting position for subscription
+            var startIndex = requests.Min(r => r.FromPartitionIndexInclusive);
+            
             await PushToSubscriber(
-                fromLowerIndexInclusive,
-                recorder,
+                startIndex,
+                subscription,
                 options,
                 filter,
                 false,
                 cancellationToken).ConfigureAwait(false);
+        }
+
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            if (partitionRequests is null)
+            {
+                throw new ArgumentNullException(nameof(partitionRequests));
+            }
+
+            var requests = partitionRequests.ToList();
+            if (!requests.Any())
+            {
+                yield break;
+            }
+
+            var recorder = new Recorder();
+            await ReadForwardMultiplePartitionsWithRangesAsync(requests, recorder, cancellationToken)
+                .ConfigureAwait(false);
 
             foreach (var chunk in recorder.Chunks)
             {
                 yield return chunk;
             }
         }
-#endif
-
-        public Task ReadForwardMultiplePartitionsWithRangesAsync(
-            IEnumerable<PartitionReadRequest> partitionRequests,
-            ISubscription subscription,
-            CancellationToken cancellationToken)
-        {
-            throw new System.NotImplementedException();
-        }
-
+#else
         public IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
             IEnumerable<PartitionReadRequest> partitionRequests,
             CancellationToken cancellationToken = default)
         {
-            throw new System.NotImplementedException();
+            throw new NotSupportedException("IAsyncEnumerable is only supported in .NET 8.0 or greater");
         }
+#endif
 
         /// <summary>
         /// Pushes a result of a query to a subscriber handling all the logic.
