@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using NStore.BaseSqlPersistence;
 using NStore.Core.Logging;
+using NStore.Core.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -191,6 +192,57 @@ namespace NStore.Persistence.Sqlite
             }
 
             sb.Append(descending ? "ORDER BY [Index] DESC" : "ORDER BY [Index]");
+
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Generates a SQL query to read multiple partitions where each partition can have its own index range.
+        /// Uses UNION ALL to combine results from different partitions while maintaining per-partition ordering.
+        /// </summary>
+        /// <param name="partitionRequests">Collection of partition read requests with individual ranges</param>
+        /// <returns>SQL query string with UNION ALL clauses</returns>
+        /// <remarks>
+        /// Performance Note: For large numbers of partitions (>20), consider using a CTE or temp table approach.
+        /// The current UNION ALL approach is optimal for small to medium partition counts.
+        /// </remarks>
+        public virtual string GetRangeMultiplePartitionWithRangesSelectChunksSql(
+            IEnumerable<PartitionReadRequest> partitionRequests)
+        {
+            var requests = partitionRequests.ToList();
+            if (!requests.Any())
+            {
+                return string.Empty;
+            }
+
+            var sb = new StringBuilder();
+            
+            for (int i = 0; i < requests.Count; i++)
+            {
+                if (i > 0)
+                {
+                    sb.Append(" UNION ALL ");
+                }
+
+                sb.Append("SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo] ");
+                sb.Append($"FROM {StreamsTableName} ");
+                sb.Append($"WHERE [PartitionId] = @p{i} ");
+
+                var request = requests[i];
+                
+                if (request.FromPartitionIndexInclusive > 0)
+                {
+                    sb.Append($"AND [Index] >= @from{i} ");
+                }
+
+                if (request.ToPartitionIndexInclusive != long.MaxValue)
+                {
+                    sb.Append($"AND [Index] <= @to{i} ");
+                }
+            }
+
+            // Order by Index to maintain ordering guarantees within each partition
+            sb.Append(" ORDER BY [Index]");
 
             return sb.ToString();
         }
