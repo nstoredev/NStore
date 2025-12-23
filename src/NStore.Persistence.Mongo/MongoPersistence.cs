@@ -3,7 +3,11 @@ using MongoDB.Driver;
 using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
+#if NET8_0_OR_GREATER
+using System.Collections.Frozen;
+#endif
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -45,6 +49,10 @@ namespace NStore.Persistence.Mongo
         /// Index on partitionId+operationId, for idempotency on operations
         /// </summary>
         private const string PartitionOperationIdx = "partition_operation";
+
+#if NET8_0_OR_GREATER
+        private static readonly FrozenSet<string> IndexNames = FrozenSet.ToFrozenSet(new[] { PartitionIndexIdx, PartitionOperationIdx, "_id_" });
+#endif
 
         public bool SupportsFillers => true;
 
@@ -234,34 +242,42 @@ namespace NStore.Persistence.Mongo
             }
 
             // Build filter for each partition request and combine them with OR
-            var partitionFilters = new List<FilterDefinition<TChunk>>();
-            foreach (var request in requests)
+            var requestCount = requests.Count;
+            var partitionFiltersArray = ArrayPool<FilterDefinition<TChunk>>.Shared.Rent(requestCount);
+            try
             {
-                var partitionFilter = Builders<TChunk>.Filter.And(
-                    Builders<TChunk>.Filter.Eq(x => x.PartitionId, request.PartitionId),
-                    Builders<TChunk>.Filter.Gte(x => x.Index, request.FromPartitionIndexInclusive),
-                    Builders<TChunk>.Filter.Lte(x => x.Index, request.ToPartitionIndexInclusive)
+                for (int i = 0; i < requestCount; i++)
+                {
+                    var request = requests[i];
+                    partitionFiltersArray[i] = Builders<TChunk>.Filter.And(
+                        Builders<TChunk>.Filter.Eq(x => x.PartitionId, request.PartitionId),
+                        Builders<TChunk>.Filter.Gte(x => x.Index, request.FromPartitionIndexInclusive),
+                        Builders<TChunk>.Filter.Lte(x => x.Index, request.ToPartitionIndexInclusive)
+                    );
+                }
+
+                var filter = Builders<TChunk>.Filter.Or(partitionFiltersArray.AsSpan(0, requestCount).ToArray());
+                var sort = Builders<TChunk>.Sort.Combine(
+                    Builders<TChunk>.Sort.Ascending(x => x.PartitionId),
+                    Builders<TChunk>.Sort.Ascending(x => x.Index)
                 );
-                partitionFilters.Add(partitionFilter);
-            }
+                var options = new FindOptions<TChunk>() { Sort = sort };
 
-            var filter = Builders<TChunk>.Filter.Or(partitionFilters);
-            var sort = Builders<TChunk>.Sort.Combine(
-                Builders<TChunk>.Sort.Ascending(x => x.PartitionId),
-                Builders<TChunk>.Sort.Ascending(x => x.Index)
-            );
-            var options = new FindOptions<TChunk>() { Sort = sort };
-
-            // Use the minimum from index as the starting position for subscription
-            var startIndex = requests.Min(r => r.FromPartitionIndexInclusive);
+                // Use the minimum from index as the starting position for subscription
+                var startIndex = requests.Min(r => r.FromPartitionIndexInclusive);
             
-            await PushToSubscriber(
-                startIndex,
-                subscription,
-                options,
-                filter,
-                false,
-                cancellationToken).ConfigureAwait(false);
+                await PushToSubscriber(
+                    startIndex,
+                    subscription,
+                    options,
+                    filter,
+                    false,
+                    cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                ArrayPool<FilterDefinition<TChunk>>.Shared.Return(partitionFiltersArray, clearArray: false);
+            }
         }
 
 #if NET8_0_OR_GREATER
@@ -297,38 +313,46 @@ namespace NStore.Persistence.Mongo
             }
 
             // Build filter for each partition request and combine them with OR
-            var partitionFilters = new List<FilterDefinition<TChunk>>();
-            foreach (var request in requests)
+            var requestCount = requests.Count;
+            var partitionFiltersArray = ArrayPool<FilterDefinition<TChunk>>.Shared.Rent(requestCount);
+            try
             {
-                var partitionFilter = Builders<TChunk>.Filter.And(
-                    Builders<TChunk>.Filter.Eq(x => x.PartitionId, request.PartitionId),
-                    Builders<TChunk>.Filter.Gte(x => x.Index, request.FromPartitionIndexInclusive),
-                    Builders<TChunk>.Filter.Lte(x => x.Index, request.ToPartitionIndexInclusive)
-                );
-                partitionFilters.Add(partitionFilter);
-            }
-
-            var filter = Builders<TChunk>.Filter.Or(partitionFilters);
-
-            //Really important in all the multi partition read. If you simply sort by index, this will really make mongodb sad because
-            //it must first scan all partition then sort by index. By sorting first by partitionId we help mongo to read sequentially the data
-            //because it will simply sort by partition id, the main filter, then by index.
-            var sort = Builders<TChunk>.Sort.Combine(
-                Builders<TChunk>.Sort.Ascending(x => x.PartitionId),
-                Builders<TChunk>.Sort.Ascending(x => x.Index)
-            );
-            var options = new FindOptions<TChunk>() { Sort = sort };
-
-            using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
-            {
-                while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
+                for (int i = 0; i < requestCount; i++)
                 {
-                    foreach (var chunk in cursor.Current)
+                    var request = requests[i];
+                    partitionFiltersArray[i] = Builders<TChunk>.Filter.And(
+                        Builders<TChunk>.Filter.Eq(x => x.PartitionId, request.PartitionId),
+                        Builders<TChunk>.Filter.Gte(x => x.Index, request.FromPartitionIndexInclusive),
+                        Builders<TChunk>.Filter.Lte(x => x.Index, request.ToPartitionIndexInclusive)
+                    );
+                }
+
+                var filter = Builders<TChunk>.Filter.Or(partitionFiltersArray.AsSpan(0, requestCount).ToArray());
+
+                //Really important in all the multi partition read. If you simply sort by index, this will really make mongodb sad because
+                //it must first scan all partition then sort by index. By sorting first by partitionId we help mongo to read sequentially the data
+                //because it will simply sort by partition id, the main filter, then by index.
+                var sort = Builders<TChunk>.Sort.Combine(
+                    Builders<TChunk>.Sort.Ascending(x => x.PartitionId),
+                    Builders<TChunk>.Sort.Ascending(x => x.Index)
+                );
+                var options = new FindOptions<TChunk>() { Sort = sort };
+
+                using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
+                {
+                    while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
                     {
-                        _mongoPayloadSerializer.ApplyDeserialization(chunk);
-                        yield return chunk;
+                        foreach (var chunk in cursor.Current)
+                        {
+                            _mongoPayloadSerializer.ApplyDeserialization(chunk);
+                            yield return chunk;
+                        }
                     }
                 }
+            }
+            finally
+            {
+                ArrayPool<FilterDefinition<TChunk>>.Shared.Return(partitionFiltersArray, clearArray: false);
             }
         }
 #endif
@@ -527,13 +551,22 @@ namespace NStore.Persistence.Mongo
                 {
                     //Index violation, we do have a chunk that broke an unique index, we need to know if this is 
                     //at partitionId level (concurrency) or at position level (UseLocalSequence == false and multiple process/appdomain are appending to the stream).
+#if NET8_0_OR_GREATER
+                    var messageSpan = ex.Message.AsSpan();
+                    if (messageSpan.Contains(PartitionIndexIdx.AsSpan(), StringComparison.Ordinal))
+#else
                     if (ex.Message.Contains(PartitionIndexIdx))
+#endif
                     {
                         _logger.LogInformation($"DuplicateStreamIndexException: {ex.Message}.\n{ex.ToString()}");
                         throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
                     }
 
+#if NET8_0_OR_GREATER
+                    if (messageSpan.Contains(PartitionOperationIdx.AsSpan(), StringComparison.Ordinal))
+#else
                     if (ex.Message.Contains(PartitionOperationIdx))
+#endif
                     {
                         if (cancellationToken.IsCancellationRequested)
                         {
@@ -666,7 +699,12 @@ namespace NStore.Persistence.Mongo
                     {
                         //Index violation, we do have a chunk that broke an unique index, we need to know if this is 
                         //at partitionId level (concurrency) or at position level (UseLocalSequence == false and multiple process/appdomain are appending to the stream).
+#if NET8_0_OR_GREATER
+                        var messageSpan = ex.Message.AsSpan();
+                        if (messageSpan.Contains(PartitionIndexIdx.AsSpan(), StringComparison.Ordinal))
+#else
                         if (ex.Message.Contains(PartitionIndexIdx))
+#endif
                         {
                             await PersistAsEmptyAsync(chunk, cancellationToken).ConfigureAwait(false);
                             _logger.LogInformation(
@@ -674,7 +712,11 @@ namespace NStore.Persistence.Mongo
                             throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
                         }
 
+#if NET8_0_OR_GREATER
+                        if (messageSpan.Contains(PartitionOperationIdx.AsSpan(), StringComparison.Ordinal))
+#else
                         if (ex.Message.Contains(PartitionOperationIdx))
+#endif
                         {
                             if (cancellationToken.IsCancellationRequested)
                             {
@@ -686,7 +728,11 @@ namespace NStore.Persistence.Mongo
                             return null;
                         }
 
+#if NET8_0_OR_GREATER
+                        if (messageSpan.Contains("_id_".AsSpan(), StringComparison.Ordinal))
+#else
                         if (ex.Message.Contains("_id_"))
+#endif
                         {
                             if (cancellationToken.IsCancellationRequested)
                             {
@@ -716,7 +762,7 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
         {
             if (_options.DropOnInit)
             {
-                Drop(cancellationToken).Wait(cancellationToken);
+                await Drop(cancellationToken).ConfigureAwait(false);
             }
 
             _chunks = _partitionsDb.GetCollection<TChunk>(_options.PartitionsCollectionName);
@@ -814,7 +860,7 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
             }
         }
 
-        private async Task<long> GetNextId(int size, CancellationToken cancellationToken = default)
+        private async ValueTask<long> GetNextId(int size, CancellationToken cancellationToken = default)
         {
             if (_options.UseLocalSequence)
             {
@@ -909,13 +955,22 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
                 {
                     if (err.Category == ServerErrorCategory.DuplicateKey)
                     {
+#if NET8_0_OR_GREATER
+                        var errorMessageSpan = err.Message.AsSpan();
+                        if (errorMessageSpan.Contains(PartitionIndexIdx.AsSpan(), StringComparison.Ordinal))
+#else
                         if (err.Message.Contains(PartitionIndexIdx))
+#endif
                         {
                             queue[err.Index].Failed(WriteJob.WriteResult.DuplicatedIndex);
                             continue;
                         }
 
+#if NET8_0_OR_GREATER
+                        if (errorMessageSpan.Contains(PartitionOperationIdx.AsSpan(), StringComparison.Ordinal))
+#else
                         if (err.Message.Contains(PartitionOperationIdx))
+#endif
                         {
                             queue[err.Index].Failed(WriteJob.WriteResult.DuplicatedOperation);
                         }
