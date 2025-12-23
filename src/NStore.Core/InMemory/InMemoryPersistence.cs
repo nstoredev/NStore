@@ -148,6 +148,21 @@ namespace NStore.Core.InMemory
         }
 #endif
 
+        public Task ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            CancellationToken cancellationToken = default)
+        {
+            throw new System.NotImplementedException();
+        }
+
         public Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,

@@ -197,6 +197,21 @@ namespace NStore.Persistence.Mongo
         }
 #endif
 
+        public Task ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            CancellationToken cancellationToken = default)
+        {
+            throw new System.NotImplementedException();
+        }
+
         /// <summary>
         /// Pushes a result of a query to a subscriber handling all the logic.
         /// </summary>

@@ -89,6 +89,14 @@ namespace NStore.Tpl
                 cancellationToken);
         }
 
+        public Task ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            return _persistence.ReadForwardMultiplePartitionsWithRangesAsync(partitionRequests, subscription, cancellationToken);
+        }
+
 #if NET8_0_OR_GREATER
         public IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
             IEnumerable<string> partitionIdsList,
@@ -103,6 +111,13 @@ namespace NStore.Tpl
                 cancellationToken);
         }
 #endif
+
+        public IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            CancellationToken cancellationToken = default)
+        {
+            return _persistence.ReadForwardMultiplePartitionsWithRangesAsync(partitionRequests, cancellationToken);
+        }
 
         public Task ReadBackwardAsync(string partitionId, long fromUpperIndexInclusive, ISubscription subscription,
             long toLowerIndexInclusive, int limit, CancellationToken cancellationToken)
