@@ -16,7 +16,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <AssemblyName>NStore.Core</AssemblyName>
     <RootNamespace>NStore.Core</RootNamespace>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>13.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\AssemblyInfo.cs">
