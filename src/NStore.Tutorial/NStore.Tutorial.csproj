@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>Net8.0</TargetFramework>
+        <TargetFramework>Net10.0</TargetFramework>
         <LangVersion>latest</LangVersion>
     </PropertyGroup>
 
