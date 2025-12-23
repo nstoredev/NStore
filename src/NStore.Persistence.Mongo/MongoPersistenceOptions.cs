@@ -84,6 +84,26 @@ namespace NStore.Persistence.Mongo
         public int ChunkPoolMaxSize { get; set; } = 1024;
 
         /// <summary>
+        /// The number of documents MongoDB returns in each batch when reading data.
+        /// Default is null (uses MongoDB driver default of ~100 documents).
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Tuning this value can significantly impact performance:
+        /// - Higher values (500-1000): Fewer network round-trips, better throughput for bulk reads,
+        ///   but higher memory usage per cursor. Good for reading large event streams.
+        /// - Lower values (50-100): Lower memory footprint, faster initial response,
+        ///   better for pagination or reading small chunks. Good for UI scenarios.
+        /// - Very high values (>2000): May hit MongoDB's 16MB message size limit.
+        /// </para>
+        /// <para>
+        /// Monitor your workload: If you see many small batches in logs/profiling,
+        /// increase this value. If memory pressure is high, decrease it.
+        /// </para>
+        /// </remarks>
+        public int? CursorBatchSize { get; set; } = null;
+
+        /// <summary>
         /// Specify to the persistence layer that we have a connection string with a readonly user
         /// so we cannot try to create indexes on initialization or else we are not able to create a 
         /// persistence to read data.
