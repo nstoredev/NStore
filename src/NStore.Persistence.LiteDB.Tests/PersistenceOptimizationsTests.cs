@@ -43,14 +43,9 @@ namespace NStore.Persistence.LiteDB.Tests
                 ConnectionString = "test_for_size.litedb"
             };
 
-            if (File.Exists(options.ConnectionString))
-            {
-                File.Delete(options.ConnectionString);
-            }
+            LiteDBTestHelper.DeleteDataFiles(options.ConnectionString);
 
             var store = new LiteDBPersistence(options);
-            store.DeleteDataFiles();
-
             store.Init();
 
             var tasks = Enumerable.Range(1, 10_000).

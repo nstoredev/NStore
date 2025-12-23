@@ -152,7 +152,10 @@ namespace NStore.Persistence.Mongo
                 Builders<TChunk>.Filter.Lte(x => x.Index, toUpperIndexInclusive)
             );
 
-            var sort = Builders<TChunk>.Sort.Ascending(x => x.Index);
+            var sort = Builders<TChunk>.Sort.Combine(
+                Builders<TChunk>.Sort.Ascending(x => x.PartitionId),
+                Builders<TChunk>.Sort.Ascending(x => x.Index)
+            );
             var options = new FindOptions<TChunk>() { Sort = sort };
 
             await PushToSubscriber(
@@ -178,7 +181,10 @@ namespace NStore.Persistence.Mongo
                 Builders<TChunk>.Filter.Lte(x => x.Index, toUpperIndexInclusive)
             );
 
-            var sort = Builders<TChunk>.Sort.Ascending(x => x.Index);
+            var sort = Builders<TChunk>.Sort.Combine(
+                Builders<TChunk>.Sort.Ascending(x => x.PartitionId),
+                Builders<TChunk>.Sort.Ascending(x => x.Index)
+            );
             var options = new FindOptions<TChunk>() { Sort = sort };
 
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
@@ -240,7 +246,10 @@ namespace NStore.Persistence.Mongo
             }
 
             var filter = Builders<TChunk>.Filter.Or(partitionFilters);
-            var sort = Builders<TChunk>.Sort.Ascending(x => x.Index);
+            var sort = Builders<TChunk>.Sort.Combine(
+                Builders<TChunk>.Sort.Ascending(x => x.PartitionId),
+                Builders<TChunk>.Sort.Ascending(x => x.Index)
+            );
             var options = new FindOptions<TChunk>() { Sort = sort };
 
             // Use the minimum from index as the starting position for subscription
@@ -300,7 +309,14 @@ namespace NStore.Persistence.Mongo
             }
 
             var filter = Builders<TChunk>.Filter.Or(partitionFilters);
-            var sort = Builders<TChunk>.Sort.Ascending(x => x.Index);
+
+            //Really important in all the multi partition read. If you simply sort by index, this will really make mongodb sad because
+            //it must first scan all partition then sort by index. By sorting first by partitionId we help mongo to read sequentially the data
+            //because it will simply sort by partition id, the main filter, then by index.
+            var sort = Builders<TChunk>.Sort.Combine(
+                Builders<TChunk>.Sort.Ascending(x => x.PartitionId),
+                Builders<TChunk>.Sort.Ascending(x => x.Index)
+            );
             var options = new FindOptions<TChunk>() { Sort = sort };
 
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))

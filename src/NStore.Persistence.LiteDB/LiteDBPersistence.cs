@@ -3,7 +3,6 @@ using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -560,37 +559,6 @@ namespace NStore.Persistence.LiteDB
             _streams.EnsureIndex(x => x.StreamOperation, true);
             _streams.EnsureIndex(x => x.PartitionId, false);
             _streams.EnsureIndex(x => x.Index, false);
-        }
-
-        public void DeleteDataFiles()
-        {
-            if (_db != null)
-            {
-                _streams = null;
-                _db.Dispose();
-            }
-
-            // data file
-            if (File.Exists(_options.ConnectionString))
-            {
-                File.Delete(_options.ConnectionString);
-            }
-
-            // log file
-            var logFileName = Path.Combine
-            (
-                Path.GetDirectoryName(_options.ConnectionString),
-                Path.ChangeExtension
-                (
-                    Path.GetFileNameWithoutExtension(_options.ConnectionString) + "-log",
-                    Path.GetExtension(_options.ConnectionString)
-                )
-            );
-
-            if (File.Exists(logFileName))
-            {
-                File.Delete(logFileName);
-            }
         }
 
         public void Dispose()
