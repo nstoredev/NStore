@@ -1136,5 +1136,138 @@ namespace NStore.Persistence.Tests
                 checker[chunk.PartitionId] = chunk.Index;
             }
         }
+
+#if NET8_0_OR_GREATER
+        [Fact]
+        public async Task read_multiple_partition_async_enumerable()
+        {
+            var chunks = new List<IChunk>();
+            await foreach (var chunk in Store.ReadForwardMultiplePartitionsAsyncEnumerable(new[] { "mbpra", "mbprb" }, 1, Int32.MaxValue, CancellationToken.None))
+            {
+                chunks.Add(chunk);
+            }
+
+            AssertForBasicReadList(chunks, 5);
+        }
+
+        [Fact]
+        public async Task read_no_partitions_async_enumerable()
+        {
+            var chunks = new List<IChunk>();
+
+            //Read empty list
+            await foreach (var chunk in Store.ReadForwardMultiplePartitionsAsyncEnumerable(Array.Empty<string>(), 1, Int32.MaxValue, CancellationToken.None))
+            {
+                chunks.Add(chunk);
+            }
+
+            Assert.Empty(chunks);
+        }
+
+        [Fact]
+        public async Task read_with_extensions_async_enumerable()
+        {
+            var chunks = new List<IChunk>();
+            await foreach (var chunk in Store.ReadForwardMultiplePartitionsAsyncEnumerable(new[] { "mbpra", "mbprb" }, CancellationToken.None))
+            {
+                chunks.Add(chunk);
+            }
+
+            AssertForBasicReadList(chunks, 5);
+        }
+
+        [Fact]
+        public async Task read_multiple_partition_can_read_single_partition_async_enumerable()
+        {
+            var chunks = new List<IChunk>();
+            await foreach (var chunk in Store.ReadForwardMultiplePartitionsAsyncEnumerable(new[] { "mbpra" }, 1, Int32.MaxValue, CancellationToken.None))
+            {
+                chunks.Add(chunk);
+            }
+
+            Assert.Equal(3, chunks.Count);
+            //we could not assume ordering, but clearly b1, is less than b2.
+            Dictionary<string, long> checker = new Dictionary<string, long>()
+            {
+                ["mbpra"] = 0,
+            };
+
+            foreach (var chunk in chunks)
+            {
+                //Verify that actual chunk is greater than the previous on same partition
+                //then update the dictionary.
+                Assert.True(chunk.Index > checker[chunk.PartitionId]);
+                checker[chunk.PartitionId] = chunk.Index;
+            }
+        }
+
+        [Fact]
+        public async Task read_limit_version_async_enumerable()
+        {
+            var chunks = new List<IChunk>();
+            await foreach (var chunk in Store.ReadForwardMultiplePartitionsAsyncEnumerable(new[] { "mbpra", "mbprb" }, 1, 2, CancellationToken.None))
+            {
+                chunks.Add(chunk);
+            }
+
+            AssertForBasicReadList(chunks, 4);
+        }
+
+        [Fact]
+        public async Task read_not_from_first_version_async_enumerable()
+        {
+            var chunks = new List<IChunk>();
+            await foreach (var chunk in Store.ReadForwardMultiplePartitionsAsyncEnumerable(new[] { "mbpra", "mbprb" }, 2, 2, CancellationToken.None))
+            {
+                chunks.Add(chunk);
+            }
+
+            AssertForBasicReadList(chunks, 2);
+        }
+
+        [Fact]
+        public async Task read_non_exiting_partition_async_enumerable()
+        {
+            var chunks = new List<IChunk>();
+            await foreach (var chunk in Store.ReadForwardMultiplePartitionsAsyncEnumerable(new[] { "mbpra", "does-not-exists" }, 2, 2, CancellationToken.None))
+            {
+                chunks.Add(chunk);
+            }
+
+            AssertForBasicReadList(chunks, 1);
+        }
+
+        [Fact]
+        public async Task read_multiple_partition_can_read_no_partition_async_enumerable()
+        {
+            var chunks = new List<IChunk>();
+            await foreach (var chunk in Store.ReadForwardMultiplePartitionsAsyncEnumerable(Array.Empty<string>(), 1, Int32.MaxValue, CancellationToken.None))
+            {
+                chunks.Add(chunk);
+            }
+
+            Assert.Empty(chunks);
+        }
+
+        private static void AssertForBasicReadList(IEnumerable<IChunk> chunks, int expectedCount)
+        {
+            var chunksList = chunks.ToList();
+            Assert.Equal(expectedCount, chunksList.Count);
+            //we could not assume ordering, but clearly b1, is less than b2.
+            Dictionary<string, long> checker = new Dictionary<string, long>()
+            {
+                ["mbpra"] = 0,
+                ["mbprb"] = 0,
+            };
+
+            foreach (var chunk in chunksList)
+            {
+                //Verify that actual chunk is greater than the previous on same partition
+                //then update the dictionary.
+                Assert.True(chunk.Index > checker[chunk.PartitionId]);
+                checker[chunk.PartitionId] = chunk.Index;
+            }
+        }
+#endif
     }
 }

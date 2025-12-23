@@ -75,6 +75,21 @@ namespace NStore.Tpl
                 cancellationToken);
         }
 
+#if NET8_0_OR_GREATER
+        public IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            CancellationToken cancellationToken)
+        {
+            return _persistence.ReadForwardMultiplePartitionsAsyncEnumerable(
+                partitionIdsList,
+                fromLowerIndexInclusive,
+                toUpperIndexInclusive,
+                cancellationToken);
+        }
+#endif
+
         public Task ReadBackwardAsync(string partitionId, long fromUpperIndexInclusive, ISubscription subscription,
             long toLowerIndexInclusive, int limit, CancellationToken cancellationToken)
         {

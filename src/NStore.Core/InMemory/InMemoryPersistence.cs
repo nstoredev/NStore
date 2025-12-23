@@ -111,6 +111,42 @@ namespace NStore.Core.InMemory
             }
         }
 
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            if (partitionIdsList is null)
+            {
+                throw new ArgumentNullException(nameof(partitionIdsList));
+            }
+
+            var partitionsList = partitionIdsList.ToList();
+            if (!partitionsList.Any())
+            {
+                yield break;
+            }
+
+            var result = _partitions
+                .Where(c => partitionsList.Any(p => c.Key == p))
+                .Select(c => c.Value)
+                .ToList();
+
+            foreach (var partition in result)
+            {
+                var recorder = new Recorder();
+                await partition.ReadForward(fromLowerIndexInclusive, recorder, toUpperIndexInclusive, Int32.MaxValue, cancellationToken).ConfigureAwait(false);
+
+                foreach (var chunk in recorder.Chunks)
+                {
+                    yield return chunk;
+                }
+            }
+        }
+#endif
+
         public Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,
