@@ -19,7 +19,6 @@
 		</PackageReference>
 		<PackageReference Include="Newtonsoft.Json">
 		</PackageReference>
-		<PackageReference Include="System.Threading.Tasks.Dataflow">
 		</PackageReference>
 	</ItemGroup>
 </Project>

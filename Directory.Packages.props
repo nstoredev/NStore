@@ -25,5 +25,6 @@
     <PackageVersion Include="xunit" Version="2.9.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.0" />
     <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="5.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.ObjectPool" Version="8.0.0" />
   </ItemGroup>
 </Project>
