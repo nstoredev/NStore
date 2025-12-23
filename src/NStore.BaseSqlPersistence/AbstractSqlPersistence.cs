@@ -465,6 +465,42 @@ namespace NStore.BaseSqlPersistence
             ).ConfigureAwait(false);
         }
 
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            if (partitionIdsList is null)
+            {
+                throw new ArgumentNullException(nameof(partitionIdsList));
+            }
+
+            var partitionsList = partitionIdsList.ToList();
+            if (!partitionsList.Any())
+            {
+                yield break;
+            }
+
+            var recorder = new Recorder();
+            await ScanRange(
+                    partitionIdsList: partitionsList,
+                    lowerIndexInclusive: fromLowerIndexInclusive,
+                    upperIndexInclusive: toUpperIndexInclusive,
+
+                    @descending: false,
+                    subscription: recorder,
+                    cancellationToken: cancellationToken
+            ).ConfigureAwait(false);
+
+            foreach (var chunk in recorder.Chunks)
+            {
+                yield return chunk;
+            }
+        }
+#endif
+
         public async Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,

@@ -164,6 +164,39 @@ namespace NStore.Persistence.Mongo
                 cancellationToken).ConfigureAwait(false);
         }
 
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            var partitionsList = partitionIdsList.ToList();
+            var filter = Builders<TChunk>.Filter.And(
+                Builders<TChunk>.Filter.In(x => x.PartitionId, partitionsList),
+                Builders<TChunk>.Filter.Gte(x => x.Index, fromLowerIndexInclusive),
+                Builders<TChunk>.Filter.Lte(x => x.Index, toUpperIndexInclusive)
+            );
+
+            var sort = Builders<TChunk>.Sort.Ascending(x => x.Index);
+            var options = new FindOptions<TChunk>() { Sort = sort };
+
+            var recorder = new Recorder();
+            await PushToSubscriber(
+                fromLowerIndexInclusive,
+                recorder,
+                options,
+                filter,
+                false,
+                cancellationToken).ConfigureAwait(false);
+
+            foreach (var chunk in recorder.Chunks)
+            {
+                yield return chunk;
+            }
+        }
+#endif
+
         /// <summary>
         /// Pushes a result of a query to a subscriber handling all the logic.
         /// </summary>

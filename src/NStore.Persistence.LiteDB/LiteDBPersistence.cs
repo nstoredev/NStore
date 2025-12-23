@@ -69,6 +69,31 @@ namespace NStore.Persistence.LiteDB
                 .ConfigureAwait(false);
         }
 
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            var partitionsList = partitionIdsList.ToList();
+            var chunks = _streams.Query()
+               .Where(x => partitionsList.Contains(x.PartitionId)
+                           && x.Index >= fromLowerIndexInclusive
+                           && x.Index <= toUpperIndexInclusive)
+               .OrderBy(x => x.Index)
+               .ToList();
+
+            await Task.CompletedTask;
+
+            foreach (var chunk in chunks)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                yield return chunk;
+            }
+        }
+#endif
+
         private async Task PublishAsync(
             IEnumerable<LiteDBChunk> chunks,
             long start,

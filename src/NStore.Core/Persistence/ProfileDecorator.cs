@@ -80,6 +80,26 @@ namespace NStore.Core.Persistence
                 )).ConfigureAwait(false);
         }
 
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            await foreach (var chunk in _persistence.ReadForwardMultiplePartitionsAsyncEnumerable(
+                partitionIdsList,
+                fromLowerIndexInclusive,
+                toUpperIndexInclusive,
+                cancellationToken
+            ).ConfigureAwait(false))
+            {
+                ReadForwardCounter.IncCounter1();
+                yield return chunk;
+            }
+        }
+#endif
+
         public async Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,

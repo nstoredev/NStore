@@ -71,6 +71,18 @@ namespace NStore.Core.Persistence
             return Task.CompletedTask;
         }
 
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            await Task.CompletedTask;
+            yield break;
+        }
+#endif
+
         public Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,

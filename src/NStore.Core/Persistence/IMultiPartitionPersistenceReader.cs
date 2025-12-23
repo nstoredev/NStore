@@ -49,5 +49,42 @@ namespace NStore.Core.Persistence
             long toUpperIndexInclusive,
             CancellationToken cancellationToken
         );
+
+#if NET8_0_OR_GREATER
+        /// <summary>
+        /// This is the same as <see cref="IPersistence.ReadForwardAsync"/> but for multiple partitions.
+        /// Returns an IAsyncEnumerable for modern async streaming.
+        /// </summary>
+        /// <param name="partitionIdsList">List of all partition id I want to read.</param>
+        /// <param name="fromLowerIndexInclusive"></param>
+        /// <param name="toUpperIndexInclusive"></param>
+        /// <param name="cancellationToken"></param>
+        /// <remarks><para>
+        /// We have ZERO guarantee on the order of partition list, we can only assume that
+        /// for each partition all chunks are returned in correct partition index
+        /// order, but we do not have any guarantee on "temporal" ordering between partitions.
+        /// </para>
+        /// <para>
+        /// As an example, lets suppose that temporal order of chunks are (partition id, version id)
+        /// (Partition_X, 1), (Partition_Y, 1), (Partition_Z, 1), (Partition_Y, 2), (Partition_Y, 3), (Partition_X, 2)
+        /// </para>
+        /// <para>
+        /// If we search for X and Y we can have both sequences
+        /// (Partition_X, 1), (Partition_X, 2), (Partition_Y, 1), (Partition_Y, 2), (Partition_Y, 3)
+        /// (Partition_X, 1), (Partition_Y, 1), (Partition_Y, 2), (Partition_Y, 3), (Partition_X, 2)
+        /// </para>
+        /// <para>
+        /// The only guarantee is that we cannot have for the SAME partition an unordered sequence of versions but
+        /// no ordering is guaranteed between partitions, even if you perform subsequent calls, each call can
+        /// return a different order.
+        /// </para>
+        /// </remarks>
+        IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            CancellationToken cancellationToken
+        );
+#endif
     }
 }
