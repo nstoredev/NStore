@@ -1318,14 +1318,14 @@ namespace NStore.Persistence.Tests
 
             Assert.Equal(3, recorder.Chunks.Count());
             AssertPerPartitionOrdering(recorder.Chunks, "mbpra", "mbprb");
-            
+
             // Verify we got the right chunks
             var mbpraChunks = recorder.Chunks.Where(c => c.PartitionId == "mbpra").ToList();
             var mbprbChunks = recorder.Chunks.Where(c => c.PartitionId == "mbprb").ToList();
-            
+
             Assert.Equal(2, mbpraChunks.Count);
             Assert.All(mbpraChunks, c => Assert.InRange(c.Index, 2, 3));
-            
+
             Assert.Single(mbprbChunks);
             Assert.Equal(1, mbprbChunks[0].Index);
         }
@@ -1404,11 +1404,11 @@ namespace NStore.Persistence.Tests
             await Store.ReadForwardMultiplePartitionsWithRangesAsync(requests, recorder, CancellationToken.None);
 
             var mbpraChunks = recorder.Chunks.Where(c => c.PartitionId == "mbpra").ToList();
-            
+
             // Should get chunks from both ranges
             Assert.Contains(mbpraChunks, c => c.Index == 1);
             Assert.Contains(mbpraChunks, c => c.Index == 3);
-            
+
             // Ensure no duplicates - each index should appear only once
             var indices = mbpraChunks.Select(c => c.Index).ToList();
             Assert.Equal(indices.Distinct().Count(), indices.Count);
@@ -1451,13 +1451,13 @@ namespace NStore.Persistence.Tests
 
             Assert.Equal(3, chunks.Count);
             AssertPerPartitionOrdering(chunks, "mbpra", "mbprb");
-            
+
             var mbpraChunks = chunks.Where(c => c.PartitionId == "mbpra").ToList();
             var mbprbChunks = chunks.Where(c => c.PartitionId == "mbprb").ToList();
-            
+
             Assert.Equal(2, mbpraChunks.Count);
             Assert.All(mbpraChunks, c => Assert.InRange(c.Index, 2, 3));
-            
+
             Assert.Single(mbprbChunks);
             Assert.Equal(1, mbprbChunks[0].Index);
         }
@@ -1572,10 +1572,10 @@ namespace NStore.Persistence.Tests
             }
 
             var mbpraChunks = chunks.Where(c => c.PartitionId == "mbpra").ToList();
-            
+
             Assert.Contains(mbpraChunks, c => c.Index == 1);
             Assert.Contains(mbpraChunks, c => c.Index == 3);
-            
+
             // Ensure no duplicates
             var indices = mbpraChunks.Select(c => c.Index).ToList();
             Assert.Equal(indices.Distinct().Count(), indices.Count);
@@ -1602,17 +1602,90 @@ namespace NStore.Persistence.Tests
                 }
             });
         }
+
+        public class multi_stream_read_with_ranges : BasePersistenceTest
+        {
+            [Fact]
+            public async Task read_100_partitions_with_varied_ranges_over_200_partitions()
+            {
+                // create 200 partitions each with 20 commits
+                var allPartitions = Enumerable.Range(0, 200).Select(i => $"p-{i}").ToArray();
+
+                foreach (var p in allPartitions)
+                {
+                    for (long idx = 1; idx <= 20; idx++)
+                    {
+                        await _persistence.AppendAsync(p, idx, new { partition = p, idx = idx }).ConfigureAwait(false);
+                    }
+                }
+
+                // pick 100 partitions (every 2nd partition) to read with different ranges
+                var selected = allPartitions.Where((_, i) => i % 2 == 0).Take(100).ToArray();
+
+                var requests = new List<PartitionReadRequest>();
+                for (int i = 0; i < selected.Length; i++)
+                {
+                    var p = selected[i];
+                    // vary ranges across four patterns
+                    var mod = i % 4;
+                    PartitionReadRequest req;
+                    switch (mod)
+                    {
+                        case 0: // full range
+                            req = new PartitionReadRequest(p, 1, 20);
+                            break;
+                        case 1: // head-only (last 5)
+                            req = new PartitionReadRequest(p, 16, 20);
+                            break;
+                        case 2: // tail-only (first 5)
+                            req = new PartitionReadRequest(p, 1, 5);
+                            break;
+                        default: // mid-range
+                            req = new PartitionReadRequest(p, 5, 15);
+                            break;
+                    }
+                    requests.Add(req);
+                }
+
+                var recorder = new Recorder();
+
+                // perform the multi-partition ranged read
+                await _persistence.ReadForwardMultiplePartitionsWithRangesAsync(requests, recorder, CancellationToken.None).ConfigureAwait(false);
+
+                // group results per partition and assert
+                var groups = recorder.Chunks.GroupBy(c => c.PartitionId)
+                    .ToDictionary(g => g.Key, g => g.OrderBy(c => c.Index).ToArray());
+
+                foreach (var req in requests)
+                {
+                    Assert.True(groups.ContainsKey(req.PartitionId), $"Missing partition {req.PartitionId}");
+                    var chunks = groups[req.PartitionId];
+
+                    // each chunk index must be within requested range
+                    foreach (var c in chunks)
+                    {
+                        Assert.InRange(c.Index, req.FromPartitionIndexInclusive, req.ToPartitionIndexInclusive);
+                        // payload was stored as an anonymous object; validate expected fields
+                        Assert.NotNull(c.Payload);
+                    }
+
+                    // verify expected count matches the request
+                    var expectedCount = (int)(Math.Max(0, Math.Min(20, req.ToPartitionIndexInclusive) - Math.Max(1, req.FromPartitionIndexInclusive) + 1));
+                    Assert.Equal(expectedCount, chunks.Length);
+                }
+            }
+        }
 #endif
 
         private static void AssertPerPartitionOrdering(IEnumerable<IChunk> chunks, params string[] partitions)
         {
             var map = partitions.ToDictionary(p => p, _ => 0L);
-            
+
             foreach (var chunk in chunks)
             {
                 if (map.ContainsKey(chunk.PartitionId))
                 {
-                    Assert.True(chunk.Index > map[chunk.PartitionId], 
+                    Assert.True(chunk.Index > map[chunk.PartitionId],
                         $"Partition {chunk.PartitionId}: chunk index {chunk.Index} is not greater than previous {map[chunk.PartitionId]}");
                     map[chunk.PartitionId] = chunk.Index;
                 }
