@@ -110,7 +110,7 @@ namespace NStore.Tpl
                 toUpperIndexInclusive,
                 cancellationToken);
         }
-#endif
+
 
         public IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
             IEnumerable<PartitionReadRequest> partitionRequests,
@@ -118,6 +118,7 @@ namespace NStore.Tpl
         {
             return _persistence.ReadForwardMultiplePartitionsWithRangesAsync(partitionRequests, cancellationToken);
         }
+#endif
 
         public Task ReadBackwardAsync(string partitionId, long fromUpperIndexInclusive, ISubscription subscription,
             long toLowerIndexInclusive, int limit, CancellationToken cancellationToken)
