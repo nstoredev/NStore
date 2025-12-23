@@ -53,6 +53,20 @@ namespace NStore.Persistence.Mongo
         /// This function allows callers to override the <see cref="IMongoClient"/> creation
         /// function to avoid creating too much IMongoClient.
         /// </summary>
+        /// <remarks>
+        /// IMPORTANT: MongoClient is thread-safe and maintains an internal connection pool.
+        /// It is recommended to use a singleton instance or cache MongoClient instances
+        /// per connection string to maximize connection pooling efficiency.
+        /// Creating multiple MongoClient instances creates separate connection pools,
+        /// which increases resource usage and reduces performance.
+        /// 
+        /// Example of singleton pattern:
+        /// <code>
+        /// private static readonly ConcurrentDictionary&lt;string, IMongoClient&gt; _clientCache = new();
+        /// options.CreateClientFunction = settings => 
+        ///     _clientCache.GetOrAdd(settings.ToString(), _ => new MongoClient(settings));
+        /// </code>
+        /// </remarks>
         public Func<MongoClientSettings, IMongoClient> CreateClientFunction { get; set; } = settings => new MongoClient(settings);
 
         /// <summary>
@@ -61,6 +75,13 @@ namespace NStore.Persistence.Mongo
         /// THE STREAM IF THE USER USED TO CONNECT TO MONGO HAS WRITE PERMISSION
         /// </summary>
         public bool ReadonlyUser { get; set; }
+
+        /// <summary>
+        /// Maximum size of the ObjectPool for TChunk instances used in batch operations.
+        /// Only applicable for .NET 8.0 and above. Default is 1024.
+        /// Higher values reduce allocations but increase memory usage.
+        /// </summary>
+        public int ChunkPoolMaxSize { get; set; } = 1024;
 
         /// <summary>
         /// Specify to the persistence layer that we have a connection string with a readonly user
