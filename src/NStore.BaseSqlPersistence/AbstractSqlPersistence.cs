@@ -483,20 +483,40 @@ namespace NStore.BaseSqlPersistence
                 yield break;
             }
 
-            var recorder = new Recorder();
-            await ScanRange(
-                    partitionIdsList: partitionsList,
-                    lowerIndexInclusive: fromLowerIndexInclusive,
-                    upperIndexInclusive: toUpperIndexInclusive,
+            var sql = Options.GetRangeMultiplePartitionSelectChunksSql(
+                partitionsList,
+                lowerIndexInclusive: fromLowerIndexInclusive,
+                upperIndexInclusive: toUpperIndexInclusive,
+                descending: false);
 
-                    @descending: false,
-                    subscription: recorder,
-                    cancellationToken: cancellationToken
-            ).ConfigureAwait(false);
-
-            foreach (var chunk in recorder.Chunks)
+            using (var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false))
             {
-                yield return chunk;
+                using (var command = context.CreateCommand(sql))
+                {
+                    int i = 1;
+                    foreach (var id in partitionsList)
+                    {
+                        context.AddParam(command, $"@p{i++}", id);
+                    }
+
+                    if (fromLowerIndexInclusive > 0 && fromLowerIndexInclusive != Int64.MaxValue)
+                    {
+                        context.AddParam(command, "@lowerIndexInclusive", fromLowerIndexInclusive);
+                    }
+
+                    if (toUpperIndexInclusive > 0 && toUpperIndexInclusive != Int64.MaxValue)
+                    {
+                        context.AddParam(command, "@upperIndexInclusive", toUpperIndexInclusive);
+                    }
+
+                    using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
+                    {
+                        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                        {
+                            yield return ReadChunk(reader);
+                        }
+                    }
+                }
             }
         }
 #endif

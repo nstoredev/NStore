@@ -127,6 +127,7 @@ namespace NStore.Core.Persistence
             CancellationToken cancellationToken
         );
 
+#if NET8_0_OR_GREATER
         /// <summary>
         /// Asynchronously enumerates chunks for multiple partitions where each partition can have its own index range.
         /// Consumers can use `await foreach` and stop enumeration early to signal the producer to stop.
@@ -138,5 +139,6 @@ namespace NStore.Core.Persistence
             IEnumerable<PartitionReadRequest> partitionRequests,
             CancellationToken cancellationToken = default
         );
+#endif
     }
 }

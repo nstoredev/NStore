@@ -240,13 +240,53 @@ namespace NStore.Persistence.MsSql
                 yield break;
             }
 
-            var recorder = new Recorder();
-            await ReadForwardMultiplePartitionsWithRangesAsync(requests, recorder, cancellationToken)
-                .ConfigureAwait(false);
-
-            foreach (var chunk in recorder.Chunks)
+            // Validate partition requests
+            foreach (var request in requests)
             {
-                yield return chunk;
+                if (string.IsNullOrWhiteSpace(request.PartitionId))
+                {
+                    throw new ArgumentException("PartitionId cannot be null or whitespace", nameof(partitionRequests));
+                }
+
+                if (request.ToPartitionIndexInclusive < request.FromPartitionIndexInclusive)
+                {
+                    throw new ArgumentException(
+                        $"ToPartitionIndexInclusive ({request.ToPartitionIndexInclusive}) must be >= FromPartitionIndexInclusive ({request.FromPartitionIndexInclusive}) for partition {request.PartitionId}",
+                        nameof(partitionRequests));
+                }
+            }
+
+            var sql = _options.GetRangeMultiplePartitionWithRangesSelectChunksSql(requests);
+
+            using (var context = await _options.GetContextAsync(cancellationToken).ConfigureAwait(false))
+            {
+                using (var command = context.CreateCommand(sql))
+                {
+                    // Add parameters for each partition request
+                    for (int i = 0; i < requests.Count; i++)
+                    {
+                        var request = requests[i];
+                        context.AddParam(command, $"@p{i}", request.PartitionId);
+
+                        if (request.FromPartitionIndexInclusive > 0)
+                        {
+                            context.AddParam(command, $"@from{i}", request.FromPartitionIndexInclusive);
+                        }
+
+                        if (request.ToPartitionIndexInclusive != long.MaxValue)
+                        {
+                            context.AddParam(command, $"@to{i}", request.ToPartitionIndexInclusive);
+                        }
+                    }
+
+                    using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
+                    {
+                        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                        {
+                            yield return ReadChunk(reader);
+                        }
+                    }
+                }
             }
         }
 #else

@@ -73,6 +73,7 @@ namespace NStore.Core.Persistence
             _logger.LogDebug("End ReadForwardMultiplePartitionsWithRangesAsync(PartitionRequests {Requests})", string.Join(",", partitionRequests));
         }
 
+#if NET8_0_OR_GREATER
         public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
             IEnumerable<PartitionReadRequest> partitionRequests,
             [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -86,6 +87,7 @@ namespace NStore.Core.Persistence
 
             _logger.LogDebug("End ReadForwardMultiplePartitionsWithRangesAsync Enumerable(PartitionRequests {Requests})", string.Join(",", partitionRequests));
         }
+#endif
 
         public async Task ReadBackwardAsync(
             string partitionId,

@@ -118,6 +118,8 @@ namespace NStore.Core.Persistence
                 )).ConfigureAwait(false);
         }
 
+#if NET8_0_OR_GREATER
+
         public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
             IEnumerable<PartitionReadRequest> partitionRequests,
             [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -128,6 +130,7 @@ namespace NStore.Core.Persistence
                 yield return chunk;
             }
         }
+#endif
 
         public async Task ReadBackwardAsync(
             string partitionId,

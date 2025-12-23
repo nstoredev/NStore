@@ -271,21 +271,49 @@ namespace NStore.Persistence.Mongo
                 yield break;
             }
 
-            var recorder = new Recorder();
-            await ReadForwardMultiplePartitionsWithRangesAsync(requests, recorder, cancellationToken)
-                .ConfigureAwait(false);
-
-            foreach (var chunk in recorder.Chunks)
+            // Validate partition requests
+            foreach (var request in requests)
             {
-                yield return chunk;
+                if (string.IsNullOrWhiteSpace(request.PartitionId))
+                {
+                    throw new ArgumentException("PartitionId cannot be null or whitespace", nameof(partitionRequests));
+                }
+
+                if (request.ToPartitionIndexInclusive < request.FromPartitionIndexInclusive)
+                {
+                    throw new ArgumentException(
+                        $"ToPartitionIndexInclusive ({request.ToPartitionIndexInclusive}) must be >= FromPartitionIndexInclusive ({request.FromPartitionIndexInclusive}) for partition {request.PartitionId}",
+                        nameof(partitionRequests));
+                }
             }
-        }
-#else
-        public IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
-            IEnumerable<PartitionReadRequest> partitionRequests,
-            CancellationToken cancellationToken = default)
-        {
-            throw new NotSupportedException("IAsyncEnumerable is only supported in .NET 8.0 or greater");
+
+            // Build filter for each partition request and combine them with OR
+            var partitionFilters = new List<FilterDefinition<TChunk>>();
+            foreach (var request in requests)
+            {
+                var partitionFilter = Builders<TChunk>.Filter.And(
+                    Builders<TChunk>.Filter.Eq(x => x.PartitionId, request.PartitionId),
+                    Builders<TChunk>.Filter.Gte(x => x.Index, request.FromPartitionIndexInclusive),
+                    Builders<TChunk>.Filter.Lte(x => x.Index, request.ToPartitionIndexInclusive)
+                );
+                partitionFilters.Add(partitionFilter);
+            }
+
+            var filter = Builders<TChunk>.Filter.Or(partitionFilters);
+            var sort = Builders<TChunk>.Sort.Ascending(x => x.Index);
+            var options = new FindOptions<TChunk>() { Sort = sort };
+
+            using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
+            {
+                while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    foreach (var chunk in cursor.Current)
+                    {
+                        _mongoPayloadSerializer.ApplyDeserialization(chunk);
+                        yield return chunk;
+                    }
+                }
+            }
         }
 #endif
 

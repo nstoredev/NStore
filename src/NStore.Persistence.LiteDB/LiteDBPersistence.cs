@@ -77,16 +77,15 @@ namespace NStore.Persistence.LiteDB
             [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
         {
             var partitionsList = partitionIdsList.ToList();
-            var chunks = _streams.Query()
+            var query = _streams.Query()
                .Where(x => partitionsList.Contains(x.PartitionId)
                            && x.Index >= fromLowerIndexInclusive
                            && x.Index <= toUpperIndexInclusive)
-               .OrderBy(x => x.Index)
-               .ToList();
+               .OrderBy(x => x.Index);
 
             await Task.CompletedTask;
 
-            foreach (var chunk in chunks)
+            foreach (var chunk in query.ToEnumerable())
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 yield return chunk;
@@ -136,14 +135,48 @@ namespace NStore.Persistence.LiteDB
             IEnumerable<PartitionReadRequest> partitionRequests,
             [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            var chunks = GatherChunksFromPartitionRequests(partitionRequests, deserializePayloads: false);
+            var requestsList = partitionRequests.ToList();
+            if (!requestsList.Any())
+            {
+                yield break;
+            }
+
+            // Group requests by partition to preserve per-partition ordering and handle duplicates
+            var partitionGroups = requestsList
+                .GroupBy(r => r.PartitionId)
+                .Select(g => new
+                {
+                    PartitionId = g.Key,
+                    Ranges = OptimizeRanges(g.Select(r => (r.FromPartitionIndexInclusive, r.ToPartitionIndexInclusive)).ToList())
+                })
+                .ToList();
+
+            var seenChunks = new HashSet<(string PartitionId, long Index)>();
 
             await Task.CompletedTask;
 
-            foreach (var chunk in chunks)
+            foreach (var partitionGroup in partitionGroups)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                yield return chunk;
+                // Query each optimized range for this partition
+                foreach (var (fromIndex, toIndex) in partitionGroup.Ranges)
+                {
+                    var rangeChunks = _streams.Query()
+                        .Where(x => x.PartitionId == partitionGroup.PartitionId
+                                    && x.Index >= fromIndex
+                                    && x.Index <= toIndex)
+                        .OrderBy(x => x.Index)
+                        .ToEnumerable();
+
+                    foreach (var chunk in rangeChunks)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var key = (chunk.PartitionId, chunk.Index);
+                        if (seenChunks.Add(key))
+                        {
+                            yield return chunk;
+                        }
+                    }
+                }
             }
         }
 
