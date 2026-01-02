@@ -8,7 +8,7 @@ using NStore.Core.Persistence;
 
 namespace NStore.Core.InMemory
 {
-    public class InMemoryPersistence : IPersistence, IDisposable
+    public class InMemoryPersistence : IPersistence, IMultiPartitionPersistenceReader, IEnhancedPersistence, IDisposable
     {
         private bool _disposed;
         private readonly Func<object, object> _cloneFunc;
@@ -675,6 +675,46 @@ namespace NStore.Core.InMemory
             };
 
             await ReadAllAsync(0, filter, int.MaxValue, cancellationToken).ConfigureAwait(false);
+        }
+
+        public async Task AppendBatchAsync(WriteJob[] queue, CancellationToken cancellationToken)
+        {
+            if (queue == null)
+                throw new ArgumentNullException(nameof(queue));
+
+            foreach (var job in queue)
+            {
+                try
+                {
+                    var chunk = await AppendAsync(
+                        job.PartitionId,
+                        job.Index,
+                        job.Payload,
+                        job.OperationId,
+                        cancellationToken
+                    ).ConfigureAwait(false);
+
+                    if (chunk != null)
+                    {
+                        job.Succeeded(chunk);
+                    }
+                    else
+                    {
+                        // Idempotent operation (same operation ID already exists)
+                        job.Failed(WriteJob.WriteResult.DuplicatedOperation);
+                    }
+                }
+                catch (DuplicateStreamIndexException)
+                {
+                    // Concurrency conflict
+                    job.Failed(WriteJob.WriteResult.DuplicatedIndex);
+                }
+                catch (Exception)
+                {
+                    // Generic failure
+                    job.Failed(WriteJob.WriteResult.Failed);
+                }
+            }
         }
 
         protected virtual void Dispose(bool disposing)

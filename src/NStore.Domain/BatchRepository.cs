@@ -85,7 +85,6 @@ namespace NStore.Domain
             foreach (var (aggregateType, id) in idsToLoad)
             {
                 var aggregate = _factory.Create(aggregateType);
-                aggregate.Init(id);
                 aggregates[id] = aggregate;
                 _trackingAggregates[id] = aggregate;
             }
@@ -105,19 +104,31 @@ namespace NStore.Domain
                 }
             }
 
-            // Step 4: Build partition read requests based on aggregate versions
-            var partitionRequests = new List<PartitionReadRequest>();
+            // Step 3b: Initialize aggregates that weren't restored from snapshots
             foreach (var kvp in aggregates)
             {
+                if (!kvp.Value.IsInitialized)
+                {
+                    kvp.Value.Init(kvp.Key);
+                }
+            }
+
+            // Step 4: Build partition read requests based on aggregate versions
+            var partitionRequests = new List<PartitionReadRequest>();
+            var snapshotVersions = new Dictionary<string, long>();
+            foreach (var kvp in aggregates)
+            {
+                // Track snapshot version for stale snapshot detection
+                snapshotVersions[kvp.Key] = kvp.Value.Version;
+
                 // Read from current version to end
+                // Note: Starting point is inclusive, so we read from aggregate.Version
+                // The aggregate will ignore duplicate events because ApplyChanges is idempotent
                 partitionRequests.Add(new PartitionReadRequest(
                     kvp.Key,
                     kvp.Value.Version,
                     long.MaxValue
                 ));
-
-                // Track the version for optimistic concurrency
-                _aggregateVersions[kvp.Key] = kvp.Value.Version;
             }
 
             // Step 5: Read events from multiple partitions
@@ -141,29 +152,38 @@ namespace NStore.Domain
 
             if (subscription.Failed)
             {
-                throw new RepositoryReadException("Error reading aggregates in batch", subscription.LastError);
+                var aggregateIds = string.Join(", ", aggregates.Keys);
+                throw new RepositoryReadException(
+                    $"Error reading aggregates in batch. Aggregate IDs: [{aggregateIds}]",
+                    subscription.LastError);
             }
 
             // Step 6: Apply events to aggregates
             foreach (var kvp in aggregates)
             {
+                var persister = (IEventSourcedAggregate)kvp.Value;
+                int eventsRead = 0;
+
                 if (eventsByPartition.TryGetValue(kvp.Key, out var chunks))
                 {
-                    var persister = (IEventSourcedAggregate)kvp.Value;
                     foreach (var chunk in chunks.OrderBy(c => c.Index))
                     {
+                        eventsRead++;
                         persister.ApplyChanges((Changeset)chunk.Payload);
                     }
-                    persister.Loaded();
+                }
 
-                    // Update tracked version to latest
-                    _aggregateVersions[kvp.Key] = kvp.Value.Version;
-                }
-                else
+                persister.Loaded();
+
+                // Validate snapshot: if we had a snapshot but read no events, the snapshot is stale
+                var snapshotVersion = snapshotVersions[kvp.Key];
+                if (snapshotVersion > 0 && eventsRead == 0)
                 {
-                    // No events, just mark as loaded
-                    ((IEventSourcedAggregate)kvp.Value).Loaded();
+                    throw new StaleSnapshotException(kvp.Key, snapshotVersion);
                 }
+
+                // Track the current version for optimistic concurrency
+                _aggregateVersions[kvp.Key] = kvp.Value.Version;
 
                 result[kvp.Key] = kvp.Value;
             }
@@ -189,7 +209,7 @@ namespace NStore.Domain
 
             foreach (var aggregate in aggregatesList)
             {
-                // Validate aggregate is tracked by this repository
+                // Validate aggregate is tracked by this repository (unless it's a new aggregate)
                 if (!_trackingAggregates.Values.Contains(aggregate) && !aggregate.IsNew)
                 {
                     throw new RepositoryMismatchException($"Aggregate {aggregate.Id} was not loaded by this batch repository");
@@ -214,16 +234,18 @@ namespace NStore.Domain
                 // Apply headers if provided
                 headers?.Invoke(changeSet);
 
-                // Determine the version to write at
+                // Determine the current version for optimistic concurrency control
                 long currentVersion;
                 if (aggregate.IsNew)
                 {
+                    // New aggregates start at version 0, will write at index 1
                     currentVersion = 0;
                     _aggregateVersions[aggregate.Id] = 0;
                     _trackingAggregates[aggregate.Id] = aggregate;
                 }
                 else if (_aggregateVersions.TryGetValue(aggregate.Id, out var trackedVersion))
                 {
+                    // Use the tracked version from when we loaded the aggregate
                     currentVersion = trackedVersion;
                 }
                 else
@@ -231,6 +253,7 @@ namespace NStore.Domain
                     throw new RepositoryMismatchException($"Aggregate {aggregate.Id} version not tracked");
                 }
 
+                // Calculate the next version index to write
                 long desiredVersion = currentVersion + 1;
 
                 // Create write job
@@ -253,7 +276,7 @@ namespace NStore.Domain
             // Step 2: Execute batch append
             await _persistence.AppendBatchAsync(writeJobs.ToArray(), cancellationToken).ConfigureAwait(false);
 
-            // Step 3: Process results
+            // Step 3: Process results and update aggregate states
             var failedAggregates = new List<AggregateFailureInfo>();
             var succeededIds = new List<string>();
 
@@ -265,12 +288,12 @@ namespace NStore.Domain
                 switch (job.Result)
                 {
                     case WriteJob.WriteResult.Committed:
-                        // Success - update version and mark as persisted
+                        // Success - update tracked version and notify aggregate
                         _aggregateVersions[aggregate.Id] = job.Index;
                         persister.Persisted(persister.GetChangeSet());
                         succeededIds.Add(aggregate.Id);
 
-                        // Save snapshot if supported
+                        // Save snapshot if snapshot store is available and aggregate supports snapshots
                         if (_snapshotStore != null && aggregate is ISnapshottable snapshottable)
                         {
                             await _snapshotStore.AddAsync(
@@ -282,7 +305,7 @@ namespace NStore.Domain
                         break;
 
                     case WriteJob.WriteResult.DuplicatedIndex:
-                        // Optimistic concurrency violation
+                        // Optimistic concurrency violation - another process modified this aggregate
                         failedAggregates.Add(new AggregateFailureInfo(
                             aggregate.Id,
                             aggregate.GetType(),
@@ -291,12 +314,12 @@ namespace NStore.Domain
                         break;
 
                     case WriteJob.WriteResult.DuplicatedOperation:
-                        // Operation was already executed (idempotency) - treat as success
+                        // Operation was already executed (idempotency check passed) - treat as success
                         succeededIds.Add(aggregate.Id);
                         break;
 
                     case WriteJob.WriteResult.Failed:
-                        // Generic failure
+                        // Generic failure from persistence layer
                         failedAggregates.Add(new AggregateFailureInfo(
                             aggregate.Id,
                             aggregate.GetType(),
@@ -305,8 +328,7 @@ namespace NStore.Domain
                         break;
 
                     case WriteJob.WriteResult.DuplicatedPosition:
-                        // This should have been retried by the persistence layer
-                        // If we still see it here, it means retry limit was exceeded
+                        // Position conflict after retry limit exceeded
                         failedAggregates.Add(new AggregateFailureInfo(
                             aggregate.Id,
                             aggregate.GetType(),
