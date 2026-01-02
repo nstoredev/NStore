@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -80,26 +81,25 @@ namespace NStore.Domain
             // Step 3: Load snapshots if available
             if (_snapshotBatchStore != null)
             {
-                var snapshotIds = idsToLoad.ToList();
-                var snapshots = await _snapshotBatchStore.GetManyAsync(snapshotIds, cancellationToken).ConfigureAwait(false);
+                var snapshots = await _snapshotBatchStore.GetManyAsync(idsToLoad, cancellationToken).ConfigureAwait(false);
 
-                foreach (var kvp in snapshots)
+                Parallel.ForEach(snapshots, kvp =>
                 {
                     if (aggregates.TryGetValue(kvp.Key, out var aggregate) && aggregate is ISnapshottable snapshottable)
                     {
                         snapshottable.TryRestore(kvp.Value);
                     }
-                }
+                });
             }
 
             // Step 3b: Initialize aggregates that weren't restored from snapshots
-            foreach (var kvp in aggregates)
+            Parallel.ForEach(aggregates, kvp =>
             {
                 if (!kvp.Value.IsInitialized)
                 {
                     kvp.Value.Init(kvp.Key);
                 }
-            }
+            });
 
             // Step 4: Build partition read requests based on aggregate versions
             var partitionRequests = new List<PartitionReadRequest>();
@@ -120,14 +120,10 @@ namespace NStore.Domain
             }
 
             // Step 5: Read events from multiple partitions
-            var eventsByPartition = new Dictionary<string, List<IChunk>>();
+            var eventsByPartition = new ConcurrentDictionary<string, ConcurrentBag<IChunk>>();
             var subscription = new LambdaSubscription(chunk =>
             {
-                if (!eventsByPartition.TryGetValue(chunk.PartitionId, out var chunks))
-                {
-                    chunks = new List<IChunk>();
-                    eventsByPartition[chunk.PartitionId] = chunks;
-                }
+                var chunks = eventsByPartition.GetOrAdd(chunk.PartitionId, _ => new ConcurrentBag<IChunk>());
                 chunks.Add(chunk);
                 return Task.FromResult(true);
             });
@@ -146,34 +142,50 @@ namespace NStore.Domain
                     subscription.LastError);
             }
 
-            // Step 6: Apply events to aggregates
-            foreach (var kvp in aggregates)
+            // Step 6: Apply events to aggregates (in parallel for performance)
+            var exceptions = new ConcurrentBag<Exception>();
+
+            Parallel.ForEach(aggregates, kvp =>
             {
-                var persister = (IEventSourcedAggregate)kvp.Value;
-                int eventsRead = 0;
-
-                if (eventsByPartition.TryGetValue(kvp.Key, out var chunks))
+                try
                 {
-                    foreach (var chunk in chunks.OrderBy(c => c.Index))
+                    var persister = (IEventSourcedAggregate)kvp.Value;
+                    int eventsRead = 0;
+
+                    if (eventsByPartition.TryGetValue(kvp.Key, out var chunks))
                     {
-                        eventsRead++;
-                        persister.ApplyChanges((Changeset)chunk.Payload);
+                        foreach (var chunk in chunks.OrderBy(c => c.Index))
+                        {
+                            eventsRead++;
+                            persister.ApplyChanges((Changeset)chunk.Payload);
+                        }
                     }
+
+                    persister.Loaded();
+
+                    // Validate snapshot: if we had a snapshot but read no events, the snapshot is stale
+                    var snapshotVersion = snapshotVersions[kvp.Key];
+                    if (snapshotVersion > 0 && eventsRead == 0)
+                    {
+                        exceptions.Add(new StaleSnapshotException(kvp.Key, snapshotVersion));
+                        return;
+                    }
+
+                    // Track the current version for optimistic concurrency
+                    _aggregateVersions[kvp.Key] = kvp.Value.Version;
+
+                    result[kvp.Key] = kvp.Value;
                 }
-
-                persister.Loaded();
-
-                // Validate snapshot: if we had a snapshot but read no events, the snapshot is stale
-                var snapshotVersion = snapshotVersions[kvp.Key];
-                if (snapshotVersion > 0 && eventsRead == 0)
+                catch (Exception ex)
                 {
-                    throw new StaleSnapshotException(kvp.Key, snapshotVersion);
+                    exceptions.Add(ex);
                 }
+            });
 
-                // Track the current version for optimistic concurrency
-                _aggregateVersions[kvp.Key] = kvp.Value.Version;
-
-                result[kvp.Key] = kvp.Value;
+            // Throw the first exception if any occurred during parallel processing
+            if (!exceptions.IsEmpty)
+            {
+                throw exceptions.First();
             }
 
             return result;
