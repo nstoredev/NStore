@@ -757,6 +757,8 @@ namespace NStore.Persistence.Mongo
                         if (ex.Message.Contains(PartitionIndexIdx))
 #endif
                         {
+                            // in this situation we have a concurrency exception, to avoid leaving a hole in the position sequence
+                            // we persist an empty chunk at this position
                             await PersistAsEmptyAsync(chunk, cancellationToken).ConfigureAwait(false);
                             _logger.LogInformation(
                                 $"DuplicateStreamIndexException: {ex.Message}.\n{ex.ToString()}");
@@ -790,7 +792,10 @@ namespace NStore.Persistence.Mongo
                                 cancellationToken.ThrowIfCancellationRequested();
                             }
 
-                            //some other process steals the Position, we need to warn the user, because too many of this error could suggest to enable UseLocalSequence
+                            // some other process steals the Position, we need to warn the user,
+                            // because too many of this error could suggest to enable UseLocalSequence
+                            // but we can retry because this is not an error at application level
+                            // it is only that mongodb have no way to generate a sqlserver identity like field
                             _logger.LogWarning(
                                 $@"Error writing chunk #{chunk.Position} - Some other process already wrote position {chunk.Position}. 
 Operation will be retried. 
