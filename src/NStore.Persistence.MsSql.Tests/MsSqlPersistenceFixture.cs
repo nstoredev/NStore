@@ -37,7 +37,7 @@ namespace NStore.Persistence.Tests
             return new MsSqlPersistenceOptions(LoggerFactory)
             {
                 ConnectionString = _connectionString,
-                StreamsTableName = "streams_" + _testRunId + "_" + GetType().Name,
+                StreamsTableName = "streams_" + _testRunId + "_" + Environment.Version.Major + "_" + GetType().Name,
                 Serializer = new JsonMsSqlSerializer()
             };
         }
