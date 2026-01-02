@@ -1,0 +1,332 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using NStore.Core.Persistence;
+using NStore.Core.Snapshots;
+
+namespace NStore.Domain
+{
+    /// <summary>
+    /// Batch repository implementation for efficient multi-aggregate operations.
+    /// Uses IMultiSnapshotReader, IMultiPartitionPersistenceReader, and IEnhancedPersistence
+    /// to perform batch reads and writes with optimistic concurrency control.
+    /// </summary>
+    public class BatchRepository : IBatchRepository
+    {
+        private readonly IAggregateFactory _factory;
+        private readonly IMultiPartitionPersistenceReader _multiReader;
+        private readonly IEnhancedPersistence _persistence;
+        private readonly IMultiSnapshotReader _snapshotReader;
+        private readonly ISnapshotStore _snapshotStore;
+
+        private readonly IDictionary<string, IAggregate> _trackingAggregates = new Dictionary<string, IAggregate>();
+        private readonly IDictionary<string, long> _aggregateVersions = new Dictionary<string, long>();
+
+        public bool PersistEmptyChangeset { get; set; } = false;
+
+        public BatchRepository(
+            IAggregateFactory factory,
+            IMultiPartitionPersistenceReader multiReader,
+            IEnhancedPersistence persistence,
+            ISnapshotStore snapshotStore = null)
+        {
+            _factory = factory ?? throw new ArgumentNullException(nameof(factory));
+            _multiReader = multiReader ?? throw new ArgumentNullException(nameof(multiReader));
+            _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
+            _snapshotStore = snapshotStore;
+            _snapshotReader = snapshotStore != null ? new DefaultMultiSnapshotReader(snapshotStore) : null;
+        }
+
+        public async Task<IDictionary<string, T>> GetManyByIdAsync<T>(
+            IEnumerable<string> ids,
+            CancellationToken cancellationToken = default) where T : IAggregate
+        {
+            var requests = ids.Select(id => (typeof(T), id)).ToList();
+            var aggregates = await GetManyByIdAsync(requests, cancellationToken).ConfigureAwait(false);
+
+            return aggregates.ToDictionary(kvp => kvp.Key, kvp => (T)kvp.Value);
+        }
+
+        public async Task<IDictionary<string, IAggregate>> GetManyByIdAsync(
+            IEnumerable<(Type aggregateType, string id)> requests,
+            CancellationToken cancellationToken = default)
+        {
+            var requestsList = requests.ToList();
+            if (!requestsList.Any())
+            {
+                return new Dictionary<string, IAggregate>();
+            }
+
+            var result = new Dictionary<string, IAggregate>();
+
+            // Step 1: Check tracking cache first
+            var idsToLoad = new List<(Type aggregateType, string id)>();
+            foreach (var (aggregateType, id) in requestsList)
+            {
+                if (_trackingAggregates.TryGetValue(id, out var cachedAggregate))
+                {
+                    result[id] = cachedAggregate;
+                }
+                else
+                {
+                    idsToLoad.Add((aggregateType, id));
+                }
+            }
+
+            if (!idsToLoad.Any())
+            {
+                return result;
+            }
+
+            // Step 2: Create aggregates
+            var aggregates = new Dictionary<string, IAggregate>();
+            foreach (var (aggregateType, id) in idsToLoad)
+            {
+                var aggregate = _factory.Create(aggregateType);
+                aggregate.Init(id);
+                aggregates[id] = aggregate;
+                _trackingAggregates[id] = aggregate;
+            }
+
+            // Step 3: Load snapshots if available
+            if (_snapshotReader != null)
+            {
+                var snapshotIds = idsToLoad.Select(x => x.id).ToList();
+                var snapshots = await _snapshotReader.GetManyAsync(snapshotIds, cancellationToken).ConfigureAwait(false);
+
+                foreach (var kvp in snapshots)
+                {
+                    if (aggregates.TryGetValue(kvp.Key, out var aggregate) && aggregate is ISnapshottable snapshottable)
+                    {
+                        snapshottable.TryRestore(kvp.Value);
+                    }
+                }
+            }
+
+            // Step 4: Build partition read requests based on aggregate versions
+            var partitionRequests = new List<PartitionReadRequest>();
+            foreach (var kvp in aggregates)
+            {
+                // Read from current version to end
+                partitionRequests.Add(new PartitionReadRequest(
+                    kvp.Key,
+                    kvp.Value.Version,
+                    long.MaxValue
+                ));
+
+                // Track the version for optimistic concurrency
+                _aggregateVersions[kvp.Key] = kvp.Value.Version;
+            }
+
+            // Step 5: Read events from multiple partitions
+            var eventsByPartition = new Dictionary<string, List<IChunk>>();
+            var subscription = new LambdaSubscription(chunk =>
+            {
+                if (!eventsByPartition.TryGetValue(chunk.PartitionId, out var chunks))
+                {
+                    chunks = new List<IChunk>();
+                    eventsByPartition[chunk.PartitionId] = chunks;
+                }
+                chunks.Add(chunk);
+                return Task.FromResult(true);
+            });
+
+            await _multiReader.ReadForwardMultiplePartitionsWithRangesAsync(
+                partitionRequests,
+                subscription,
+                cancellationToken
+            ).ConfigureAwait(false);
+
+            if (subscription.Failed)
+            {
+                throw new RepositoryReadException("Error reading aggregates in batch", subscription.LastError);
+            }
+
+            // Step 6: Apply events to aggregates
+            foreach (var kvp in aggregates)
+            {
+                if (eventsByPartition.TryGetValue(kvp.Key, out var chunks))
+                {
+                    var persister = (IEventSourcedAggregate)kvp.Value;
+                    foreach (var chunk in chunks.OrderBy(c => c.Index))
+                    {
+                        persister.ApplyChanges((Changeset)chunk.Payload);
+                    }
+                    persister.Loaded();
+
+                    // Update tracked version to latest
+                    _aggregateVersions[kvp.Key] = kvp.Value.Version;
+                }
+                else
+                {
+                    // No events, just mark as loaded
+                    ((IEventSourcedAggregate)kvp.Value).Loaded();
+                }
+
+                result[kvp.Key] = kvp.Value;
+            }
+
+            return result;
+        }
+
+        public async Task SaveManyAsync(
+            IEnumerable<IAggregate> aggregates,
+            string operationId,
+            Action<IHeadersAccessor> headers = null,
+            CancellationToken cancellationToken = default)
+        {
+            var aggregatesList = aggregates.ToList();
+            if (!aggregatesList.Any())
+            {
+                return;
+            }
+
+            // Step 1: Validate all aggregates and prepare write jobs
+            var writeJobs = new List<WriteJob>();
+            var aggregateByPartitionId = new Dictionary<string, IAggregate>();
+
+            foreach (var aggregate in aggregatesList)
+            {
+                // Validate aggregate is tracked by this repository
+                if (!_trackingAggregates.Values.Contains(aggregate) && !aggregate.IsNew)
+                {
+                    throw new RepositoryMismatchException($"Aggregate {aggregate.Id} was not loaded by this batch repository");
+                }
+
+                var persister = (IEventSourcedAggregate)aggregate;
+                var changeSet = persister.GetChangeSet();
+
+                // Skip empty changesets unless configured to persist them
+                if (changeSet.IsEmpty() && !PersistEmptyChangeset)
+                {
+                    continue;
+                }
+
+                // Check invariants if supported
+                if (aggregate is IInvariantsChecker checker)
+                {
+                    var check = checker.CheckInvariants();
+                    check.ThrowIfInvalid();
+                }
+
+                // Apply headers if provided
+                headers?.Invoke(changeSet);
+
+                // Determine the version to write at
+                long currentVersion;
+                if (aggregate.IsNew)
+                {
+                    currentVersion = 0;
+                    _aggregateVersions[aggregate.Id] = 0;
+                    _trackingAggregates[aggregate.Id] = aggregate;
+                }
+                else if (_aggregateVersions.TryGetValue(aggregate.Id, out var trackedVersion))
+                {
+                    currentVersion = trackedVersion;
+                }
+                else
+                {
+                    throw new RepositoryMismatchException($"Aggregate {aggregate.Id} version not tracked");
+                }
+
+                long desiredVersion = currentVersion + 1;
+
+                // Create write job
+                var job = new WriteJob(
+                    aggregate.Id,
+                    desiredVersion,
+                    changeSet,
+                    operationId ?? Guid.NewGuid().ToString()
+                );
+
+                writeJobs.Add(job);
+                aggregateByPartitionId[aggregate.Id] = aggregate;
+            }
+
+            if (!writeJobs.Any())
+            {
+                return;
+            }
+
+            // Step 2: Execute batch append
+            await _persistence.AppendBatchAsync(writeJobs.ToArray(), cancellationToken).ConfigureAwait(false);
+
+            // Step 3: Process results
+            var failedAggregates = new List<AggregateFailureInfo>();
+            var succeededIds = new List<string>();
+
+            foreach (var job in writeJobs)
+            {
+                var aggregate = aggregateByPartitionId[job.PartitionId];
+                var persister = (IEventSourcedAggregate)aggregate;
+
+                switch (job.Result)
+                {
+                    case WriteJob.WriteResult.Committed:
+                        // Success - update version and mark as persisted
+                        _aggregateVersions[aggregate.Id] = job.Index;
+                        persister.Persisted(persister.GetChangeSet());
+                        succeededIds.Add(aggregate.Id);
+
+                        // Save snapshot if supported
+                        if (_snapshotStore != null && aggregate is ISnapshottable snapshottable)
+                        {
+                            await _snapshotStore.AddAsync(
+                                aggregate.Id,
+                                snapshottable.GetSnapshot(),
+                                cancellationToken
+                            ).ConfigureAwait(false);
+                        }
+                        break;
+
+                    case WriteJob.WriteResult.DuplicatedIndex:
+                        // Optimistic concurrency violation
+                        failedAggregates.Add(new AggregateFailureInfo(
+                            aggregate.Id,
+                            aggregate.GetType(),
+                            AggregateFailureReason.ConcurrencyConflict
+                        ));
+                        break;
+
+                    case WriteJob.WriteResult.DuplicatedOperation:
+                        // Operation was already executed (idempotency) - treat as success
+                        succeededIds.Add(aggregate.Id);
+                        break;
+
+                    case WriteJob.WriteResult.Failed:
+                        // Generic failure
+                        failedAggregates.Add(new AggregateFailureInfo(
+                            aggregate.Id,
+                            aggregate.GetType(),
+                            AggregateFailureReason.Failed
+                        ));
+                        break;
+
+                    case WriteJob.WriteResult.DuplicatedPosition:
+                        // This should have been retried by the persistence layer
+                        // If we still see it here, it means retry limit was exceeded
+                        failedAggregates.Add(new AggregateFailureInfo(
+                            aggregate.Id,
+                            aggregate.GetType(),
+                            AggregateFailureReason.Failed
+                        ));
+                        break;
+                }
+            }
+
+            // Step 4: Throw exception if there were any failures
+            if (failedAggregates.Any())
+            {
+                throw new BatchConcurrencyException(failedAggregates, succeededIds);
+            }
+        }
+
+        public void Clear()
+        {
+            _trackingAggregates.Clear();
+            _aggregateVersions.Clear();
+        }
+    }
+}
