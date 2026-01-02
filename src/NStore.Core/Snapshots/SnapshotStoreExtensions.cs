@@ -53,7 +53,7 @@ namespace NStore.Core.Snapshots
         /// <summary>
         /// Retrieves the most recent snapshots for multiple partitions without requiring a cancellation token.
         /// </summary>
-        /// <param name="reader">The multi-snapshot reader instance.</param>
+        /// <param name="batchStore">The snapshot batch store instance.</param>
         /// <param name="snapshotPartitionIds">Collection of partition IDs to retrieve snapshots for.</param>
         /// <returns>
         /// A dictionary mapping partition IDs to their corresponding <see cref="SnapshotInfo"/>.
@@ -65,11 +65,29 @@ namespace NStore.Core.Snapshots
         /// that accepts a <see cref="CancellationToken"/>.
         /// </remarks>
         public static Task<IDictionary<string, SnapshotInfo>> GetManyAsync(
-            this IMultiSnapshotReader reader,
+            this ISnapshotBatchStore batchStore,
             IEnumerable<string> snapshotPartitionIds
         )
         {
-            return reader.GetManyAsync(snapshotPartitionIds, CancellationToken.None);
+            return batchStore.GetManyAsync(snapshotPartitionIds, CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Stores multiple snapshots without requiring a cancellation token.
+        /// </summary>
+        /// <param name="batchStore">The snapshot batch store instance.</param>
+        /// <param name="snapshots">Dictionary mapping partition IDs to their snapshot information.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        /// <remarks>
+        /// This is a convenience overload that uses <see cref="CancellationToken.None"/>.
+        /// Uses best-effort semantics - individual snapshot save failures are silently ignored.
+        /// </remarks>
+        public static Task AddManyAsync(
+            this ISnapshotBatchStore batchStore,
+            IDictionary<string, SnapshotInfo> snapshots
+        )
+        {
+            return batchStore.AddManyAsync(snapshots, CancellationToken.None);
         }
     }
 }

@@ -7,33 +7,33 @@ using System.Threading.Tasks;
 namespace NStore.Core.Snapshots
 {
     /// <summary>
-    /// Default implementation of <see cref="IMultiSnapshotReader"/> that retrieves snapshots
-    /// in parallel using an underlying <see cref="ISnapshotStore"/>.
+    /// Default implementation of <see cref="ISnapshotBatchStore"/> that performs batch
+    /// snapshot operations in parallel using an underlying <see cref="ISnapshotStore"/>.
     /// </summary>
     /// <remarks>
     /// <para>
     /// This implementation wraps an existing <see cref="ISnapshotStore"/> and executes
-    /// <see cref="ISnapshotStore.GetLastAsync"/> calls in parallel using <see cref="Task.WhenAll"/>.
+    /// operations in parallel using <see cref="Task.WhenAll"/>.
     /// It does not perform database-level batch operations; instead, it optimizes throughput
     /// by issuing multiple concurrent requests.
     /// </para>
     /// <para>
     /// This is a general-purpose implementation suitable for most scenarios. For specialized
     /// storage backends that support native batch queries (e.g., SQL with IN clauses, MongoDB
-    /// with $in operator), consider implementing a custom <see cref="IMultiSnapshotReader"/>
+    /// with $in operator), consider implementing a custom <see cref="ISnapshotBatchStore"/>
     /// that leverages those capabilities for better performance.
     /// </para>
     /// </remarks>
-    public class DefaultMultiSnapshotReader : IMultiSnapshotReader
+    public class DefaultSnapshotBatchStore : ISnapshotBatchStore
     {
         private readonly ISnapshotStore _snapshotStore;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="DefaultMultiSnapshotReader"/> class.
+        /// Initializes a new instance of the <see cref="DefaultSnapshotBatchStore"/> class.
         /// </summary>
-        /// <param name="snapshotStore">The underlying snapshot store to use for retrieving individual snapshots.</param>
+        /// <param name="snapshotStore">The underlying snapshot store to use for individual snapshot operations.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="snapshotStore"/> is null.</exception>
-        public DefaultMultiSnapshotReader(ISnapshotStore snapshotStore)
+        public DefaultSnapshotBatchStore(ISnapshotStore snapshotStore)
         {
             _snapshotStore = snapshotStore ?? throw new ArgumentNullException(nameof(snapshotStore));
         }
@@ -97,6 +97,63 @@ namespace NStore.Core.Snapshots
                 .ToDictionary(r => r.PartitionId, r => r.Snapshot);
 
             return dictionary;
+        }
+
+        /// <summary>
+        /// Stores multiple snapshots in parallel using best-effort semantics.
+        /// Individual failures are silently ignored as snapshots are an optimization.
+        /// </summary>
+        /// <param name="snapshots">Dictionary mapping partition IDs to their snapshot information.</param>
+        /// <param name="cancellationToken">Cancellation token to cancel the operation.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        /// <remarks>
+        /// <para>
+        /// <strong>Implementation Details:</strong>
+        /// </para>
+        /// <list type="number">
+        /// <item><description>Filters out null or empty snapshots.</description></item>
+        /// <item><description>Executes <see cref="ISnapshotStore.AddAsync"/> for each snapshot in parallel.</description></item>
+        /// <item><description>Ignores individual failures (best-effort semantics).</description></item>
+        /// <item><description>Does not throw exceptions for snapshot save failures.</description></item>
+        /// </list>
+        /// <para>
+        /// <strong>Best-Effort Rationale:</strong> Snapshot persistence is an optimization to avoid
+        /// rebuilding state from events. If a snapshot fails to save, the system remains functional
+        /// as it can rebuild from the event stream. This approach prioritizes system availability
+        /// over snapshot consistency.
+        /// </para>
+        /// </remarks>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="snapshots"/> is null.</exception>
+        public async Task AddManyAsync(
+            IDictionary<string, SnapshotInfo> snapshots,
+            CancellationToken cancellationToken)
+        {
+            if (snapshots == null)
+                throw new ArgumentNullException(nameof(snapshots));
+
+            // Filter out null or empty snapshots
+            var validSnapshots = snapshots
+                .Where(kvp => kvp.Value != null && !kvp.Value.IsEmpty)
+                .ToList();
+
+            if (validSnapshots.Count == 0)
+                return;
+
+            // Execute all AddAsync calls in parallel with best-effort semantics
+            var tasks = validSnapshots.Select(async kvp =>
+            {
+                try
+                {
+                    await _snapshotStore.AddAsync(kvp.Key, kvp.Value, cancellationToken).ConfigureAwait(false);
+                }
+                catch
+                {
+                    // Best-effort: silently ignore failures
+                    // Snapshots are an optimization, not critical
+                }
+            });
+
+            await Task.WhenAll(tasks).ConfigureAwait(false);
         }
     }
 }

@@ -5,24 +5,25 @@ using System.Threading.Tasks;
 namespace NStore.Core.Snapshots
 {
     /// <summary>
-    /// Provides batch read operations for retrieving snapshots from multiple partitions.
-    /// This interface enables efficient bulk retrieval when you need to load snapshots
+    /// Provides batch read and write operations for snapshots across multiple partitions.
+    /// This interface enables efficient bulk operations when you need to load or store snapshots
     /// for many aggregates or entities in a single operation.
     /// </summary>
     /// <remarks>
     /// <para>
     /// This interface is designed to complement <see cref="ISnapshotStore"/> by providing
-    /// batch read capabilities. Implementations may optimize batch reads at the storage level
-    /// (e.g., using database batch queries) or execute individual reads in parallel.
+    /// batch capabilities. Implementations may optimize batch operations at the storage level
+    /// (e.g., using database batch queries) or execute individual operations in parallel.
     /// </para>
     /// <para>
     /// Typical use cases include:
     /// - Loading snapshots for multiple aggregates during query processing
     /// - Bulk snapshot retrieval for reporting or analysis
     /// - Preloading snapshots for a set of related entities
+    /// - Batch saving snapshots after processing multiple aggregates
     /// </para>
     /// </remarks>
-    public interface IMultiSnapshotReader
+    public interface ISnapshotBatchStore
     {
         /// <summary>
         /// Retrieves the most recent snapshots for multiple partitions in a single operation.
@@ -69,6 +70,40 @@ namespace NStore.Core.Snapshots
         /// </remarks>
         Task<IDictionary<string, SnapshotInfo>> GetManyAsync(
             IEnumerable<string> snapshotPartitionIds,
+            CancellationToken cancellationToken
+        );
+
+        /// <summary>
+        /// Stores multiple snapshots in a single operation using best-effort semantics.
+        /// </summary>
+        /// <param name="snapshots">Dictionary mapping partition IDs to their snapshot information.</param>
+        /// <param name="cancellationToken">Cancellation token to cancel the operation.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        /// <remarks>
+        /// <para>
+        /// <strong>Best-Effort Semantics:</strong> This method attempts to store all provided snapshots
+        /// but does not fail if individual snapshots cannot be saved. Failed snapshot saves are logged
+        /// or silently ignored, as snapshot persistence is an optimization and not critical to system
+        /// correctness. The system can always rebuild state from the event stream if a snapshot is missing.
+        /// </para>
+        /// <para>
+        /// <strong>Performance:</strong> Implementations may execute writes in parallel or use batch
+        /// queries to optimize performance. The order of writes is not guaranteed.
+        /// </para>
+        /// <para>
+        /// <strong>Example Usage:</strong>
+        /// <code>
+        /// var snapshots = new Dictionary&lt;string, SnapshotInfo&gt;
+        /// {
+        ///     { "Order-123", new SnapshotInfo("Order-123", 5, orderState, "v1") },
+        ///     { "Order-456", new SnapshotInfo("Order-456", 10, orderState2, "v1") }
+        /// };
+        /// await batchStore.AddManyAsync(snapshots, cancellationToken);
+        /// </code>
+        /// </para>
+        /// </remarks>
+        Task AddManyAsync(
+            IDictionary<string, SnapshotInfo> snapshots,
             CancellationToken cancellationToken
         );
     }
