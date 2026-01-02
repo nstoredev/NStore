@@ -61,6 +61,8 @@ namespace NStore.Core.Persistence
             this.Result = result;
             // Remove chunk if failed - the chunk is not valid
             this.Chunk = null;
+            // Reset position to 0 to indicate failure
+            this.Position = 0;
         }
     }
 
