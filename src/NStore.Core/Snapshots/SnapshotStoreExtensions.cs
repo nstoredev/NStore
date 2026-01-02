@@ -64,7 +64,7 @@ namespace NStore.Core.Snapshots
         /// For long-running operations or when cancellation support is needed, use the overload
         /// that accepts a <see cref="CancellationToken"/>.
         /// </remarks>
-        public static Task<IDictionary<string, SnapshotInfo>> GetManyAsync(
+        public static Task<IReadOnlyDictionary<string, SnapshotInfo>> GetManyAsync(
             this ISnapshotBatchStore batchStore,
             IEnumerable<string> snapshotPartitionIds
         )
@@ -84,7 +84,7 @@ namespace NStore.Core.Snapshots
         /// </remarks>
         public static Task AddManyAsync(
             this ISnapshotBatchStore batchStore,
-            IDictionary<string, SnapshotInfo> snapshots
+            IReadOnlyDictionary<string, SnapshotInfo> snapshots
         )
         {
             return batchStore.AddManyAsync(snapshots, CancellationToken.None);

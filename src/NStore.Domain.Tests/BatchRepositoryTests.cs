@@ -1,16 +1,10 @@
-// ReSharper disable InconsistentNaming
-
 using NStore.Core.InMemory;
 using NStore.Core.Persistence;
 using NStore.Core.Snapshots;
-using NStore.Core.Tests.Snapshots;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
-
-#pragma warning disable S101 // Types should be named in camel case
 
 namespace NStore.Domain.Tests
 {
@@ -497,5 +491,3 @@ namespace NStore.Domain.Tests
         }
     }
 }
-
-#pragma warning restore S101 // Types should be named in camel case
