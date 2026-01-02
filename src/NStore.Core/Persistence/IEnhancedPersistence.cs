@@ -11,7 +11,12 @@ namespace NStore.Core.Persistence
             Committed,
             DuplicatedIndex,
             DuplicatedOperation,
-            DuplicatedPosition
+            DuplicatedPosition,
+
+            /// <summary>
+            /// This is needed to mark a generic failure that is not covered by the other results.
+            /// </summary>
+            Failed
         }
 
         // in
