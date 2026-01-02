@@ -10,7 +10,7 @@ namespace NStore.Domain
 {
     /// <summary>
     /// Batch repository implementation for efficient multi-aggregate operations.
-    /// Uses IMultiSnapshotReader, IMultiPartitionPersistenceReader, and IEnhancedPersistence
+    /// Uses ISnapshotBatchStore, IMultiPartitionPersistenceReader, and IEnhancedPersistence
     /// to perform batch reads and writes with optimistic concurrency control.
     /// </summary>
     public class BatchRepository : IBatchRepository
@@ -18,7 +18,7 @@ namespace NStore.Domain
         private readonly IAggregateFactory _factory;
         private readonly IMultiPartitionPersistenceReader _multiReader;
         private readonly IEnhancedPersistence _persistence;
-        private readonly IMultiSnapshotReader _snapshotReader;
+        private readonly ISnapshotBatchStore _snapshotBatchStore;
         private readonly ISnapshotStore _snapshotStore;
 
         private readonly IDictionary<string, IAggregate> _trackingAggregates = new Dictionary<string, IAggregate>();
@@ -36,7 +36,7 @@ namespace NStore.Domain
             _multiReader = multiReader ?? throw new ArgumentNullException(nameof(multiReader));
             _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
             _snapshotStore = snapshotStore;
-            _snapshotReader = snapshotStore != null ? new DefaultMultiSnapshotReader(snapshotStore) : null;
+            _snapshotBatchStore = snapshotStore != null ? new DefaultSnapshotBatchStore(snapshotStore) : null;
         }
 
         public async Task<IDictionary<string, T>> GetManyByIdAsync<T>(
@@ -90,10 +90,10 @@ namespace NStore.Domain
             }
 
             // Step 3: Load snapshots if available
-            if (_snapshotReader != null)
+            if (_snapshotBatchStore != null)
             {
                 var snapshotIds = idsToLoad.Select(x => x.id).ToList();
-                var snapshots = await _snapshotReader.GetManyAsync(snapshotIds, cancellationToken).ConfigureAwait(false);
+                var snapshots = await _snapshotBatchStore.GetManyAsync(snapshotIds, cancellationToken).ConfigureAwait(false);
 
                 foreach (var kvp in snapshots)
                 {
@@ -279,6 +279,7 @@ namespace NStore.Domain
             // Step 3: Process results and update aggregate states
             var failedAggregates = new List<AggregateFailureInfo>();
             var succeededIds = new List<string>();
+            var snapshotsToSave = new Dictionary<string, SnapshotInfo>();
 
             foreach (var job in writeJobs)
             {
@@ -293,14 +294,10 @@ namespace NStore.Domain
                         persister.Persisted(persister.GetChangeSet());
                         succeededIds.Add(aggregate.Id);
 
-                        // Save snapshot if snapshot store is available and aggregate supports snapshots
-                        if (_snapshotStore != null && aggregate is ISnapshottable snapshottable)
+                        // Collect snapshot if supported
+                        if (_snapshotBatchStore != null && aggregate is ISnapshottable snapshottable)
                         {
-                            await _snapshotStore.AddAsync(
-                                aggregate.Id,
-                                snapshottable.GetSnapshot(),
-                                cancellationToken
-                            ).ConfigureAwait(false);
+                            snapshotsToSave[aggregate.Id] = snapshottable.GetSnapshot();
                         }
                         break;
 
@@ -338,7 +335,13 @@ namespace NStore.Domain
                 }
             }
 
-            // Step 4: Throw exception if there were any failures
+            // Step 4: Save snapshots in batch (best-effort)
+            if (snapshotsToSave.Count > 0)
+            {
+                await _snapshotBatchStore.AddManyAsync(snapshotsToSave, cancellationToken).ConfigureAwait(false);
+            }
+
+            // Step 5: Throw exception if there were any failures
             if (failedAggregates.Any())
             {
                 throw new BatchConcurrencyException(failedAggregates, succeededIds);
