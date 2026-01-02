@@ -11,9 +11,6 @@ using System.Collections.Frozen;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-#if NET8_0_OR_GREATER
-using Microsoft.Extensions.ObjectPool;
-#endif
 
 namespace NStore.Persistence.Mongo
 {
@@ -42,10 +39,6 @@ namespace NStore.Persistence.Mongo
         private readonly INStoreLogger _logger;
 
         private long _sequence = 0;
-
-#if NET8_0_OR_GREATER
-        private readonly ObjectPool<TChunk> _chunkPool;
-#endif
 
         /// <summary>
         /// Index for partitionId+Index, used for concurrency check.
@@ -77,12 +70,6 @@ namespace NStore.Persistence.Mongo
                 $"Mongo-{String.Join(",", partitionsBuild.Servers.Select(s => $"{s.Host}:{s.Port}"))}, {options.PartitionsCollectionName}");
 
             _mongoPayloadSerializer = options.MongoPayloadSerializer ?? new TypeSystemMongoPayloadSerializer();
-#if NET8_0_OR_GREATER
-            // Initialize ObjectPool for chunk reuse in batch operations
-            // This reduces GC pressure by reusing chunk instances
-            var poolPolicy = new DefaultPooledObjectPolicy<TChunk>();
-            _chunkPool = new DefaultObjectPool<TChunk>(poolPolicy, options.ChunkPoolMaxSize);
-#endif
             Connect();
         }
 
@@ -982,12 +969,7 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
                 var current = queue[currentIdx];
                 long id = firstId + currentIdx;
 
-#if NET8_0_OR_GREATER
-                // Use ObjectPool to reduce allocations in batch operations
-                var chunk = _chunkPool.Get();
-#else
                 var chunk = new TChunk();
-#endif
                 chunk.Init(
                     id,
                     current.PartitionId,
@@ -1047,18 +1029,6 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
                     writeJob.Succeeded(chunks[index]);
                 }
             }
-
-#if NET8_0_OR_GREATER
-            // Return chunks to pool for reuse (best effort - don't fail if chunks are still referenced)
-            // Note: Chunks that succeeded are now owned by the WriteJob/caller, so we only return failed chunks
-            for (var index = 0; index < queue.Length; index++)
-            {
-                if (queue[index].Result != WriteJob.WriteResult.Committed)
-                {
-                    _chunkPool.Return(chunks[index]);
-                }
-            }
-#endif
         }
     }
 }

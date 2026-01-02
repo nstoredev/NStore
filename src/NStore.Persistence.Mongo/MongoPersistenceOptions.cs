@@ -77,13 +77,6 @@ namespace NStore.Persistence.Mongo
         public bool ReadonlyUser { get; set; }
 
         /// <summary>
-        /// Maximum size of the ObjectPool for TChunk instances used in batch operations.
-        /// Only applicable for .NET 8.0 and above. Default is 1024.
-        /// Higher values reduce allocations but increase memory usage.
-        /// </summary>
-        public int ChunkPoolMaxSize { get; set; } = 1024;
-
-        /// <summary>
         /// The number of documents MongoDB returns in each batch when reading data.
         /// Default is null (uses MongoDB driver default of ~100 documents).
         /// </summary>
