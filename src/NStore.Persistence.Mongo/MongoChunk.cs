@@ -32,6 +32,15 @@ namespace NStore.Persistence.Mongo
             this.OperationId = id;
         }
 
+        /// <summary>
+        /// Complete initialization of a chunk, this is interesting because it will give the opportunity
+        /// to use pooling of chunk instances.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="partitionId"></param>
+        /// <param name="index"></param>
+        /// <param name="payload"></param>
+        /// <param name="operationId"></param>
         public virtual void Init(
             long id,
             string partitionId,
