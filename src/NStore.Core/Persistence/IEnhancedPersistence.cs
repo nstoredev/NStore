@@ -39,16 +39,28 @@ namespace NStore.Core.Persistence
             OperationId = operationId;
         }
 
-        public virtual void Succeeded(IChunk chunk)
+        public void SetChunk(IChunk chunk)
         {
-            this.Result = WriteResult.Committed;
             this.Chunk = chunk;
             this.Position = chunk.Position;
         }
 
-        public virtual void Failed(WriteResult result )
+        public virtual void Succeeded()
+        {
+            this.Result = WriteResult.Committed;
+        }
+
+        public virtual void Succeeded(IChunk chunk)
+        {
+            SetChunk(chunk);
+            Succeeded();
+        }
+
+        public virtual void Failed(WriteResult result)
         {
             this.Result = result;
+            // Remove chunk if failed - the chunk is not valid
+            this.Chunk = null;
         }
     }
 

@@ -29,7 +29,6 @@ namespace NStore.Persistence.Mongo
     public class MongoPersistence<TChunk> : IMongoPersistence, IEnhancedPersistence
         where TChunk : class, IMongoChunk, new()
     {
-        private record struct ChunkJobMapping(TChunk Chunk, int JobIndex);
         private IMongoDatabase _partitionsDb;
         private IMongoDatabase _countersDb;
 
@@ -298,7 +297,7 @@ namespace NStore.Persistence.Mongo
 
                 // Use the minimum from index as the starting position for subscription
                 var startIndex = requests.Min(r => r.FromPartitionIndexInclusive);
-            
+
                 await PushToSubscriber(
                     startIndex,
                     subscription,
@@ -964,24 +963,25 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
 
             var firstId = lastId - insertCount + 1;
 
-            // Create a list to track which chunks correspond to which jobs
-            var chunkMappings = new List<ChunkJobMapping>(insertCount);
-
+            // Create write jobs list and set chunks before saving
+            var writeJobs = new List<WriteJob>(insertCount);
             for (var currentIdx = 0; currentIdx < insertCount; currentIdx++)
             {
-                var current = queue[currentIdx];
+                var job = queue[currentIdx];
                 long id = firstId + currentIdx;
 
                 var chunk = new TChunk();
                 chunk.Init(
                     id,
-                    current.PartitionId,
-                    current.Index,
-                    _mongoPayloadSerializer.Serialize(current.Payload),
-                    current.OperationId ?? Guid.NewGuid().ToString()
+                    job.PartitionId,
+                    job.Index,
+                    _mongoPayloadSerializer.Serialize(job.Payload),
+                    job.OperationId ?? Guid.NewGuid().ToString()
                 );
 
-                chunkMappings.Add(new ChunkJobMapping(chunk, currentIdx));
+                // Set chunk before saving
+                job.SetChunk(chunk);
+                writeJobs.Add(job);
             }
 
             var options = new InsertManyOptions()
@@ -989,34 +989,34 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
                 IsOrdered = false,
             };
 
-            while (true)
+            // Simple retry loop: continue while there are jobs to save and retry count is less than 100
+            while (writeJobs.Count > 0 && retry < 100)
             {
                 try
                 {
                     await _chunks
-                        .InsertManyAsync(chunkMappings.Select(m => m.Chunk).ToArray(), options, cancellationToken)
+                        .InsertManyAsync(writeJobs.Select(j => (TChunk)j.Chunk).ToArray(), options, cancellationToken)
                         .ConfigureAwait(false);
 
-                    // All succeeded, mark remaining jobs as committed
-                    foreach (var mapping in chunkMappings)
+                    // All succeeded, mark all jobs as committed
+                    foreach (var job in writeJobs)
                     {
-                        if (queue[mapping.JobIndex].Result == WriteJob.WriteResult.None)
-                        {
-                            queue[mapping.JobIndex].Succeeded(mapping.Chunk);
-                        }
+                        job.Succeeded();
                     }
-                    break;
+
+                    // Clear the list - all jobs succeeded we can exit.
+                    writeJobs.Clear();
                 }
                 catch (MongoBulkWriteException<TChunk> e)
                 {
-                    var hasPositionError = false;
-                    var failedIndices = new HashSet<int>();
+                    retry++;
+                    var hasRecoverableError = false;
+                    var jobsToRetry = new List<WriteJob>();
+                    var jobsToRemove = new HashSet<WriteJob>();
 
                     foreach (var err in e.WriteErrors)
                     {
-                        // Map error index back to job index
-                        var jobIndex = chunkMappings[err.Index].JobIndex;
-
+                        var failedJob = writeJobs[err.Index];
                         if (err.Category == ServerErrorCategory.DuplicateKey)
                         {
 #if NET8_0_OR_GREATER
@@ -1026,8 +1026,9 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
                             if (err.Message.Contains(PartitionIndexIdx))
 #endif
                             {
-                                queue[jobIndex].Failed(WriteJob.WriteResult.DuplicatedIndex);
-                                failedIndices.Add(err.Index);
+                                // Non-recoverable: duplicated index
+                                failedJob.Failed(WriteJob.WriteResult.DuplicatedIndex);
+                                jobsToRemove.Add(failedJob);
                                 continue;
                             }
 
@@ -1037,8 +1038,9 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
                             if (err.Message.Contains(PartitionOperationIdx))
 #endif
                             {
-                                queue[jobIndex].Failed(WriteJob.WriteResult.DuplicatedOperation);
-                                failedIndices.Add(err.Index);
+                                // Non-recoverable: duplicated operation
+                                failedJob.Failed(WriteJob.WriteResult.DuplicatedOperation);
+                                jobsToRemove.Add(failedJob);
                                 continue;
                             }
 
@@ -1048,73 +1050,54 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
                             if (err.Message.Contains("_id_"))
 #endif
                             {
-                                queue[jobIndex].Failed(WriteJob.WriteResult.DuplicatedPosition);
-                                failedIndices.Add(err.Index);
-                                hasPositionError = true;
+                                // Recoverable: duplicated position - can retry with new position
+                                failedJob.Failed(WriteJob.WriteResult.DuplicatedPosition);
+                                jobsToRetry.Add(failedJob);
+                                hasRecoverableError = true;
                                 continue;
                             }
                         }
 
-                        // Any other error type marks the job as failed
-                        queue[jobIndex].Failed(WriteJob.WriteResult.Failed);
-                        failedIndices.Add(err.Index);
+                        // Any other error type marks the job as failed (non-recoverable)
+                        failedJob.Failed(WriteJob.WriteResult.Failed);
+                        jobsToRemove.Add(failedJob);
                     }
 
                     // Mark successfully written chunks
-                    for (var i = 0; i < chunkMappings.Count; i++)
+                    for (var i = 0; i < writeJobs.Count; i++)
                     {
-                        if (!failedIndices.Contains(i))
+                        var job = writeJobs[i];
+                        // If the job is not in failed or retry lists, it succeeded
+                        if (!jobsToRemove.Contains(job) && !jobsToRetry.Contains(job))
                         {
-                            var mapping = chunkMappings[i];
-                            if (queue[mapping.JobIndex].Result == WriteJob.WriteResult.None)
-                            {
-                                queue[mapping.JobIndex].Succeeded(mapping.Chunk);
-                            }
+                            job.Succeeded();
+                            jobsToRemove.Add(job);
                         }
                     }
 
-                    // Circuit breaker to prevent infinite retries
-                    if (retry++ > 100)
+                    // Remove all succeeded and non-recoverable failed jobs from the list
+                    foreach (var job in jobsToRemove)
                     {
-                        _logger.LogError($"Error During AppendBatchAsync. Reached number of max {retry} retry count");
-                        break;
+                        writeJobs.Remove(job);
                     }
 
-                    if (hasPositionError)
+                    if (hasRecoverableError && jobsToRetry.Count > 0)
                     {
                         // Reload sequence and prepare retry for failed chunks only
-                        _logger.LogWarning($@"Error writing batch - Some positions were already taken. 
-Operation will be retried for failed chunks only. 
+                        _logger.LogWarning($@"Error writing batch - Some positions were already taken.
+Operation will be retried for failed chunks only.
 If you see too many of this kind of errors, consider disabling UseLocalSequence because multiple processes are using the very same counter.");
 
                         await ReloadSequence(cancellationToken).ConfigureAwait(false);
 
-                        // Build new list with only jobs that have DuplicatedPosition
-                        var retryMappings = new List<ChunkJobMapping>();
-                        for (var i = 0; i < queue.Length; i++)
-                        {
-                            if (queue[i].Result == WriteJob.WriteResult.DuplicatedPosition)
-                            {
-                                // Reset the result to None for retry
-                                queue[i].Failed(WriteJob.WriteResult.None);
-                                retryMappings.Add(new ChunkJobMapping(null, i));
-                            }
-                        }
+                        // Get new positions for retry chunks
+                        var newLastId = await GetNextId(jobsToRetry.Count, cancellationToken).ConfigureAwait(false);
+                        var newFirstId = newLastId - jobsToRetry.Count + 1;
 
-                        if (retryMappings.Count == 0)
+                        // Create new chunks with new positions for retry jobs
+                        for (var i = 0; i < jobsToRetry.Count; i++)
                         {
-                            break;
-                        }
-
-                        // Get new positions for failed chunks
-                        var newLastId = await GetNextId(retryMappings.Count, cancellationToken).ConfigureAwait(false);
-                        var newFirstId = newLastId - retryMappings.Count + 1;
-
-                        // Create new chunks with new positions
-                        for (var i = 0; i < retryMappings.Count; i++)
-                        {
-                            var jobIndex = retryMappings[i].JobIndex;
-                            var job = queue[jobIndex];
+                            var job = jobsToRetry[i];
 
                             var newChunk = new TChunk();
                             newChunk.Init(
@@ -1125,15 +1108,23 @@ If you see too many of this kind of errors, consider disabling UseLocalSequence 
                                 job.OperationId
                             );
 
-                            retryMappings[i] = new ChunkJobMapping(newChunk, jobIndex);
+                            // Set new chunk and reset result to None for retry
+                            job.SetChunk(newChunk);
+                            job.Failed(WriteJob.WriteResult.None);
                         }
 
-                        chunkMappings = retryMappings;
-                        continue;
+                        // Remove retry jobs from main list (they were marked as failed)
+                        // and rebuild the writeJobs list with only retry jobs
+                        writeJobs.Clear();
+                        writeJobs.AddRange(jobsToRetry);
                     }
-
-                    break;
                 }
+            }
+
+            // Check if we exited due to retry limit
+            if (retry >= 100)
+            {
+                _logger.LogError($"Error During AppendBatchAsync. Reached number of max {retry} retry count");
             }
         }
     }

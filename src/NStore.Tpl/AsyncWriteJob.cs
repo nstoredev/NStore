@@ -5,23 +5,22 @@ namespace NStore.Tpl
 {
     public class AsyncWriteJob : WriteJob
     {
-        private readonly TaskCompletionSource<IChunk> _completionSource = 
+        private readonly TaskCompletionSource<IChunk> _completionSource =
             new TaskCompletionSource<IChunk>();
 
         public Task<IChunk> Task => _completionSource.Task;
 
-        public AsyncWriteJob(string partitionId, long index, object payload, string operationId) : 
+        public AsyncWriteJob(string partitionId, long index, object payload, string operationId) :
             base(partitionId, index, payload, operationId)
         {
         }
 
-        public override void Succeeded(IChunk chunk)
+        public override void Succeeded()
         {
-            base.Succeeded(chunk);
-            this._completionSource.SetResult(chunk);
+            base.Succeeded();
+            this._completionSource.SetResult(this.Chunk);
         }
 
-        //@@REVIEW should set invaliid stream operation exception on completitionSource?
         public override void Failed(WriteResult result)
         {
             base.Failed(result);
