@@ -19,7 +19,6 @@ namespace NStore.Domain
         private readonly IMultiPartitionPersistenceReader _multiReader;
         private readonly IEnhancedPersistence _persistence;
         private readonly ISnapshotBatchStore _snapshotBatchStore;
-        private readonly ISnapshotStore _snapshotStore;
 
         private readonly IDictionary<string, IAggregate> _trackingAggregates = new Dictionary<string, IAggregate>();
         private readonly IDictionary<string, long> _aggregateVersions = new Dictionary<string, long>();
@@ -30,48 +29,37 @@ namespace NStore.Domain
             IAggregateFactory factory,
             IMultiPartitionPersistenceReader multiReader,
             IEnhancedPersistence persistence,
-            ISnapshotStore snapshotStore = null)
+            ISnapshotBatchStore snapshotStore)
         {
             _factory = factory ?? throw new ArgumentNullException(nameof(factory));
             _multiReader = multiReader ?? throw new ArgumentNullException(nameof(multiReader));
             _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
-            _snapshotStore = snapshotStore;
-            _snapshotBatchStore = snapshotStore != null ? new DefaultSnapshotBatchStore(snapshotStore) : null;
+            _snapshotBatchStore = snapshotStore;
         }
 
         public async Task<IDictionary<string, T>> GetManyByIdAsync<T>(
             IEnumerable<string> ids,
             CancellationToken cancellationToken = default) where T : IAggregate
         {
-            var requests = ids.Select(id => (typeof(T), id)).ToList();
-            var aggregates = await GetManyByIdAsync(requests, cancellationToken).ConfigureAwait(false);
-
-            return aggregates.ToDictionary(kvp => kvp.Key, kvp => (T)kvp.Value);
-        }
-
-        public async Task<IDictionary<string, IAggregate>> GetManyByIdAsync(
-            IEnumerable<(Type aggregateType, string id)> requests,
-            CancellationToken cancellationToken = default)
-        {
-            var requestsList = requests.ToList();
+            var requestsList = ids.ToList();
             if (!requestsList.Any())
             {
-                return new Dictionary<string, IAggregate>();
+                return new Dictionary<string, T>();
             }
 
-            var result = new Dictionary<string, IAggregate>();
+            var result = new Dictionary<string, T>();
 
             // Step 1: Check tracking cache first
-            var idsToLoad = new List<(Type aggregateType, string id)>();
-            foreach (var (aggregateType, id) in requestsList)
+            var idsToLoad = new List<string>();
+            foreach (var id in requestsList)
             {
                 if (_trackingAggregates.TryGetValue(id, out var cachedAggregate))
                 {
-                    result[id] = cachedAggregate;
+                    result[id] = (T)cachedAggregate;
                 }
                 else
                 {
-                    idsToLoad.Add((aggregateType, id));
+                    idsToLoad.Add(id);
                 }
             }
 
@@ -81,10 +69,10 @@ namespace NStore.Domain
             }
 
             // Step 2: Create aggregates
-            var aggregates = new Dictionary<string, IAggregate>();
-            foreach (var (aggregateType, id) in idsToLoad)
+            var aggregates = new Dictionary<string, T>();
+            foreach (var id in idsToLoad)
             {
-                var aggregate = _factory.Create(aggregateType);
+                var aggregate = _factory.Create<T>();
                 aggregates[id] = aggregate;
                 _trackingAggregates[id] = aggregate;
             }
@@ -92,7 +80,7 @@ namespace NStore.Domain
             // Step 3: Load snapshots if available
             if (_snapshotBatchStore != null)
             {
-                var snapshotIds = idsToLoad.Select(x => x.id).ToList();
+                var snapshotIds = idsToLoad.ToList();
                 var snapshots = await _snapshotBatchStore.GetManyAsync(snapshotIds, cancellationToken).ConfigureAwait(false);
 
                 foreach (var kvp in snapshots)

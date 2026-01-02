@@ -25,18 +25,6 @@ namespace NStore.Domain
         ) where T : IAggregate;
 
         /// <summary>
-        /// Loads multiple aggregates of different types.
-        /// Uses batch snapshot reading and multi-partition event reading for optimal performance.
-        /// </summary>
-        /// <param name="requests">Collection of (Type, Id) tuples specifying which aggregates to load</param>
-        /// <param name="cancellationToken">Cancellation token</param>
-        /// <returns>Dictionary mapping aggregate IDs to loaded aggregates. Only successfully loaded aggregates are included.</returns>
-        Task<IDictionary<string, IAggregate>> GetManyByIdAsync(
-            IEnumerable<(Type aggregateType, string id)> requests,
-            CancellationToken cancellationToken = default
-        );
-
-        /// <summary>
         /// Saves multiple aggregates in a single batch operation.
         /// Throws BatchConcurrencyException if any aggregate has a concurrency conflict.
         /// Automatically retries on position conflicts (duplicate global IDs).

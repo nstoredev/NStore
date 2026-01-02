@@ -3,6 +3,7 @@
 using NStore.Core.InMemory;
 using NStore.Core.Persistence;
 using NStore.Core.Snapshots;
+using NStore.Core.Tests.Snapshots;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,7 +19,7 @@ namespace NStore.Domain.Tests
         protected IPersistence _persistence;
         protected IPersistence Persistence => _persistence ?? (_persistence = CreatePersistence());
         protected IAggregateFactory AggregateFactory { get; set; }
-        protected ISnapshotStore SnapshotStore { get; set; }
+        protected ISnapshotBatchStore SnapshotBatchStore { get; set; }
         private IBatchRepository _batchRepository;
         protected IBatchRepository BatchRepository => _batchRepository ?? (_batchRepository = CreateBatchRepository());
 
@@ -48,7 +49,7 @@ namespace NStore.Domain.Tests
                 AggregateFactory,
                 multiReader,
                 enhancedPersistence,
-                SnapshotStore
+                SnapshotBatchStore
             );
         }
     }
@@ -353,9 +354,12 @@ namespace NStore.Domain.Tests
 
     public class batch_with_snapshots : BaseBatchRepositoryTest
     {
+        private DefaultSnapshotStore _snapshotStore;
+
         public batch_with_snapshots()
         {
-            SnapshotStore = new DefaultSnapshotStore(new InMemoryPersistence(new InMemoryPersistenceOptions()));
+            _snapshotStore = new DefaultSnapshotStore(new InMemoryPersistence(new InMemoryPersistenceOptions()));
+            SnapshotBatchStore = new DefaultSnapshotBatchStore(_snapshotStore);
 
             Persistence.AppendAsync("Ticket_1", 1, new Changeset(1, new object[] { new TicketSold() })).Wait();
             Persistence.AppendAsync("Ticket_1", 2, new Changeset(2, new object[] { new TicketRefunded() })).Wait();
@@ -386,8 +390,8 @@ namespace NStore.Domain.Tests
 
             await BatchRepository.SaveManyAsync(tickets.Values, "save_snap").ConfigureAwait(false);
 
-            var snapshot1 = await SnapshotStore.GetAsync("Ticket_1", int.MaxValue).ConfigureAwait(false);
-            var snapshot2 = await SnapshotStore.GetAsync("Ticket_2", int.MaxValue).ConfigureAwait(false);
+            var snapshot1 = await _snapshotStore.GetAsync("Ticket_1", int.MaxValue).ConfigureAwait(false);
+            var snapshot2 = await _snapshotStore.GetAsync("Ticket_2", int.MaxValue).ConfigureAwait(false);
 
             Assert.NotNull(snapshot1);
             Assert.Equal(3, snapshot1.SourceVersion);
@@ -426,38 +430,15 @@ namespace NStore.Domain.Tests
     public class batch_with_mixed_aggregate_types : BaseBatchRepositoryTest
     {
         [Fact]
-        public async Task can_load_different_aggregate_types()
-        {
-            var requests = new[]
-            {
-                (typeof(Ticket), "Ticket_1"),
-                (typeof(CounterAggregate), "Counter_1"),
-                (typeof(Ticket), "Ticket_2")
-            };
-
-            var aggregates = await BatchRepository.GetManyByIdAsync(requests).ConfigureAwait(false);
-
-            Assert.Equal(3, aggregates.Count);
-            Assert.IsType<Ticket>(aggregates["Ticket_1"]);
-            Assert.IsType<CounterAggregate>(aggregates["Counter_1"]);
-            Assert.IsType<Ticket>(aggregates["Ticket_2"]);
-        }
-
-        [Fact]
         public async Task can_save_different_aggregate_types()
         {
-            var requests = new[]
-            {
-                (typeof(Ticket), "Ticket_1"),
-                (typeof(CounterAggregate), "Counter_1")
-            };
+            var tickets = await BatchRepository.GetManyByIdAsync<Ticket>(new[] { "Ticket_1" }).ConfigureAwait(false);
+            var counters = await BatchRepository.GetManyByIdAsync<CounterAggregate>(new[] { "Counter_1" }).ConfigureAwait(false);
 
-            var aggregates = await BatchRepository.GetManyByIdAsync(requests).ConfigureAwait(false);
+            tickets["Ticket_1"].Sale();
+            counters["Counter_1"].Increment();
 
-            ((Ticket)aggregates["Ticket_1"]).Sale();
-            ((CounterAggregate)aggregates["Counter_1"]).Increment();
-
-            await BatchRepository.SaveManyAsync(aggregates.Values, "op_1").ConfigureAwait(false);
+            await BatchRepository.SaveManyAsync(new IAggregate[] { tickets["Ticket_1"], counters["Counter_1"] }, "op_1").ConfigureAwait(false);
 
             var chunk1 = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
             var chunk2 = await Persistence.ReadSingleBackwardAsync("Counter_1").ConfigureAwait(false);
