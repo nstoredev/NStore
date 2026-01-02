@@ -68,7 +68,7 @@ namespace NStore.Core.Snapshots
         /// </code>
         /// </para>
         /// </remarks>
-        Task<IDictionary<string, SnapshotInfo>> GetManyAsync(
+        Task<IReadOnlyDictionary<string, SnapshotInfo>> GetManyAsync(
             IEnumerable<string> snapshotPartitionIds,
             CancellationToken cancellationToken
         );
@@ -103,7 +103,7 @@ namespace NStore.Core.Snapshots
         /// </para>
         /// </remarks>
         Task AddManyAsync(
-            IDictionary<string, SnapshotInfo> snapshots,
+            IReadOnlyDictionary<string, SnapshotInfo> snapshots,
             CancellationToken cancellationToken
         );
     }

@@ -68,7 +68,7 @@ namespace NStore.Core.Snapshots
         /// </para>
         /// </remarks>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="snapshotPartitionIds"/> is null.</exception>
-        public async Task<IDictionary<string, SnapshotInfo>> GetManyAsync(
+        public async Task<IReadOnlyDictionary<string, SnapshotInfo>> GetManyAsync(
             IEnumerable<string> snapshotPartitionIds,
             CancellationToken cancellationToken)
         {
@@ -125,7 +125,7 @@ namespace NStore.Core.Snapshots
         /// </remarks>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="snapshots"/> is null.</exception>
         public async Task AddManyAsync(
-            IDictionary<string, SnapshotInfo> snapshots,
+            IReadOnlyDictionary<string, SnapshotInfo> snapshots,
             CancellationToken cancellationToken)
         {
             if (snapshots == null)
