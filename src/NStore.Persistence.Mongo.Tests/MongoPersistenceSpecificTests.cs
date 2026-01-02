@@ -319,4 +319,128 @@ namespace NStore.Persistence.Mongo.Tests
             Assert.Equal(0L, sequenceDocument["LastValue"].AsInt64);
         }
     }
+
+    public abstract class batch_append_with_position_conflict_base : BasePersistenceTest
+    {
+        protected internal override MongoPersistenceOptions GetMongoPersistenceOptions()
+        {
+            var options = base.GetMongoPersistenceOptions();
+            options.UseLocalSequence = GetUseLocalSequence();
+            options.SequenceCollectionName = "sequence_batch_test";
+            return options;
+        }
+
+        protected abstract bool GetUseLocalSequence();
+
+        [Fact]
+        public async Task should_retry_only_failed_chunks_on_position_conflict()
+        {
+            if (Batcher == null)
+                return;
+
+            // Create a second store to simulate concurrent writes
+            var store2 = Create(false);
+
+            var partition1 = Guid.NewGuid().ToString();
+            var partition2 = Guid.NewGuid().ToString();
+
+            // First write to establish position
+            await Store.AppendAsync(partition1, 1, new { data = "first" }).ConfigureAwait(false);
+
+            // Prepare batch jobs
+            var jobs = new[]
+            {
+                new WriteJob(partition1, 2, new { data = "job1" }, null),
+                new WriteJob(partition2, 1, new { data = "job2" }, null),
+                new WriteJob(partition1, 3, new { data = "job3" }, null),
+                new WriteJob(partition2, 2, new { data = "job4" }, null),
+            };
+
+            // Simulate position conflict by writing with store2 during the batch operation
+            // This will cause some positions to be already taken
+            var writeTask = Task.Run(async () =>
+            {
+                await Task.Delay(50).ConfigureAwait(false);
+                await store2.AppendAsync(partition2, 3, new { data = "concurrent" }).ConfigureAwait(false);
+            });
+
+            await Batcher.AppendBatchAsync(jobs, CancellationToken.None).ConfigureAwait(false);
+            await writeTask.ConfigureAwait(false);
+
+            // All jobs should eventually succeed
+            Assert.All(jobs, job => Assert.Equal(WriteJob.WriteResult.Committed, job.Result));
+            Assert.All(jobs, job => Assert.True(job.Position > 0));
+
+            // Verify all chunks are in the database
+            var chunk1 = await Store.ReadSingleBackwardAsync(partition1, 2, CancellationToken.None);
+            var chunk2 = await Store.ReadSingleBackwardAsync(partition2, 1, CancellationToken.None);
+            var chunk3 = await Store.ReadSingleBackwardAsync(partition1, 3, CancellationToken.None);
+            var chunk4 = await Store.ReadSingleBackwardAsync(partition2, 2, CancellationToken.None);
+
+            Assert.NotNull(chunk1);
+            Assert.NotNull(chunk2);
+            Assert.NotNull(chunk3);
+            Assert.NotNull(chunk4);
+        }
+
+        [Fact]
+        public async Task should_handle_mixed_failures_correctly()
+        {
+            if (Batcher == null)
+                return;
+
+            var partition = Guid.NewGuid().ToString();
+
+            // First write to establish baseline
+            await Store.AppendAsync(partition, 1, new { data = "first" }).ConfigureAwait(false);
+
+            var jobs = new[]
+            {
+                new WriteJob(partition, 2, new { data = "job1" }, null),
+                new WriteJob(partition, 2, new { data = "duplicate_index" }, null), // Will fail with DuplicatedIndex
+                new WriteJob(partition, 3, new { data = "job3" }, "op1"),
+                new WriteJob(partition, 4, new { data = "job4" }, "op1"), // Will fail with DuplicatedOperation
+            };
+
+            await Batcher.AppendBatchAsync(jobs, CancellationToken.None).ConfigureAwait(false);
+
+            // Check results
+            Assert.True(jobs[0].Position > 0);
+            Assert.Equal(WriteJob.WriteResult.Committed, jobs[0].Result);
+
+            Assert.Equal(0, jobs[1].Position);
+            Assert.Equal(WriteJob.WriteResult.DuplicatedIndex, jobs[1].Result);
+
+            Assert.True(jobs[2].Position > 0);
+            Assert.Equal(WriteJob.WriteResult.Committed, jobs[2].Result);
+
+            Assert.Equal(0, jobs[3].Position);
+            Assert.Equal(WriteJob.WriteResult.DuplicatedOperation, jobs[3].Result);
+
+            // Verify correct data in database
+            var chunk2 = await Store.ReadSingleBackwardAsync(partition, 2, CancellationToken.None);
+            var chunk3 = await Store.ReadSingleBackwardAsync(partition, 3, CancellationToken.None);
+
+            Assert.NotNull(chunk2);
+            Assert.NotNull(chunk3);
+            Assert.Equal("job1", ((dynamic)chunk2.Payload).data);
+            Assert.Equal("job3", ((dynamic)chunk3.Payload).data);
+        }
+    }
+
+    public class batch_append_with_position_conflict_local_sequence : batch_append_with_position_conflict_base
+    {
+        protected override bool GetUseLocalSequence()
+        {
+            return true;
+        }
+    }
+
+    public class batch_append_with_position_conflict_db_sequence : batch_append_with_position_conflict_base
+    {
+        protected override bool GetUseLocalSequence()
+        {
+            return false;
+        }
+    }
 }

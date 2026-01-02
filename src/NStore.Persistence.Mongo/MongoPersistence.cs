@@ -29,6 +29,7 @@ namespace NStore.Persistence.Mongo
     public class MongoPersistence<TChunk> : IMongoPersistence, IEnhancedPersistence
         where TChunk : class, IMongoChunk, new()
     {
+        private record struct ChunkJobMapping(TChunk Chunk, int JobIndex);
         private IMongoDatabase _partitionsDb;
         private IMongoDatabase _countersDb;
 
@@ -956,13 +957,15 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
 
         public async Task AppendBatchAsync(WriteJob[] queue, CancellationToken cancellationToken)
         {
+            int retry = 0;
             var insertCount = queue.Length;
             var lastId = await GetNextId(insertCount, cancellationToken)
                 .ConfigureAwait(false);
 
             var firstId = lastId - insertCount + 1;
 
-            var chunks = new TChunk[insertCount];
+            // Create a list to track which chunks correspond to which jobs
+            var chunkMappings = new List<ChunkJobMapping>(insertCount);
 
             for (var currentIdx = 0; currentIdx < insertCount; currentIdx++)
             {
@@ -978,7 +981,7 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
                     current.OperationId ?? Guid.NewGuid().ToString()
                 );
 
-                chunks[currentIdx] = chunk;
+                chunkMappings.Add(new ChunkJobMapping(chunk, currentIdx));
             }
 
             var options = new InsertManyOptions()
@@ -986,47 +989,150 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
                 IsOrdered = false,
             };
 
-            try
+            while (true)
             {
-                await _chunks
-                    .InsertManyAsync(chunks, options, cancellationToken)
-                    .ConfigureAwait(false);
-            }
-            catch (MongoBulkWriteException<TChunk> e)
-            {
-                foreach (var err in e.WriteErrors)
+                try
                 {
-                    if (err.Category == ServerErrorCategory.DuplicateKey)
-                    {
-#if NET8_0_OR_GREATER
-                        var errorMessageSpan = err.Message.AsSpan();
-                        if (errorMessageSpan.Contains(PartitionIndexIdx.AsSpan(), StringComparison.Ordinal))
-#else
-                        if (err.Message.Contains(PartitionIndexIdx))
-#endif
-                        {
-                            queue[err.Index].Failed(WriteJob.WriteResult.DuplicatedIndex);
-                            continue;
-                        }
+                    await _chunks
+                        .InsertManyAsync(chunkMappings.Select(m => m.Chunk).ToArray(), options, cancellationToken)
+                        .ConfigureAwait(false);
 
-#if NET8_0_OR_GREATER
-                        if (errorMessageSpan.Contains(PartitionOperationIdx.AsSpan(), StringComparison.Ordinal))
-#else
-                        if (err.Message.Contains(PartitionOperationIdx))
-#endif
+                    // All succeeded, mark remaining jobs as committed
+                    foreach (var mapping in chunkMappings)
+                    {
+                        if (queue[mapping.JobIndex].Result == WriteJob.WriteResult.None)
                         {
-                            queue[err.Index].Failed(WriteJob.WriteResult.DuplicatedOperation);
+                            queue[mapping.JobIndex].Succeeded(mapping.Chunk);
                         }
                     }
+                    break;
                 }
-            }
-
-            for (var index = 0; index < queue.Length; index++)
-            {
-                var writeJob = queue[index];
-                if (writeJob.Result == WriteJob.WriteResult.None)
+                catch (MongoBulkWriteException<TChunk> e)
                 {
-                    writeJob.Succeeded(chunks[index]);
+                    var hasPositionError = false;
+                    var failedIndices = new HashSet<int>();
+
+                    foreach (var err in e.WriteErrors)
+                    {
+                        // Map error index back to job index
+                        var jobIndex = chunkMappings[err.Index].JobIndex;
+
+                        if (err.Category == ServerErrorCategory.DuplicateKey)
+                        {
+#if NET8_0_OR_GREATER
+                            var errorMessageSpan = err.Message.AsSpan();
+                            if (errorMessageSpan.Contains(PartitionIndexIdx.AsSpan(), StringComparison.Ordinal))
+#else
+                            if (err.Message.Contains(PartitionIndexIdx))
+#endif
+                            {
+                                queue[jobIndex].Failed(WriteJob.WriteResult.DuplicatedIndex);
+                                failedIndices.Add(err.Index);
+                                continue;
+                            }
+
+#if NET8_0_OR_GREATER
+                            if (errorMessageSpan.Contains(PartitionOperationIdx.AsSpan(), StringComparison.Ordinal))
+#else
+                            if (err.Message.Contains(PartitionOperationIdx))
+#endif
+                            {
+                                queue[jobIndex].Failed(WriteJob.WriteResult.DuplicatedOperation);
+                                failedIndices.Add(err.Index);
+                                continue;
+                            }
+
+#if NET8_0_OR_GREATER
+                            if (errorMessageSpan.Contains("_id_".AsSpan(), StringComparison.Ordinal))
+#else
+                            if (err.Message.Contains("_id_"))
+#endif
+                            {
+                                queue[jobIndex].Failed(WriteJob.WriteResult.DuplicatedPosition);
+                                failedIndices.Add(err.Index);
+                                hasPositionError = true;
+                                continue;
+                            }
+                        }
+
+                        // Any other error type marks the job as failed
+                        queue[jobIndex].Failed(WriteJob.WriteResult.Failed);
+                        failedIndices.Add(err.Index);
+                    }
+
+                    // Mark successfully written chunks
+                    for (var i = 0; i < chunkMappings.Count; i++)
+                    {
+                        if (!failedIndices.Contains(i))
+                        {
+                            var mapping = chunkMappings[i];
+                            if (queue[mapping.JobIndex].Result == WriteJob.WriteResult.None)
+                            {
+                                queue[mapping.JobIndex].Succeeded(mapping.Chunk);
+                            }
+                        }
+                    }
+
+                    // Circuit breaker to prevent infinite retries
+                    if (retry++ > 100)
+                    {
+                        _logger.LogError($"Error During AppendBatchAsync. Reached number of max {retry} retry count");
+                        break;
+                    }
+
+                    if (hasPositionError)
+                    {
+                        // Reload sequence and prepare retry for failed chunks only
+                        _logger.LogWarning($@"Error writing batch - Some positions were already taken. 
+Operation will be retried for failed chunks only. 
+If you see too many of this kind of errors, consider disabling UseLocalSequence because multiple processes are using the very same counter.");
+
+                        await ReloadSequence(cancellationToken).ConfigureAwait(false);
+
+                        // Build new list with only jobs that have DuplicatedPosition
+                        var retryMappings = new List<ChunkJobMapping>();
+                        for (var i = 0; i < queue.Length; i++)
+                        {
+                            if (queue[i].Result == WriteJob.WriteResult.DuplicatedPosition)
+                            {
+                                // Reset the result to None for retry
+                                queue[i].Failed(WriteJob.WriteResult.None);
+                                retryMappings.Add(new ChunkJobMapping(null, i));
+                            }
+                        }
+
+                        if (retryMappings.Count == 0)
+                        {
+                            break;
+                        }
+
+                        // Get new positions for failed chunks
+                        var newLastId = await GetNextId(retryMappings.Count, cancellationToken).ConfigureAwait(false);
+                        var newFirstId = newLastId - retryMappings.Count + 1;
+
+                        // Create new chunks with new positions
+                        for (var i = 0; i < retryMappings.Count; i++)
+                        {
+                            var jobIndex = retryMappings[i].JobIndex;
+                            var job = queue[jobIndex];
+
+                            var newChunk = new TChunk();
+                            newChunk.Init(
+                                newFirstId + i,
+                                job.PartitionId,
+                                job.Index,
+                                _mongoPayloadSerializer.Serialize(job.Payload),
+                                job.OperationId
+                            );
+
+                            retryMappings[i] = new ChunkJobMapping(newChunk, jobIndex);
+                        }
+
+                        chunkMappings = retryMappings;
+                        continue;
+                    }
+
+                    break;
                 }
             }
         }
