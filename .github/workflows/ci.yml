@@ -66,4 +66,10 @@ jobs:
       with:
         name: nuget-packages
         path: artifacts/NuGet
+    
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: TestResults
+        path: TestResults
 

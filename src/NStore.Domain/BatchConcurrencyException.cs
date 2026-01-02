@@ -56,11 +56,6 @@ namespace NStore.Domain
         ConcurrencyConflict,
 
         /// <summary>
-        /// Duplicate operation ID - operation was already executed (idempotency)
-        /// </summary>
-        DuplicateOperation,
-
-        /// <summary>
         /// Generic failure not covered by other reasons
         /// </summary>
         Failed

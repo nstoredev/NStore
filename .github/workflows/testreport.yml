@@ -1,7 +1,7 @@
 name: 'Test Report'
 on:
   workflow_run:
-    workflows: ['SonarCloud']                     # runs after CI workflow
+    workflows: ['NStore CI']                     # runs after CI workflow
     types:
       - completed
 permissions:
