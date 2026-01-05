@@ -25,8 +25,8 @@ namespace NStore.Domain
         ) where T : IAggregate;
 
         /// <summary>
-        /// Saves multiple aggregates in a single batch operation.
-        /// Throws BatchConcurrencyException if any aggregate has a concurrency conflict.
+        /// Saves multiple aggregates in a single batch operation and returns a `BatchSaveResult` describing per-aggregate outcomes.
+        /// Throws BatchConcurrencyException if any aggregate has a concurrency conflict (per-aggregate result population will be implemented later).
         /// Automatically retries on position conflicts (duplicate global IDs).
         /// </summary>
         /// <param name="aggregates">Collection of aggregates to save</param>
@@ -38,7 +38,7 @@ namespace NStore.Domain
         /// <param name="headers">Optional action to add headers to changesets</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <exception cref="BatchConcurrencyException">Thrown when one or more aggregates have concurrency conflicts</exception>
-        Task SaveManyAsync(
+        Task<BatchSaveResult> SaveManyAsync(
             IEnumerable<IAggregate> aggregates,
             string operationId,
             Action<IHeadersAccessor> headers = null,

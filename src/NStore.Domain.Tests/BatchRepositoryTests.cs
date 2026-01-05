@@ -81,7 +81,8 @@ namespace NStore.Domain.Tests
         [Fact]
         public async Task saving_empty_batch_should_not_throw()
         {
-            await BatchRepository.SaveManyAsync(new IAggregate[0], "op_1").ConfigureAwait(false);
+            var result = await BatchRepository.SaveManyAsync(new IAggregate[0], "op_1").ConfigureAwait(false);
+            Assert.NotNull(result);
             // Should complete without error
         }
 
@@ -91,7 +92,8 @@ namespace NStore.Domain.Tests
             var tickets = await BatchRepository.GetManyByIdAsync<Ticket>(new[] { "Ticket_1" }).ConfigureAwait(false);
             tickets["Ticket_1"].Sale();
 
-            await BatchRepository.SaveManyAsync(tickets.Values, "op_1").ConfigureAwait(false);
+            var result = await BatchRepository.SaveManyAsync(tickets.Values, "op_1").ConfigureAwait(false);
+            Assert.NotNull(result);
 
             var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
             Assert.NotNull(chunk);
@@ -109,7 +111,8 @@ namespace NStore.Domain.Tests
                 ticket.Sale();
             }
 
-            await BatchRepository.SaveManyAsync(tickets.Values, "op_1").ConfigureAwait(false);
+            var result = await BatchRepository.SaveManyAsync(tickets.Values, "op_1").ConfigureAwait(false);
+            Assert.NotNull(result);
 
             foreach (var id in ids)
             {
@@ -124,7 +127,8 @@ namespace NStore.Domain.Tests
         {
             var tickets = await BatchRepository.GetManyByIdAsync<Ticket>(new[] { "Ticket_1", "Ticket_2" }).ConfigureAwait(false);
 
-            await BatchRepository.SaveManyAsync(tickets.Values, "op_1").ConfigureAwait(false);
+            var result = await BatchRepository.SaveManyAsync(tickets.Values, "op_1").ConfigureAwait(false);
+            Assert.NotNull(result);
 
             var chunk1 = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
             var chunk2 = await Persistence.ReadSingleBackwardAsync("Ticket_2").ConfigureAwait(false);
@@ -141,7 +145,8 @@ namespace NStore.Domain.Tests
             // Ticket_2 unchanged
             tickets["Ticket_3"].Sale();
 
-            await BatchRepository.SaveManyAsync(tickets.Values, "op_1").ConfigureAwait(false);
+            var result = await BatchRepository.SaveManyAsync(tickets.Values, "op_1").ConfigureAwait(false);
+            Assert.NotNull(result);
 
             Assert.NotNull(await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false));
             Assert.Null(await Persistence.ReadSingleBackwardAsync("Ticket_2").ConfigureAwait(false));
@@ -207,7 +212,8 @@ namespace NStore.Domain.Tests
             tickets["Ticket_1"].DoSomething();
             tickets["Ticket_2"].Refund();
 
-            await BatchRepository.SaveManyAsync(tickets.Values, "op_1").ConfigureAwait(false);
+            var result = await BatchRepository.SaveManyAsync(tickets.Values, "op_1").ConfigureAwait(false);
+            Assert.NotNull(result);
 
             var chunk1 = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
             var chunk2 = await Persistence.ReadSingleBackwardAsync("Ticket_2").ConfigureAwait(false);
@@ -238,7 +244,8 @@ namespace NStore.Domain.Tests
             // Setup initial state
             var tickets = await BatchRepository.GetManyByIdAsync<Ticket>(new[] { "Ticket_1" }).ConfigureAwait(false);
             tickets["Ticket_1"].Sale();
-            await BatchRepository.SaveManyAsync(tickets.Values, "initial").ConfigureAwait(false);
+            var initResult = await BatchRepository.SaveManyAsync(tickets.Values, "initial").ConfigureAwait(false);
+            Assert.NotNull(initResult);
 
             // Load same aggregate in two repositories
             var repo1 = CreateBatchRepository();
@@ -249,7 +256,8 @@ namespace NStore.Domain.Tests
 
             // First repo saves successfully
             tickets1["Ticket_1"].DoSomething();
-            await repo1.SaveManyAsync(tickets1.Values, Guid.NewGuid().ToString()).ConfigureAwait(false);
+            var save1 = await repo1.SaveManyAsync(tickets1.Values, Guid.NewGuid().ToString()).ConfigureAwait(false);
+            Assert.NotNull(save1);
 
             // Second repo should fail with concurrency exception
             tickets2["Ticket_1"].DoSomething();
@@ -275,7 +283,8 @@ namespace NStore.Domain.Tests
             {
                 ticket.Sale();
             }
-            await BatchRepository.SaveManyAsync(tickets.Values, "initial").ConfigureAwait(false);
+            var initAll = await BatchRepository.SaveManyAsync(tickets.Values, "initial").ConfigureAwait(false);
+            Assert.NotNull(initAll);
 
             // Load in two repositories
             var repo1 = CreateBatchRepository();
@@ -319,7 +328,8 @@ namespace NStore.Domain.Tests
             // Setup initial state
             var tickets = await BatchRepository.GetManyByIdAsync<Ticket>(new[] { "Ticket_1" }).ConfigureAwait(false);
             tickets["Ticket_1"].Sale();
-            await BatchRepository.SaveManyAsync(tickets.Values, "initial").ConfigureAwait(false);
+            var init = await BatchRepository.SaveManyAsync(tickets.Values, "initial").ConfigureAwait(false);
+            Assert.NotNull(init);
 
             var repo1 = CreateBatchRepository();
             var repo2 = CreateBatchRepository();
@@ -328,7 +338,8 @@ namespace NStore.Domain.Tests
             var tickets2 = await repo2.GetManyByIdAsync<Ticket>(new[] { "Ticket_1" }).ConfigureAwait(false);
 
             tickets1["Ticket_1"].DoSomething();
-            await repo1.SaveManyAsync(tickets1.Values, Guid.NewGuid().ToString()).ConfigureAwait(false);
+            var save2 = await repo1.SaveManyAsync(tickets1.Values, Guid.NewGuid().ToString()).ConfigureAwait(false);
+            Assert.NotNull(save2);
 
             tickets2["Ticket_1"].DoSomething();
             await Assert.ThrowsAsync<BatchConcurrencyException>(() =>
@@ -339,7 +350,8 @@ namespace NStore.Domain.Tests
             repo2.Clear();
             var tickets2Retry = await repo2.GetManyByIdAsync<Ticket>(new[] { "Ticket_1" }).ConfigureAwait(false);
             tickets2Retry["Ticket_1"].DoSomething();
-            await repo2.SaveManyAsync(tickets2Retry.Values, Guid.NewGuid().ToString()).ConfigureAwait(false);
+            var retryResult = await repo2.SaveManyAsync(tickets2Retry.Values, Guid.NewGuid().ToString()).ConfigureAwait(false);
+            Assert.NotNull(retryResult);
 
             var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
             Assert.Equal(3, ((Changeset)chunk.Payload).AggregateVersion);
@@ -382,7 +394,8 @@ namespace NStore.Domain.Tests
             tickets["Ticket_1"].DoSomething();
             tickets["Ticket_2"].Refund();
 
-            await BatchRepository.SaveManyAsync(tickets.Values, "save_snap").ConfigureAwait(false);
+            var saveSnapResult = await BatchRepository.SaveManyAsync(tickets.Values, "save_snap").ConfigureAwait(false);
+            Assert.NotNull(saveSnapResult);
 
             var snapshot1 = await _snapshotStore.GetAsync("Ticket_1", int.MaxValue).ConfigureAwait(false);
             var snapshot2 = await _snapshotStore.GetAsync("Ticket_2", int.MaxValue).ConfigureAwait(false);
@@ -404,7 +417,8 @@ namespace NStore.Domain.Tests
 
             tickets["Ticket_1"].DoSomething();
             tickets["Ticket_2"].Refund();
-            await BatchRepository.SaveManyAsync(tickets.Values, "save_snap").ConfigureAwait(false);
+            var saveSnapResult2 = await BatchRepository.SaveManyAsync(tickets.Values, "save_snap").ConfigureAwait(false);
+            Assert.NotNull(saveSnapResult2);
 
             // Add more events
             Persistence.AppendAsync("Ticket_1", 4, new Changeset(4, new object[] { new TicketSomethingHappened() })).Wait();
@@ -432,7 +446,8 @@ namespace NStore.Domain.Tests
             tickets["Ticket_1"].Sale();
             counters["Counter_1"].Increment();
 
-            await BatchRepository.SaveManyAsync(new IAggregate[] { tickets["Ticket_1"], counters["Counter_1"] }, "op_1").ConfigureAwait(false);
+            var result = await BatchRepository.SaveManyAsync(new IAggregate[] { tickets["Ticket_1"], counters["Counter_1"] }, "op_1").ConfigureAwait(false);
+            Assert.NotNull(result);
 
             var chunk1 = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
             var chunk2 = await Persistence.ReadSingleBackwardAsync("Counter_1").ConfigureAwait(false);
@@ -450,7 +465,8 @@ namespace NStore.Domain.Tests
             ((BatchRepository)BatchRepository).PersistEmptyChangeset = true;
 
             var tickets = await BatchRepository.GetManyByIdAsync<Ticket>(new[] { "Ticket_1" }).ConfigureAwait(false);
-            await BatchRepository.SaveManyAsync(tickets.Values, "empty").ConfigureAwait(false);
+            var result = await BatchRepository.SaveManyAsync(tickets.Values, "empty").ConfigureAwait(false);
+            Assert.NotNull(result);
 
             var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
 
@@ -469,7 +485,8 @@ namespace NStore.Domain.Tests
             tickets["Ticket_1"].Sale();
 
             // Save first time
-            await BatchRepository.SaveManyAsync(tickets.Values, "op_123").ConfigureAwait(false);
+            var first = await BatchRepository.SaveManyAsync(tickets.Values, "op_123").ConfigureAwait(false);
+            Assert.NotNull(first);
 
             // Create new repository and load
             var repo2 = CreateBatchRepository();
@@ -477,7 +494,8 @@ namespace NStore.Domain.Tests
             tickets2["Ticket_1"].DoSomething();
 
             // Save with same operation ID - should not throw
-            await repo2.SaveManyAsync(tickets2.Values, "op_123").ConfigureAwait(false);
+            var second = await repo2.SaveManyAsync(tickets2.Values, "op_123").ConfigureAwait(false);
+            Assert.NotNull(second);
 
             // Verify only one changeset was persisted
             var chunks = new List<IChunk>();
