@@ -191,7 +191,7 @@ namespace NStore.Domain
             return result;
         }
 
-        public async Task SaveManyAsync(
+        public async Task<BatchSaveResult> SaveManyAsync(
             IEnumerable<IAggregate> aggregates,
             string operationId,
             Action<IHeadersAccessor> headers = null,
@@ -200,7 +200,7 @@ namespace NStore.Domain
             var aggregatesList = aggregates.ToList();
             if (!aggregatesList.Any())
             {
-                return;
+                return new BatchSaveResult();
             }
 
             // Step 1: Validate all aggregates and prepare write jobs
@@ -270,7 +270,7 @@ namespace NStore.Domain
 
             if (!writeJobs.Any())
             {
-                return;
+                return new BatchSaveResult();
             }
 
             // Step 2: Execute batch append
@@ -346,6 +346,9 @@ namespace NStore.Domain
             {
                 throw new BatchConcurrencyException(failedAggregates, succeededIds);
             }
+
+            // Temporary: return empty result (detailed reporting will be implemented later)
+            return new BatchSaveResult();
         }
 
         public void Clear()
