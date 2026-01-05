@@ -277,14 +277,17 @@ namespace NStore.Domain
             await _persistence.AppendBatchAsync(writeJobs.ToArray(), cancellationToken).ConfigureAwait(false);
 
             // Step 3: Process results and update aggregate states
-            var failedAggregates = new List<AggregateFailureInfo>();
-            var succeededIds = new List<string>();
+            var results = new List<AggregateSaveResult>();
             var snapshotsToSave = new Dictionary<string, SnapshotInfo>();
 
             foreach (var job in writeJobs)
             {
                 var aggregate = aggregateByPartitionId[job.PartitionId];
                 var persister = (IEventSourcedAggregate)aggregate;
+                var saveResult = new AggregateSaveResult
+                {
+                    AggregateId = aggregate.Id
+                };
 
                 switch (job.Result)
                 {
@@ -292,7 +295,10 @@ namespace NStore.Domain
                         // Success - update tracked version and notify aggregate
                         _aggregateVersions[aggregate.Id] = job.Index;
                         persister.Persisted(persister.GetChangeSet());
-                        succeededIds.Add(aggregate.Id);
+                        
+                        saveResult.Succeeded = true;
+                        saveResult.Chunk = job.Chunk;
+                        saveResult.FailureException = null;
 
                         // Collect snapshot if supported
                         if (_snapshotBatchStore != null && aggregate is ISnapshottable snapshottable)
@@ -303,36 +309,44 @@ namespace NStore.Domain
 
                     case WriteJob.WriteResult.DuplicatedIndex:
                         // Optimistic concurrency violation - another process modified this aggregate
-                        failedAggregates.Add(new AggregateFailureInfo(
-                            aggregate.Id,
-                            aggregate.GetType(),
-                            AggregateFailureReason.ConcurrencyConflict
-                        ));
+                        saveResult.Succeeded = false;
+                        saveResult.Chunk = null;
+                        saveResult.FailureException = new BatchConcurrencyException(
+                            new List<AggregateFailureInfo>
+                            {
+                                new AggregateFailureInfo(
+                                    aggregate.Id,
+                                    aggregate.GetType(),
+                                    AggregateFailureReason.ConcurrencyConflict
+                                )
+                            },
+                            new List<string>()
+                        );
                         break;
 
                     case WriteJob.WriteResult.DuplicatedOperation:
                         // Operation was already executed (idempotency check passed) - treat as success
-                        succeededIds.Add(aggregate.Id);
+                        saveResult.Succeeded = true;
+                        saveResult.Chunk = job.Chunk; // May be null for duplicated operations
+                        saveResult.FailureException = null;
                         break;
 
                     case WriteJob.WriteResult.Failed:
                         // Generic failure from persistence layer
-                        failedAggregates.Add(new AggregateFailureInfo(
-                            aggregate.Id,
-                            aggregate.GetType(),
-                            AggregateFailureReason.Failed
-                        ));
+                        saveResult.Succeeded = false;
+                        saveResult.Chunk = null;
+                        saveResult.FailureException = new Exception($"Persistence failed for aggregate {aggregate.Id}");
                         break;
 
                     case WriteJob.WriteResult.DuplicatedPosition:
                         // Position conflict after retry limit exceeded
-                        failedAggregates.Add(new AggregateFailureInfo(
-                            aggregate.Id,
-                            aggregate.GetType(),
-                            AggregateFailureReason.Failed
-                        ));
+                        saveResult.Succeeded = false;
+                        saveResult.Chunk = null;
+                        saveResult.FailureException = new Exception($"Position conflict for aggregate {aggregate.Id} after retry limit exceeded");
                         break;
                 }
+
+                results.Add(saveResult);
             }
 
             // Step 4: Save snapshots in batch (best-effort)
@@ -341,14 +355,11 @@ namespace NStore.Domain
                 await _snapshotBatchStore.AddManyAsync(snapshotsToSave, cancellationToken).ConfigureAwait(false);
             }
 
-            // Step 5: Throw exception if there were any failures
-            if (failedAggregates.Any())
+            // Step 5: Return batch save result with all aggregate results
+            return new BatchSaveResult
             {
-                throw new BatchConcurrencyException(failedAggregates, succeededIds);
-            }
-
-            // Temporary: return empty result (detailed reporting will be implemented later)
-            return new BatchSaveResult();
+                Results = results
+            };
         }
 
         public void Clear()

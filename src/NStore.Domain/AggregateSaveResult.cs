@@ -5,9 +5,9 @@ namespace NStore.Domain
 {
     public class AggregateSaveResult
     {
-        public string AggregateId { get; set; }
-        public bool Succeeded { get; set; }
-        public Exception FailureException { get; set; }
-        public IChunk Chunk { get; set; }
+        public string AggregateId { get; internal set; }
+        public bool Succeeded { get; internal set; }
+        public Exception FailureException { get; internal set; }
+        public IChunk Chunk { get; internal set; }
     }
 }

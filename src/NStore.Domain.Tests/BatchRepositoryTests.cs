@@ -3,6 +3,7 @@ using NStore.Core.Persistence;
 using NStore.Core.Snapshots;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -259,16 +260,19 @@ namespace NStore.Domain.Tests
             var save1 = await repo1.SaveManyAsync(tickets1.Values, Guid.NewGuid().ToString()).ConfigureAwait(false);
             Assert.NotNull(save1);
 
-            // Second repo should fail with concurrency exception
+            // Second repo should report concurrency conflict in result
             tickets2["Ticket_1"].DoSomething();
-            var ex = await Assert.ThrowsAsync<BatchConcurrencyException>(() =>
-                repo2.SaveManyAsync(tickets2.Values, Guid.NewGuid().ToString())
-            ).ConfigureAwait(false);
+            var result = await repo2.SaveManyAsync(tickets2.Values, Guid.NewGuid().ToString()).ConfigureAwait(false);
 
-            Assert.Single(ex.FailedAggregates);
-            Assert.Equal("Ticket_1", ex.FailedAggregates[0].AggregateId);
-            Assert.Equal(AggregateFailureReason.ConcurrencyConflict, ex.FailedAggregates[0].Reason);
-            Assert.Empty(ex.SucceededAggregateIds);
+            Assert.NotNull(result);
+            Assert.False(result.Success);
+            Assert.True(result.HasFailures);
+            Assert.Single(result.Results);
+            var failedResult = result.Results[0];
+            Assert.Equal("Ticket_1", failedResult.AggregateId);
+            Assert.False(failedResult.Succeeded);
+            Assert.NotNull(failedResult.FailureException);
+            Assert.Null(failedResult.Chunk);
         }
 
         [Fact]
@@ -301,25 +305,34 @@ namespace NStore.Domain.Tests
             // Repo1 modifies Ticket_1 and Ticket_2
             tickets1["Ticket_1"].DoSomething();
             tickets1["Ticket_2"].DoSomething();
-            await repo1.SaveManyAsync(tickets1.Values, Guid.NewGuid().ToString()).ConfigureAwait(false);
+            var save2 = await repo1.SaveManyAsync(tickets1.Values, Guid.NewGuid().ToString()).ConfigureAwait(false);
+            Assert.NotNull(save2);
 
-            // Repo2 tries to modify all three - should fail on Ticket_1 and Ticket_2
+            // Repo2 tries to modify all three - should report partial success
             tickets2["Ticket_1"].DoSomething();
             tickets2["Ticket_2"].DoSomething();
             tickets2["Ticket_3"].DoSomething();
 
-            var ex = await Assert.ThrowsAsync<BatchConcurrencyException>(() =>
-                repo2.SaveManyAsync(tickets2.Values, Guid.NewGuid().ToString())
-            ).ConfigureAwait(false);
+            var result = await repo2.SaveManyAsync(tickets2.Values, Guid.NewGuid().ToString()).ConfigureAwait(false);
 
-            Assert.Equal(2, ex.FailedAggregates.Count);
-            Assert.Contains(ex.FailedAggregates, f => f.AggregateId == "Ticket_1");
-            Assert.Contains(ex.FailedAggregates, f => f.AggregateId == "Ticket_2");
-            Assert.All(ex.FailedAggregates, f => Assert.Equal(AggregateFailureReason.ConcurrencyConflict, f.Reason));
+            Assert.NotNull(result);
+            Assert.False(result.Success);
+            Assert.True(result.HasFailures);
+            Assert.Equal(3, result.Results.Count);
+
+            var failed = result.Results.Where(r => !r.Succeeded).ToList();
+            var succeeded = result.Results.Where(r => r.Succeeded).ToList();
+
+            Assert.Equal(2, failed.Count); // Ticket_1 and Ticket_2 failed
+            Assert.Contains(failed, f => f.AggregateId == "Ticket_1");
+            Assert.Contains(failed, f => f.AggregateId == "Ticket_2");
+            Assert.All(failed, f => Assert.NotNull(f.FailureException));
+            Assert.All(failed, f => Assert.Null(f.Chunk));
 
             // Ticket_3 should have succeeded
-            Assert.Single(ex.SucceededAggregateIds);
-            Assert.Contains("Ticket_3", ex.SucceededAggregateIds);
+            Assert.Single(succeeded);
+            Assert.Contains(succeeded, s => s.AggregateId == "Ticket_3");
+            Assert.All(succeeded, s => Assert.NotNull(s.Chunk));
         }
 
         [Fact]
@@ -342,9 +355,8 @@ namespace NStore.Domain.Tests
             Assert.NotNull(save2);
 
             tickets2["Ticket_1"].DoSomething();
-            await Assert.ThrowsAsync<BatchConcurrencyException>(() =>
-                repo2.SaveManyAsync(tickets2.Values, Guid.NewGuid().ToString())
-            ).ConfigureAwait(false);
+            var conflictResult = await repo2.SaveManyAsync(tickets2.Values, Guid.NewGuid().ToString()).ConfigureAwait(false);
+            Assert.False(conflictResult.Success); // Verify conflict happened
 
             // Clear and retry
             repo2.Clear();
