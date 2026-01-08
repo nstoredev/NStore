@@ -61,14 +61,26 @@ namespace NStore.Domain.Tests
         }
 
         [Fact]
-        public async Task loading_single_aggregate_should_return_new_aggregate()
+        public async Task SaveManyAsync_should_report_invariant_failure_when_check_fails()
         {
-            var tickets = await BatchRepository.GetManyByIdAsync<Ticket>(new[] { "Ticket_1" }).ConfigureAwait(false);
+            // Arrange - counter aggregate will return invalid invariant when decremented below zero
+            var counters = await BatchRepository.GetManyByIdAsync<CounterAggregate>(new[] { "Counter_1" }).ConfigureAwait(false);
+            counters["Counter_1"].Decrement(); // now invalid (value becomes -1)
 
-            Assert.Single(tickets);
-            Assert.True(tickets["Ticket_1"].IsNew());
+            // Act
+            var result = await BatchRepository.SaveManyAsync(counters.Values, "inv_op").ConfigureAwait(false);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.False(result.Success);
+            Assert.True(result.HasFailures);
+            Assert.Single(result.Results);
+            var res = result.Results[0];
+            Assert.Equal("Counter_1", res.AggregateId);
+            Assert.False(res.Succeeded);
+            Assert.Equal(AggregateSaveFailureKind.InvariantFailure, res.FailureKind);
+            Assert.Null(res.Chunk);
         }
-
         [Fact]
         public async Task loading_multiple_aggregates_should_return_all_as_new()
         {
@@ -85,6 +97,18 @@ namespace NStore.Domain.Tests
             var result = await BatchRepository.SaveManyAsync(new IAggregate[0], "op_1").ConfigureAwait(false);
             Assert.NotNull(result);
             // Should complete without error
+        }
+
+        [Fact]
+        public async Task SaveManyAsync_should_throw_when_duplicate_aggregates_passed()
+        {
+            // Arrange - load a single aggregate and duplicate it in the input list
+            var tickets = await BatchRepository.GetManyByIdAsync<Ticket>(new[] { "Ticket_1" }).ConfigureAwait(false);
+            var list = tickets.Values.ToList();
+            list.Add(tickets["Ticket_1"]); // duplicate id in input
+
+            // Act / Assert
+            await Assert.ThrowsAsync<ArgumentException>(() => BatchRepository.SaveManyAsync(list, "dup_op")).ConfigureAwait(false);
         }
 
         [Fact]
@@ -271,7 +295,7 @@ namespace NStore.Domain.Tests
             var failedResult = result.Results[0];
             Assert.Equal("Ticket_1", failedResult.AggregateId);
             Assert.False(failedResult.Succeeded);
-            Assert.NotNull(failedResult.FailureException);
+            Assert.Equal(AggregateSaveFailureKind.Concurrency, failedResult.FailureKind);
             Assert.Null(failedResult.Chunk);
         }
 
@@ -326,13 +350,14 @@ namespace NStore.Domain.Tests
             Assert.Equal(2, failed.Count); // Ticket_1 and Ticket_2 failed
             Assert.Contains(failed, f => f.AggregateId == "Ticket_1");
             Assert.Contains(failed, f => f.AggregateId == "Ticket_2");
-            Assert.All(failed, f => Assert.NotNull(f.FailureException));
+            Assert.All(failed, f => Assert.Equal(AggregateSaveFailureKind.Concurrency, f.FailureKind));
             Assert.All(failed, f => Assert.Null(f.Chunk));
 
             // Ticket_3 should have succeeded
             Assert.Single(succeeded);
             Assert.Contains(succeeded, s => s.AggregateId == "Ticket_3");
             Assert.All(succeeded, s => Assert.NotNull(s.Chunk));
+            Assert.All(succeeded, s => Assert.Null(s.FailureKind));
         }
 
         [Fact]
@@ -508,6 +533,10 @@ namespace NStore.Domain.Tests
             // Save with same operation ID - should not throw
             var second = await repo2.SaveManyAsync(tickets2.Values, "op_123").ConfigureAwait(false);
             Assert.NotNull(second);
+            Assert.Single(second.Results);
+            var opResult = second.Results[0];
+            Assert.True(opResult.Succeeded);
+            Assert.Equal(AggregateSaveFailureKind.DuplicatedOperation, opResult.FailureKind);
 
             // Verify only one changeset was persisted
             var chunks = new List<IChunk>();

@@ -1,5 +1,7 @@
 ## vNext
 
+- Added `AggregateSaveFailureKind` and `AggregateSaveResult.FailureKind` to surface categorized per-aggregate save outcomes: `Concurrency`, `GenericFailure`, `DuplicatedPosition`, and `DuplicatedOperation`. Tests updated to assert these values and idempotent saves now report `DuplicatedOperation` when applicable.
+
 ## 0.20.1
 
 - Upgraded MongoDb Driver to 3.4.2.
