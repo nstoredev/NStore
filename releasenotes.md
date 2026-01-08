@@ -1,9 +1,12 @@
 ## vNext
 
+- Added `AggregateSaveFailureKind` and `AggregateSaveResult.FailureKind` to surface categorized per-aggregate save outcomes: `Concurrency`, `GenericFailure`, `DuplicatedPosition`, and `DuplicatedOperation`. Tests updated to assert these values and idempotent saves now report `DuplicatedOperation` when applicable.
+
 ## 0.20.2
 
 - Fixed a potential memory Leak for missing dispose in CancellationTokenSource and ReaderWriterLockSlim.
 - Fix usage of ReadWriteLockSlim to avoid potential deadlocks.
+
 
 ## 0.20.1
 

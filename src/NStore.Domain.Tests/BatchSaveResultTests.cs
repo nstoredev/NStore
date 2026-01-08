@@ -25,9 +25,9 @@ namespace NStore.Domain.Tests
             var res = result.Results[0];
             Assert.Equal("Ticket_1", res.AggregateId);
             Assert.True(res.Succeeded, "Expected aggregate to be succeeded");
-            Assert.Null(res.FailureException);
             Assert.NotNull(res.Chunk);
             Assert.Equal("Ticket_1", res.Chunk.PartitionId);
+            Assert.Null(res.FailureKind);
         }
 
         [Fact]
@@ -49,11 +49,11 @@ namespace NStore.Domain.Tests
             Assert.Equal(3, result.Results.Count);
             Assert.All(result.Results, r => Assert.True(r.Succeeded));
             Assert.All(result.Results, r => Assert.NotNull(r.Chunk));
-            Assert.All(result.Results, r => Assert.Null(r.FailureException));
+            Assert.All(result.Results, r => Assert.Null(r.FailureKind));
         }
 
         [Fact]
-        public async Task SaveManyAsync_should_return_empty_result_when_no_changes()
+        public async Task SaveManyAsync_should_return_unchanged_result_when_no_changes()
         {
             // Arrange
             var tickets = await BatchRepository.GetManyByIdAsync<Ticket>(new[] { "Ticket_1" }).ConfigureAwait(false);
@@ -62,11 +62,16 @@ namespace NStore.Domain.Tests
             // Act
             var result = await BatchRepository.SaveManyAsync(tickets.Values, "no_change_op").ConfigureAwait(false);
 
-            // Assert - TDD expectation: empty result (no write jobs generated)
+            // Assert - TDD expectation: result should include a single Unchanged entry for the aggregate
             Assert.NotNull(result);
             Assert.True(result.Success);
             Assert.False(result.HasFailures);
-            Assert.Empty(result.Results);
+            Assert.Single(result.Results);
+            var res = result.Results[0];
+            Assert.Equal("Ticket_1", res.AggregateId);
+            Assert.True(res.Succeeded);
+            Assert.Null(res.Chunk);
+            Assert.Equal(AggregateSaveFailureKind.Unchanged, res.FailureKind);
         }
 
         [Fact]
@@ -97,8 +102,8 @@ namespace NStore.Domain.Tests
             var res = result.Results[0];
             Assert.Equal("Ticket_1", res.AggregateId);
             Assert.False(res.Succeeded, "Expected aggregate save to fail");
-            Assert.NotNull(res.FailureException);
             Assert.Null(res.Chunk); // No chunk on failure
+            Assert.Equal(AggregateSaveFailureKind.Concurrency, res.FailureKind);
         }
 
         [Fact]
@@ -141,11 +146,11 @@ namespace NStore.Domain.Tests
             Assert.Equal(2, failed.Count); // Ticket_1 and Ticket_2 failed
             Assert.Single(succeeded); // Ticket_3 succeeded
 
-            Assert.All(failed, r => Assert.NotNull(r.FailureException));
             Assert.All(failed, r => Assert.Null(r.Chunk));
+            Assert.All(failed, r => Assert.Equal(AggregateSaveFailureKind.Concurrency, r.FailureKind));
 
-            Assert.All(succeeded, r => Assert.Null(r.FailureException));
             Assert.All(succeeded, r => Assert.NotNull(r.Chunk));
+            Assert.All(succeeded, r => Assert.Null(r.FailureKind));
         }
     }
 }

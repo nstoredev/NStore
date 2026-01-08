@@ -19,7 +19,7 @@ namespace NStore.Domain
         /// <param name="ids">Collection of aggregate IDs to load</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Dictionary mapping aggregate IDs to loaded aggregates. Only successfully loaded aggregates are included.</returns>
-        Task<IDictionary<string, T>> GetManyByIdAsync<T>(
+        Task<IReadOnlyDictionary<string, T>> GetManyByIdAsync<T>(
             IEnumerable<string> ids,
             CancellationToken cancellationToken = default
         ) where T : IAggregate;
@@ -37,7 +37,6 @@ namespace NStore.Domain
         /// request the same batch of operation with the same id for full idempotency.</param>
         /// <param name="headers">Optional action to add headers to changesets</param>
         /// <param name="cancellationToken">Cancellation token</param>
-        /// <exception cref="BatchConcurrencyException">Thrown when one or more aggregates have concurrency conflicts</exception>
         Task<BatchSaveResult> SaveManyAsync(
             IEnumerable<IAggregate> aggregates,
             string operationId,

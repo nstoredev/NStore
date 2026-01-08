@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,8 +22,8 @@ namespace NStore.Domain
         private readonly IEnhancedPersistence _persistence;
         private readonly ISnapshotBatchStore _snapshotBatchStore;
 
-        private readonly IDictionary<string, IAggregate> _trackingAggregates = new Dictionary<string, IAggregate>();
-        private readonly IDictionary<string, long> _aggregateVersions = new Dictionary<string, long>();
+        private readonly ConcurrentDictionary<string, IAggregate> _trackingAggregates = new ConcurrentDictionary<string, IAggregate>();
+        private readonly ConcurrentDictionary<string, long> _aggregateVersions = new ConcurrentDictionary<string, long>();
 
         public bool PersistEmptyChangeset { get; set; } = false;
 
@@ -38,25 +39,28 @@ namespace NStore.Domain
             _snapshotBatchStore = snapshotStore;
         }
 
-        public async Task<IDictionary<string, T>> GetManyByIdAsync<T>(
+        public async Task<IReadOnlyDictionary<string, T>> GetManyByIdAsync<T>(
             IEnumerable<string> ids,
             CancellationToken cancellationToken = default) where T : IAggregate
         {
-            var requestsList = ids.ToList();
-            if (!requestsList.Any())
+            if (!ids.Any())
             {
-                return new Dictionary<string, T>();
+#if NET8_0_OR_GREATER
+                return System.Collections.ObjectModel.ReadOnlyDictionary<string, T>.Empty;
+#else
+                return new ReadOnlyDictionary<string, T>(new Dictionary<string, T>());
+#endif
             }
 
-            var result = new Dictionary<string, T>();
+            var aggregates = new Dictionary<string, T>();
 
             // Step 1: Check tracking cache first
             var idsToLoad = new List<string>();
-            foreach (var id in requestsList)
+            foreach (var id in ids)
             {
                 if (_trackingAggregates.TryGetValue(id, out var cachedAggregate))
                 {
-                    result[id] = (T)cachedAggregate;
+                    aggregates[id] = (T)cachedAggregate;
                 }
                 else
                 {
@@ -64,13 +68,13 @@ namespace NStore.Domain
                 }
             }
 
-            if (!idsToLoad.Any())
+            // all id were already loaded. we can exit.
+            if (idsToLoad.Count == 0)
             {
-                return result;
+                return aggregates;
             }
 
-            // Step 2: Create aggregates
-            var aggregates = new Dictionary<string, T>();
+            // Step 2: Load aggregate with event sourcing.
             foreach (var id in idsToLoad)
             {
                 var aggregate = _factory.Create<T>();
@@ -173,8 +177,6 @@ namespace NStore.Domain
 
                     // Track the current version for optimistic concurrency
                     _aggregateVersions[kvp.Key] = kvp.Value.Version;
-
-                    result[kvp.Key] = kvp.Value;
                 }
                 catch (Exception ex)
                 {
@@ -188,7 +190,7 @@ namespace NStore.Domain
                 throw exceptions.First();
             }
 
-            return result;
+            return aggregates;
         }
 
         public async Task<BatchSaveResult> SaveManyAsync(
@@ -197,62 +199,84 @@ namespace NStore.Domain
             Action<IHeadersAccessor> headers = null,
             CancellationToken cancellationToken = default)
         {
-            var aggregatesList = aggregates.ToList();
-            if (!aggregatesList.Any())
+            if (!aggregates.Any())
             {
-                return new BatchSaveResult();
+                return BatchSaveResult.Empty;
             }
 
             // Step 1: Validate all aggregates and prepare write jobs
             var writeJobs = new List<WriteJob>();
             var aggregateByPartitionId = new Dictionary<string, IAggregate>();
 
-            foreach (var aggregate in aggregatesList)
+            // Check for duplicate aggregate ids in the input - this is not allowed
+            var duplicate = aggregates.GroupBy(a => a.Id).FirstOrDefault(g => g.Count() > 1);
+            if (duplicate != null)
+            {
+                throw new ArgumentException($"Duplicate aggregate id '{duplicate.Key}' passed to SaveManyAsync");
+            }
+
+            // first step is preparing the write jobs for all aggregates to persist in a batch.
+            var listOfAggregateSaveResult = new List<AggregateSaveResult>();
+            foreach (var aggregate in aggregates)
             {
                 // Validate aggregate is tracked by this repository (unless it's a new aggregate)
-                if (!_trackingAggregates.Values.Contains(aggregate) && !aggregate.IsNew)
+                if (!_trackingAggregates.Values.Contains(aggregate))
                 {
-                    throw new RepositoryMismatchException($"Aggregate {aggregate.Id} was not loaded by this batch repository");
+                    if (aggregate.IsNew)
+                    {
+                        _trackingAggregates[aggregate.Id] = aggregate;
+                        _aggregateVersions[aggregate.Id] = 0;
+                    }
+                    else
+                    {
+                        //this operation is not permitted something bad happens.
+                        throw new RepositoryMismatchException($"Aggregate {aggregate.Id} was not loaded by this batch repository");
+                    }
                 }
 
                 var persister = (IEventSourcedAggregate)aggregate;
                 var changeSet = persister.GetChangeSet();
 
-                // Skip empty changesets unless configured to persist them
+                // Skip empty changesets unless configured to persist them; report as Unchanged instead of omitting
                 if (changeSet.IsEmpty() && !PersistEmptyChangeset)
                 {
+                    //we do not need to save the aggregate, just report it as unchanged
+                    listOfAggregateSaveResult.Add(new AggregateSaveResult
+                    {
+                        AggregateId = aggregate.Id,
+                        Succeeded = true,
+                        Chunk = null,
+                        FailureKind = AggregateSaveFailureKind.Unchanged
+                    });
                     continue;
                 }
 
-                // Check invariants if supported
+                // Check invariants if supported - collect failures to report per-aggregate instead of throwing
                 if (aggregate is IInvariantsChecker checker)
                 {
                     var check = checker.CheckInvariants();
-                    check.ThrowIfInvalid();
+                    if (check.IsInvalid)
+                    {
+                        listOfAggregateSaveResult.Add(new AggregateSaveResult
+                        {
+                            AggregateId = aggregate.Id,
+                            Succeeded = false,
+                            Chunk = null,
+                            FailureKind = AggregateSaveFailureKind.InvariantFailure
+                        });
+                        continue;
+                    }
                 }
 
                 // Apply headers if provided
                 headers?.Invoke(changeSet);
 
-                // Determine the current version for optimistic concurrency control
-                long currentVersion;
-                if (aggregate.IsNew)
-                {
-                    // New aggregates start at version 0, will write at index 1
-                    currentVersion = 0;
-                    _aggregateVersions[aggregate.Id] = 0;
-                    _trackingAggregates[aggregate.Id] = aggregate;
-                }
-                else if (_aggregateVersions.TryGetValue(aggregate.Id, out var trackedVersion))
-                {
-                    // Use the tracked version from when we loaded the aggregate
-                    currentVersion = trackedVersion;
-                }
-                else
+                // Determine the current version for optimistic concurrency control 
+                if (!_aggregateVersions.TryGetValue(aggregate.Id, out var currentVersion))
                 {
                     throw new RepositoryMismatchException($"Aggregate {aggregate.Id} version not tracked");
                 }
-
+               
                 // Calculate the next version index to write
                 long desiredVersion = currentVersion + 1;
 
@@ -268,97 +292,82 @@ namespace NStore.Domain
                 aggregateByPartitionId[aggregate.Id] = aggregate;
             }
 
-            if (!writeJobs.Any())
+            if (writeJobs.Count > 0)
             {
-                return new BatchSaveResult();
-            }
+                // Step 2: Execute batch append
+                await _persistence.AppendBatchAsync(writeJobs.ToArray(), cancellationToken).ConfigureAwait(false);
+                var snapshotsToSave = new Dictionary<string, SnapshotInfo>();
 
-            // Step 2: Execute batch append
-            await _persistence.AppendBatchAsync(writeJobs.ToArray(), cancellationToken).ConfigureAwait(false);
-
-            // Step 3: Process results and update aggregate states
-            var results = new List<AggregateSaveResult>();
-            var snapshotsToSave = new Dictionary<string, SnapshotInfo>();
-
-            foreach (var job in writeJobs)
-            {
-                var aggregate = aggregateByPartitionId[job.PartitionId];
-                var persister = (IEventSourcedAggregate)aggregate;
-                var saveResult = new AggregateSaveResult
+                foreach (var job in writeJobs)
                 {
-                    AggregateId = aggregate.Id
-                };
+                    var aggregate = aggregateByPartitionId[job.PartitionId];
+                    var persister = (IEventSourcedAggregate)aggregate;
+                    var saveResult = new AggregateSaveResult
+                    {
+                        AggregateId = aggregate.Id
+                    };
 
-                switch (job.Result)
-                {
-                    case WriteJob.WriteResult.Committed:
-                        // Success - update tracked version and notify aggregate
-                        _aggregateVersions[aggregate.Id] = job.Index;
-                        persister.Persisted(persister.GetChangeSet());
-                        
-                        saveResult.Succeeded = true;
-                        saveResult.Chunk = job.Chunk;
-                        saveResult.FailureException = null;
+                    switch (job.Result)
+                    {
+                        case WriteJob.WriteResult.Committed:
+                            // Success - update tracked version and notify aggregate
+                            _aggregateVersions[aggregate.Id] = job.Index;
+                            persister.Persisted(persister.GetChangeSet());
 
-                        // Collect snapshot if supported
-                        if (_snapshotBatchStore != null && aggregate is ISnapshottable snapshottable)
-                        {
-                            snapshotsToSave[aggregate.Id] = snapshottable.GetSnapshot();
-                        }
-                        break;
+                            saveResult.Succeeded = true;
+                            saveResult.Chunk = job.Chunk;
+                            saveResult.FailureKind = null;
 
-                    case WriteJob.WriteResult.DuplicatedIndex:
-                        // Optimistic concurrency violation - another process modified this aggregate
-                        saveResult.Succeeded = false;
-                        saveResult.Chunk = null;
-                        saveResult.FailureException = new BatchConcurrencyException(
-                            new List<AggregateFailureInfo>
+                            // Collect snapshot if supported
+                            if (_snapshotBatchStore != null && aggregate is ISnapshottable snapshottable)
                             {
-                                new AggregateFailureInfo(
-                                    aggregate.Id,
-                                    aggregate.GetType(),
-                                    AggregateFailureReason.ConcurrencyConflict
-                                )
-                            },
-                            new List<string>()
-                        );
-                        break;
+                                snapshotsToSave[aggregate.Id] = snapshottable.GetSnapshot();
+                            }
+                            break;
 
-                    case WriteJob.WriteResult.DuplicatedOperation:
-                        // Operation was already executed (idempotency check passed) - treat as success
-                        saveResult.Succeeded = true;
-                        saveResult.Chunk = job.Chunk; // May be null for duplicated operations
-                        saveResult.FailureException = null;
-                        break;
+                        case WriteJob.WriteResult.DuplicatedIndex:
+                            // Optimistic concurrency violation - another process modified this aggregate
+                            saveResult.Succeeded = false;
+                            saveResult.Chunk = null;
+                            saveResult.FailureKind = AggregateSaveFailureKind.Concurrency;
+                            break;
 
-                    case WriteJob.WriteResult.Failed:
-                        // Generic failure from persistence layer
-                        saveResult.Succeeded = false;
-                        saveResult.Chunk = null;
-                        saveResult.FailureException = new Exception($"Persistence failed for aggregate {aggregate.Id}");
-                        break;
+                        case WriteJob.WriteResult.DuplicatedOperation:
+                            // Operation was already executed (idempotency check passed) - treat as success
+                            saveResult.Succeeded = true;
+                            saveResult.Chunk = job.Chunk; // May be null for duplicated operations
+                            saveResult.FailureKind = AggregateSaveFailureKind.DuplicatedOperation;
+                            break;
 
-                    case WriteJob.WriteResult.DuplicatedPosition:
-                        // Position conflict after retry limit exceeded
-                        saveResult.Succeeded = false;
-                        saveResult.Chunk = null;
-                        saveResult.FailureException = new Exception($"Position conflict for aggregate {aggregate.Id} after retry limit exceeded");
-                        break;
+                        case WriteJob.WriteResult.Failed:
+                            // Generic failure from persistence layer
+                            saveResult.Succeeded = false;
+                            saveResult.Chunk = null;
+                            saveResult.FailureKind = AggregateSaveFailureKind.GenericFailure;
+                            break;
+
+                        case WriteJob.WriteResult.DuplicatedPosition:
+                            // Position conflict after retry limit exceeded
+                            saveResult.Succeeded = false;
+                            saveResult.Chunk = null;
+                            saveResult.FailureKind = AggregateSaveFailureKind.DuplicatedPosition;
+                            break;
+                    }
+
+                    listOfAggregateSaveResult.Add(saveResult);
                 }
 
-                results.Add(saveResult);
-            }
-
-            // Step 4: Save snapshots in batch (best-effort)
-            if (snapshotsToSave.Count > 0)
-            {
-                await _snapshotBatchStore.AddManyAsync(snapshotsToSave, cancellationToken).ConfigureAwait(false);
+                // Step 4: Save snapshots in batch (best-effort)
+                if (snapshotsToSave.Count > 0)
+                {
+                    await _snapshotBatchStore.AddManyAsync(snapshotsToSave, cancellationToken).ConfigureAwait(false);
+                }
             }
 
             // Step 5: Return batch save result with all aggregate results
             return new BatchSaveResult
             {
-                Results = results
+                Results = listOfAggregateSaveResult
             };
         }
 
