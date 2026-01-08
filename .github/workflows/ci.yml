@@ -13,7 +13,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        dotnet: [ '8.x' ] #, '2.2.301', '3.0.100-preview9-014004' ]
+        dotnet: [ '10.x' ] #, '2.2.301', '3.0.100-preview9-014004' ]
         os: ['ubuntu-latest'] #['windows-latest', 'ubuntu-latest', 'macOS-latest']
     name: Build for .NET ${{ matrix.dotnet }}
     steps:
@@ -26,11 +26,6 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 6.x
-
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: ${{ matrix.dotnet }}
 
     - name: Setup dotnet 10
       uses: actions/setup-dotnet@v1

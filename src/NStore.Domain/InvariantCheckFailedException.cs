@@ -17,9 +17,5 @@ namespace NStore.Domain
         public InvariantCheckFailedException(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-        protected InvariantCheckFailedException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }
