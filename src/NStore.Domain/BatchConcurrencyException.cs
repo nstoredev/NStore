@@ -97,13 +97,6 @@ namespace NStore.Domain
             SucceededAggregateIds = succeededAggregateIds?.ToList() ?? new List<string>();
         }
 
-        protected BatchConcurrencyException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-            FailedAggregates = new List<AggregateFailureInfo>();
-            SucceededAggregateIds = new List<string>();
-        }
-
         private static string BuildMessage(IEnumerable<AggregateFailureInfo> failedAggregates)
         {
             var failures = failedAggregates?.ToList() ?? new List<AggregateFailureInfo>();

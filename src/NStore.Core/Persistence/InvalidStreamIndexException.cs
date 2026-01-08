@@ -25,33 +25,12 @@ namespace NStore.Core.Persistence
         {
         }
 
-        protected InvalidStreamIndexException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-            this.StreamId = info.GetString("StreamId");
-            this.StreamIndex = info.GetInt64("StreamIndex");
-        }
-
         public InvalidStreamIndexException(string message) : base(message)
         {
         }
 
         public InvalidStreamIndexException(string message, Exception innerException) : base(message, innerException)
         {
-        }
-
-        [SecurityPermission(SecurityAction.Demand, SerializationFormatter = true)]
-        public override void GetObjectData(SerializationInfo info, StreamingContext context)
-        {
-            if (info == null)
-            {
-                throw new ArgumentNullException(nameof(info));
-            }
-
-            info.AddValue("StreamId", this.StreamId);
-            info.AddValue("StreamIndex", this.StreamIndex);
-
-            // MUST call through to the base class to let it save its own state
-            base.GetObjectData(info, context);
         }
     }
 }

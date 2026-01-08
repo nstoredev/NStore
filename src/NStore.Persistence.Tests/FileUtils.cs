@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 
+#nullable enable
+
 namespace NStore.Persistence.Tests
 {
     public static class FileUtils
