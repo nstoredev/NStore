@@ -72,7 +72,7 @@ foreach ($tfm in $frameworkList)
             }
 
             Write-Host "Restoring project: $($proj.FullName)"
-            dotnet restore "$($proj.FullName)" -f $tfm
+            dotnet restore "$($proj.FullName)"
             Assert-LastExecution -message "Error restoring project $($proj.FullName) for framework $tfm." -haltExecution $true
 
             Write-Host "Running tests for project: $projName"
