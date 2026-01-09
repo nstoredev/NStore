@@ -8,8 +8,13 @@ permissions:
   contents: read
   actions: read
   checks: write
+
+concurrency:
+  group: test-report-${{ github.event.workflow_run.id }}
+  cancel-in-progress: true
 jobs:
   report:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
     - uses: dorny/test-reporter@v1
