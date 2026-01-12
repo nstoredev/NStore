@@ -618,7 +618,7 @@ namespace NStore.Persistence.Tests
                 HoleDetectionTimeout = 100
             };
 
-            var cts = new CancellationTokenSource(20000);
+            using var cts = new CancellationTokenSource(20000);
 
             await poller.Poll(cts.Token).ConfigureAwait(false);
             await poller.Poll(cts.Token).ConfigureAwait(false);
@@ -854,7 +854,7 @@ namespace NStore.Persistence.Tests
 
             // read to end
             _logger.LogDebug("Polling to end");
-            var timeout = new CancellationTokenSource(60000);
+            using var timeout = new CancellationTokenSource(60000);
             await poller.Poll(timeout.Token).ConfigureAwait(false);
             _logger.LogDebug("Polling to end - done");
 

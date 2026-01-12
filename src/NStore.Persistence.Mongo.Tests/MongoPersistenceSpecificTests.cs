@@ -129,7 +129,7 @@ namespace NStore.Persistence.Mongo.Tests
         public async Task filler_should_regenerate_operation_id()
         {
             await Store.AppendAsync("::empty", 1, "payload", "op1").ConfigureAwait(false);
-            var cts = new CancellationTokenSource(2000);
+            using var cts = new CancellationTokenSource(2000);
             var result = await Store.AppendAsync("::empty", 2, "payload", "op1", cts.Token).ConfigureAwait(false);
             Assert.Null(result);
 

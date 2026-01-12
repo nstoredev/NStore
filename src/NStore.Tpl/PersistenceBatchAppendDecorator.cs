@@ -1,4 +1,5 @@
-﻿using NStore.Core.Persistence;
+﻿using NStore.Core.Logging;
+using NStore.Core.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -7,13 +8,24 @@ using System.Threading.Tasks.Dataflow;
 
 namespace NStore.Tpl
 {
-    public class PersistenceBatchAppendDecorator : IPersistence, IDisposable
+    /// <summary>
+    /// Decorator that batches write operations for improved performance.
+    /// Implements two-phase disposal: call <see cref="ShutdownAsync"/> for graceful async shutdown,
+    /// then <see cref="Dispose"/> for synchronous cleanup.
+    /// </summary>
+    public class PersistenceBatchAppendDecorator : IPersistence, IDisposable, IAsyncDisposable
     {
         private readonly IPersistence _persistence;
+        private readonly INStoreLogger _nStoreLogger;
         private readonly BatchBlock<AsyncWriteJob> _batch;
+        private readonly ActionBlock<AsyncWriteJob[]> _processor;
         private readonly CancellationTokenSource _cts;
 
-        public PersistenceBatchAppendDecorator(IPersistence persistence, int batchSize, int flushTimeout)
+        public PersistenceBatchAppendDecorator(
+            IPersistence persistence,
+            INStoreLogger nStoreLogger,
+            int batchSize,
+            int flushTimeout)
         {
             _cts = new CancellationTokenSource();
             var batcher = (IEnhancedPersistence)persistence;
@@ -32,7 +44,7 @@ namespace NStore.Tpl
                 }
             });
 
-            var processor = new ActionBlock<AsyncWriteJob[]>
+            _processor = new ActionBlock<AsyncWriteJob[]>
             (
                 queue => batcher.AppendBatchAsync(queue, CancellationToken.None),
                 new ExecutionDataflowBlockOptions()
@@ -43,12 +55,13 @@ namespace NStore.Tpl
                 }
             );
 
-            _batch.LinkTo(processor, new DataflowLinkOptions()
+            _batch.LinkTo(_processor, new DataflowLinkOptions()
             {
                 PropagateCompletion = true,
             });
 
             _persistence = persistence;
+            _nStoreLogger = nStoreLogger;
         }
 
         public bool SupportsFillers => _persistence.SupportsFillers;
@@ -137,11 +150,45 @@ namespace NStore.Tpl
             return _persistence.ReadAllByOperationIdAsync(operationId, subscription, cancellationToken);
         }
 
-        public void Dispose()
+        /// <summary>
+        /// Gracefully shuts down the batching pipeline by completing the batch queue
+        /// and waiting for all pending operations to finish.
+        /// Call this method before <see cref="Dispose"/> to ensure all writes are flushed.
+        /// </summary>
+        /// <param name="cancellationToken">Cancellation token to abort the shutdown wait.</param>
+        /// <returns>A task representing the async shutdown operation.</returns>
+        public async Task ShutdownAsync(CancellationToken cancellationToken = default)
         {
             _batch.Complete();
-            _batch.Completion.GetAwaiter().GetResult();
+
+            try
+            {
+                await _processor.Completion.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when cancellation token is triggered
+            }
             _cts.Cancel();
+            _cts.Dispose();
+        }
+
+        /// <summary>
+        /// Disposes managed resources. For graceful shutdown, call <see cref="ShutdownAsync"/> first.
+        /// This method performs non-blocking cleanup only.
+        /// </summary>
+        public void Dispose()
+        {
+            var closed = ShutdownAsync().Wait(5000);
+            if (!closed)
+            {
+                _nStoreLogger.LogWarning("PersistenceBatchAppendDecorator disposal timed out before completion.");
+            }
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await ShutdownAsync();
         }
     }
 }

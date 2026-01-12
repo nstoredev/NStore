@@ -106,8 +106,8 @@ namespace NStore.Persistence.Tests
             if (Batcher == null)
                 return;
 
-            var cts = new CancellationTokenSource(10_000);
-            var batcher = new PersistenceBatchAppendDecorator(_persistence, 512,10);
+            using var cts = new CancellationTokenSource(10_000);
+            using var batcher = new PersistenceBatchAppendDecorator(_persistence, _logger, 512, 10);
             //            batcher.Cancel(10_000);
 
             await batcher.AppendAsync("a", 1, "first", null, cts.Token);

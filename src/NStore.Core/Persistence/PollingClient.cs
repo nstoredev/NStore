@@ -106,8 +106,12 @@ namespace NStore.Core.Persistence
 
         public async Task Stop()
         {
-            _source.Cancel();
-            _source = null;
+            if (_source != null)
+            {
+                _source.Cancel();
+                _source.Dispose();
+                _source = null;
+            }
 
             while (!_stopped)
             {
@@ -149,10 +153,10 @@ namespace NStore.Core.Persistence
             .ConfigureAwait(false);
         }
 
-        public Task Poll(int timeoutInMilliseconds)
+        public async Task Poll(int timeoutInMilliseconds)
         {
-            var timeout = new CancellationTokenSource(timeoutInMilliseconds);
-            return Poll(timeout.Token);
+            using var timeout = new CancellationTokenSource(timeoutInMilliseconds);
+            await Poll(timeout.Token).ConfigureAwait(false);
         }
 
         public Task Poll()

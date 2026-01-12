@@ -8,7 +8,7 @@ using NStore.Core.Persistence;
 
 namespace NStore.Core.InMemory
 {
-    public class InMemoryPersistence : IPersistence
+    public class InMemoryPersistence : IPersistence, IDisposable
     {
         private readonly Func<object, object> _cloneFunc;
         private readonly MemoryChunk[] _chunks;
@@ -483,6 +483,16 @@ namespace NStore.Core.InMemory
             };
 
             await ReadAllAsync(0, filter, int.MaxValue, cancellationToken).ConfigureAwait(false);
+        }
+
+        public void Dispose()
+        {
+            foreach (var partition in _partitions.Values)
+            {
+                partition.Dispose();
+            }
+            _partitions.Clear();
+            _lockSlim.Dispose();
         }
     }
 }

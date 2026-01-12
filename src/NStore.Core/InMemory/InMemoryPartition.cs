@@ -7,7 +7,7 @@ using NStore.Core.Persistence;
 
 namespace NStore.Core.InMemory
 {
-    internal class InMemoryPartition
+    internal class InMemoryPartition : IDisposable
     {
         private readonly ReaderWriterLockSlim _lockSlim = new ReaderWriterLockSlim();
 
@@ -161,6 +161,11 @@ namespace NStore.Core.InMemory
             _lockSlim.ExitReadLock();
 
             return Task.FromResult((IChunk)Clone(chunk));
+        }
+
+        public void Dispose()
+        {
+            _lockSlim.Dispose();
         }
     }
 }
