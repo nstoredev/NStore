@@ -80,6 +80,7 @@ jobs:
           NSTORE_MONGODB: mongodb://localhost/nstore
           NSTORE_MSSQL: Server=localhost;user id=sa;password=sqlPw3$secure
         shell: pwsh
+
         run: |
           
           dotnet tool restore
@@ -89,7 +90,7 @@ jobs:
           }
 
           # Run dotnet tool and then if the output is not success will break the build.
-          dotnet tool run dotnet-sonarscanner begin /k:"nstore" /o:"alkampfergit-github" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.vstest.reportsPaths=TestResults/*.trx /d:sonar.cs.opencover.reportsPaths=TestResults/*/coverage.opencover.xml /d:sonar.coverage.exclusions="**Test*.cs"
+          dotnet tool run dotnet-sonarscanner begin /k:"nstore" /o:"alkampfergit-github" /d:sonar.token="$env:SONAR_TOKEN" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.vstest.reportsPaths=TestResults/*.trx /d:sonar.cs.opencover.reportsPaths=TestResults/*/coverage.opencover.xml /d:sonar.coverage.exclusions="**Test*.cs"
           if ($LASTEXITCODE -ne 0) 
           { 
             throw "dotnet-sonarscanner begin failed with exit code $LASTEXITCODE" 
@@ -97,7 +98,7 @@ jobs:
 
           ./newbuild.ps1 -nugetPublish $false --$nugetApiKey "NOKEY"
           
-          dotnet tool run dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+          dotnet tool run dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
