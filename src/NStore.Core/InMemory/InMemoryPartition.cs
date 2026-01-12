@@ -139,19 +139,21 @@ namespace NStore.Core.InMemory
 
         public MemoryChunk[] Delete(long fromIndex, long toIndex)
         {
-            _lockSlim.EnterReadLock();
-            var toDelete = Chunks.Where(x => x.Index >= fromIndex && x.Index <= toIndex).ToArray();
-            _lockSlim.ExitReadLock();
-
             _lockSlim.EnterWriteLock();
-            foreach (var chunk in toDelete)
+            try
             {
-                this._sortedChunks.Remove(chunk.Index);
-                this._operations.Remove(chunk.OperationId);
+                var toDelete = Chunks.Where(x => x.Index >= fromIndex && x.Index <= toIndex).ToArray();
+                foreach (var chunk in toDelete)
+                {
+                    this._sortedChunks.Remove(chunk.Index);
+                    this._operations.Remove(chunk.OperationId);
+                }
+                return toDelete;
             }
-            _lockSlim.ExitWriteLock();
-
-            return toDelete;
+            finally
+            {
+                _lockSlim.ExitWriteLock();
+            }
         }
 
         public Task<IChunk> GetByOperationId(string operationId)

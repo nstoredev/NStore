@@ -423,15 +423,20 @@ namespace NStore.Core.InMemory
         private void SetChunk(MemoryChunk chunk)
         {
             int slot = (int)chunk.Position - 1;
-            _chunks[slot] = chunk;
 
             _lockSlim.EnterWriteLock();
-            if (_lastWrittenPosition < slot)
+            try
             {
-                _lastWrittenPosition = slot;
+                _chunks[slot] = chunk;
+                if (_lastWrittenPosition < slot)
+                {
+                    _lastWrittenPosition = slot;
+                }
             }
-
-            _lockSlim.ExitWriteLock();
+            finally
+            {
+                _lockSlim.ExitWriteLock();
+            }
         }
 
         public async Task DeleteAsync(

@@ -3,6 +3,7 @@
 ## 0.20.2
 
 - Fixed a potential memory Leak for missing dispose in CancellationTokenSource and ReaderWriterLockSlim.
+- Fix usage of ReadWriteLockSlim to avoid potential deadlocks.
 
 ## 0.20.1
 
