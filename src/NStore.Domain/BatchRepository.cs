@@ -282,34 +282,15 @@ namespace NStore.Domain
                 foreach (var job in writeJobs)
                 {
                     var aggregate = aggregateByPartitionId[job.PartitionId];
-                    var persister = (IEventSourcedAggregate)aggregate;
+                    listOfAggregateSaveResult.Add(MapJobResult(job, aggregate.Id));
 
-                    switch (job.Result)
+                    if (job.Result == WriteJob.WriteResult.Committed)
                     {
-                        case WriteJob.WriteResult.Committed:
-                            persister.Persisted(persister.GetChangeSet());
-                            listOfAggregateSaveResult.Add(AggregateSaveResult.Committed(aggregate.Id, job.Chunk));
-                            if (_snapshotBatchStore != null && aggregate is ISnapshottable snapshottable)
-                            {
-                                snapshotsToSave[aggregate.Id] = snapshottable.GetSnapshot();
-                            }
-                            break;
-
-                        case WriteJob.WriteResult.DuplicatedIndex:
-                            listOfAggregateSaveResult.Add(AggregateSaveResult.Concurrency(aggregate.Id));
-                            break;
-
-                        case WriteJob.WriteResult.DuplicatedOperation:
-                            listOfAggregateSaveResult.Add(AggregateSaveResult.DuplicatedOperation(aggregate.Id, job.Chunk));
-                            break;
-
-                        case WriteJob.WriteResult.Failed:
-                            listOfAggregateSaveResult.Add(AggregateSaveResult.GenericFailure(aggregate.Id));
-                            break;
-
-                        case WriteJob.WriteResult.DuplicatedPosition:
-                            listOfAggregateSaveResult.Add(AggregateSaveResult.DuplicatedPosition(aggregate.Id));
-                            break;
+                        ((IEventSourcedAggregate)aggregate).Persisted(((IEventSourcedAggregate)aggregate).GetChangeSet());
+                        if (_snapshotBatchStore != null && aggregate is ISnapshottable snapshottable)
+                        {
+                            snapshotsToSave[aggregate.Id] = snapshottable.GetSnapshot();
+                        }
                     }
                 }
 
@@ -330,6 +311,21 @@ namespace NStore.Domain
         public void Clear()
         {
             _trackingAggregates.Clear();
+        }
+
+        private static AggregateSaveResult MapJobResult(WriteJob job, string aggregateId)
+        {
+            switch (job.Result)
+            {
+                case WriteJob.WriteResult.Committed: return AggregateSaveResult.Committed(aggregateId, job.Chunk);
+                case WriteJob.WriteResult.DuplicatedIndex: return AggregateSaveResult.Concurrency(aggregateId);
+                case WriteJob.WriteResult.DuplicatedOperation: return AggregateSaveResult.DuplicatedOperation(aggregateId, job.Chunk);
+                case WriteJob.WriteResult.DuplicatedPosition: return AggregateSaveResult.DuplicatedPosition(aggregateId);
+                
+                case WriteJob.WriteResult.None:
+                case WriteJob.WriteResult.Failed:
+                default: return AggregateSaveResult.GenericFailure(aggregateId);
+            }
         }
     }
 }
