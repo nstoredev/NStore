@@ -205,10 +205,6 @@ namespace NStore.Tpl
             _cts.Dispose();
         }
 
-        /// <summary>
-        /// Disposes managed resources. For graceful shutdown, call <see cref="ShutdownAsync"/> first.
-        /// This method performs synchronous cleanup only and does not wait for async operations.
-        /// </summary>
         public void Dispose()
         {
             Dispose(true);
@@ -232,26 +228,7 @@ namespace NStore.Tpl
         {
             if (_disposed) return;
 
-            try
-            {
-                await ShutdownAsync().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                _nStoreLogger?.LogWarning($"Exception during async disposal: {ex.Message}");
-            }
-
-            // Dispose managed resources
-            try
-            {
-                _cts?.Dispose();
-            }
-            catch
-            {
-                // Ignoring exceptions during CancellationTokenSource disposal as cleanup is already in progress
-                // and any exception here cannot be meaningfully handled
-            }
-
+            await ShutdownAsync().ConfigureAwait(false);
             _disposed = true;
         }
 
@@ -265,16 +242,6 @@ namespace NStore.Tpl
 
             if (disposing)
             {
-                // Cancel any ongoing operations
-                try
-                {
-                    _cts?.Cancel();
-                }
-                catch
-                {
-                    // Ignoring exceptions during cancellation token cancellation as it's already in a disposed state
-                    // and any exception here cannot be meaningfully handled during cleanup
-                }
 
                 // Best-effort synchronous shutdown with timeout
                 try
@@ -288,17 +255,6 @@ namespace NStore.Tpl
                 catch (Exception ex)
                 {
                     _nStoreLogger?.LogWarning($"Exception during synchronous disposal: {ex.Message}");
-                }
-
-                // Dispose the CancellationTokenSource
-                try
-                {
-                    _cts?.Dispose();
-                }
-                catch
-                {
-                    // Ignoring exceptions during CancellationTokenSource disposal as cleanup is already in progress
-                    // and any exception here cannot be meaningfully handled
                 }
             }
 
