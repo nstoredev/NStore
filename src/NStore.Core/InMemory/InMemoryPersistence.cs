@@ -8,8 +8,9 @@ using NStore.Core.Persistence;
 
 namespace NStore.Core.InMemory
 {
-    public class InMemoryPersistence : IPersistence
+    public class InMemoryPersistence : IPersistence, IDisposable
     {
+        private bool _disposed;
         private readonly Func<object, object> _cloneFunc;
         private readonly MemoryChunk[] _chunks;
 
@@ -262,7 +263,7 @@ namespace NStore.Core.InMemory
             var chunk = new MemoryChunk()
             {
                 Position = id,
-                Index = index >= 0 ? index : id,
+                Index = index,
                 OperationId = operationId ?? Guid.NewGuid().ToString(),
                 PartitionId = partitionId,
                 Payload = _cloneFunc(payload)
@@ -318,7 +319,7 @@ namespace NStore.Core.InMemory
             var chunk = new MemoryChunk()
             {
                 Position = position,
-                Index = index >= 0 ? index : position,
+                Index = index,
                 OperationId = operationId ?? Guid.NewGuid().ToString(),
                 PartitionId = partitionId,
                 Payload = _cloneFunc(payload)
@@ -423,15 +424,20 @@ namespace NStore.Core.InMemory
         private void SetChunk(MemoryChunk chunk)
         {
             int slot = (int)chunk.Position - 1;
-            _chunks[slot] = chunk;
 
             _lockSlim.EnterWriteLock();
-            if (_lastWrittenPosition < slot)
+            try
             {
-                _lastWrittenPosition = slot;
+                _chunks[slot] = chunk;
+                if (_lastWrittenPosition < slot)
+                {
+                    _lastWrittenPosition = slot;
+                }
             }
-
-            _lockSlim.ExitWriteLock();
+            finally
+            {
+                _lockSlim.ExitWriteLock();
+            }
         }
 
         public async Task DeleteAsync(
@@ -483,6 +489,36 @@ namespace NStore.Core.InMemory
             };
 
             await ReadAllAsync(0, filter, int.MaxValue, cancellationToken).ConfigureAwait(false);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+
+            if (disposing)
+            {
+                foreach (var partition in _partitions.Values)
+                {
+                    try
+                    {
+                        partition?.Dispose();
+                    }
+                    catch
+                    {
+                        // swallow to continue disposing other partitions
+                    }
+                }
+                _partitions.Clear();
+                _lockSlim?.Dispose();
+            }
+
+            _disposed = true;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }

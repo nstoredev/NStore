@@ -7,9 +7,10 @@ using NStore.Core.Persistence;
 
 namespace NStore.Core.InMemory
 {
-    internal class InMemoryPartition
+    internal class InMemoryPartition : IDisposable
     {
         private readonly ReaderWriterLockSlim _lockSlim = new ReaderWriterLockSlim();
+        private bool _disposed;
 
         public InMemoryPartition(string partitionId, INetworkSimulator networkSimulator, Func<MemoryChunk, MemoryChunk> clone)
         {
@@ -139,19 +140,21 @@ namespace NStore.Core.InMemory
 
         public MemoryChunk[] Delete(long fromIndex, long toIndex)
         {
-            _lockSlim.EnterReadLock();
-            var toDelete = Chunks.Where(x => x.Index >= fromIndex && x.Index <= toIndex).ToArray();
-            _lockSlim.ExitReadLock();
-
             _lockSlim.EnterWriteLock();
-            foreach (var chunk in toDelete)
+            try
             {
-                this._sortedChunks.Remove(chunk.Index);
-                this._operations.Remove(chunk.OperationId);
+                var toDelete = Chunks.Where(x => x.Index >= fromIndex && x.Index <= toIndex).ToArray();
+                foreach (var chunk in toDelete)
+                {
+                    this._sortedChunks.Remove(chunk.Index);
+                    this._operations.Remove(chunk.OperationId);
+                }
+                return toDelete;
             }
-            _lockSlim.ExitWriteLock();
-
-            return toDelete;
+            finally
+            {
+                _lockSlim.ExitWriteLock();
+            }
         }
 
         public Task<IChunk> GetByOperationId(string operationId)
@@ -161,6 +164,24 @@ namespace NStore.Core.InMemory
             _lockSlim.ExitReadLock();
 
             return Task.FromResult((IChunk)Clone(chunk));
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+
+            if (disposing)
+            {
+                _lockSlim?.Dispose();
+            }
+
+            _disposed = true;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }
