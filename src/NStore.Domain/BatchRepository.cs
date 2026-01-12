@@ -115,21 +115,16 @@ namespace NStore.Domain
                     subscription.LastError);
             }
 
-            // now we need to understand if we have stale snapshot and mark all the aggregates as initialized
+            // Mark aggregates as loaded and check for stale snapshots
             foreach (var kvp in aggregates)
             {
-                var aggregate = kvp.Value;
-                aggregate.Loaded();
+                kvp.Value.Loaded();
+
                 var snapshotVersion = snapshotVersions[kvp.Key];
-                if (!countOfEventsRead.TryGetValue(kvp.Key, out var eventsRead))
-                {
-                    eventsRead = 0;
-                }
+                countOfEventsRead.TryGetValue(kvp.Key, out var eventsRead);
+
                 if (snapshotVersion > 0 && eventsRead == 0)
-                {
-                    // immediately throw
-                    throw new StaleSnapshotException(aggregate.Id, snapshotVersion);
-                }
+                    throw new StaleSnapshotException(kvp.Value.Id, snapshotVersion);
             }
 
             return aggregates;
@@ -212,64 +207,20 @@ namespace NStore.Domain
             // Step 1: Validate all aggregates and prepare write jobs
             var writeJobs = new List<WriteJob>();
             var aggregateByPartitionId = new Dictionary<string, IAggregate>();
-
-            // first step is preparing the write jobs for all aggregates to persist in a batch.
             var seen = new HashSet<string>();
             var listOfAggregateSaveResult = new List<AggregateSaveResult>();
+
             foreach (var aggregate in aggregates)
             {
-                // Check for duplicate aggregate ids in the input - this is not allowed
-                if (!seen.Add(aggregate.Id))
-                {
-                    throw new ArgumentException($"Duplicate aggregate id '{aggregate.Id}' passed to SaveManyAsync");
-                }
+                var result = PrepareAggregate(aggregate, operationId, headers, seen);
 
-                // Validate aggregate is tracked by this repository (unless it's a new aggregate)
-                if (!_trackingAggregates.ContainsKey(aggregate.Id))
+                if (result.EarlyResult != null)
                 {
-                    if (aggregate.IsNew)
-                    {
-                        _trackingAggregates[aggregate.Id] = aggregate;
-                    }
-                    else
-                    {
-                        throw new RepositoryMismatchException($"Aggregate {aggregate.Id} was not loaded by this batch repository");
-                    }
-                }
-
-                var persister = (IEventSourcedAggregate)aggregate;
-                var changeSet = persister.GetChangeSet();
-
-                // Skip empty changesets unless configured to persist them; report as Unchanged instead of omitting
-                if (changeSet.IsEmpty() && !PersistEmptyChangeset)
-                {
-                    listOfAggregateSaveResult.Add(AggregateSaveResult.Unchanged(aggregate.Id));
+                    listOfAggregateSaveResult.Add(result.EarlyResult);
                     continue;
                 }
 
-                // Check invariants if supported - collect failures to report per-aggregate instead of throwing
-                if (aggregate is IInvariantsChecker checker)
-                {
-                    var check = checker.CheckInvariants();
-                    if (check.IsInvalid)
-                    {
-                        listOfAggregateSaveResult.Add(AggregateSaveResult.InvariantFailure(aggregate.Id));
-                        continue;
-                    }
-                }
-
-                // Apply headers if provided
-                headers?.Invoke(changeSet);
-
-                // Create write job - use changeSet.AggregateVersion which is already Version + 1
-                var job = new WriteJob(
-                    aggregate.Id,
-                    changeSet.AggregateVersion,
-                    changeSet,
-                    operationId ?? Guid.NewGuid().ToString()
-                );
-
-                writeJobs.Add(job);
+                writeJobs.Add(result.Job);
                 aggregateByPartitionId[aggregate.Id] = aggregate;
             }
 
@@ -311,6 +262,49 @@ namespace NStore.Domain
         public void Clear()
         {
             _trackingAggregates.Clear();
+        }
+
+        private (AggregateSaveResult EarlyResult, WriteJob Job) PrepareAggregate(
+            IAggregate aggregate,
+            string operationId,
+            Action<IHeadersAccessor> headers,
+            HashSet<string> seen)
+        {
+            // Check for duplicate aggregate ids in the input
+            if (!seen.Add(aggregate.Id))
+                throw new ArgumentException($"Duplicate aggregate id '{aggregate.Id}' passed to SaveManyAsync");
+
+            // Validate aggregate is tracked by this repository (unless it's a new aggregate)
+            if (!_trackingAggregates.ContainsKey(aggregate.Id))
+            {
+                if (aggregate.IsNew)
+                    _trackingAggregates[aggregate.Id] = aggregate;
+                else
+                    throw new RepositoryMismatchException($"Aggregate {aggregate.Id} was not loaded by this batch repository");
+            }
+
+            var persister = (IEventSourcedAggregate)aggregate;
+            var changeSet = persister.GetChangeSet();
+
+            // Skip empty changesets unless configured to persist them
+            if (changeSet.IsEmpty() && !PersistEmptyChangeset)
+                return (AggregateSaveResult.Unchanged(aggregate.Id), null);
+
+            // Check invariants if supported
+            if (aggregate is IInvariantsChecker checker && checker.CheckInvariants().IsInvalid)
+                return (AggregateSaveResult.InvariantFailure(aggregate.Id), null);
+
+            // Apply headers if provided
+            headers?.Invoke(changeSet);
+
+            var job = new WriteJob(
+                aggregate.Id,
+                changeSet.AggregateVersion,
+                changeSet,
+                operationId ?? Guid.NewGuid().ToString()
+            );
+
+            return (null, job);
         }
 
         private static AggregateSaveResult MapJobResult(WriteJob job, string aggregateId)
