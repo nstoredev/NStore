@@ -48,10 +48,10 @@ namespace NStore.Persistence.Tests
 
             await Batcher.AppendBatchAsync(jobs, CancellationToken.None);
 
-            Assert.False(jobs[0].Position == 0);
-            Assert.True(jobs[1].Position == 0);
-            Assert.False(jobs[2].Position == 0);
-            Assert.True(jobs[3].Position == 0);
+            Assert.NotEqual(0, jobs[0].Position);
+            Assert.Equal(0, jobs[1].Position);
+            Assert.NotEqual(0, jobs[2].Position);
+            Assert.Equal(0, jobs[3].Position);
 
             var firstIndexResults = new[] { jobs[0].Result, jobs[1].Result };
 
@@ -93,7 +93,7 @@ namespace NStore.Persistence.Tests
             var allTasks = jobs.Select(x => x.Task).ToArray();
             var written = await Task.WhenAll(allTasks);
 
-            Assert.True(4 == written.Length);
+            Assert.Equal(4, written.Length);
             Assert.NotNull(written[0]);
             Assert.Null(written[1]);
             Assert.NotNull(written[2]);
