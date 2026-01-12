@@ -22,8 +22,7 @@ namespace NStore.Domain
         private readonly IEnhancedPersistence _persistence;
         private readonly ISnapshotBatchStore _snapshotBatchStore;
 
-        private readonly ConcurrentDictionary<string, IAggregate> _trackingAggregates = new ConcurrentDictionary<string, IAggregate>();
-        private readonly ConcurrentDictionary<string, long> _aggregateVersions = new ConcurrentDictionary<string, long>();
+        private readonly Dictionary<string, IAggregate> _trackingAggregates = new Dictionary<string, IAggregate>();
 
         public bool PersistEmptyChangeset { get; set; } = false;
 
@@ -174,9 +173,6 @@ namespace NStore.Domain
                         exceptions.Add(new StaleSnapshotException(kvp.Key, snapshotVersion));
                         return;
                     }
-
-                    // Track the current version for optimistic concurrency
-                    _aggregateVersions[kvp.Key] = kvp.Value.Version;
                 }
                 catch (Exception ex)
                 {
@@ -220,16 +216,14 @@ namespace NStore.Domain
             foreach (var aggregate in aggregates)
             {
                 // Validate aggregate is tracked by this repository (unless it's a new aggregate)
-                if (!_trackingAggregates.Values.Contains(aggregate))
+                if (!_trackingAggregates.ContainsKey(aggregate.Id))
                 {
                     if (aggregate.IsNew)
                     {
                         _trackingAggregates[aggregate.Id] = aggregate;
-                        _aggregateVersions[aggregate.Id] = 0;
                     }
                     else
                     {
-                        //this operation is not permitted something bad happens.
                         throw new RepositoryMismatchException($"Aggregate {aggregate.Id} was not loaded by this batch repository");
                     }
                 }
@@ -271,19 +265,10 @@ namespace NStore.Domain
                 // Apply headers if provided
                 headers?.Invoke(changeSet);
 
-                // Determine the current version for optimistic concurrency control 
-                if (!_aggregateVersions.TryGetValue(aggregate.Id, out var currentVersion))
-                {
-                    throw new RepositoryMismatchException($"Aggregate {aggregate.Id} version not tracked");
-                }
-               
-                // Calculate the next version index to write
-                long desiredVersion = currentVersion + 1;
-
-                // Create write job
+                // Create write job - use changeSet.AggregateVersion which is already Version + 1
                 var job = new WriteJob(
                     aggregate.Id,
-                    desiredVersion,
+                    changeSet.AggregateVersion,
                     changeSet,
                     operationId ?? Guid.NewGuid().ToString()
                 );
@@ -310,8 +295,7 @@ namespace NStore.Domain
                     switch (job.Result)
                     {
                         case WriteJob.WriteResult.Committed:
-                            // Success - update tracked version and notify aggregate
-                            _aggregateVersions[aggregate.Id] = job.Index;
+                            // Success - notify aggregate (which updates its Version internally)
                             persister.Persisted(persister.GetChangeSet());
 
                             saveResult.Succeeded = true;
@@ -374,7 +358,6 @@ namespace NStore.Domain
         public void Clear()
         {
             _trackingAggregates.Clear();
-            _aggregateVersions.Clear();
         }
     }
 }
