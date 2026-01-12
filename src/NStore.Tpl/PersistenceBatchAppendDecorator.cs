@@ -207,55 +207,98 @@ namespace NStore.Tpl
 
         /// <summary>
         /// Disposes managed resources. For graceful shutdown, call <see cref="ShutdownAsync"/> first.
-        /// This method performs non-blocking cleanup only.
+        /// This method performs synchronous cleanup only and does not wait for async operations.
         /// </summary>
         public void Dispose()
         {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Asynchronously disposes the resources, ensuring all pending operations complete gracefully.
+        /// </summary>
+        public async ValueTask DisposeAsync()
+        {
+            await DisposeAsyncCore().ConfigureAwait(false);
+            Dispose(false); // Don't dispose managed resources again
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Performs the async disposal work.
+        /// </summary>
+        protected virtual async ValueTask DisposeAsyncCore()
+        {
+            if (_disposed) return;
+
             try
             {
-                var task = ShutdownAsync();
-                Task.WhenAny(task, Task.Delay(5000)).GetAwaiter().GetResult();
-                if (!task.IsCompleted)
-                {
-                    _nStoreLogger?.LogWarning("PersistenceBatchAppendDecorator disposal timed out before completion.");
-                }
+                await ShutdownAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                _nStoreLogger?.LogWarning($"Exception while disposing PersistenceBatchAppendDecorator: {ex.Message}");
+                _nStoreLogger?.LogWarning($"Exception during async disposal: {ex.Message}");
             }
 
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            // Dispose managed resources
+            try
+            {
+                _cts?.Dispose();
+            }
+            catch
+            {
+                // Ignoring exceptions during CancellationTokenSource disposal as cleanup is already in progress
+                // and any exception here cannot be meaningfully handled
+            }
+
+            _disposed = true;
         }
 
-        public async ValueTask DisposeAsync()
-        {
-            await ShutdownAsync().ConfigureAwait(false);
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
+        /// <summary>
+        /// Disposes managed resources synchronously.
+        /// </summary>
+        /// <param name="disposing">True if called from Dispose(), false if called from finalizer.</param>
         protected virtual void Dispose(bool disposing)
         {
             if (_disposed) return;
 
             if (disposing)
             {
+                // Cancel any ongoing operations
                 try
                 {
                     _cts?.Cancel();
                 }
                 catch
                 {
+                    // Ignoring exceptions during cancellation token cancellation as it's already in a disposed state
+                    // and any exception here cannot be meaningfully handled during cleanup
                 }
 
+                // Best-effort synchronous shutdown with timeout
+                try
+                {
+                    var task = ShutdownAsync();
+                    if (!task.Wait(TimeSpan.FromSeconds(5)))
+                    {
+                        _nStoreLogger?.LogWarning("PersistenceBatchAppendDecorator synchronous disposal timed out.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _nStoreLogger?.LogWarning($"Exception during synchronous disposal: {ex.Message}");
+                }
+
+                // Dispose the CancellationTokenSource
                 try
                 {
                     _cts?.Dispose();
                 }
                 catch
                 {
+                    // Ignoring exceptions during CancellationTokenSource disposal as cleanup is already in progress
+                    // and any exception here cannot be meaningfully handled
                 }
             }
 

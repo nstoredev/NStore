@@ -7,7 +7,7 @@ namespace NStore.Core.Persistence
 {
     public class PollingClient
     {
-        private class Sequencer : ISubscription
+        private sealed class Sequencer : ISubscription
         {
             private readonly ISubscription _subscription;
             private readonly INStoreLogger _logger;
@@ -89,9 +89,7 @@ namespace NStore.Core.Persistence
         private readonly INStoreLogger _logger;
         private int _isPolling = 0;
         private bool _stopped = false;
-
-        [Obsolete("Use IsActive")]
-        public bool IsPolling => IsActive;
+        
         public bool IsActive => !_stopped;
 
         public PollingClient(IPersistence store, long lastPosition, ISubscription subscription, INStoreLoggerFactory inStoreLoggerFactory)

@@ -256,7 +256,7 @@ namespace NStore.Domain.Tests
 
             var repo2 = CreateBatchRepository();
 
-            var ex = await Assert.ThrowsAsync<RepositoryMismatchException>(() =>
+            await Assert.ThrowsAsync<RepositoryMismatchException>(() =>
                 repo2.SaveManyAsync(tickets.Values, Guid.NewGuid().ToString())
             ).ConfigureAwait(false);
         }
@@ -398,7 +398,7 @@ namespace NStore.Domain.Tests
 
     public class batch_with_snapshots : BaseBatchRepositoryTest
     {
-        private DefaultSnapshotStore _snapshotStore;
+        private readonly DefaultSnapshotStore _snapshotStore;
 
         public batch_with_snapshots()
         {
@@ -553,7 +553,7 @@ namespace NStore.Domain.Tests
 
     public class batch_with_stale_snapshots : BaseBatchRepositoryTest
     {
-        private DefaultSnapshotStore _snapshotStore;
+        private readonly DefaultSnapshotStore _snapshotStore;
 
         public batch_with_stale_snapshots()
         {
@@ -618,6 +618,8 @@ namespace NStore.Domain.Tests
                 "op_headers",
                 headers => headers.Add("CustomHeader", "CustomValue")
             ).ConfigureAwait(false);
+
+            Assert.True(result.Success);
 
             // Assert - verify headers were added by reading the persisted chunk
             var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
@@ -842,7 +844,7 @@ namespace NStore.Domain.Tests
         public async Task GetManyByIdAsync_should_respect_cancellation_token()
         {
             // Arrange
-            var cts = new CancellationTokenSource();
+            using var cts = new CancellationTokenSource();
             cts.Cancel(); // Cancel immediately
 
             // Act & Assert
@@ -855,7 +857,7 @@ namespace NStore.Domain.Tests
         public async Task SaveManyAsync_with_cancelled_token_should_complete_for_empty_batch()
         {
             // Arrange - with empty batch, cancellation doesn't matter since no actual work is done
-            var cts = new CancellationTokenSource();
+            using var cts = new CancellationTokenSource();
             cts.Cancel(); // Cancel immediately
 
             // Act - empty batch returns immediately without checking cancellation
@@ -869,7 +871,7 @@ namespace NStore.Domain.Tests
 
     public class batch_snapshots_on_partial_failure : BaseBatchRepositoryTest
     {
-        private DefaultSnapshotStore _snapshotStore;
+        private readonly DefaultSnapshotStore _snapshotStore;
 
         public batch_snapshots_on_partial_failure()
         {
