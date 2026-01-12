@@ -55,5 +55,60 @@ namespace NStore.Domain
             Chunk = null,
             FailureKind = AggregateSaveFailureKind.InvariantFailure
         };
+
+        /// <summary>
+        /// Creates a result indicating the aggregate was successfully committed.
+        /// </summary>
+        public static AggregateSaveResult Committed(string aggregateId, IChunk chunk) => new AggregateSaveResult
+        {
+            AggregateId = aggregateId,
+            Succeeded = true,
+            Chunk = chunk,
+            FailureKind = null
+        };
+
+        /// <summary>
+        /// Creates a result indicating a concurrency conflict (optimistic concurrency violation).
+        /// </summary>
+        public static AggregateSaveResult Concurrency(string aggregateId) => new AggregateSaveResult
+        {
+            AggregateId = aggregateId,
+            Succeeded = false,
+            Chunk = null,
+            FailureKind = AggregateSaveFailureKind.Concurrency
+        };
+
+        /// <summary>
+        /// Creates a result indicating the operation was already executed (idempotency).
+        /// </summary>
+        public static AggregateSaveResult DuplicatedOperation(string aggregateId, IChunk chunk) => new AggregateSaveResult
+        {
+            AggregateId = aggregateId,
+            Succeeded = true,
+            Chunk = chunk,
+            FailureKind = AggregateSaveFailureKind.DuplicatedOperation
+        };
+
+        /// <summary>
+        /// Creates a result indicating a generic failure from the persistence layer.
+        /// </summary>
+        public static AggregateSaveResult GenericFailure(string aggregateId) => new AggregateSaveResult
+        {
+            AggregateId = aggregateId,
+            Succeeded = false,
+            Chunk = null,
+            FailureKind = AggregateSaveFailureKind.GenericFailure
+        };
+
+        /// <summary>
+        /// Creates a result indicating a position conflict after retry limit exceeded.
+        /// </summary>
+        public static AggregateSaveResult DuplicatedPosition(string aggregateId) => new AggregateSaveResult
+        {
+            AggregateId = aggregateId,
+            Succeeded = false,
+            Chunk = null,
+            FailureKind = AggregateSaveFailureKind.DuplicatedPosition
+        };
     }
 }

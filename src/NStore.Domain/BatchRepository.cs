@@ -283,22 +283,12 @@ namespace NStore.Domain
                 {
                     var aggregate = aggregateByPartitionId[job.PartitionId];
                     var persister = (IEventSourcedAggregate)aggregate;
-                    var saveResult = new AggregateSaveResult
-                    {
-                        AggregateId = aggregate.Id
-                    };
 
                     switch (job.Result)
                     {
                         case WriteJob.WriteResult.Committed:
-                            // Success - notify aggregate (which updates its Version internally)
                             persister.Persisted(persister.GetChangeSet());
-
-                            saveResult.Succeeded = true;
-                            saveResult.Chunk = job.Chunk;
-                            saveResult.FailureKind = null;
-
-                            // Collect snapshot if supported
+                            listOfAggregateSaveResult.Add(AggregateSaveResult.Committed(aggregate.Id, job.Chunk));
                             if (_snapshotBatchStore != null && aggregate is ISnapshottable snapshottable)
                             {
                                 snapshotsToSave[aggregate.Id] = snapshottable.GetSnapshot();
@@ -306,35 +296,21 @@ namespace NStore.Domain
                             break;
 
                         case WriteJob.WriteResult.DuplicatedIndex:
-                            // Optimistic concurrency violation - another process modified this aggregate
-                            saveResult.Succeeded = false;
-                            saveResult.Chunk = null;
-                            saveResult.FailureKind = AggregateSaveFailureKind.Concurrency;
+                            listOfAggregateSaveResult.Add(AggregateSaveResult.Concurrency(aggregate.Id));
                             break;
 
                         case WriteJob.WriteResult.DuplicatedOperation:
-                            // Operation was already executed (idempotency check passed) - treat as success
-                            saveResult.Succeeded = true;
-                            saveResult.Chunk = job.Chunk; // May be null for duplicated operations
-                            saveResult.FailureKind = AggregateSaveFailureKind.DuplicatedOperation;
+                            listOfAggregateSaveResult.Add(AggregateSaveResult.DuplicatedOperation(aggregate.Id, job.Chunk));
                             break;
 
                         case WriteJob.WriteResult.Failed:
-                            // Generic failure from persistence layer
-                            saveResult.Succeeded = false;
-                            saveResult.Chunk = null;
-                            saveResult.FailureKind = AggregateSaveFailureKind.GenericFailure;
+                            listOfAggregateSaveResult.Add(AggregateSaveResult.GenericFailure(aggregate.Id));
                             break;
 
                         case WriteJob.WriteResult.DuplicatedPosition:
-                            // Position conflict after retry limit exceeded
-                            saveResult.Succeeded = false;
-                            saveResult.Chunk = null;
-                            saveResult.FailureKind = AggregateSaveFailureKind.DuplicatedPosition;
+                            listOfAggregateSaveResult.Add(AggregateSaveResult.DuplicatedPosition(aggregate.Id));
                             break;
                     }
-
-                    listOfAggregateSaveResult.Add(saveResult);
                 }
 
                 // Step 4: Save snapshots in batch (best-effort)
