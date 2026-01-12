@@ -40,7 +40,7 @@ namespace NStore.Domain
 
         public async Task<IReadOnlyDictionary<string, T>> GetManyByIdAsync<T>(
             IEnumerable<string> ids,
-            CancellationToken cancellationToken = default) where T : IAggregate
+            CancellationToken cancellationToken = default) where T : IAggregate, IEventSourcedAggregate
         {
             if (!ids.Any())
             {
@@ -54,18 +54,7 @@ namespace NStore.Domain
             var aggregates = new Dictionary<string, T>();
 
             // Step 1: Check tracking cache first
-            var idsToLoad = new List<string>();
-            foreach (var id in ids)
-            {
-                if (_trackingAggregates.TryGetValue(id, out var cachedAggregate))
-                {
-                    aggregates[id] = (T)cachedAggregate;
-                }
-                else
-                {
-                    idsToLoad.Add(id);
-                }
-            }
+            List<string> idsToLoad = GetListOfIdToLoad(ids, aggregates);
 
             // all id were already loaded. we can exit.
             if (idsToLoad.Count == 0)
@@ -73,40 +62,81 @@ namespace NStore.Domain
                 return aggregates;
             }
 
-            // Step 2: Load aggregate with event sourcing.
-            foreach (var id in idsToLoad)
-            {
-                var aggregate = _factory.Create<T>();
-                aggregates[id] = aggregate;
-                _trackingAggregates[id] = aggregate;
-            }
+            // Step 2: Create aggregates to be loaded with event sourcing.
+            CreateAggregates(aggregates, idsToLoad);
 
             // Step 3: Load snapshots if available
-            if (_snapshotBatchStore != null)
-            {
-                var snapshots = await _snapshotBatchStore.GetManyAsync(idsToLoad, cancellationToken).ConfigureAwait(false);
-
-                Parallel.ForEach(snapshots, kvp =>
-                {
-                    if (aggregates.TryGetValue(kvp.Key, out var aggregate) && aggregate is ISnapshottable snapshottable)
-                    {
-                        snapshottable.TryRestore(kvp.Value);
-                    }
-                });
-            }
+            await LoadSnapshots(aggregates, idsToLoad, cancellationToken).ConfigureAwait(false);
 
             // Step 3b: Initialize aggregates that weren't restored from snapshots
-            Parallel.ForEach(aggregates, kvp =>
+            foreach (var notInitializedAggregateEntry in aggregates.Where(a => !a.Value.IsInitialized))
             {
-                if (!kvp.Value.IsInitialized)
-                {
-                    kvp.Value.Init(kvp.Key);
-                }
-            });
+                notInitializedAggregateEntry.Value.Init(notInitializedAggregateEntry.Key);
+            }
 
             // Step 4: Build partition read requests based on aggregate versions
             var partitionRequests = new List<PartitionReadRequest>();
             var snapshotVersions = new Dictionary<string, long>();
+            LoadPartitionRequest(aggregates, partitionRequests, snapshotVersions);
+
+            // Step 5: Read events from multiple partitions, it is imperative that we do not store
+            //         chunks in memory or we will use too much memory for large batches.
+            var countOfEventsRead = new Dictionary<string, int>();
+            var subscription = new LambdaSubscription(chunk =>
+            {
+                //we immediately restore the aggregate
+                var partitionId = chunk.PartitionId;
+                if (aggregates.TryGetValue(partitionId, out var aggregate))
+                {
+                    aggregate.ApplyChanges((Changeset)chunk.Payload);
+                    if (!countOfEventsRead.ContainsKey(partitionId))
+                    {
+                        countOfEventsRead[partitionId] = 0;
+                    }
+                    countOfEventsRead[partitionId] += 1;
+                }
+
+                // the else should never happen, but just in case, we ignore chunks for unknown partitions
+                return Task.FromResult(true);
+            });
+
+            await _multiReader.ReadForwardMultiplePartitionsWithRangesAsync(
+                partitionRequests,
+                subscription,
+                cancellationToken
+            ).ConfigureAwait(false);
+
+            // Check for subscription errors
+            if (subscription.Failed)
+            {
+                var aggregateIds = string.Join(", ", aggregates.Keys);
+                throw new RepositoryReadException(
+                    $"Error reading aggregates in batch. Aggregate IDs: [{aggregateIds}]",
+                    subscription.LastError);
+            }
+
+            // now we need to understand if we have stale snapshot and mark all the aggregates as initialized
+            foreach (var kvp in aggregates)
+            {
+                var aggregate = kvp.Value;
+                aggregate.Loaded();
+                var snapshotVersion = snapshotVersions[kvp.Key];
+                if (!countOfEventsRead.TryGetValue(kvp.Key, out var eventsRead))
+                {
+                    eventsRead = 0;
+                }
+                if (snapshotVersion > 0 && eventsRead == 0)
+                {
+                    // immediately throw
+                    throw new StaleSnapshotException(aggregate.Id, snapshotVersion);
+                }
+            }
+
+            return aggregates;
+        }
+
+        private static void LoadPartitionRequest<T>(Dictionary<string, T> aggregates, List<PartitionReadRequest> partitionRequests, Dictionary<string, long> snapshotVersions) where T : IAggregate
+        {
             foreach (var kvp in aggregates)
             {
                 // Track snapshot version for stale snapshot detection
@@ -121,72 +151,51 @@ namespace NStore.Domain
                     long.MaxValue
                 ));
             }
+        }
 
-            // Step 5: Read events from multiple partitions
-            var eventsByPartition = new ConcurrentDictionary<string, ConcurrentBag<IChunk>>();
-            var subscription = new LambdaSubscription(chunk =>
+        private async Task LoadSnapshots<T>(Dictionary<string, T> aggregates, List<string> idsToLoad, CancellationToken cancellationToken) where T : IAggregate
+        {
+            //TODO load snapshot only for the aggregate id that support snapshotting
+            if (_snapshotBatchStore != null)
             {
-                var chunks = eventsByPartition.GetOrAdd(chunk.PartitionId, _ => new ConcurrentBag<IChunk>());
-                chunks.Add(chunk);
-                return Task.FromResult(true);
-            });
+                var snapshots = await _snapshotBatchStore.GetManyAsync(idsToLoad, cancellationToken).ConfigureAwait(false);
 
-            await _multiReader.ReadForwardMultiplePartitionsWithRangesAsync(
-                partitionRequests,
-                subscription,
-                cancellationToken
-            ).ConfigureAwait(false);
+                Parallel.ForEach(snapshots, kvp =>
+                {
+                    if (aggregates.TryGetValue(kvp.Key, out var aggregate) && aggregate is ISnapshottable snapshottable)
+                    {
+                        snapshottable.TryRestore(kvp.Value);
+                    }
+                });
+            }
+        }
 
-            if (subscription.Failed)
+        private void CreateAggregates<T>(Dictionary<string, T> aggregates, List<string> idsToLoad) where T : IAggregate
+        {
+            foreach (var id in idsToLoad)
             {
-                var aggregateIds = string.Join(", ", aggregates.Keys);
-                throw new RepositoryReadException(
-                    $"Error reading aggregates in batch. Aggregate IDs: [{aggregateIds}]",
-                    subscription.LastError);
+                var aggregate = _factory.Create<T>();
+                aggregates[id] = aggregate;
+                _trackingAggregates[id] = aggregate;
+            }
+        }
+
+        private List<string> GetListOfIdToLoad<T>(IEnumerable<string> ids, Dictionary<string, T> aggregates) where T : IAggregate
+        {
+            var idsToLoad = new List<string>();
+            foreach (var id in ids)
+            {
+                if (_trackingAggregates.TryGetValue(id, out var cachedAggregate))
+                {
+                    aggregates[id] = (T)cachedAggregate;
+                }
+                else
+                {
+                    idsToLoad.Add(id);
+                }
             }
 
-            // Step 6: Apply events to aggregates (in parallel for performance)
-            var exceptions = new ConcurrentBag<Exception>();
-
-            Parallel.ForEach(aggregates, kvp =>
-            {
-                try
-                {
-                    var persister = (IEventSourcedAggregate)kvp.Value;
-                    int eventsRead = 0;
-
-                    if (eventsByPartition.TryGetValue(kvp.Key, out var chunks))
-                    {
-                        foreach (var chunk in chunks.OrderBy(c => c.Index))
-                        {
-                            eventsRead++;
-                            persister.ApplyChanges((Changeset)chunk.Payload);
-                        }
-                    }
-
-                    persister.Loaded();
-
-                    // Validate snapshot: if we had a snapshot but read no events, the snapshot is stale
-                    var snapshotVersion = snapshotVersions[kvp.Key];
-                    if (snapshotVersion > 0 && eventsRead == 0)
-                    {
-                        exceptions.Add(new StaleSnapshotException(kvp.Key, snapshotVersion));
-                        return;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    exceptions.Add(ex);
-                }
-            });
-
-            // Throw the first exception if any occurred during parallel processing
-            if (!exceptions.IsEmpty)
-            {
-                throw exceptions.First();
-            }
-
-            return aggregates;
+            return idsToLoad;
         }
 
         public async Task<BatchSaveResult> SaveManyAsync(

@@ -22,7 +22,7 @@ namespace NStore.Domain
         Task<IReadOnlyDictionary<string, T>> GetManyByIdAsync<T>(
             IEnumerable<string> ids,
             CancellationToken cancellationToken = default
-        ) where T : IAggregate;
+        ) where T : IAggregate, IEventSourcedAggregate;
 
         /// <summary>
         /// Saves multiple aggregates in a single batch operation and returns a `BatchSaveResult` describing per-aggregate outcomes.

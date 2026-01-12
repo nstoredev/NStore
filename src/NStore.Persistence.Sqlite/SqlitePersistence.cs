@@ -11,7 +11,7 @@ using NStore.Core.Persistence;
 
 namespace NStore.Persistence.Sqlite
 {
-    public class SqlitePersistence : AbstractSqlPersistence, IPersistence, IEnhancedPersistence, IAsyncDisposable
+    public class SqlitePersistence : AbstractSqlPersistence, IPersistence, IEnhancedPersistence, IAsyncDisposable, IDisposable
     {
         private bool _disposed = false;
         private const int DUPLICATED_INDEX_EXCEPTION = 19;
