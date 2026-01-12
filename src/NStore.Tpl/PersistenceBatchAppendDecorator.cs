@@ -20,6 +20,7 @@ namespace NStore.Tpl
         private readonly BatchBlock<AsyncWriteJob> _batch;
         private readonly ActionBlock<AsyncWriteJob[]> _processor;
         private readonly CancellationTokenSource _cts;
+        private bool _disposed;
 
         public PersistenceBatchAppendDecorator(
             IPersistence persistence,
@@ -179,16 +180,55 @@ namespace NStore.Tpl
         /// </summary>
         public void Dispose()
         {
-            var closed = ShutdownAsync().Wait(5000);
-            if (!closed)
+            try
             {
-                _nStoreLogger.LogWarning("PersistenceBatchAppendDecorator disposal timed out before completion.");
+                var task = ShutdownAsync();
+                Task.WhenAny(task, Task.Delay(5000)).GetAwaiter().GetResult();
+                if (!task.IsCompleted)
+                {
+                    _nStoreLogger?.LogWarning("PersistenceBatchAppendDecorator disposal timed out before completion.");
+                }
             }
+            catch (Exception ex)
+            {
+                _nStoreLogger?.LogWarning($"Exception while disposing PersistenceBatchAppendDecorator: {ex.Message}");
+            }
+
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         public async ValueTask DisposeAsync()
         {
-            await ShutdownAsync();
+            await ShutdownAsync().ConfigureAwait(false);
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+
+            if (disposing)
+            {
+                try
+                {
+                    _cts?.Cancel();
+                }
+                catch
+                {
+                }
+
+                try
+                {
+                    _cts?.Dispose();
+                }
+                catch
+                {
+                }
+            }
+
+            _disposed = true;
         }
     }
 }

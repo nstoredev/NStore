@@ -10,6 +10,7 @@ namespace NStore.Core.InMemory
     internal class InMemoryPartition : IDisposable
     {
         private readonly ReaderWriterLockSlim _lockSlim = new ReaderWriterLockSlim();
+        private bool _disposed;
 
         public InMemoryPartition(string partitionId, INetworkSimulator networkSimulator, Func<MemoryChunk, MemoryChunk> clone)
         {
@@ -165,9 +166,22 @@ namespace NStore.Core.InMemory
             return Task.FromResult((IChunk)Clone(chunk));
         }
 
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+
+            if (disposing)
+            {
+                _lockSlim?.Dispose();
+            }
+
+            _disposed = true;
+        }
+
         public void Dispose()
         {
-            _lockSlim.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }
