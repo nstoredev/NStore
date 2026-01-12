@@ -33,5 +33,27 @@ namespace NStore.Domain
         /// save succeeded and no special condition applies.
         /// </summary>
         public AggregateSaveFailureKind? FailureKind { get; internal set; }
+
+        /// <summary>
+        /// Creates a result indicating the aggregate had no changes to persist.
+        /// </summary>
+        public static AggregateSaveResult Unchanged(string aggregateId) => new AggregateSaveResult
+        {
+            AggregateId = aggregateId,
+            Succeeded = true,
+            Chunk = null,
+            FailureKind = AggregateSaveFailureKind.Unchanged
+        };
+
+        /// <summary>
+        /// Creates a result indicating the aggregate failed invariant validation.
+        /// </summary>
+        public static AggregateSaveResult InvariantFailure(string aggregateId) => new AggregateSaveResult
+        {
+            AggregateId = aggregateId,
+            Succeeded = false,
+            Chunk = null,
+            FailureKind = AggregateSaveFailureKind.InvariantFailure
+        };
     }
 }

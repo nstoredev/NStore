@@ -213,17 +213,17 @@ namespace NStore.Domain
             var writeJobs = new List<WriteJob>();
             var aggregateByPartitionId = new Dictionary<string, IAggregate>();
 
-            // Check for duplicate aggregate ids in the input - this is not allowed
-            var duplicate = aggregates.GroupBy(a => a.Id).FirstOrDefault(g => g.Count() > 1);
-            if (duplicate != null)
-            {
-                throw new ArgumentException($"Duplicate aggregate id '{duplicate.Key}' passed to SaveManyAsync");
-            }
-
             // first step is preparing the write jobs for all aggregates to persist in a batch.
+            var seen = new HashSet<string>();
             var listOfAggregateSaveResult = new List<AggregateSaveResult>();
             foreach (var aggregate in aggregates)
             {
+                // Check for duplicate aggregate ids in the input - this is not allowed
+                if (!seen.Add(aggregate.Id))
+                {
+                    throw new ArgumentException($"Duplicate aggregate id '{aggregate.Id}' passed to SaveManyAsync");
+                }
+
                 // Validate aggregate is tracked by this repository (unless it's a new aggregate)
                 if (!_trackingAggregates.ContainsKey(aggregate.Id))
                 {
@@ -243,14 +243,7 @@ namespace NStore.Domain
                 // Skip empty changesets unless configured to persist them; report as Unchanged instead of omitting
                 if (changeSet.IsEmpty() && !PersistEmptyChangeset)
                 {
-                    //we do not need to save the aggregate, just report it as unchanged
-                    listOfAggregateSaveResult.Add(new AggregateSaveResult
-                    {
-                        AggregateId = aggregate.Id,
-                        Succeeded = true,
-                        Chunk = null,
-                        FailureKind = AggregateSaveFailureKind.Unchanged
-                    });
+                    listOfAggregateSaveResult.Add(AggregateSaveResult.Unchanged(aggregate.Id));
                     continue;
                 }
 
@@ -260,13 +253,7 @@ namespace NStore.Domain
                     var check = checker.CheckInvariants();
                     if (check.IsInvalid)
                     {
-                        listOfAggregateSaveResult.Add(new AggregateSaveResult
-                        {
-                            AggregateId = aggregate.Id,
-                            Succeeded = false,
-                            Chunk = null,
-                            FailureKind = AggregateSaveFailureKind.InvariantFailure
-                        });
+                        listOfAggregateSaveResult.Add(AggregateSaveResult.InvariantFailure(aggregate.Id));
                         continue;
                     }
                 }
@@ -351,7 +338,7 @@ namespace NStore.Domain
                 }
 
                 // Step 4: Save snapshots in batch (best-effort)
-                if (snapshotsToSave.Count > 0)
+                if (_snapshotBatchStore != null && snapshotsToSave.Count > 0)
                 {
                     await _snapshotBatchStore.AddManyAsync(snapshotsToSave, cancellationToken).ConfigureAwait(false);
                 }

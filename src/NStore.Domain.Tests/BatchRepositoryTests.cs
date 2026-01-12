@@ -109,7 +109,8 @@ namespace NStore.Domain.Tests
             list.Add(tickets["Ticket_1"]); // duplicate id in input
 
             // Act / Assert
-            await Assert.ThrowsAsync<ArgumentException>(() => BatchRepository.SaveManyAsync(list, "dup_op")).ConfigureAwait(false);
+            var ex = await Assert.ThrowsAsync<ArgumentException>(() => BatchRepository.SaveManyAsync(list, "dup_op")).ConfigureAwait(false);
+            Assert.Contains("Duplicate aggregate id 'Ticket_1' passed to SaveManyAsync", ex.Message);
         }
 
         [Fact]
