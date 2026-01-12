@@ -101,12 +101,17 @@ namespace NStore.Core.InMemory
                 return;
             }
 
-            var result = _partitions
-                .Where(c => partitionIdsList.Any(p => c.Key == p))
-                .Select(c => c.Value)
-                .ToList();
+            // O(m) lookup using dictionary TryGetValue instead of O(n*m) with nested Any()
+            var partitions = new List<InMemoryPartition>();
+            foreach (var partitionId in partitionIdsList)
+            {
+                if (_partitions.TryGetValue(partitionId, out var partition))
+                {
+                    partitions.Add(partition);
+                }
+            }
 
-            foreach (var partition in result)
+            foreach (var partition in partitions)
             {
                 await partition.ReadForward(fromLowerIndexInclusive, subscription, toUpperIndexInclusive, Int32.MaxValue, cancellationToken);
             }
@@ -124,18 +129,22 @@ namespace NStore.Core.InMemory
                 throw new ArgumentNullException(nameof(partitionIdsList));
             }
 
-            var partitionsList = partitionIdsList.ToList();
-            if (!partitionsList.Any())
+            // O(m) lookup using dictionary TryGetValue instead of O(n*m) with nested Any()
+            var partitions = new List<InMemoryPartition>();
+            foreach (var partitionId in partitionIdsList)
+            {
+                if (_partitions.TryGetValue(partitionId, out var partition))
+                {
+                    partitions.Add(partition);
+                }
+            }
+
+            if (partitions.Count == 0)
             {
                 yield break;
             }
 
-            var result = _partitions
-                .Where(c => partitionsList.Any(p => c.Key == p))
-                .Select(c => c.Value)
-                .ToList();
-
-            foreach (var partition in result)
+            foreach (var partition in partitions)
             {
                 var recorder = new Recorder();
                 await partition.ReadForward(fromLowerIndexInclusive, recorder, toUpperIndexInclusive, Int32.MaxValue, cancellationToken).ConfigureAwait(false);
