@@ -4,7 +4,6 @@ on:
     branches:
       - master
       - develop
-      - feature/*
       - hotfix/*
       - release/*
   pull_request:
@@ -21,7 +20,7 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
-      - name: Install Dotnet Tools
+      - name: Run GitVersion Tool
         shell: pwsh
         run: |
           dotnet tool restore
@@ -82,8 +81,20 @@ jobs:
           NSTORE_MSSQL: Server=localhost;user id=sa;password=sqlPw3$secure
         shell: pwsh
         run: |
-          dotnet tool run dotnet-sonarscanner begin /k:"nstore" /o:"alkampfergit-github" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.vstest.reportsPaths=TestResults/*.trx /d:sonar.cs.opencover.reportsPaths=TestResults/*/coverage.opencover.xml /d:sonar.coverage.exclusions="**Test*.cs"
           
+          dotnet tool restore
+          if ($LASTEXITCODE -ne 0) 
+          { 
+            throw "dotnet tool restore failed with exit code $LASTEXITCODE" 
+          }
+
+          # Run dotnet tool and then if the output is not success will break the build.
+          dotnet tool run dotnet-sonarscanner begin /k:"nstore" /o:"alkampfergit-github" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.vstest.reportsPaths=TestResults/*.trx /d:sonar.cs.opencover.reportsPaths=TestResults/*/coverage.opencover.xml /d:sonar.coverage.exclusions="**Test*.cs"
+          if ($LASTEXITCODE -ne 0) 
+          { 
+            throw "dotnet-sonarscanner begin failed with exit code $LASTEXITCODE" 
+          }
+
           ./newbuild.ps1 -nugetPublish $false --$nugetApiKey "NOKEY"
           
           dotnet tool run dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
