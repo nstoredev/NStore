@@ -478,6 +478,34 @@ namespace NStore.Core.Tests.Tpl
             Assert.Equal(2, recorder.Length);
         }
 
+        [Fact]
+        public async Task ReadForwardMultiplePartitionsWithRangesAsync_ShouldDelegateToUnderlyingPersistence()
+        {
+            // Arrange
+            _decorator = new PersistenceBatchAppendDecorator(_persistence, _loggerMock.Object, batchSize: 10, flushTimeout: 100);
+            await _persistence.AppendAsync("partition1", 1, "payload1", null, CancellationToken.None);
+            await _persistence.AppendAsync("partition1", 2, "payload2", null, CancellationToken.None);
+            await _persistence.AppendAsync("partition2", 1, "payload3", null, CancellationToken.None);
+            await _persistence.AppendAsync("partition2", 2, "payload4", null, CancellationToken.None);
+            await _persistence.AppendAsync("partition3", 1, "payload5", null, CancellationToken.None);
+
+            var recorder = new Recorder();
+            var requests = new[]
+            {
+                new PartitionReadRequest("partition1", 1, 1), // Only index 1 from partition1
+                new PartitionReadRequest("partition2", 0, 2)  // indices 0-2 from partition2
+            };
+
+            // Act
+            await _decorator.ReadForwardMultiplePartitionsWithRangesAsync(requests, recorder, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(3, recorder.Length); // 1 from partition1 + 2 from partition2
+            Assert.Contains(recorder.Chunks, c => c.PartitionId == "partition1" && c.Index == 1L);
+            Assert.Contains(recorder.Chunks, c => c.PartitionId == "partition2" && c.Index == 1L);
+            Assert.Contains(recorder.Chunks, c => c.PartitionId == "partition2" && c.Index == 2L);
+        }
+
         // Helper class that implements both IPersistence and IEnhancedPersistence for testing
         private class TestEnhancedPersistence : IPersistence, IEnhancedPersistence
         {
@@ -681,6 +709,76 @@ namespace NStore.Core.Tests.Tpl
                 }
                 return Task.CompletedTask;
             }
+
+            public Task ReadForwardMultiplePartitionsWithRangesAsync(IEnumerable<PartitionReadRequest> partitionRequests, ISubscription subscription, CancellationToken cancellationToken)
+            {
+                lock (_lock)
+                {
+                    var items = new List<TestChunk>();
+                    foreach (var request in partitionRequests)
+                    {
+                        var partitionItems = _chunks
+                            .Where(c => c.PartitionId == request.PartitionId && 
+                                       c.Index >= request.FromPartitionIndexInclusive && 
+                                       c.Index <= request.ToPartitionIndexInclusive)
+                            .OrderBy(c => c.Index);
+                        items.AddRange(partitionItems);
+                    }
+
+                    // Sort by index across all partitions (no temporal ordering guarantee)
+                    items = items.OrderBy(c => c.Index).ToList();
+
+                    foreach (var item in items)
+                    {
+                        subscription.OnNextAsync(item).GetAwaiter().GetResult();
+                    }
+                }
+                return Task.CompletedTask;
+            }
+
+#if NET8_0_OR_GREATER
+            public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(IEnumerable<PartitionReadRequest> partitionRequests, CancellationToken cancellationToken = default)
+            {
+                var items = new List<TestChunk>();
+                lock (_lock)
+                {
+                    foreach (var request in partitionRequests)
+                    {
+                        var partitionItems = _chunks
+                            .Where(c => c.PartitionId == request.PartitionId && 
+                                       c.Index >= request.FromPartitionIndexInclusive && 
+                                       c.Index <= request.ToPartitionIndexInclusive)
+                            .OrderBy(c => c.Index);
+                        items.AddRange(partitionItems);
+                    }
+
+                    // Sort by index across all partitions (no temporal ordering guarantee)
+                    items = items.OrderBy(c => c.Index).ToList();
+                }
+
+                foreach (var item in items)
+                {
+                    yield return item;
+                }
+            }
+
+            public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(IEnumerable<string> partitionIdsList, long fromLowerIndexInclusive, long toUpperIndexInclusive, CancellationToken cancellationToken)
+            {
+                var items = new List<TestChunk>();
+                lock (_lock)
+                {
+                    items = _chunks
+                        .Where(c => partitionIdsList.Contains(c.PartitionId) && c.Index >= fromLowerIndexInclusive && c.Index <= toUpperIndexInclusive)
+                        .OrderBy(c => c.Index)
+                        .ToList();
+                }
+
+                foreach (var item in items)
+                {
+                    yield return item;
+                }
+            }
+#endif
 
             private class TestChunk : IChunk
             {
