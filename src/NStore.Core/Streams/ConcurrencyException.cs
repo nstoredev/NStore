@@ -9,10 +9,6 @@ namespace NStore.Core.Streams
         {
         }
 
-        protected ConcurrencyException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
-
         public ConcurrencyException(string message) : base(message)
         {
         }

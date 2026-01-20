@@ -115,6 +115,37 @@ public static class PersistenceExtensions
         );
     }
 
+#if NET8_0_OR_GREATER
+    public static IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
+        this IMultiPartitionPersistenceReader persistence,
+        IEnumerable<string> partitionIdsList,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return persistence.ReadForwardMultiplePartitionsAsyncEnumerable(
+            partitionIdsList: partitionIdsList,
+            fromLowerIndexInclusive: 0,
+            toUpperIndexInclusive: long.MaxValue,
+            cancellationToken: cancellationToken
+        );
+    }
+
+    public static IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
+        this IMultiPartitionPersistenceReader persistence,
+        IEnumerable<string> partitionIdsList,
+        long fromLowerIndexInclusive,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return persistence.ReadForwardMultiplePartitionsAsyncEnumerable(
+            partitionIdsList: partitionIdsList,
+            fromLowerIndexInclusive: fromLowerIndexInclusive,
+            toUpperIndexInclusive: long.MaxValue,
+            cancellationToken: cancellationToken
+        );
+    }
+#endif
+
     public static Task ReadBackwardAsync(
         this IPersistence persistence,
         string partitionId,

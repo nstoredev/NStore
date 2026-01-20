@@ -17,9 +17,5 @@ namespace NStore.Core.Streams
         public StreamReadOnlyException(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-        protected StreamReadOnlyException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

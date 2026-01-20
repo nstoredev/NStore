@@ -2,6 +2,8 @@ using NStore.BaseSqlPersistence;
 using System.Data.Common;
 using System.Data.SqlClient;
 using System.Data.SqlTypes;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace NStore.Persistence.MsSql
 {
@@ -20,12 +22,16 @@ namespace NStore.Persistence.MsSql
 
         public override DbCommand CreateCommand(string sql)
         {
-            return new SqlCommand(sql, (SqlConnection)Connection, _pendingTransaction);
+            var command = new SqlCommand(sql, (SqlConnection)Connection, _pendingTransaction);
+            // Command timeout can be set by the persistence options
+            return command;
         }
 
         public override DbCommand CreateCommand(string sql, DbTransaction transaction)
         {
-            return new SqlCommand(sql, (SqlConnection)Connection, (SqlTransaction)transaction);
+            var command = new SqlCommand(sql, (SqlConnection)Connection, (SqlTransaction)transaction);
+            // Command timeout can be set by the persistence options
+            return command;
         }
 
         public override void AddParam(DbCommand command, string paramName, object value)

@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using NStore.BaseSqlPersistence;
 using NStore.Core.Logging;
+using NStore.Core.Persistence;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,37 +43,13 @@ namespace NStore.Persistence.Sqlite
 ";
         }
 
-        public override string GetReplaceChunkSql()
-        {
-            return $@"UPDATE [{StreamsTableName}]
-                    SET [PartitionId] = @PartitionId,
-                        [Index] = @Index,
-                        [Payload] = @Payload,
-                        [OperationId] = @OperationId,
-                        [SerializerInfo] = @SerializerInfo
-                    WHERE [Position] = @Position";
-        }
 
-        public override string GetSelectChunkByStreamAndOperation()
-        {
-            return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
-                      FROM [{StreamsTableName}] 
-                      WHERE [PartitionId] = @PartitionId AND [OperationId] = @OperationId";
-        }
 
-        public override string GetSelectAllChunksByOperationSql()
-        {
-            return $@"SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
-                      FROM [{StreamsTableName}] 
-                      WHERE [OperationId] = @OperationId";
-        }
 
-        public override string GetDeleteStreamChunksSql()
-        {
-            return $@"DELETE FROM [{StreamsTableName}] WHERE 
-                          [PartitionId] = @PartitionId 
-                      AND [Index] BETWEEN @fromLowerIndexInclusive AND @toUpperIndexInclusive";
-        }
+
+
+
+
 
         public override string GetSelectLastChunkSql()
         {
@@ -88,15 +65,7 @@ namespace NStore.Persistence.Sqlite
                       LIMIT 1";
         }
 
-        public override string GetChunkByPositionSql()
-        {
-            return $@"SELECT  
-                        [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo]
-                      FROM 
-                        [{this.StreamsTableName}] 
-                      WHERE 
-                          [Position] = @Position";
-        }
+
 
         public override string GetCreateTableIfMissingSql()
         {
@@ -122,7 +91,7 @@ namespace NStore.Persistence.Sqlite
             sb.Append($"FROM {StreamsTableName} ");
             sb.Append("WHERE [PartitionId] = @PartitionId ");
 
-            if (lowerIndexInclusive > 0 && lowerIndexInclusive != Int64.MinValue)
+            if (lowerIndexInclusive > 0)
             {
                 sb.Append("AND [Index] >= @lowerIndexInclusive ");
             }
@@ -166,33 +135,6 @@ namespace NStore.Persistence.Sqlite
                       ORDER BY 
                           [Position] DESC
                       LIMIT 1";
-        }
-
-        public override string GetRangeMultiplePartitionSelectChunksSql(
-            IEnumerable<string> partitionIdsList,
-            long lowerIndexInclusive,
-            long upperIndexInclusive,
-            bool descending)
-        {
-            var sb = new StringBuilder("SELECT ");
-            sb.Append("[Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo] ");
-            sb.Append($"FROM {StreamsTableName} ");
-            //Generate a query like [PartitionId] in (@p1, @p2, @p3) based on how many parameter we have
-            sb.Append($"WHERE [PartitionId] in ({String.Join(",", Enumerable.Range(1, partitionIdsList.Count()).Select(n => $"@p{n}"))}) ");
-
-            if (lowerIndexInclusive > 0 && lowerIndexInclusive != Int64.MinValue)
-            {
-                sb.Append("AND [Index] >= @lowerIndexInclusive ");
-            }
-
-            if (upperIndexInclusive > 0 && upperIndexInclusive != Int64.MaxValue)
-            {
-                sb.Append("AND [Index] <= @upperIndexInclusive ");
-            }
-
-            sb.Append(descending ? "ORDER BY [Index] DESC" : "ORDER BY [Index]");
-
-            return sb.ToString();
         }
     }
 }
