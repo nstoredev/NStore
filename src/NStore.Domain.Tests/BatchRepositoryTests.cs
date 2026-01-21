@@ -766,8 +766,8 @@ namespace NStore.Domain.Tests
             var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
             Assert.NotNull(chunk);
             var changeset = (Changeset)chunk.Payload;
-            Assert.True(changeset.Headers.ContainsKey("CustomHeader"));
-            Assert.Equal("CustomValue", changeset.Headers["CustomHeader"]);
+            Assert.True(changeset.Headers.TryGetValue("CustomHeader", out var headerValue));
+            Assert.Equal("CustomValue", headerValue);
         }
 
         [Fact]

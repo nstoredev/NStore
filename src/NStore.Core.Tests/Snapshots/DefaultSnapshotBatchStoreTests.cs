@@ -156,11 +156,11 @@ namespace NStore.Core.Tests.Snapshots
 
             // Assert
             Assert.Equal(2, result.Count);
-            Assert.True(result.ContainsKey("Order-1"));
             Assert.False(result.ContainsKey("Order-2")); // Should not be in result
-            Assert.True(result.ContainsKey("Order-3"));
-            Assert.Same(snapshot1, result["Order-1"]);
-            Assert.Same(snapshot3, result["Order-3"]);
+            Assert.True(result.TryGetValue("Order-1", out var order1Snapshot));
+            Assert.Same(snapshot1, order1Snapshot);
+            Assert.True(result.TryGetValue("Order-3", out var order3Snapshot));
+            Assert.Same(snapshot3, order3Snapshot);
         }
 
         [Fact]
@@ -203,8 +203,10 @@ namespace NStore.Core.Tests.Snapshots
 
             // Assert
             Assert.Equal(2, result.Count);
-            Assert.Same(snapshot1, result["Order-1"]);
-            Assert.Same(snapshot5, result["Order-5"]);
+            Assert.True(result.TryGetValue("Order-1", out var order1Snapshot));
+            Assert.Same(snapshot1, order1Snapshot);
+            Assert.True(result.TryGetValue("Order-5", out var order5Snapshot));
+            Assert.Same(snapshot5, order5Snapshot);
             Assert.False(result.ContainsKey("Order-2"));
             Assert.False(result.ContainsKey("Order-3"));
             Assert.False(result.ContainsKey("Order-4"));
@@ -246,7 +248,7 @@ namespace NStore.Core.Tests.Snapshots
                 // Act & Assert
                 // The fake store doesn't actually check cancellation, but we verify the token is passed through
                 // In a real implementation, this would throw OperationCanceledException
-                var ex = await Assert.ThrowsAnyAsync<TaskCanceledException>(async () => await batchStore.GetManyAsync(partitionIds, cts.Token));
+                await Assert.ThrowsAnyAsync<TaskCanceledException>(async () => await batchStore.GetManyAsync(partitionIds, cts.Token));
             }
         }
 
@@ -299,8 +301,8 @@ namespace NStore.Core.Tests.Snapshots
             Assert.Equal(100, result.Count);
             foreach (var snapshot in snapshots)
             {
-                Assert.True(result.ContainsKey(snapshot.SourceId));
-                Assert.Same(snapshot, result[snapshot.SourceId]);
+                Assert.True(result.TryGetValue(snapshot.SourceId, out var storedSnapshot));
+                Assert.Same(snapshot, storedSnapshot);
             }
         }
 

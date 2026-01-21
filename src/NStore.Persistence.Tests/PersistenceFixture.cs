@@ -1026,7 +1026,7 @@ namespace NStore.Persistence.Tests
             Store.AppendAsync("mbpra", 3, "payload", $"op_{seed++}").Wait();
             Store.AppendAsync("mbprc", 1, "payload", $"op_{seed++}").Wait();
             Store.AppendAsync("mbprb", 2, "payload", $"op_{seed++}").Wait();
-            Store.AppendAsync("mbprz", 1, "payload", $"op_{seed++}").Wait();
+            Store.AppendAsync("mbprz", 1, "payload", $"op_{seed}").Wait();
         }
 
         [Fact]
@@ -1285,7 +1285,7 @@ namespace NStore.Persistence.Tests
             Store.AppendAsync("mbpra", 2, "payload_a2", $"op_{seed++}").Wait();
             Store.AppendAsync("mbpra", 3, "payload_a3", $"op_{seed++}").Wait();
             Store.AppendAsync("mbprc", 1, "payload_c1", $"op_{seed++}").Wait();
-            Store.AppendAsync("mbprb", 2, "payload_b2", $"op_{seed++}").Wait();
+            Store.AppendAsync("mbprb", 2, "payload_b2", $"op_{seed}").Wait();
         }
 
         [Fact]
@@ -1681,14 +1681,11 @@ namespace NStore.Persistence.Tests
         {
             var map = partitions.ToDictionary(p => p, _ => 0L);
 
-            foreach (var chunk in chunks)
+            foreach (var chunk in chunks.Where(c => map.ContainsKey(c.PartitionId)))
             {
-                if (map.ContainsKey(chunk.PartitionId))
-                {
-                    Assert.True(chunk.Index > map[chunk.PartitionId],
-                        $"Partition {chunk.PartitionId}: chunk index {chunk.Index} is not greater than previous {map[chunk.PartitionId]}");
-                    map[chunk.PartitionId] = chunk.Index;
-                }
+                Assert.True(chunk.Index > map[chunk.PartitionId],
+                    $"Partition {chunk.PartitionId}: chunk index {chunk.Index} is not greater than previous {map[chunk.PartitionId]}");
+                map[chunk.PartitionId] = chunk.Index;
             }
         }
 

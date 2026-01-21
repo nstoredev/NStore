@@ -41,9 +41,9 @@ namespace NStore.Domain
         /// </summary>
         /// <param name="aggregates">Collection of aggregates to save</param>
         /// <param name="operationId">Operation ID for idempotency, it can be null, where using null means
-        /// that the repository will generate unique operation id. Usually I'm expecting this value to be pased 
-        /// from the external code, because probably all the update of all the aggregate will be written on the 
-        /// very same operation id for a full idempotency: es the caller calls an api, a transport error arise, he/she can
+        /// that the repository will generate unique operation id. Usually I'm expecting this value to be passed
+        /// from the external code, because probably all the update of all the aggregate will be written on the
+        /// very same operation id for a full idempotency: e.g., the caller calls an API, a transport error arises, he/she can
         /// request the same batch of operation with the same id for full idempotency.</param>
         /// <param name="headers">Optional action to add headers to changesets</param>
         /// <param name="cancellationToken">Cancellation token</param>

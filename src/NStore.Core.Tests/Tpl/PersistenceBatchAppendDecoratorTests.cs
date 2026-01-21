@@ -391,7 +391,7 @@ namespace NStore.Core.Tests.Tpl
         {
             // Arrange
             _decorator = new PersistenceBatchAppendDecorator(_persistence, _loggerMock.Object, batchSize: 100, flushTimeout: 10000);
-            var cts = new CancellationTokenSource();
+            using var cts = new CancellationTokenSource();
             cts.Cancel();
 
             // Act & Assert
@@ -714,19 +714,13 @@ namespace NStore.Core.Tests.Tpl
             {
                 lock (_lock)
                 {
-                    var items = new List<TestChunk>();
-                    foreach (var request in partitionRequests)
-                    {
-                        var partitionItems = _chunks
-                            .Where(c => c.PartitionId == request.PartitionId && 
-                                       c.Index >= request.FromPartitionIndexInclusive && 
-                                       c.Index <= request.ToPartitionIndexInclusive)
-                            .OrderBy(c => c.Index);
-                        items.AddRange(partitionItems);
-                    }
-
-                    // Sort by index across all partitions (no temporal ordering guarantee)
-                    items = items.OrderBy(c => c.Index).ToList();
+                    var items = partitionRequests
+                        .SelectMany(request => _chunks
+                            .Where(c => c.PartitionId == request.PartitionId &&
+                                       c.Index >= request.FromPartitionIndexInclusive &&
+                                       c.Index <= request.ToPartitionIndexInclusive))
+                        .OrderBy(c => c.Index)
+                        .ToList();
 
                     foreach (var item in items)
                     {
@@ -741,21 +735,16 @@ namespace NStore.Core.Tests.Tpl
                 IEnumerable<PartitionReadRequest> partitionRequests,
                 [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
             {
-                var items = new List<TestChunk>();
+                List<TestChunk> items;
                 lock (_lock)
                 {
-                    foreach (var request in partitionRequests)
-                    {
-                        var partitionItems = _chunks
-                            .Where(c => c.PartitionId == request.PartitionId && 
-                                       c.Index >= request.FromPartitionIndexInclusive && 
-                                       c.Index <= request.ToPartitionIndexInclusive)
-                            .OrderBy(c => c.Index);
-                        items.AddRange(partitionItems);
-                    }
-
-                    // Sort by index across all partitions (no temporal ordering guarantee)
-                    items = items.OrderBy(c => c.Index).ToList();
+                    items = partitionRequests
+                        .SelectMany(request => _chunks
+                            .Where(c => c.PartitionId == request.PartitionId &&
+                                       c.Index >= request.FromPartitionIndexInclusive &&
+                                       c.Index <= request.ToPartitionIndexInclusive))
+                        .OrderBy(c => c.Index)
+                        .ToList();
                 }
 
                 await Task.Delay(0, cancellationToken);

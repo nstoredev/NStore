@@ -23,7 +23,7 @@ namespace NStore.Core.Streams
         /// <summary>
         /// Batched streams works differently from a standard stream
         /// where usually you specify the stream id in the constructor
-        /// then you have method to work whith that stream.
+        /// then you have method to work with that stream.
         /// 
         /// A batched stream has a specific purpose of loading multiple
         /// stream and being able to batch updates, no other functionalities
