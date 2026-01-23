@@ -3,7 +3,6 @@ using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -67,6 +66,225 @@ namespace NStore.Persistence.LiteDB
 
             await PublishAsync(chunks, fromLowerIndexInclusive, subscription, false, cancellationToken)
                 .ConfigureAwait(false);
+        }
+
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            var partitionsList = partitionIdsList.ToList();
+            var query = _streams.Query()
+               .Where(x => partitionsList.Contains(x.PartitionId)
+                           && x.Index >= fromLowerIndexInclusive
+                           && x.Index <= toUpperIndexInclusive)
+               .OrderBy(x => x.Index);
+
+            await Task.CompletedTask;
+
+            foreach (var chunk in query.ToEnumerable())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                yield return chunk;
+            }
+        }
+#endif
+
+        /// <summary>
+        /// Reads multiple partitions where each partition can have its own index range.
+        /// Implements subscription-based result delivery with per-partition ordering guarantees.
+        /// </summary>
+        /// <param name="partitionRequests">List of partition read requests, each with its own range.</param>
+        /// <param name="subscription">Subscriber that will receive chunks.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <remarks>
+        /// Chunks within the same partition are ordered by partition index.
+        /// Overlapping or duplicate ranges for the same partition are automatically merged and deduplicated.
+        /// NO temporal ordering is guaranteed between different partitions.
+        /// </remarks>
+        public async Task ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            var chunks = GatherChunksFromPartitionRequests(partitionRequests, deserializePayloads: false);
+            var startIndex = partitionRequests.Any() 
+                ? partitionRequests.Min(r => r.FromPartitionIndexInclusive) 
+                : 0L;
+
+            await PublishAsync(chunks, startIndex, subscription, false, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Asynchronously enumerates chunks for multiple partitions where each partition can have its own index range.
+        /// Consumers can use `await foreach` and stop enumeration early to signal the producer to stop.
+        /// </summary>
+        /// <param name="partitionRequests">List of partition read requests, each with its own range.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>An async sequence of <see cref="IChunk"/> instances.</returns>
+        /// <remarks>
+        /// Chunks within the same partition are ordered by partition index.
+        /// Overlapping or duplicate ranges for the same partition are automatically merged and deduplicated.
+        /// NO temporal ordering is guaranteed between different partitions.
+        /// </remarks>
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            var requestsList = partitionRequests.ToList();
+            if (!requestsList.Any())
+            {
+                yield break;
+            }
+
+            // Group requests by partition to preserve per-partition ordering and handle duplicates
+            var partitionGroups = requestsList
+                .GroupBy(r => r.PartitionId)
+                .Select(g => new
+                {
+                    PartitionId = g.Key,
+                    Ranges = OptimizeRanges(g.Select(r => (r.FromPartitionIndexInclusive, r.ToPartitionIndexInclusive)).ToList())
+                })
+                .ToList();
+
+            var seenChunks = new HashSet<(string PartitionId, long Index)>();
+
+            await Task.CompletedTask;
+
+            foreach (var partitionGroup in partitionGroups)
+            {
+                // Query each optimized range for this partition
+                foreach (var (fromIndex, toIndex) in partitionGroup.Ranges)
+                {
+                    var rangeChunks = _streams.Query()
+                        .Where(x => x.PartitionId == partitionGroup.PartitionId
+                                    && x.Index >= fromIndex
+                                    && x.Index <= toIndex)
+                        .OrderBy(x => x.Index)
+                        .ToEnumerable();
+
+                    foreach (var chunk in rangeChunks)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var key = (chunk.PartitionId, chunk.Index);
+                        if (seenChunks.Add(key))
+                        {
+                            yield return chunk;
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Helper method to gather chunks from partition requests with range optimization and deduplication.
+        /// </summary>
+        /// <param name="partitionRequests">List of partition read requests.</param>
+        /// <param name="deserializePayloads">Whether to deserialize payloads (true for direct consumption, false when PublishAsync will handle it).</param>
+        /// <returns>List of deduplicated chunks ordered by partition and index.</returns>
+        private List<LiteDBChunk> GatherChunksFromPartitionRequests(
+            IEnumerable<PartitionReadRequest> partitionRequests, 
+            bool deserializePayloads)
+        {
+            var requestsList = partitionRequests.ToList();
+            if (!requestsList.Any())
+            {
+                return new List<LiteDBChunk>();
+            }
+
+            // Group requests by partition to preserve per-partition ordering and handle duplicates
+            var partitionGroups = requestsList
+                .GroupBy(r => r.PartitionId)
+                .Select(g => new
+                {
+                    PartitionId = g.Key,
+                    Ranges = OptimizeRanges(g.Select(r => (r.FromPartitionIndexInclusive, r.ToPartitionIndexInclusive)).ToList())
+                })
+                .ToList();
+
+            var allChunks = new List<LiteDBChunk>();
+            var seenChunks = new HashSet<(string PartitionId, long Index)>();
+
+            foreach (var partitionGroup in partitionGroups)
+            {
+                var partitionChunks = new List<LiteDBChunk>();
+
+                // Query each optimized range for this partition
+                foreach (var (fromIndex, toIndex) in partitionGroup.Ranges)
+                {
+                    var rangeChunks = _streams.Query()
+                        .Where(x => x.PartitionId == partitionGroup.PartitionId
+                                    && x.Index >= fromIndex
+                                    && x.Index <= toIndex)
+                        .OrderBy(x => x.Index)
+                        .ToList();
+
+                    partitionChunks.AddRange(rangeChunks);
+                }
+
+                // Deduplicate and maintain ordering within partition
+                foreach (var chunk in partitionChunks.OrderBy(c => c.Index))
+                {
+                    var key = (chunk.PartitionId, chunk.Index);
+                    if (seenChunks.Add(key))
+                    {
+                        // Optionally deserialize payload if requested
+                        if (deserializePayloads && chunk.Payload != null)
+                        {
+                            chunk.Payload = _options.PayloadSerializer.Deserialize((string)chunk.Payload);
+                        }
+                        allChunks.Add(chunk);
+                    }
+                }
+            }
+
+            return allChunks;
+        }
+
+        /// <summary>
+        /// Optimizes a list of index ranges by merging overlapping or contiguous ranges.
+        /// This reduces the number of database queries needed.
+        /// </summary>
+        /// <param name="ranges">List of ranges to optimize.</param>
+        /// <returns>Optimized list with merged ranges.</returns>
+        private List<(long FromIndex, long ToIndex)> OptimizeRanges(List<(long FromIndex, long ToIndex)> ranges)
+        {
+            if (ranges.Count <= 1)
+            {
+                return ranges;
+            }
+
+            // Sort ranges by start index
+            var sortedRanges = ranges.OrderBy(r => r.FromIndex).ToList();
+            var optimized = new List<(long FromIndex, long ToIndex)>();
+
+            var currentRange = sortedRanges[0];
+
+            for (int i = 1; i < sortedRanges.Count; i++)
+            {
+                var nextRange = sortedRanges[i];
+
+                // Check if ranges overlap or are contiguous
+                if (nextRange.FromIndex <= currentRange.ToIndex + 1)
+                {
+                    // Merge ranges
+                    currentRange = (currentRange.FromIndex, Math.Max(currentRange.ToIndex, nextRange.ToIndex));
+                }
+                else
+                {
+                    // No overlap, add current range and move to next
+                    optimized.Add(currentRange);
+                    currentRange = nextRange;
+                }
+            }
+
+            // Add the last range
+            optimized.Add(currentRange);
+
+            return optimized;
         }
 
         private async Task PublishAsync(
@@ -339,37 +557,8 @@ namespace NStore.Persistence.LiteDB
 
             _streams.EnsureIndex(x => x.StreamSequence, true);
             _streams.EnsureIndex(x => x.StreamOperation, true);
-        }
-
-        public void DeleteDataFiles()
-        {
-            if (_db != null)
-            {
-                _streams = null;
-                _db.Dispose();
-            }
-
-            // data file
-            if (File.Exists(_options.ConnectionString))
-            {
-                File.Delete(_options.ConnectionString);
-            }
-
-            // log file
-            var logFileName = Path.Combine
-            (
-                Path.GetDirectoryName(_options.ConnectionString),
-                Path.ChangeExtension
-                (
-                    Path.GetFileNameWithoutExtension(_options.ConnectionString) + "-log",
-                    Path.GetExtension(_options.ConnectionString)
-                )
-            );
-
-            if (File.Exists(logFileName))
-            {
-                File.Delete(logFileName);
-            }
+            _streams.EnsureIndex(x => x.PartitionId, false);
+            _streams.EnsureIndex(x => x.Index, false);
         }
 
         public void Dispose()

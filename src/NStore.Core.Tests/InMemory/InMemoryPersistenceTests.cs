@@ -97,4 +97,88 @@ namespace NStore.Core.Tests.InMemory
                 persistence.ReadForwardMultiplePartitionsAsync(null, 0, new DummySubscription(), long.MaxValue, CancellationToken.None));
         }
     }
+
+    /// <summary>
+    /// Tests for InMemoryPersistence optimizations - see GitHub issue #124
+    /// </summary>
+    public class InMemoryPersistenceMultiPartitionTests
+    {
+        private readonly InMemoryPersistence _persistence;
+
+        public InMemoryPersistenceMultiPartitionTests()
+        {
+            _persistence = new InMemoryPersistence();
+        }
+
+        [Fact]
+        public async Task read_multiple_partitions_should_return_only_existing_partitions()
+        {
+            // Arrange - create only some of the partitions we'll request
+            await _persistence.AppendAsync("partition-a", 1, "payload-a1", "op1", CancellationToken.None);
+            await _persistence.AppendAsync("partition-a", 2, "payload-a2", "op2", CancellationToken.None);
+            await _persistence.AppendAsync("partition-b", 1, "payload-b1", "op3", CancellationToken.None);
+
+            var recorder = new Recorder();
+
+            // Act - request existing and non-existing partitions
+            await _persistence.ReadForwardMultiplePartitionsAsync(
+                new[] { "partition-a", "partition-nonexistent", "partition-b", "another-missing" },
+                1,
+                recorder,
+                long.MaxValue,
+                CancellationToken.None
+            );
+
+            // Assert - should only return chunks from existing partitions
+            Assert.Equal(3, recorder.Length);
+        }
+
+        [Fact]
+        public async Task read_multiple_partitions_with_all_nonexistent_should_return_empty()
+        {
+            // Arrange - create a partition that won't be queried
+            await _persistence.AppendAsync("existing-partition", 1, "payload", "op1", CancellationToken.None);
+
+            var recorder = new Recorder();
+
+            // Act - request only non-existing partitions
+            await _persistence.ReadForwardMultiplePartitionsAsync(
+                new[] { "nonexistent-a", "nonexistent-b", "nonexistent-c" },
+                1,
+                recorder,
+                long.MaxValue,
+                CancellationToken.None
+            );
+
+            // Assert - should return no chunks
+            Assert.Equal(0, recorder.Length);
+        }
+
+        [Fact]
+        public async Task read_multiple_partitions_preserves_partition_order()
+        {
+            // Arrange - create partitions
+            await _persistence.AppendAsync("partition-z", 1, "z-payload", "op1", CancellationToken.None);
+            await _persistence.AppendAsync("partition-a", 1, "a-payload", "op2", CancellationToken.None);
+            await _persistence.AppendAsync("partition-m", 1, "m-payload", "op3", CancellationToken.None);
+
+            var recorder = new Recorder();
+
+            // Act - request in specific order
+            await _persistence.ReadForwardMultiplePartitionsAsync(
+                new[] { "partition-a", "partition-z", "partition-m" },
+                1,
+                recorder,
+                long.MaxValue,
+                CancellationToken.None
+            );
+
+            // Assert - should return chunks in partition request order
+            var chunks = recorder.Chunks.ToList();
+            Assert.Equal(3, recorder.Length);
+            Assert.Equal("partition-a", chunks[0].PartitionId);
+            Assert.Equal("partition-z", chunks[1].PartitionId);
+            Assert.Equal("partition-m", chunks[2].PartitionId);
+        }
+    }
 }

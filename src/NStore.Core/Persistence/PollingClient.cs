@@ -7,7 +7,7 @@ namespace NStore.Core.Persistence
 {
     public class PollingClient
     {
-        private class Sequencer : ISubscription
+        private sealed class Sequencer : ISubscription
         {
             private readonly ISubscription _subscription;
             private readonly INStoreLogger _logger;
@@ -89,9 +89,7 @@ namespace NStore.Core.Persistence
         private readonly INStoreLogger _logger;
         private int _isPolling = 0;
         private bool _stopped = false;
-
-        [Obsolete("Use IsActive")]
-        public bool IsPolling => IsActive;
+        
         public bool IsActive => !_stopped;
 
         public PollingClient(IPersistence store, long lastPosition, ISubscription subscription, INStoreLoggerFactory inStoreLoggerFactory)
@@ -108,7 +106,11 @@ namespace NStore.Core.Persistence
         {
             if (_source != null)
             {
-                _source.Cancel();
+#if NET8_0_OR_GREATER
+                await _source.CancelAsync();
+#else
+                _source.Cancel();       
+#endif
                 _source.Dispose();
                 _source = null;
             }
@@ -182,7 +184,7 @@ namespace NStore.Core.Persistence
             {
                 throw new PollingException("Already polling");
             }
-#endif 
+#endif
         }
 
         private async Task InnerPolling(CancellationToken token)

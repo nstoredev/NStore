@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;net8.0;net10.0</TargetFrameworks>
 
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <PackageProjectUrl>https://github.com/ProximoSrl/NStore</PackageProjectUrl>
     <RepositoryUrl>https://github.com/ProximoSrl/NStore</RepositoryUrl>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -24,9 +24,6 @@
     <PackageReference Include="System.Data.SqlClient" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\AssemblyInfo.cs">
-      <Link>AssemblyInfo.cs</Link>
-    </Compile>
     <None PackagePath="" Include="..\..\LICENSE.md" pack="true" />
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>

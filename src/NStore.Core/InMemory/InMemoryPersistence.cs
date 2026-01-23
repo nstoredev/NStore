@@ -8,7 +8,7 @@ using NStore.Core.Persistence;
 
 namespace NStore.Core.InMemory
 {
-    public class InMemoryPersistence : IPersistence, IDisposable
+    public class InMemoryPersistence : IPersistence, IEnhancedPersistence, IDisposable
     {
         private bool _disposed;
         private readonly Func<object, object> _cloneFunc;
@@ -101,14 +101,209 @@ namespace NStore.Core.InMemory
                 return;
             }
 
-            var result = _partitions
-                .Where(c => partitionIdsList.Any(p => c.Key == p))
-                .Select(c => c.Value)
-                .ToList();
+            // O(m) lookup using dictionary TryGetValue instead of O(n*m) with nested Any()
+            var partitions = new List<InMemoryPartition>();
+            foreach (var partitionId in partitionIdsList)
+            {
+                if (_partitions.TryGetValue(partitionId, out var partition))
+                {
+                    partitions.Add(partition);
+                }
+            }
 
-            foreach (var partition in result)
+            foreach (var partition in partitions)
             {
                 await partition.ReadForward(fromLowerIndexInclusive, subscription, toUpperIndexInclusive, Int32.MaxValue, cancellationToken);
+            }
+        }
+
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            if (partitionIdsList is null)
+            {
+                throw new ArgumentNullException(nameof(partitionIdsList));
+            }
+
+            // O(m) lookup using dictionary TryGetValue instead of O(n*m) with nested Any()
+            var partitions = new List<InMemoryPartition>();
+            foreach (var partitionId in partitionIdsList)
+            {
+                if (_partitions.TryGetValue(partitionId, out var partition))
+                {
+                    partitions.Add(partition);
+                }
+            }
+
+            if (partitions.Count == 0)
+            {
+                yield break;
+            }
+
+            foreach (var partition in partitions)
+            {
+                var recorder = new Recorder();
+                await partition.ReadForward(fromLowerIndexInclusive, recorder, toUpperIndexInclusive, Int32.MaxValue, cancellationToken).ConfigureAwait(false);
+
+                foreach (var chunk in recorder.Chunks)
+                {
+                    yield return chunk;
+                }
+            }
+        }
+#endif
+
+        public async Task ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            if (partitionRequests is null)
+                throw new ArgumentNullException(nameof(partitionRequests));
+
+            var requestsList = partitionRequests.ToList();
+            if (!requestsList.Any())
+                return;
+
+            // Group requests by partition id and preserve the order of ranges for each partition.
+            var grouped = requestsList.GroupBy(r => r.PartitionId);
+
+            foreach (var group in grouped)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var partitionId = group.Key;
+                if (!_partitions.TryGetValue(partitionId, out var partition))
+                {
+                    continue; // ignore non existing partitions
+                }
+
+                // Keep track of seen indices for this partition to avoid duplicates across ranges.
+                var seen = new HashSet<long>();
+                var wrapper = new PartitionSubscriptionWrapper(subscription, seen);
+
+                // Sort ranges by starting index to ensure per-partition ordering.
+                var ranges = group.Select(r => (from: r.FromPartitionIndexInclusive, to: r.ToPartitionIndexInclusive))
+                                  .OrderBy(t => t.from)
+                                  .ToList();
+
+                foreach (var (from, to) in ranges)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    await partition.ReadForward(from, wrapper, to, Int32.MaxValue, cancellationToken).ConfigureAwait(false);
+
+                    if (wrapper.ShouldStop)
+                    {
+                        // upstream indicated to stop (OnNextAsync returned false). Stop processing further ranges/partitions.
+                        return;
+                    }
+                }
+            }
+        }
+
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            if (partitionRequests is null)
+                throw new ArgumentNullException(nameof(partitionRequests));
+
+            var requestsList = partitionRequests.ToList();
+            if (!requestsList.Any())
+                yield break;
+
+            var grouped = requestsList.GroupBy(r => r.PartitionId);
+
+            foreach (var group in grouped)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var partitionId = group.Key;
+                if (!_partitions.TryGetValue(partitionId, out var partition))
+                {
+                    continue; // no such partition
+                }
+
+                // Track seen indices per partition to avoid duplicates across ranges.
+                var seen = new HashSet<long>();
+
+                var ranges = group.Select(r => (from: r.FromPartitionIndexInclusive, to: r.ToPartitionIndexInclusive))
+                                  .OrderBy(t => t.from)
+                                  .ToList();
+
+                foreach (var (from, to) in ranges)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    // Use a recorder to collect chunks for this range and then yield them.
+                    var recorder = new Recorder();
+                    await partition.ReadForward(from, recorder, to, Int32.MaxValue, cancellationToken).ConfigureAwait(false);
+
+                    foreach (var chunk in recorder.Chunks)
+                    {
+                        if (seen.Add(chunk.Index))
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            yield return Clone((MemoryChunk)chunk);
+                        }
+                    }
+                }
+            }
+        }
+
+        private class PartitionSubscriptionWrapper : ISubscription
+        {
+            private readonly ISubscription _inner;
+            private readonly HashSet<long> _seen;
+
+            public bool ShouldStop { get; private set; }
+
+            public PartitionSubscriptionWrapper(ISubscription inner, HashSet<long> seen)
+            {
+                _inner = inner;
+                _seen = seen;
+            }
+
+            public Task OnStartAsync(long indexOrPosition)
+            {
+                return _inner.OnStartAsync(indexOrPosition);
+            }
+
+            public async Task<bool> OnNextAsync(IChunk chunk)
+            {
+                if (!_seen.Add(chunk.Index))
+                {
+                    // already seen this index for this partition -> skip but keep reading
+                    return true;
+                }
+
+                var cont = await _inner.OnNextAsync(chunk).ConfigureAwait(false);
+                if (!cont)
+                {
+                    ShouldStop = true;
+                }
+
+                return cont;
+            }
+
+            public Task CompletedAsync(long indexOrPosition)
+            {
+                return _inner.CompletedAsync(indexOrPosition);
+            }
+
+            public Task StoppedAsync(long indexOrPosition)
+            {
+                return _inner.StoppedAsync(indexOrPosition);
+            }
+
+            public Task OnErrorAsync(long indexOrPosition, Exception ex)
+            {
+                return _inner.OnErrorAsync(indexOrPosition, ex);
             }
         }
 
@@ -489,6 +684,46 @@ namespace NStore.Core.InMemory
             };
 
             await ReadAllAsync(0, filter, int.MaxValue, cancellationToken).ConfigureAwait(false);
+        }
+
+        public async Task AppendBatchAsync(WriteJob[] queue, CancellationToken cancellationToken)
+        {
+            if (queue == null)
+                throw new ArgumentNullException(nameof(queue));
+
+            foreach (var job in queue)
+            {
+                try
+                {
+                    var chunk = await AppendAsync(
+                        job.PartitionId,
+                        job.Index,
+                        job.Payload,
+                        job.OperationId,
+                        cancellationToken
+                    ).ConfigureAwait(false);
+
+                    if (chunk != null)
+                    {
+                        job.Succeeded(chunk);
+                    }
+                    else
+                    {
+                        // Idempotent operation (same operation ID already exists)
+                        job.Failed(WriteJob.WriteResult.DuplicatedOperation);
+                    }
+                }
+                catch (DuplicateStreamIndexException)
+                {
+                    // Concurrency conflict
+                    job.Failed(WriteJob.WriteResult.DuplicatedIndex);
+                }
+                catch (Exception)
+                {
+                    // Generic failure
+                    job.Failed(WriteJob.WriteResult.Failed);
+                }
+            }
         }
 
         protected virtual void Dispose(bool disposing)

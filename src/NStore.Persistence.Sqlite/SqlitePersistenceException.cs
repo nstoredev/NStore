@@ -8,9 +8,5 @@ namespace NStore.Persistence.Sqlite
         public SqlitePersistenceException(string message) : base(message)
         {
         }
-
-        protected SqlitePersistenceException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

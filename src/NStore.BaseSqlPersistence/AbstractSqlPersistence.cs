@@ -29,29 +29,23 @@ namespace NStore.BaseSqlPersistence
         {
             var sql = Options.GetSelectLastPositionSql();
 
-            using (var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false))
-            {
-                using (var command = context.CreateCommand(sql))
-                {
-                    var result = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-                    if (result == null)
-                        return 0;
+            using var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false);
+            using var command = context.CreateCommand(sql);
+            var result = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+            if (result == null)
+                return 0;
 
-                    return (long)result;
-                }
-            }
+            return (long)result;
         }
 
         protected async Task<IChunk> ReadSingleChunk(DbCommand command, CancellationToken cancellationToken)
         {
-            using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
-            {
-                if (!reader.HasRows)
-                    return null;
+            using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            if (!reader.HasRows)
+                return null;
 
-                await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
-                return ReadChunk(reader);
-            }
+            await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+            return ReadChunk(reader);
         }
 
         protected IChunk ReadChunk(DbDataReader reader)
@@ -79,16 +73,12 @@ namespace NStore.BaseSqlPersistence
             long fromUpperIndexInclusive,
             CancellationToken cancellationToken)
         {
-            using (var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false))
-            {
-                using (var command = context.CreateCommand(Options.GetSelectLastChunkSql()))
-                {
-                    context.AddParam(command, "@PartitionId", partitionId);
-                    context.AddParam(command, "@toUpperIndexInclusive", fromUpperIndexInclusive);
+            using var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false);
+            using var command = context.CreateCommand(Options.GetSelectLastChunkSql());
+            context.AddParam(command, "@PartitionId", partitionId);
+            context.AddParam(command, "@toUpperIndexInclusive", fromUpperIndexInclusive);
 
-                    return await ReadSingleChunk(command, cancellationToken).ConfigureAwait(false);
-                }
-            }
+            return await ReadSingleChunk(command, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task DeleteAsync(
@@ -97,17 +87,13 @@ namespace NStore.BaseSqlPersistence
             long toUpperIndexInclusive,
             CancellationToken cancellationToken)
         {
-            using (var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false))
-            {
-                using (var command = context.CreateCommand(Options.GetDeleteStreamChunksSql()))
-                {
-                    context.AddParam(command, "@PartitionId", partitionId);
-                    context.AddParam(command, "@fromLowerIndexInclusive", fromLowerIndexInclusive);
-                    context.AddParam(command, "@toUpperIndexInclusive", toUpperIndexInclusive);
+            using var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false);
+            using var command = context.CreateCommand(Options.GetDeleteStreamChunksSql());
+            context.AddParam(command, "@PartitionId", partitionId);
+            context.AddParam(command, "@fromLowerIndexInclusive", fromLowerIndexInclusive);
+            context.AddParam(command, "@toUpperIndexInclusive", toUpperIndexInclusive);
 
-                    await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-                }
-            }
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
 
         public async Task<IChunk> ReadByOperationIdAsync(
@@ -116,29 +102,21 @@ namespace NStore.BaseSqlPersistence
             CancellationToken cancellationToken
         )
         {
-            using (var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false))
-            {
-                using (var command = context.CreateCommand(Options.GetSelectChunkByStreamAndOperation()))
-                {
-                    context.AddParam(command, "@PartitionId", partitionId);
-                    context.AddParam(command, "@OperationId", operationId);
+            using var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false);
+            using var command = context.CreateCommand(Options.GetSelectChunkByStreamAndOperation());
+            context.AddParam(command, "@PartitionId", partitionId);
+            context.AddParam(command, "@OperationId", operationId);
 
-                    return await ReadSingleChunk(command, cancellationToken).ConfigureAwait(false);
-                }
-            }
+            return await ReadSingleChunk(command, cancellationToken).ConfigureAwait(false);
         }
 
         public async Task ReadAllByOperationIdAsync(string operationId, ISubscription subscription,
             CancellationToken cancellationToken)
         {
-            using (var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false))
-            {
-                using (var command = context.CreateCommand(Options.GetSelectAllChunksByOperationSql()))
-                {
-                    context.AddParam(command, "@OperationId", operationId);
-                    await PushToSubscriber(command, 0, subscription, true, cancellationToken).ConfigureAwait(false);
-                }
-            }
+            using var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false);
+            using var command = context.CreateCommand(Options.GetSelectAllChunksByOperationSql());
+            context.AddParam(command, "@OperationId", operationId);
+            await PushToSubscriber(command, 0, subscription, true, cancellationToken).ConfigureAwait(false);
         }
 
         protected async Task PushToSubscriber(
@@ -209,24 +187,22 @@ namespace NStore.BaseSqlPersistence
 
                 using (var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false))
                 {
-                    using (var command = context.CreateCommand(sql))
+                    using var command = context.CreateCommand(sql);
+                    context.AddParam(command, "@PartitionId", partitionId);
+                    context.AddParam(command, "@Index", index);
+                    if (chunk.OperationId == null)
                     {
-                        context.AddParam(command, "@PartitionId", partitionId);
-                        context.AddParam(command, "@Index", index);
-                        if (chunk.OperationId == null)
-                        {
-                            context.AddParam(command, "@OperationId", DBNull.Value);
-                        }
-                        else
-                        {
-                            context.AddParam(command, "@OperationId", chunk.OperationId);
-                        }
-                        context.AddParam(command, "@Payload", bytes);
-                        context.AddParam(command, "@SerializerInfo", serializerInfo);
-
-                        chunk.Position =
-                            (long)await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+                        context.AddParam(command, "@OperationId", DBNull.Value);
                     }
+                    else
+                    {
+                        context.AddParam(command, "@OperationId", chunk.OperationId);
+                    }
+                    context.AddParam(command, "@Payload", bytes);
+                    context.AddParam(command, "@SerializerInfo", serializerInfo);
+
+                    chunk.Position =
+                        (long)await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
                 }
 
                 return chunk;
@@ -285,24 +261,22 @@ namespace NStore.BaseSqlPersistence
 
                 using (var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false))
                 {
-                    using (var command = context.CreateCommand(sql))
+                    using var command = context.CreateCommand(sql);
+                    context.AddParam(command, "@Position", position);
+                    context.AddParam(command, "@PartitionId", partitionId);
+                    context.AddParam(command, "@Index", index);
+                    if (chunk.OperationId == null)
                     {
-                        context.AddParam(command, "@Position", position);
-                        context.AddParam(command, "@PartitionId", partitionId);
-                        context.AddParam(command, "@Index", index);
-                        if (chunk.OperationId == null)
-                        {
-                            context.AddParam(command, "@OperationId", DBNull.Value);
-                        }
-                        else
-                        {
-                            context.AddParam(command, "@OperationId", chunk.OperationId);
-                        }
-                        context.AddParam(command, "@Payload", bytes);
-                        context.AddParam(command, "@SerializerInfo", serializerInfo);
-
-                        await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+                        context.AddParam(command, "@OperationId", DBNull.Value);
                     }
+                    else
+                    {
+                        context.AddParam(command, "@OperationId", chunk.OperationId);
+                    }
+                    context.AddParam(command, "@Payload", bytes);
+                    context.AddParam(command, "@SerializerInfo", serializerInfo);
+
+                    await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
                 }
 
                 return chunk;
@@ -330,13 +304,9 @@ namespace NStore.BaseSqlPersistence
         {
             var sql = Options.GetCreateTableIfMissingSql();
 
-            using (var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false))
-            {
-                using (var cmd = context.CreateCommand(sql))
-                {
-                    await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-                }
-            }
+            using var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false);
+            using var cmd = context.CreateCommand(sql);
+            await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
 
         protected async Task ScanRange(
@@ -354,27 +324,23 @@ namespace NStore.BaseSqlPersistence
                 limit: limit,
                 descending: descending);
 
-            using (var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false))
+            using var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false);
+            using var command = context.CreateCommand(sql);
+            context.AddParam(command, "@PartitionId", partitionId);
+
+            if (lowerIndexInclusive > 0 && lowerIndexInclusive != Int64.MaxValue)
             {
-                using (var command = context.CreateCommand(sql))
-                {
-                    context.AddParam(command, "@PartitionId", partitionId);
-
-                    if (lowerIndexInclusive > 0 && lowerIndexInclusive != Int64.MaxValue)
-                    {
-                        context.AddParam(command, "@lowerIndexInclusive", lowerIndexInclusive);
-                    }
-
-                    if (upperIndexInclusive > 0 && upperIndexInclusive != Int64.MaxValue)
-                    {
-                        context.AddParam(command, "@upperIndexInclusive", upperIndexInclusive);
-                    }
-
-                    await PushToSubscriber(command, descending ? upperIndexInclusive : lowerIndexInclusive,
-                            subscription, false, cancellationToken)
-                        .ConfigureAwait(false);
-                }
+                context.AddParam(command, "@lowerIndexInclusive", lowerIndexInclusive);
             }
+
+            if (upperIndexInclusive > 0 && upperIndexInclusive != Int64.MaxValue)
+            {
+                context.AddParam(command, "@upperIndexInclusive", upperIndexInclusive);
+            }
+
+            await PushToSubscriber(command, descending ? upperIndexInclusive : lowerIndexInclusive,
+                    subscription, false, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         public async Task ReadForwardAsync(
@@ -410,31 +376,27 @@ namespace NStore.BaseSqlPersistence
                 upperIndexInclusive: upperIndexInclusive,
                 descending: descending);
 
-            using (var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false))
+            using var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false);
+            using var command = context.CreateCommand(sql);
+            int i = 1;
+            foreach (var id in partitionIdsList)
             {
-                using (var command = context.CreateCommand(sql))
-                {
-                    int i = 1;
-                    foreach (var id in partitionIdsList)
-                    {
-                        context.AddParam(command, $"@p{i++}", id);
-                    }
-
-                    if (lowerIndexInclusive > 0 && lowerIndexInclusive != Int64.MaxValue)
-                    {
-                        context.AddParam(command, "@lowerIndexInclusive", lowerIndexInclusive);
-                    }
-
-                    if (upperIndexInclusive > 0 && upperIndexInclusive != Int64.MaxValue)
-                    {
-                        context.AddParam(command, "@upperIndexInclusive", upperIndexInclusive);
-                    }
-
-                    await PushToSubscriber(command, descending ? upperIndexInclusive : lowerIndexInclusive,
-                            subscription, false, cancellationToken)
-                        .ConfigureAwait(false);
-                }
+                context.AddParam(command, $"@p{i++}", id);
             }
+
+            if (lowerIndexInclusive > 0 && lowerIndexInclusive != Int64.MaxValue)
+            {
+                context.AddParam(command, "@lowerIndexInclusive", lowerIndexInclusive);
+            }
+
+            if (upperIndexInclusive > 0 && upperIndexInclusive != Int64.MaxValue)
+            {
+                context.AddParam(command, "@upperIndexInclusive", upperIndexInclusive);
+            }
+
+            await PushToSubscriber(command, descending ? upperIndexInclusive : lowerIndexInclusive,
+                    subscription, false, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         public async Task ReadForwardMultiplePartitionsAsync(
@@ -465,6 +427,53 @@ namespace NStore.BaseSqlPersistence
             ).ConfigureAwait(false);
         }
 
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(partitionIdsList);
+
+            var partitionsList = partitionIdsList.ToList();
+            if (!partitionsList.Any())
+            {
+                yield break;
+            }
+
+            var sql = Options.GetRangeMultiplePartitionSelectChunksSql(
+                partitionsList,
+                lowerIndexInclusive: fromLowerIndexInclusive,
+                upperIndexInclusive: toUpperIndexInclusive,
+                descending: false);
+
+            using var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false);
+            using var command = context.CreateCommand(sql);
+            int i = 1;
+            foreach (var id in partitionsList)
+            {
+                context.AddParam(command, $"@p{i++}", id);
+            }
+
+            if (fromLowerIndexInclusive > 0 && fromLowerIndexInclusive != Int64.MaxValue)
+            {
+                context.AddParam(command, "@lowerIndexInclusive", fromLowerIndexInclusive);
+            }
+
+            if (toUpperIndexInclusive > 0 && toUpperIndexInclusive != Int64.MaxValue)
+            {
+                context.AddParam(command, "@upperIndexInclusive", toUpperIndexInclusive);
+            }
+
+            using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                yield return ReadChunk(reader);
+            }
+        }
+#endif
+
         public async Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,
@@ -486,23 +495,17 @@ namespace NStore.BaseSqlPersistence
 
         public async Task<IChunk> ReadOneAsync(long position, CancellationToken cancellationToken)
         {
-            using (var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false))
+            using var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false);
+            using var command = context.CreateCommand(Options.GetChunkByPositionSql());
+            context.AddParam(command, "@Position", position);
+            using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            if (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             {
-                using (var command = context.CreateCommand(Options.GetChunkByPositionSql()))
-                {
-                    context.AddParam(command, "@Position", position);
-                    using (var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
-                    {
-                        if (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
-                        {
-                            var chunk = ReadChunk(reader);
-                            return chunk;
-                        }
-
-                        return null;
-                    }
-                }
+                var chunk = ReadChunk(reader);
+                return chunk;
             }
+
+            return null;
         }
     }
 }

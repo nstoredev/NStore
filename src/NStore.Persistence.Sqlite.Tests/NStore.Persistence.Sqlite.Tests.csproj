@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>Net8.0</TargetFramework>
+        <TargetFrameworks>net6.0;net10.0</TargetFrameworks>
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="..\NStore.Persistence.Sqlite\NStore.Persistence.Sqlite.csproj">
@@ -14,6 +14,7 @@
         <Compile Include="..\NStore.Persistence.Tests\DefaultSnapshotStoreTests.cs">
             <Link>DefaultSnapshotStoreTests.cs</Link>
         </Compile>
+        <Compile Include="..\NStore.Persistence.Tests\FileUtils.cs" Link="FileUtils.cs" />
         <Compile Include="..\NStore.Persistence.Tests\PersistenceDebugExtensions.cs" Link="PersistenceDebugExtensions.cs" />
         <Compile Include="..\NStore.Persistence.Tests\PersistenceFixture.cs">
             <Link>PersistenceFixture.cs</Link>

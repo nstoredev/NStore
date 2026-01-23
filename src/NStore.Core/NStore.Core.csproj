@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <TargetFrameworks>netstandard2.0;net8.0;net10.0</TargetFrameworks>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <PackageProjectUrl>https://github.com/ProximoSrl/NStore</PackageProjectUrl>
     <RepositoryUrl>https://github.com/ProximoSrl/NStore</RepositoryUrl>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -16,12 +16,9 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <AssemblyName>NStore.Core</AssemblyName>
     <RootNamespace>NStore.Core</RootNamespace>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>13.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\AssemblyInfo.cs">
-      <Link>AssemblyInfo.cs</Link>
-    </Compile>
 
     <None PackagePath="" Include="..\..\LICENSE.md" pack="true" />
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
@@ -31,5 +28,9 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
   </ItemGroup>
 </Project>

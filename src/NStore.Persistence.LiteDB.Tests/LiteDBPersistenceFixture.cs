@@ -23,13 +23,12 @@ namespace NStore.Persistence.Tests
                 StreamsCollectionName = "streams"
             };
 
-            var lite = new LiteDBPersistence(options);
-
             if (dropOnInit)
             {
-                lite.DeleteDataFiles();
+                LiteDBTestHelper.DeleteDataFiles(pathToFile);
             }
 
+            var lite = new LiteDBPersistence(options);
             lite.Init();
 
             return lite;
@@ -38,11 +37,6 @@ namespace NStore.Persistence.Tests
         private static void Clear(IPersistence persistence, bool drop)
         {
             var lite = (LiteDBPersistence)persistence;
-            if (drop)
-            {
-                lite.DeleteDataFiles();
-            }
-
             lite.Dispose();
         }
     }

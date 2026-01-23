@@ -17,9 +17,5 @@ namespace NStore.Core.Streams
         public InvalidStreamOperationException(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-        protected InvalidStreamOperationException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

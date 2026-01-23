@@ -21,9 +21,5 @@ namespace NStore.Domain
         public RepositoryReadException(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-        protected RepositoryReadException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

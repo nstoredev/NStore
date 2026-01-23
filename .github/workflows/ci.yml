@@ -30,10 +30,10 @@ jobs:
       with:
         dotnet-version: 6.x
 
-    - name: Set up .NET 8
+    - name: Set up .NET 10
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 8.x
+        dotnet-version: 10.x
          
     - name: Start SQL Server (MSSQL) Docker container
       run: docker run -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=sqlPw3$secure' -e 'MSSQL_PID=Developer' -p 1433:1433 --name msssql -d mcr.microsoft.com/mssql/server:2017-latest-ubuntu
@@ -64,8 +64,10 @@ jobs:
       with:
         name: nuget-packages
         path: artifacts/NuGet
+
     - name: Flatten all TRX files
       shell: bash
+      if: ${{ always() }}
       run: |
         mkdir -p flattened-trx
         find TestResults -name "*.trx" -type f -exec cp {} flattened-trx/ \;

@@ -1,17 +1,21 @@
 param(
     [string] $nugetApiKey = "",
-    [bool]   $nugetPublish = $false
+    [bool]   $nugetPublish = $false,
+    [switch] $skipInstallBuildUtils, # use -skipInstallBuildUtils as a flag (no argument needed)
+    [switch] $skiptest
 )
 
-Install-package BuildUtils -Confirm:$false -Scope CurrentUser -Force
+if (-not $skipInstallBuildUtils) {
+    Write-Host "Ensuring BuildUtils module is installed"
+    Install-package BuildUtils -Confirm:$false -Scope CurrentUser -Force
+}
 Import-Module BuildUtils
 
 $runningDirectory = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
 
 $nugetTempDir = "$runningDirectory/artifacts/NuGet"
 
-if (Test-Path $nugetTempDir) 
-{
+if (Test-Path $nugetTempDir) {
     Write-host "Cleaning temporary nuget path $nugetTempDir"
     Remove-Item $nugetTempDir -Recurse -Force
 }
@@ -38,18 +42,56 @@ Write-Host "\n\n*******************RESTORING PACKAGES*******************"
 dotnet restore "$runningDirectory/src/NStore.sln"
 Assert-LastExecution -message "Error in restoring packages." -haltExecution $true
 
-Write-Host "\n\n*******************TESTING SOLUTION*******************"
-dotnet test "$runningDirectory/src/NStore.sln" `
-    --collect:"XPlat Code Coverage" `
-    --results-directory TestResults/ `
-    --logger "trx;LogFilePrefix=testResults" `
-    --no-restore `
-    -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+Write-Host "`n`n*******************TESTING SOLUTION*******************"
 
-Assert-LastExecution -message "Error in test running." -haltExecution $true
+if (-not $skiptest) {
+    $frameworkList = @(
+        # "net6.0"
+        "net10.0"
+    )
+    foreach ($tfm in $frameworkList) {
+        Write-Host "Running tests for framework: $tfm"
+        $resultsDir = "$runningDirectory/TestResults/$tfm"
+        # Ensure results directory exists (dotnet will create it, but make explicit)
+        New-Item -ItemType Directory -Force -Path $resultsDir | Out-Null
+
+        Write-Host "Restoring test projects for framework: $tfm"
+        $testProjects = Get-ChildItem -Path "$runningDirectory/src" -Recurse -File -Include '*test*.csproj', '*tests*.csproj' -ErrorAction SilentlyContinue
+
+        if ($testProjects -and $testProjects.Count -gt 0) {
+            foreach ($proj in $testProjects) {
+                $projName = [System.IO.Path]::GetFileNameWithoutExtension($proj.Name)
+
+                if ($tfm -eq 'net6.0' -and $projName -match 'mongo') {
+                    Write-Host "Skipping project: $projName for framework: $tfm (mongo tests are excluded on net6.0)"
+                    continue
+                }
+
+                Write-Host "Restoring project: $($proj.FullName)"
+                dotnet restore "$($proj.FullName)"
+                Assert-LastExecution -message "Error restoring project $($proj.FullName) for framework $tfm." -haltExecution $true
+
+                Write-Host "Running tests for project: $projName"
+                dotnet test "$($proj.FullName)" `
+                    -f $tfm `
+                    --collect:"XPlat Code Coverage" `
+                    --results-directory $resultsDir `
+                    --logger "trx;LogFilePrefix=$projName-$tfm" `
+                    -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+                Assert-LastExecution -message "Error in test running for project $projName (framework $tfm)." -haltExecution $true
+            }
+        }
+
+        Write-Host "Tests completed for framework: $tfm"
+    }
+}
+else {
+    Write-Host "Skipping tests due to -skiptest flag"
+}
 
 Write-Host "\n\n*******************BUILDING SOLUTION*******************"
-dotnet build "$runningDirectory/src/NStore.sln" --configuration release
+dotnet build "$runningDirectory/src/NStore.sln" --configuration release /p:AssemblyVersion=$assemblyVer /p:FileVersion=$assemblyFileVersion /p:InformationalVersion=$assemblyInformationalVersion
 Assert-LastExecution -message "Error in building in release configuration" -haltExecution $true
 
 Write-Host "\n\n*******************PUBLISHING SOLUTION*******************"
@@ -64,9 +106,9 @@ dotnet pack "$runningDirectory/src/NStore.Persistence.Sqlite/NStore.Persistence.
 
 Assert-LastExecution -message "Error in creating nuget packages.." -haltExecution $true
 
-if ($true -eq $nugetPublish) 
-{
+if ($true -eq $nugetPublish) {
     Write-Host "\n\n*******************PUBLISHING NUGET PACKAGE*******************"
     dotnet nuget push .\artifacts\NuGet\** --source https://api.nuget.org/v3/index.json --api-key $nugetApiKey --skip-duplicate
     Assert-LastExecution -message "Error pushing nuget packages to nuget.org." -haltExecution $true
 }
+
