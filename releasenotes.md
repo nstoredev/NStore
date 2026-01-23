@@ -1,8 +1,7 @@
-## vNext
+## 0.21.0
 
-- **BREAKING CHANGE**: Renamed `AggregateSaveFailureKind` enum to `AggregateSaveOutcome` and `AggregateSaveResult.FailureKind` property to `Outcome` to better reflect that it represents both successful operations with special conditions (like `Unchanged` and `DuplicatedOperation`) and failures.
-- Fixed MongoDB `AppendBatchAsync` to properly mark failed jobs with `DuplicatedPosition` status when retry limit is exceeded, ensuring consistent result reporting.
-- Added `AggregateSaveFailureKind` and `AggregateSaveResult.FailureKind` to surface categorized per-aggregate save outcomes: `Concurrency`, `GenericFailure`, `DuplicatedPosition`, and `DuplicatedOperation`. Tests updated to assert these values and idempotent saves now report `DuplicatedOperation` when applicable.
+- Introduced BatchRepository for batch operations.
+- Improved the interface for IPersistence to support batch operations.
 
 ## 0.20.2
 
