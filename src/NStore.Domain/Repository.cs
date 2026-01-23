@@ -209,7 +209,13 @@ namespace NStore.Domain
                     throw new RepositoryMismatchException($"Aggregate {aggregate.Id} was loaded but you are trying to save a different instance");
                 }
                 
-                return _openedStreams[aggregate.Id];
+                // Ensure the stream exists for this aggregate
+                if (!_openedStreams.TryGetValue(aggregate.Id, out var stream))
+                {
+                    throw new RepositoryMismatchException($"Aggregate {aggregate.Id} is tracked but its stream was not found");
+                }
+                
+                return stream;
             }
             
             // Not tracking this aggregate yet
