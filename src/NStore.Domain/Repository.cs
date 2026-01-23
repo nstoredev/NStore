@@ -200,24 +200,32 @@ namespace NStore.Domain
 
         private IStream GetStream(IAggregate aggregate)
         {
-            if (!_trackingAggregates.ContainsKey(aggregate.Id))
+            // Check if we're tracking this aggregate
+            if (_trackingAggregates.TryGetValue(aggregate.Id, out var trackedAggregate))
             {
-                if (aggregate.IsNew)
+                // If the tracked aggregate is not the same instance, throw an error
+                if (!ReferenceEquals(trackedAggregate, aggregate))
                 {
-                    var newStream = OpenStream(aggregate.Id);
-                    if (newStream is OptimisticConcurrencyStream os)
-                    {
-                        os.MarkAsNew();
-                    }
-                    _trackingAggregates.Add(aggregate.Id, aggregate);
-
-                    return newStream;
+                    throw new RepositoryMismatchException($"Aggregate {aggregate.Id} was loaded but you are trying to save a different instance");
                 }
+                
+                return _openedStreams[aggregate.Id];
+            }
+            
+            // Not tracking this aggregate yet
+            if (aggregate.IsNew)
+            {
+                var newStream = OpenStream(aggregate.Id);
+                if (newStream is OptimisticConcurrencyStream os)
+                {
+                    os.MarkAsNew();
+                }
+                _trackingAggregates.Add(aggregate.Id, aggregate);
 
-                throw new RepositoryMismatchException($"Aggregate {aggregate.Id} was not loaded by this repository");
+                return newStream;
             }
 
-            return _openedStreams[aggregate.Id];
+            throw new RepositoryMismatchException($"Aggregate {aggregate.Id} was not loaded by this repository");
         }
 
         public void Clear()
