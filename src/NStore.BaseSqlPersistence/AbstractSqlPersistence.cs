@@ -667,6 +667,43 @@ namespace NStore.BaseSqlPersistence
             ).ConfigureAwait(false);
         }
 
+        public async Task<IReadOnlyDictionary<string, IChunk>> ReadLastChunkForPartitionsAsync(
+            IEnumerable<string> partitionIds,
+            CancellationToken cancellationToken)
+        {
+            if (partitionIds is null)
+            {
+                throw new ArgumentNullException(nameof(partitionIds));
+            }
+
+            var partitionList = partitionIds.Where(p => !string.IsNullOrWhiteSpace(p)).Distinct().ToList();
+            if (!partitionList.Any())
+            {
+                return new Dictionary<string, IChunk>();
+            }
+
+            var sql = Options.GetLastChunkForPartitionsSql(partitionList);
+
+            using var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false);
+            using var command = context.CreateCommand(sql);
+
+            for (int i = 0; i < partitionList.Count; i++)
+            {
+                context.AddParam(command, $"@p{i}", partitionList[i]);
+            }
+
+            var result = new Dictionary<string, IChunk>();
+
+            using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                var chunk = ReadChunk(reader);
+                result[chunk.PartitionId] = chunk;
+            }
+
+            return result;
+        }
+
         public async Task<IChunk> ReadOneAsync(long position, CancellationToken cancellationToken)
         {
             using var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false);

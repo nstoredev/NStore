@@ -356,6 +356,35 @@ namespace NStore.Core.InMemory
             }
         }
 
+        public Task<IReadOnlyDictionary<string, IChunk>> ReadLastChunkForPartitionsAsync(
+            IEnumerable<string> partitionIds,
+            CancellationToken cancellationToken)
+        {
+            if (partitionIds is null)
+                throw new ArgumentNullException(nameof(partitionIds));
+
+            var result = new Dictionary<string, IChunk>();
+
+            foreach (var partitionId in partitionIds)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (string.IsNullOrWhiteSpace(partitionId))
+                    continue;
+
+                if (_partitions.TryGetValue(partitionId, out var partition))
+                {
+                    var lastChunk = partition.GetLastChunk();
+                    if (lastChunk != null)
+                    {
+                        result[partitionId] = Clone(lastChunk);
+                    }
+                }
+            }
+
+            return Task.FromResult<IReadOnlyDictionary<string, IChunk>>(result);
+        }
+
         private class PartitionSubscriptionWrapper : ISubscription
         {
             private readonly ISubscription _inner;

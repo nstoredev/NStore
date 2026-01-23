@@ -220,5 +220,35 @@ namespace NStore.BaseSqlPersistence
 
             return sb.ToString();
         }
+
+        /// <summary>
+        /// Generates a SQL query to get the last chunk (highest index) for each partition.
+        /// Uses ROW_NUMBER() window function to efficiently select the top record per partition.
+        /// </summary>
+        /// <param name="partitionIds">Collection of partition IDs to query</param>
+        /// <returns>SQL query string that returns the last chunk for each partition</returns>
+        public virtual string GetLastChunkForPartitionsSql(IEnumerable<string> partitionIds)
+        {
+            var partitionList = partitionIds.ToList();
+            if (!partitionList.Any())
+            {
+                return string.Empty;
+            }
+
+            var sb = new StringBuilder();
+
+            // Use ROW_NUMBER() to rank chunks within each partition by index descending
+            // Then filter to only get the top-ranked (last) chunk per partition
+            sb.Append("WITH RankedChunks AS (");
+            sb.Append("SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo], ");
+            sb.Append("ROW_NUMBER() OVER (PARTITION BY [PartitionId] ORDER BY [Index] DESC) AS rn ");
+            sb.Append($"FROM {StreamsTableName} ");
+            sb.Append($"WHERE [PartitionId] IN ({string.Join(",", Enumerable.Range(0, partitionList.Count).Select(n => $"@p{n}"))})");
+            sb.Append(") ");
+            sb.Append("SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo] ");
+            sb.Append("FROM RankedChunks WHERE rn = 1");
+
+            return sb.ToString();
+        }
     }
 }

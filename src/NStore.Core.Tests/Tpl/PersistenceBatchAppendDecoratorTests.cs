@@ -750,6 +750,28 @@ namespace NStore.Core.Tests.Tpl
                 return Task.CompletedTask;
             }
 
+            public Task<IReadOnlyDictionary<string, IChunk>> ReadLastChunkForPartitionsAsync(
+                IEnumerable<string> partitionIds,
+                CancellationToken cancellationToken)
+            {
+                lock (_lock)
+                {
+                    var result = new Dictionary<string, IChunk>();
+                    foreach (var partitionId in partitionIds.Where(p => !string.IsNullOrWhiteSpace(p)).Distinct())
+                    {
+                        var lastChunk = _chunks
+                            .Where(c => c.PartitionId == partitionId)
+                            .OrderByDescending(c => c.Index)
+                            .FirstOrDefault();
+                        if (lastChunk != null)
+                        {
+                            result[partitionId] = lastChunk;
+                        }
+                    }
+                    return Task.FromResult<IReadOnlyDictionary<string, IChunk>>(result);
+                }
+            }
+
 #if NET8_0_OR_GREATER
             public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
                 IEnumerable<PartitionReadRequest> partitionRequests,

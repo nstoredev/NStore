@@ -182,5 +182,32 @@ namespace NStore.Core.Persistence
             CancellationToken cancellationToken = default
         );
 #endif
+
+        /// <summary>
+        /// Retrieves the last (most recent by index) chunk for each specified partition in a single operation.
+        /// This is the multi-partition companion to <see cref="IPartitionPersistence.ReadSingleBackwardAsync"/> with fromUpperIndexInclusive = long.MaxValue.
+        /// </summary>
+        /// <param name="partitionIds">Collection of partition identifiers to query.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>
+        /// A dictionary mapping partition IDs to their last chunk.
+        /// Partitions that don't exist or have no chunks are not included in the result.
+        /// </returns>
+        /// <remarks>
+        /// <para>
+        /// <strong>Use Case:</strong> Efficiently load the latest state/snapshot from multiple aggregates
+        /// without knowing their current index. For example, loading the current version of multiple
+        /// aggregates to check for optimistic concurrency, or retrieving the latest snapshot for each aggregate.
+        /// </para>
+        /// <para>
+        /// <strong>Performance:</strong> This method is optimized to retrieve only one chunk per partition
+        /// in a single database operation, which is more efficient than calling ReadSingleBackwardAsync
+        /// in a loop for each partition.
+        /// </para>
+        /// </remarks>
+        Task<IReadOnlyDictionary<string, IChunk>> ReadLastChunkForPartitionsAsync(
+            IEnumerable<string> partitionIds,
+            CancellationToken cancellationToken
+        );
     }
 }

@@ -443,6 +443,92 @@ namespace NStore.Persistence.Mongo
             }
         }
 
+        public async Task<IReadOnlyDictionary<string, IChunk>> ReadLastChunkForPartitionsAsync(
+            IEnumerable<string> partitionIds,
+            CancellationToken cancellationToken)
+        {
+            if (partitionIds is null)
+            {
+                throw new ArgumentNullException(nameof(partitionIds));
+            }
+
+            var partitionList = partitionIds.Where(p => !string.IsNullOrWhiteSpace(p)).Distinct().ToList();
+            if (!partitionList.Any())
+            {
+                return new Dictionary<string, IChunk>();
+            }
+
+            // Two-stage approach for optimal performance:
+            //
+            // Stage 1: Use $group with $max to find the maximum index for each partition.
+            //          This is very fast because MongoDB can use a covered query on the index
+            //          (PartitionId, Index) - it only reads index entries, not full documents.
+            //
+            // Stage 2: Fetch the actual documents using exact (PartitionId, Index) lookups.
+            //          This uses point queries on the compound index, which are O(log n).
+            //
+            // Why this is better than $sort + $group with $first:
+            // - $sort before $group must scan and sort ALL matching documents
+            // - $max only needs to find the maximum value per group (index scan)
+            // - Stage 2 fetches exactly N documents (one per partition) with point lookups
+
+            // Stage 1: Get max index per partition using covered index query
+            var maxIndexPipeline = new[]
+            {
+                new BsonDocument("$match", new BsonDocument("PartitionId", new BsonDocument("$in", new BsonArray(partitionList)))),
+                new BsonDocument("$group", new BsonDocument
+                {
+                    { "_id", "$PartitionId" },
+                    { "maxIndex", new BsonDocument("$max", "$Index") }
+                })
+            };
+
+            var maxIndices = new Dictionary<string, long>();
+            using (var cursor = await _chunks.AggregateAsync<BsonDocument>(maxIndexPipeline, cancellationToken: cancellationToken).ConfigureAwait(false))
+            {
+                while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    foreach (var doc in cursor.Current)
+                    {
+                        var partitionId = doc["_id"].AsString;
+                        var maxIndex = doc["maxIndex"].AsInt64;
+                        maxIndices[partitionId] = maxIndex;
+                    }
+                }
+            }
+
+            if (maxIndices.Count == 0)
+            {
+                return new Dictionary<string, IChunk>();
+            }
+
+            // Stage 2: Fetch actual documents using compound index point lookups
+            // Build an OR filter for each (PartitionId, Index) pair - each is a point lookup
+            var filters = maxIndices.Select(kv =>
+                Builders<TChunk>.Filter.And(
+                    Builders<TChunk>.Filter.Eq(x => x.PartitionId, kv.Key),
+                    Builders<TChunk>.Filter.Eq(x => x.Index, kv.Value)
+                )
+            ).ToList();
+
+            var combinedFilter = Builders<TChunk>.Filter.Or(filters);
+
+            var result = new Dictionary<string, IChunk>();
+            using (var cursor = await _chunks.FindAsync(combinedFilter, cancellationToken: cancellationToken).ConfigureAwait(false))
+            {
+                while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    foreach (var chunk in cursor.Current)
+                    {
+                        _mongoPayloadSerializer.ApplyDeserialization(chunk);
+                        result[chunk.PartitionId] = chunk;
+                    }
+                }
+            }
+
+            return result;
+        }
+
         private static (FilterDefinition<TChunk>, FindOptions<TChunk>) PrepareFilteringForMultiPartitionRequest(List<PartitionReadRequest> requests, int requestCount, FilterDefinition<TChunk>[] partitionFiltersArray)
         {
             for (int i = 0; i < requestCount; i++)

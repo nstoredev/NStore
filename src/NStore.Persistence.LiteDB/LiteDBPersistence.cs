@@ -295,6 +295,43 @@ namespace NStore.Persistence.LiteDB
             return allChunks;
         }
 
+        public Task<IReadOnlyDictionary<string, IChunk>> ReadLastChunkForPartitionsAsync(
+            IEnumerable<string> partitionIds,
+            CancellationToken cancellationToken)
+        {
+            if (partitionIds is null)
+                throw new ArgumentNullException(nameof(partitionIds));
+
+            var partitionList = partitionIds.Where(p => !string.IsNullOrWhiteSpace(p)).Distinct().ToList();
+            if (!partitionList.Any())
+            {
+                return Task.FromResult<IReadOnlyDictionary<string, IChunk>>(new Dictionary<string, IChunk>());
+            }
+
+            var result = new Dictionary<string, IChunk>();
+
+            foreach (var partitionId in partitionList)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var lastChunk = _streams.Query()
+                    .Where(x => x.PartitionId == partitionId)
+                    .OrderByDescending(x => x.Index)
+                    .FirstOrDefault();
+
+                if (lastChunk != null)
+                {
+                    if (lastChunk.Payload != null)
+                    {
+                        lastChunk.Payload = _options.PayloadSerializer.Deserialize((string)lastChunk.Payload);
+                    }
+                    result[partitionId] = lastChunk;
+                }
+            }
+
+            return Task.FromResult<IReadOnlyDictionary<string, IChunk>>(result);
+        }
+
         /// <summary>
         /// Helper method to gather chunks from partition requests with range optimization and deduplication.
         /// </summary>

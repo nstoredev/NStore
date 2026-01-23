@@ -137,6 +137,13 @@ namespace NStore.Tpl
         }
 #endif
 
+        public Task<IReadOnlyDictionary<string, IChunk>> ReadLastChunkForPartitionsAsync(
+            IEnumerable<string> partitionIds,
+            CancellationToken cancellationToken)
+        {
+            return _persistence.ReadLastChunkForPartitionsAsync(partitionIds, cancellationToken);
+        }
+
         public Task ReadBackwardAsync(string partitionId, long fromUpperIndexInclusive, ISubscription subscription,
             long toLowerIndexInclusive, int limit, CancellationToken cancellationToken)
         {

@@ -1803,6 +1803,39 @@ namespace NStore.Persistence.Tests
             Assert.Equal(indices.Distinct().Count(), indices.Count);
         }
 
+        [Fact]
+        public async Task read_many_backward_latest_version_only()
+        {
+            // Setup partitions with multiple commits
+            await Store.AppendAsync("latest_1", 1, "p1_1").ConfigureAwait(false);
+            await Store.AppendAsync("latest_1", 2, "p1_2").ConfigureAwait(false);
+            await Store.AppendAsync("latest_1", 3, "p1_3").ConfigureAwait(false);
+
+            await Store.AppendAsync("latest_2", 1, "p2_1").ConfigureAwait(false);
+            await Store.AppendAsync("latest_2", 2, "p2_2").ConfigureAwait(false);
+
+            // Request exactly the latest index for each
+            // This verifies we can efficiently load just the heads without scanning
+            var requests = new[]
+            {
+                new PartitionReadRequest("latest_1", 3, 3),
+                new PartitionReadRequest("latest_2", 2, 2)
+            };
+
+            var recorder = new Recorder();
+            await Store.ReadManyBackwardAsync(requests, recorder, CancellationToken.None);
+
+            Assert.Equal(2, recorder.Chunks.Count());
+
+            var c1 = recorder.Chunks.Single(c => c.PartitionId == "latest_1");
+            Assert.Equal(3, c1.Index);
+            Assert.Equal("p1_3", c1.Payload);
+
+            var c2 = recorder.Chunks.Single(c => c.PartitionId == "latest_2");
+            Assert.Equal(2, c2.Index);
+            Assert.Equal("p2_2", c2.Payload);
+        }
+
 #if NET8_0_OR_GREATER
         [Fact]
         public async Task read_many_backward_async_enumerable()
@@ -1907,6 +1940,82 @@ namespace NStore.Persistence.Tests
             });
         }
 #endif
+
+        [Fact]
+        public async Task read_last_chunk_for_partitions_returns_last_chunk_for_each()
+        {
+            // mbpra has chunks at index 1, 2, 3
+            // mbprb has chunks at index 1, 2
+            var partitionIds = new[] { "mbpra", "mbprb" };
+
+            var result = await Store.ReadLastChunkForPartitionsAsync(partitionIds, CancellationToken.None);
+
+            Assert.Equal(2, result.Count);
+            Assert.True(result.ContainsKey("mbpra"));
+            Assert.True(result.ContainsKey("mbprb"));
+            Assert.Equal(3, result["mbpra"].Index);
+            Assert.Equal(2, result["mbprb"].Index);
+        }
+
+        [Fact]
+        public async Task read_last_chunk_for_partitions_ignores_non_existing_partitions()
+        {
+            var partitionIds = new[] { "mbpra", "does-not-exist", "also-missing" };
+
+            var result = await Store.ReadLastChunkForPartitionsAsync(partitionIds, CancellationToken.None);
+
+            Assert.Single(result);
+            Assert.True(result.ContainsKey("mbpra"));
+            Assert.Equal(3, result["mbpra"].Index);
+        }
+
+        [Fact]
+        public async Task read_last_chunk_for_partitions_returns_empty_for_empty_input()
+        {
+            var partitionIds = Array.Empty<string>();
+
+            var result = await Store.ReadLastChunkForPartitionsAsync(partitionIds, CancellationToken.None);
+
+            Assert.Empty(result);
+        }
+
+        [Fact]
+        public async Task read_last_chunk_for_partitions_handles_single_partition()
+        {
+            var partitionIds = new[] { "mbpra" };
+
+            var result = await Store.ReadLastChunkForPartitionsAsync(partitionIds, CancellationToken.None);
+
+            Assert.Single(result);
+            Assert.True(result.ContainsKey("mbpra"));
+            Assert.Equal(3, result["mbpra"].Index);
+        }
+
+        [Fact]
+        public async Task read_last_chunk_for_partitions_ignores_whitespace_partition_ids()
+        {
+            var partitionIds = new[] { "mbpra", "", "  ", null, "mbprb" };
+
+            var result = await Store.ReadLastChunkForPartitionsAsync(partitionIds, CancellationToken.None);
+
+            Assert.Equal(2, result.Count);
+            Assert.True(result.ContainsKey("mbpra"));
+            Assert.True(result.ContainsKey("mbprb"));
+        }
+
+        [Fact]
+        public async Task read_last_chunk_for_partitions_handles_duplicate_partition_ids()
+        {
+            var partitionIds = new[] { "mbpra", "mbpra", "mbprb", "mbprb" };
+
+            var result = await Store.ReadLastChunkForPartitionsAsync(partitionIds, CancellationToken.None);
+
+            Assert.Equal(2, result.Count);
+            Assert.True(result.ContainsKey("mbpra"));
+            Assert.True(result.ContainsKey("mbprb"));
+            Assert.Equal(3, result["mbpra"].Index);
+            Assert.Equal(2, result["mbprb"].Index);
+        }
 
         private static void AssertPerPartitionDescendingOrdering(IEnumerable<IChunk> chunks, params string[] partitions)
         {

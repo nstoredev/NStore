@@ -164,6 +164,13 @@ namespace NStore.Core.Persistence
         }
 #endif
 
+        public Task<IReadOnlyDictionary<string, IChunk>> ReadLastChunkForPartitionsAsync(
+            IEnumerable<string> partitionIds,
+            CancellationToken cancellationToken)
+        {
+            return _persistence.ReadLastChunkForPartitionsAsync(partitionIds, cancellationToken);
+        }
+
         public async Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,

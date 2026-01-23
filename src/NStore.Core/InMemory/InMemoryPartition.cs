@@ -81,6 +81,19 @@ namespace NStore.Core.InMemory
             return Task.FromResult((IChunk)Clone(chunk));
         }
 
+        public MemoryChunk GetLastChunk()
+        {
+            _lockSlim.EnterReadLock();
+            try
+            {
+                return _sortedChunks.Count > 0 ? _sortedChunks.Values.Last() : null;
+            }
+            finally
+            {
+                _lockSlim.ExitReadLock();
+            }
+        }
+
         private async Task PushToSubscriber(
             long start,
             ISubscription subscription,
