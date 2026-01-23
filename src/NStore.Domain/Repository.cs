@@ -200,7 +200,7 @@ namespace NStore.Domain
 
         private IStream GetStream(IAggregate aggregate)
         {
-            if (!_trackingAggregates.Values.Contains(aggregate))
+            if (!_trackingAggregates.ContainsKey(aggregate.Id))
             {
                 if (aggregate.IsNew)
                 {

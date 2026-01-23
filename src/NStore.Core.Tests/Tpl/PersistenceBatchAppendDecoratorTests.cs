@@ -391,7 +391,7 @@ namespace NStore.Core.Tests.Tpl
         {
             // Arrange
             _decorator = new PersistenceBatchAppendDecorator(_persistence, _loggerMock.Object, batchSize: 100, flushTimeout: 10000);
-            var cts = new CancellationTokenSource();
+            using var cts = new CancellationTokenSource();
             cts.Cancel();
 
             // Act & Assert
@@ -476,6 +476,34 @@ namespace NStore.Core.Tests.Tpl
 
             // Assert
             Assert.Equal(2, recorder.Length);
+        }
+
+        [Fact]
+        public async Task ReadForwardMultiplePartitionsWithRangesAsync_ShouldDelegateToUnderlyingPersistence()
+        {
+            // Arrange
+            _decorator = new PersistenceBatchAppendDecorator(_persistence, _loggerMock.Object, batchSize: 10, flushTimeout: 100);
+            await _persistence.AppendAsync("partition1", 1, "payload1", null, CancellationToken.None);
+            await _persistence.AppendAsync("partition1", 2, "payload2", null, CancellationToken.None);
+            await _persistence.AppendAsync("partition2", 1, "payload3", null, CancellationToken.None);
+            await _persistence.AppendAsync("partition2", 2, "payload4", null, CancellationToken.None);
+            await _persistence.AppendAsync("partition3", 1, "payload5", null, CancellationToken.None);
+
+            var recorder = new Recorder();
+            var requests = new[]
+            {
+                new PartitionReadRequest("partition1", 1, 1), // Only index 1 from partition1
+                new PartitionReadRequest("partition2", 0, 2)  // indices 0-2 from partition2
+            };
+
+            // Act
+            await _decorator.ReadForwardMultiplePartitionsWithRangesAsync(requests, recorder, CancellationToken.None);
+
+            // Assert
+            Assert.Equal(3, recorder.Length); // 1 from partition1 + 2 from partition2
+            Assert.Contains(recorder.Chunks, c => c.PartitionId == "partition1" && c.Index == 1L);
+            Assert.Contains(recorder.Chunks, c => c.PartitionId == "partition2" && c.Index == 1L);
+            Assert.Contains(recorder.Chunks, c => c.PartitionId == "partition2" && c.Index == 2L);
         }
 
         // Helper class that implements both IPersistence and IEnhancedPersistence for testing
@@ -681,6 +709,138 @@ namespace NStore.Core.Tests.Tpl
                 }
                 return Task.CompletedTask;
             }
+
+            public Task ReadForwardMultiplePartitionsWithRangesAsync(IEnumerable<PartitionReadRequest> partitionRequests, ISubscription subscription, CancellationToken cancellationToken)
+            {
+                lock (_lock)
+                {
+                    var items = partitionRequests
+                        .SelectMany(request => _chunks
+                            .Where(c => c.PartitionId == request.PartitionId &&
+                                       c.Index >= request.FromPartitionIndexInclusive &&
+                                       c.Index <= request.ToPartitionIndexInclusive))
+                        .OrderBy(c => c.Index)
+                        .ToList();
+
+                    foreach (var item in items)
+                    {
+                        subscription.OnNextAsync(item).GetAwaiter().GetResult();
+                    }
+                }
+                return Task.CompletedTask;
+            }
+
+            public Task ReadManyBackwardAsync(IEnumerable<PartitionReadRequest> partitionRequests, ISubscription subscription, CancellationToken cancellationToken)
+            {
+                lock (_lock)
+                {
+                    var items = partitionRequests
+                        .SelectMany(request => _chunks
+                            .Where(c => c.PartitionId == request.PartitionId &&
+                                       c.Index >= request.FromPartitionIndexInclusive &&
+                                       c.Index <= request.ToPartitionIndexInclusive))
+                        .OrderByDescending(c => c.Index)
+                        .ToList();
+
+                    foreach (var item in items)
+                    {
+                        subscription.OnNextAsync(item).GetAwaiter().GetResult();
+                    }
+                }
+                return Task.CompletedTask;
+            }
+
+            public Task<IReadOnlyDictionary<string, IChunk>> ReadLastChunkForPartitionsAsync(
+                IEnumerable<string> partitionIds,
+                CancellationToken cancellationToken)
+            {
+                lock (_lock)
+                {
+                    var result = new Dictionary<string, IChunk>();
+                    foreach (var partitionId in partitionIds.Where(p => !string.IsNullOrWhiteSpace(p)).Distinct())
+                    {
+                        var lastChunk = _chunks
+                            .Where(c => c.PartitionId == partitionId)
+                            .OrderByDescending(c => c.Index)
+                            .FirstOrDefault();
+                        if (lastChunk != null)
+                        {
+                            result[partitionId] = lastChunk;
+                        }
+                    }
+                    return Task.FromResult<IReadOnlyDictionary<string, IChunk>>(result);
+                }
+            }
+
+#if NET8_0_OR_GREATER
+            public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
+                IEnumerable<PartitionReadRequest> partitionRequests,
+                [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+            {
+                List<TestChunk> items;
+                lock (_lock)
+                {
+                    items = partitionRequests
+                        .SelectMany(request => _chunks
+                            .Where(c => c.PartitionId == request.PartitionId &&
+                                       c.Index >= request.FromPartitionIndexInclusive &&
+                                       c.Index <= request.ToPartitionIndexInclusive))
+                        .OrderBy(c => c.Index)
+                        .ToList();
+                }
+
+                await Task.Delay(0, cancellationToken);
+                foreach (var item in items)
+                {
+                    yield return item;
+                }
+            }
+
+            public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
+                IEnumerable<string> partitionIdsList,
+                long fromLowerIndexInclusive,
+                long toUpperIndexInclusive,
+                [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+            {
+                var items = new List<TestChunk>();
+                lock (_lock)
+                {
+                    items = _chunks
+                        .Where(c => partitionIdsList.Contains(c.PartitionId) && c.Index >= fromLowerIndexInclusive && c.Index <= toUpperIndexInclusive)
+                        .OrderBy(c => c.Index)
+                        .ToList();
+                }
+
+                await Task.Delay(0, cancellationToken);
+                foreach (var item in items)
+                {
+                    yield return item;
+                }
+            }
+
+            public async IAsyncEnumerable<IChunk> ReadManyBackwardAsync(
+                IEnumerable<PartitionReadRequest> partitionRequests,
+                [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+            {
+                List<TestChunk> items;
+                lock (_lock)
+                {
+                    items = partitionRequests
+                        .SelectMany(request => _chunks
+                            .Where(c => c.PartitionId == request.PartitionId &&
+                                       c.Index >= request.FromPartitionIndexInclusive &&
+                                       c.Index <= request.ToPartitionIndexInclusive))
+                        .OrderByDescending(c => c.Index)
+                        .ToList();
+                }
+
+                await Task.Delay(0, cancellationToken);
+                foreach (var item in items)
+                {
+                    yield return item;
+                }
+            }
+#endif
 
             private class TestChunk : IChunk
             {

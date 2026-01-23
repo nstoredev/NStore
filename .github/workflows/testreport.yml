@@ -1,20 +1,51 @@
 name: 'Test Report'
 on:
   workflow_run:
-    workflows: ['SonarCloud']                     # runs after CI workflow
+    workflows: ['NStore CI']                     # runs after CI workflow
     types:
       - completed
 permissions:
   contents: read
   actions: read
   checks: write
+
+concurrency:
+  group: test-report-${{ github.event.workflow_run.id }}
+  cancel-in-progress: true
 jobs:
   report:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
-    - uses: dorny/test-reporter@v1
+
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
       with:
-        artifact: TestResults             # artifact name
-        name: Test Run                  # Name of the check run which will be created
+        ref: ${{ github.event.workflow_run.head_sha }}
+    - name: Log Triggering Workflow
+      run: |
+        echo "Triggered by original workflow run:"
+        echo "  Run ID: ${{ github.event.workflow_run.id }}"
+        echo "  Run Number: ${{ github.event.workflow_run.run_number }}"
+        echo "  Run URL: ${{ github.event.workflow_run.html_url }}"
+        echo "  Workflow Name: ${{ github.event.workflow_run.name }}"
+        echo "  Head SHA: ${{ github.event.workflow_run.head_sha }}"
+        echo "  Event: ${{ github.event.workflow_run.event }}"
+        echo "  Status: ${{ github.event.workflow_run.status }}"
+        echo "  Conclusion: ${{ github.event.workflow_run.conclusion }}"
+
+    - name: Download artifacts from triggering run
+      uses: actions/download-artifact@v4
+      with:
+        name: TestResults
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        run-id: ${{ github.event.workflow_run.id }}
+
+    - uses: dorny/test-reporter@b082adf0eced0765477756c2a610396589b8c637
+      name: 'Upload Test Report'
+      with:
+        name: Test Run Summary            # Name of the check run which will be created
         path: '*.trx'                     # Path to test results (inside artifact .zip)
         reporter: dotnet-trx              # Format of test results
+        use-actions-summary: 'true'       # Add summary to the GitHub Actions summary

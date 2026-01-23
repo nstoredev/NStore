@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>Net8.0</TargetFramework>
+    <TargetFrameworks>net6.0;net10.0</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\NStore.Persistence.MsSql\NStore.Persistence.MsSql.csproj">
@@ -37,7 +37,6 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="System.Threading.Tasks.Dataflow" />
     <PackageReference Include="xunit" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="xunit.runner.visualstudio">

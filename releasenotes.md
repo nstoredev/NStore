@@ -1,9 +1,13 @@
-## vNext
+## 0.21.0
+
+- Introduced BatchRepository for batch operations.
+- Improved the interface for IPersistence to support batch operations.
 
 ## 0.20.2
 
 - Fixed a potential memory Leak for missing dispose in CancellationTokenSource and ReaderWriterLockSlim.
 - Fix usage of ReadWriteLockSlim to avoid potential deadlocks.
+
 
 ## 0.20.1
 

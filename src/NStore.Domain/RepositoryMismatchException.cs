@@ -17,9 +17,5 @@ namespace NStore.Domain
         public RepositoryMismatchException(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-        protected RepositoryMismatchException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

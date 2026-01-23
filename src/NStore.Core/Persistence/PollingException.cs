@@ -8,8 +8,5 @@ namespace NStore.Core.Persistence
         public PollingException() { }
         public PollingException(string message) : base(message) { }
         public PollingException(string message, Exception inner) : base(message, inner) { }
-        protected PollingException(
-          System.Runtime.Serialization.SerializationInfo info,
-          System.Runtime.Serialization.StreamingContext context) : base(info, context) { }
     }
 }

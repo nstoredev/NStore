@@ -89,6 +89,61 @@ namespace NStore.Tpl
                 cancellationToken);
         }
 
+        public Task ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            return _persistence.ReadForwardMultiplePartitionsWithRangesAsync(partitionRequests, subscription, cancellationToken);
+        }
+
+#if NET8_0_OR_GREATER
+        public IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            CancellationToken cancellationToken)
+        {
+            return _persistence.ReadForwardMultiplePartitionsAsyncEnumerable(
+                partitionIdsList,
+                fromLowerIndexInclusive,
+                toUpperIndexInclusive,
+                cancellationToken);
+        }
+
+
+        public IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            CancellationToken cancellationToken = default)
+        {
+            return _persistence.ReadForwardMultiplePartitionsWithRangesAsync(partitionRequests, cancellationToken);
+        }
+#endif
+
+        public Task ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            return _persistence.ReadManyBackwardAsync(partitionRequests, subscription, cancellationToken);
+        }
+
+#if NET8_0_OR_GREATER
+        public IAsyncEnumerable<IChunk> ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            CancellationToken cancellationToken = default)
+        {
+            return _persistence.ReadManyBackwardAsync(partitionRequests, cancellationToken);
+        }
+#endif
+
+        public Task<IReadOnlyDictionary<string, IChunk>> ReadLastChunkForPartitionsAsync(
+            IEnumerable<string> partitionIds,
+            CancellationToken cancellationToken)
+        {
+            return _persistence.ReadLastChunkForPartitionsAsync(partitionIds, cancellationToken);
+        }
+
         public Task ReadBackwardAsync(string partitionId, long fromUpperIndexInclusive, ISubscription subscription,
             long toLowerIndexInclusive, int limit, CancellationToken cancellationToken)
         {
@@ -174,57 +229,56 @@ namespace NStore.Tpl
             _cts.Dispose();
         }
 
-        /// <summary>
-        /// Disposes managed resources. For graceful shutdown, call <see cref="ShutdownAsync"/> first.
-        /// This method performs non-blocking cleanup only.
-        /// </summary>
         public void Dispose()
         {
-            try
-            {
-                var task = ShutdownAsync();
-                Task.WhenAny(task, Task.Delay(5000)).GetAwaiter().GetResult();
-                if (!task.IsCompleted)
-                {
-                    _nStoreLogger?.LogWarning("PersistenceBatchAppendDecorator disposal timed out before completion.");
-                }
-            }
-            catch (Exception ex)
-            {
-                _nStoreLogger?.LogWarning($"Exception while disposing PersistenceBatchAppendDecorator: {ex.Message}");
-            }
-
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
+        /// <summary>
+        /// Asynchronously disposes the resources, ensuring all pending operations complete gracefully.
+        /// </summary>
         public async ValueTask DisposeAsync()
         {
-            await ShutdownAsync().ConfigureAwait(false);
-            Dispose(true);
+            await DisposeAsyncCore().ConfigureAwait(false);
+            Dispose(false); // Don't dispose managed resources again
             GC.SuppressFinalize(this);
         }
 
+        /// <summary>
+        /// Performs the async disposal work.
+        /// </summary>
+        protected virtual async ValueTask DisposeAsyncCore()
+        {
+            if (_disposed) return;
+
+            await ShutdownAsync().ConfigureAwait(false);
+            _disposed = true;
+        }
+
+        /// <summary>
+        /// Disposes managed resources synchronously.
+        /// </summary>
+        /// <param name="disposing">True if called from Dispose(), false if called from finalizer.</param>
         protected virtual void Dispose(bool disposing)
         {
             if (_disposed) return;
 
             if (disposing)
             {
-                try
-                {
-                    _cts?.Cancel();
-                }
-                catch
-                {
-                }
 
+                // Best-effort synchronous shutdown with timeout
                 try
                 {
-                    _cts?.Dispose();
+                    var task = ShutdownAsync();
+                    if (!task.Wait(TimeSpan.FromSeconds(5)))
+                    {
+                        _nStoreLogger?.LogWarning("PersistenceBatchAppendDecorator synchronous disposal timed out.");
+                    }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    _nStoreLogger?.LogWarning($"Exception during synchronous disposal: {ex.Message}");
                 }
             }
 

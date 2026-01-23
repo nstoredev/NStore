@@ -53,6 +53,20 @@ namespace NStore.Persistence.Mongo
         /// This function allows callers to override the <see cref="IMongoClient"/> creation
         /// function to avoid creating too much IMongoClient.
         /// </summary>
+        /// <remarks>
+        /// IMPORTANT: MongoClient is thread-safe and maintains an internal connection pool.
+        /// It is recommended to use a singleton instance or cache MongoClient instances
+        /// per connection string to maximize connection pooling efficiency.
+        /// Creating multiple MongoClient instances creates separate connection pools,
+        /// which increases resource usage and reduces performance.
+        /// 
+        /// Example of singleton pattern:
+        /// <code>
+        /// private static readonly ConcurrentDictionary&lt;string, IMongoClient&gt; _clientCache = new();
+        /// options.CreateClientFunction = settings => 
+        ///     _clientCache.GetOrAdd(settings.ToString(), _ => new MongoClient(settings));
+        /// </code>
+        /// </remarks>
         public Func<MongoClientSettings, IMongoClient> CreateClientFunction { get; set; } = settings => new MongoClient(settings);
 
         /// <summary>
@@ -61,6 +75,39 @@ namespace NStore.Persistence.Mongo
         /// THE STREAM IF THE USER USED TO CONNECT TO MONGO HAS WRITE PERMISSION
         /// </summary>
         public bool ReadonlyUser { get; set; }
+
+        /// <summary>
+        /// The number of documents MongoDB returns in each batch when reading data.
+        /// Default is null (uses MongoDB driver default of ~100 documents).
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Tuning this value can significantly impact performance:
+        /// - Higher values (500-1000): Fewer network round-trips, better throughput for bulk reads,
+        ///   but higher memory usage per cursor. Good for reading large event streams.
+        /// - Lower values (50-100): Lower memory footprint, faster initial response,
+        ///   better for pagination or reading small chunks. Good for UI scenarios.
+        /// - Very high values (>2000): May hit MongoDB's 16MB message size limit.
+        /// </para>
+        /// <para>
+        /// Monitor your workload: If you see many small batches in logs/profiling,
+        /// increase this value. If memory pressure is high, decrease it.
+        /// </para>
+        /// </remarks>
+        public int? CursorBatchSize { get; set; } = null;
+
+        /// <summary>
+        /// Maximum number of retry attempts for batch append operations when encountering recoverable errors.
+        /// Default is 100. If this limit is exceeded, a <see cref="BatchRetryLimitExceededException"/> is thrown.
+        /// </summary>
+        /// <remarks>
+        /// Reaching this limit typically indicates a systemic problem such as:
+        /// - Sequence generator failure
+        /// - Extreme contention from multiple processes
+        /// - Database connectivity issues
+        /// Consider increasing this value only if you have verified the underlying cause.
+        /// </remarks>
+        public int BatchAppendMaxRetries { get; set; } = 100;
 
         /// <summary>
         /// Specify to the persistence layer that we have a connection string with a readonly user

@@ -17,9 +17,5 @@ namespace NStore.Persistence.Mongo
         public MongoPersistenceException(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-        protected MongoPersistenceException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

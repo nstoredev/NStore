@@ -45,6 +45,86 @@ namespace NStore.Core.Persistence
             _logger.LogDebug("End ReadForwardMultiplePartitionsAsync(Partition {PartitionId}, from: {from})", string.Join(",", partitionIdsList), fromLowerIndexInclusive);
         }
 
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            _logger.LogDebug("Start ReadForwardMultiplePartitionsAsyncEnumerable(Partition {PartitionId}, from: {from})", string.Join(",", partitionIdsList), fromLowerIndexInclusive);
+
+            await foreach (var chunk in _persistence.ReadForwardMultiplePartitionsAsyncEnumerable(partitionIdsList, fromLowerIndexInclusive, toUpperIndexInclusive, cancellationToken).ConfigureAwait(false))
+            {
+                yield return chunk;
+            }
+
+            _logger.LogDebug("End ReadForwardMultiplePartitionsAsyncEnumerable(Partition {PartitionId}, from: {from})", string.Join(",", partitionIdsList), fromLowerIndexInclusive);
+        }
+#endif
+
+        public async Task ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            _logger.LogDebug("Start ReadForwardMultiplePartitionsWithRangesAsync(PartitionRequests {Requests})", string.Join(",", partitionRequests));
+            await _persistence.ReadForwardMultiplePartitionsWithRangesAsync(partitionRequests, subscription, cancellationToken).ConfigureAwait(false);
+            _logger.LogDebug("End ReadForwardMultiplePartitionsWithRangesAsync(PartitionRequests {Requests})", string.Join(",", partitionRequests));
+        }
+
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            _logger.LogDebug("Start ReadForwardMultiplePartitionsWithRangesAsync Enumerable(PartitionRequests {Requests})", string.Join(",", partitionRequests));
+
+            await foreach (var chunk in _persistence.ReadForwardMultiplePartitionsWithRangesAsync(partitionRequests, cancellationToken).ConfigureAwait(false))
+            {
+                yield return chunk;
+            }
+
+            _logger.LogDebug("End ReadForwardMultiplePartitionsWithRangesAsync Enumerable(PartitionRequests {Requests})", string.Join(",", partitionRequests));
+        }
+#endif
+
+        public async Task ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            _logger.LogDebug("Start ReadManyBackwardAsync(PartitionRequests {Requests})", string.Join(",", partitionRequests));
+            await _persistence.ReadManyBackwardAsync(partitionRequests, subscription, cancellationToken).ConfigureAwait(false);
+            _logger.LogDebug("End ReadManyBackwardAsync(PartitionRequests {Requests})", string.Join(",", partitionRequests));
+        }
+
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            _logger.LogDebug("Start ReadManyBackwardAsync Enumerable(PartitionRequests {Requests})", string.Join(",", partitionRequests));
+
+            await foreach (var chunk in _persistence.ReadManyBackwardAsync(partitionRequests, cancellationToken).ConfigureAwait(false))
+            {
+                yield return chunk;
+            }
+
+            _logger.LogDebug("End ReadManyBackwardAsync Enumerable(PartitionRequests {Requests})", string.Join(",", partitionRequests));
+        }
+#endif
+
+        public async Task<IReadOnlyDictionary<string, IChunk>> ReadLastChunkForPartitionsAsync(
+            IEnumerable<string> partitionIds,
+            CancellationToken cancellationToken)
+        {
+            _logger.LogDebug("Start ReadLastChunkForPartitionsAsync(PartitionIds {Ids})", string.Join(",", partitionIds));
+            var result = await _persistence.ReadLastChunkForPartitionsAsync(partitionIds, cancellationToken).ConfigureAwait(false);
+            _logger.LogDebug("End ReadLastChunkForPartitionsAsync(PartitionIds {Ids}) - Found {Count} partitions", string.Join(",", partitionIds), result.Count);
+            return result;
+        }
+
         public async Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,

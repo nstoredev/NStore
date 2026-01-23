@@ -3,7 +3,11 @@ using MongoDB.Driver;
 using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
+#if NET8_0_OR_GREATER
+using System.Collections.Frozen;
+#endif
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,7 +27,7 @@ namespace NStore.Persistence.Mongo
     }
 
     public class MongoPersistence<TChunk> : IMongoPersistence, IEnhancedPersistence
-        where TChunk : IMongoChunk, new()
+        where TChunk : class, IMongoChunk, new()
     {
         private IMongoDatabase _partitionsDb;
         private IMongoDatabase _countersDb;
@@ -45,6 +49,10 @@ namespace NStore.Persistence.Mongo
         /// Index on partitionId+operationId, for idempotency on operations
         /// </summary>
         private const string PartitionOperationIdx = "partition_operation";
+
+#if NET8_0_OR_GREATER
+        private static readonly FrozenSet<string> IndexNames = FrozenSet.ToFrozenSet(new[] { PartitionIndexIdx, PartitionOperationIdx, "_id_" });
+#endif
 
         public bool SupportsFillers => true;
 
@@ -76,6 +84,10 @@ namespace NStore.Persistence.Mongo
             //of the partition client settings. 
             _options.CustomizePartitionClientSettings(settings);
 
+            // IMPORTANT: MongoClient is thread-safe and should be stored as a singleton or reused.
+            // MongoClient internally maintains a connection pool. Creating multiple MongoClient instances
+            // will create separate connection pools, which is inefficient.
+            // Consider using CreateClientFunction to provide a cached/singleton MongoClient instance.
             var partitionsClient = _options.CreateClientFunction(settings);
 
             this._partitionsDb = partitionsClient.GetDatabase(partitionsBuild.DatabaseName);
@@ -94,6 +106,18 @@ namespace NStore.Persistence.Mongo
 
                 var countersClient = _options.CreateClientFunction(countersSettings);
                 this._countersDb = countersClient.GetDatabase(countersUrlBuilder.DatabaseName);
+            }
+        }
+
+        /// <summary>
+        /// Configures FindOptions with cursor batch size if specified in options.
+        /// This centralizes batch size configuration to ensure consistent behavior across all read operations.
+        /// </summary>
+        private void ConfigureFindOptions(FindOptionsBase findOptions)
+        {
+            if (_options.CursorBatchSize.HasValue)
+            {
+                findOptions.BatchSize = _options.CursorBatchSize.Value;
             }
         }
 
@@ -129,6 +153,7 @@ namespace NStore.Persistence.Mongo
             {
                 options.Limit = limit;
             }
+            ConfigureFindOptions(options);
 
             await PushToSubscriber(
                 fromLowerIndexInclusive,
@@ -146,14 +171,9 @@ namespace NStore.Persistence.Mongo
             long toUpperIndexInclusive,
             CancellationToken cancellationToken)
         {
-            var filter = Builders<TChunk>.Filter.And(
-                Builders<TChunk>.Filter.In(x => x.PartitionId, partitionIdsList),
-                Builders<TChunk>.Filter.Gte(x => x.Index, fromLowerIndexInclusive),
-                Builders<TChunk>.Filter.Lte(x => x.Index, toUpperIndexInclusive)
-            );
-
-            var sort = Builders<TChunk>.Sort.Ascending(x => x.Index);
-            var options = new FindOptions<TChunk>() { Sort = sort };
+            
+            var (filter, options) = CreateFilterAndOptionsForReadForwardMultiplePartition(partitionIdsList, fromLowerIndexInclusive, toUpperIndexInclusive);
+            ConfigureFindOptions(options);
 
             await PushToSubscriber(
                 fromLowerIndexInclusive,
@@ -162,6 +182,377 @@ namespace NStore.Persistence.Mongo
                 filter,
                 false,
                 cancellationToken).ConfigureAwait(false);
+        }
+
+        private static (FilterDefinition<TChunk>, FindOptions<TChunk>)
+                CreateFilterAndOptionsForReadForwardMultiplePartition(IEnumerable<string> partitionIdsList, long fromLowerIndexInclusive, long toUpperIndexInclusive)
+        {
+            var filter = Builders<TChunk>.Filter.And(
+                Builders<TChunk>.Filter.In(x => x.PartitionId, partitionIdsList),
+                Builders<TChunk>.Filter.Gte(x => x.Index, fromLowerIndexInclusive),
+                Builders<TChunk>.Filter.Lte(x => x.Index, toUpperIndexInclusive)
+            );
+            var sort = Builders<TChunk>.Sort.Combine(
+                Builders<TChunk>.Sort.Ascending(x => x.PartitionId),
+                Builders<TChunk>.Sort.Ascending(x => x.Index)
+            );
+            var options = new FindOptions<TChunk>() { Sort = sort };
+
+            return (filter, options);
+        }
+
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
+            IEnumerable<string> partitionIdsList,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            var (filter, options) = CreateFilterAndOptionsForReadForwardMultiplePartition(partitionIdsList, fromLowerIndexInclusive, toUpperIndexInclusive);
+
+            using var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false);
+            while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
+            {
+                foreach (var chunk in cursor.Current)
+                {
+                    _mongoPayloadSerializer.ApplyDeserialization(chunk);
+                    yield return chunk;
+                }
+            }
+        }
+#endif
+
+        public async Task ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            if (partitionRequests is null)
+            {
+                throw new ArgumentNullException(nameof(partitionRequests));
+            }
+
+            var requests = partitionRequests.ToList();
+            if (!requests.Any())
+            {
+                return;
+            }
+
+            // Validate partition requests
+            ValidatePartitionRequest(requests, nameof(partitionRequests));
+
+            // Build filter for each partition request and combine them with OR
+            var requestCount = requests.Count;
+            var partitionFiltersArray = ArrayPool<FilterDefinition<TChunk>>.Shared.Rent(requestCount);
+            try
+            {
+                var (filter, options) = PrepareFilteringForMultiPartitionRequest(requests, requestCount, partitionFiltersArray);
+
+                // Use the minimum from index as the starting position for subscription
+                var startIndex = requests.Min(r => r.FromPartitionIndexInclusive);
+
+                await PushToSubscriber(
+                    startIndex,
+                    subscription,
+                    options,
+                    filter,
+                    false,
+                    cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                ArrayPool<FilterDefinition<TChunk>>.Shared.Return(partitionFiltersArray, clearArray: false);
+            }
+        }
+
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            if (partitionRequests is null)
+            {
+                throw new ArgumentNullException(nameof(partitionRequests));
+            }
+
+            var requests = partitionRequests.ToList();
+            if (!requests.Any())
+            {
+                yield break;
+            }
+
+            // Validate partition requests
+            ValidatePartitionRequest(requests, nameof(partitionRequests));
+
+            // Build filter for each partition request and combine them with OR
+            var requestCount = requests.Count;
+            var partitionFiltersArray = ArrayPool<FilterDefinition<TChunk>>.Shared.Rent(requestCount);
+            try
+            {
+                var (filter, options) = PrepareFilteringForMultiPartitionRequest(requests, requestCount, partitionFiltersArray);
+                ConfigureFindOptions(options);
+
+                using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
+                {
+                    while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
+                    {
+                        foreach (var chunk in cursor.Current)
+                        {
+                            _mongoPayloadSerializer.ApplyDeserialization(chunk);
+                            yield return chunk;
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                ArrayPool<FilterDefinition<TChunk>>.Shared.Return(partitionFiltersArray, clearArray: false);
+            }
+        }
+#endif
+
+        public async Task ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            if (partitionRequests is null)
+            {
+                throw new ArgumentNullException(nameof(partitionRequests));
+            }
+
+            var requests = partitionRequests.ToList();
+            if (!requests.Any())
+            {
+                return;
+            }
+
+            // Validate partition requests
+            ValidatePartitionRequest(requests, nameof(partitionRequests));
+
+            // Build filter for each partition request and combine them with OR
+            var requestCount = requests.Count;
+            var partitionFiltersArray = ArrayPool<FilterDefinition<TChunk>>.Shared.Rent(requestCount);
+            try
+            {
+                var (filter, options) = PrepareFilteringForMultiPartitionBackwardRequest(requests, requestCount, partitionFiltersArray);
+                ConfigureFindOptions(options);
+
+                // Use the maximum upper index as the starting position for subscription
+                var startIndex = requests.Max(r => r.ToPartitionIndexInclusive);
+
+                await PushToSubscriber(
+                    startIndex,
+                    subscription,
+                    options,
+                    filter,
+                    false,
+                    cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                ArrayPool<FilterDefinition<TChunk>>.Shared.Return(partitionFiltersArray, clearArray: false);
+            }
+        }
+
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            if (partitionRequests is null)
+            {
+                throw new ArgumentNullException(nameof(partitionRequests));
+            }
+
+            var requests = partitionRequests.ToList();
+            if (!requests.Any())
+            {
+                yield break;
+            }
+
+            // Validate partition requests
+            ValidatePartitionRequest(requests, nameof(partitionRequests));
+
+            // Build filter for each partition request and combine them with OR
+            var requestCount = requests.Count;
+            var partitionFiltersArray = ArrayPool<FilterDefinition<TChunk>>.Shared.Rent(requestCount);
+            try
+            {
+                var (filter, options) = PrepareFilteringForMultiPartitionBackwardRequest(requests, requestCount, partitionFiltersArray);
+                ConfigureFindOptions(options);
+
+                using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
+                {
+                    while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
+                    {
+                        foreach (var chunk in cursor.Current)
+                        {
+                            _mongoPayloadSerializer.ApplyDeserialization(chunk);
+                            yield return chunk;
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                ArrayPool<FilterDefinition<TChunk>>.Shared.Return(partitionFiltersArray, clearArray: false);
+            }
+        }
+#endif
+
+        private static (FilterDefinition<TChunk>, FindOptions<TChunk>) PrepareFilteringForMultiPartitionBackwardRequest(List<PartitionReadRequest> requests, int requestCount, FilterDefinition<TChunk>[] partitionFiltersArray)
+        {
+            for (int i = 0; i < requestCount; i++)
+            {
+                var request = requests[i];
+                partitionFiltersArray[i] = Builders<TChunk>.Filter.And(
+                    Builders<TChunk>.Filter.Eq(x => x.PartitionId, request.PartitionId),
+                    Builders<TChunk>.Filter.Gte(x => x.Index, request.FromPartitionIndexInclusive),
+                    Builders<TChunk>.Filter.Lte(x => x.Index, request.ToPartitionIndexInclusive)
+                );
+            }
+
+            var filter = Builders<TChunk>.Filter.Or(partitionFiltersArray.AsSpan(0, requestCount).ToArray());
+
+            // Sort by partitionId ascending first, then by index descending for backward reading
+            var sort = Builders<TChunk>.Sort.Combine(
+                Builders<TChunk>.Sort.Ascending(x => x.PartitionId),
+                Builders<TChunk>.Sort.Descending(x => x.Index)
+            );
+            var options = new FindOptions<TChunk>() { Sort = sort };
+
+            return (filter, options);
+        }
+
+        private static void ValidatePartitionRequest(List<PartitionReadRequest> requests, string propertyName)
+        {
+            foreach (var request in requests)
+            {
+                if (string.IsNullOrWhiteSpace(request.PartitionId))
+                {
+                    throw new ArgumentException("PartitionId cannot be null or whitespace", propertyName);
+                }
+
+                if (request.ToPartitionIndexInclusive < request.FromPartitionIndexInclusive)
+                {
+                    throw new ArgumentException(
+                        $"ToPartitionIndexInclusive ({request.ToPartitionIndexInclusive}) must be >= FromPartitionIndexInclusive ({request.FromPartitionIndexInclusive}) for partition {request.PartitionId}",
+                        propertyName);
+                }
+            }
+        }
+
+        public async Task<IReadOnlyDictionary<string, IChunk>> ReadLastChunkForPartitionsAsync(
+            IEnumerable<string> partitionIds,
+            CancellationToken cancellationToken)
+        {
+            if (partitionIds is null)
+            {
+                throw new ArgumentNullException(nameof(partitionIds));
+            }
+
+            var partitionList = partitionIds.Where(p => !string.IsNullOrWhiteSpace(p)).Distinct().ToList();
+            if (!partitionList.Any())
+            {
+                return new Dictionary<string, IChunk>();
+            }
+
+            // Two-stage approach for optimal performance:
+            //
+            // Stage 1: Use $group with $max to find the maximum index for each partition.
+            //          This is very fast because MongoDB can use a covered query on the index
+            //          (PartitionId, Index) - it only reads index entries, not full documents.
+            //
+            // Stage 2: Fetch the actual documents using exact (PartitionId, Index) lookups.
+            //          This uses point queries on the compound index, which are O(log n).
+            //
+            // Why this is better than $sort + $group with $first:
+            // - $sort before $group must scan and sort ALL matching documents
+            // - $max only needs to find the maximum value per group (index scan)
+            // - Stage 2 fetches exactly N documents (one per partition) with point lookups
+
+            // Stage 1: Get max index per partition using covered index query
+            var maxIndexPipeline = new[]
+            {
+                new BsonDocument("$match", new BsonDocument("PartitionId", new BsonDocument("$in", new BsonArray(partitionList)))),
+                new BsonDocument("$group", new BsonDocument
+                {
+                    { "_id", "$PartitionId" },
+                    { "maxIndex", new BsonDocument("$max", "$Index") }
+                })
+            };
+
+            var maxIndices = new Dictionary<string, long>();
+            using (var cursor = await _chunks.AggregateAsync<BsonDocument>(maxIndexPipeline, cancellationToken: cancellationToken).ConfigureAwait(false))
+            {
+                while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    foreach (var doc in cursor.Current)
+                    {
+                        var partitionId = doc["_id"].AsString;
+                        var maxIndex = doc["maxIndex"].AsInt64;
+                        maxIndices[partitionId] = maxIndex;
+                    }
+                }
+            }
+
+            if (maxIndices.Count == 0)
+            {
+                return new Dictionary<string, IChunk>();
+            }
+
+            // Stage 2: Fetch actual documents using compound index point lookups
+            // Build an OR filter for each (PartitionId, Index) pair - each is a point lookup
+            var filters = maxIndices.Select(kv =>
+                Builders<TChunk>.Filter.And(
+                    Builders<TChunk>.Filter.Eq(x => x.PartitionId, kv.Key),
+                    Builders<TChunk>.Filter.Eq(x => x.Index, kv.Value)
+                )
+            ).ToList();
+
+            var combinedFilter = Builders<TChunk>.Filter.Or(filters);
+
+            var result = new Dictionary<string, IChunk>();
+            using (var cursor = await _chunks.FindAsync(combinedFilter, cancellationToken: cancellationToken).ConfigureAwait(false))
+            {
+                while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    foreach (var chunk in cursor.Current)
+                    {
+                        _mongoPayloadSerializer.ApplyDeserialization(chunk);
+                        result[chunk.PartitionId] = chunk;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private static (FilterDefinition<TChunk>, FindOptions<TChunk>) PrepareFilteringForMultiPartitionRequest(List<PartitionReadRequest> requests, int requestCount, FilterDefinition<TChunk>[] partitionFiltersArray)
+        {
+            for (int i = 0; i < requestCount; i++)
+            {
+                var request = requests[i];
+                partitionFiltersArray[i] = Builders<TChunk>.Filter.And(
+                    Builders<TChunk>.Filter.Eq(x => x.PartitionId, request.PartitionId),
+                    Builders<TChunk>.Filter.Gte(x => x.Index, request.FromPartitionIndexInclusive),
+                    Builders<TChunk>.Filter.Lte(x => x.Index, request.ToPartitionIndexInclusive)
+                );
+            }
+
+            var filter = Builders<TChunk>.Filter.Or(partitionFiltersArray.AsSpan(0, requestCount).ToArray());
+
+            //Really important in all the multi partition read. If you simply sort by index, this will really make mongodb sad because
+            //it must first scan all partition then sort by index. By sorting first by partitionId we help mongo to read sequentially the data
+            //because it will simply sort by partition id, the main filter, then by index.
+            var sort = Builders<TChunk>.Sort.Combine(
+                Builders<TChunk>.Sort.Ascending(x => x.PartitionId),
+                Builders<TChunk>.Sort.Ascending(x => x.Index)
+            );
+            var options = new FindOptions<TChunk>() { Sort = sort };
+
+            return (filter, options);
         }
 
         /// <summary>
@@ -239,6 +630,7 @@ namespace NStore.Persistence.Mongo
             {
                 options.Limit = limit;
             }
+            ConfigureFindOptions(options);
 
             await PushToSubscriber(
                 fromUpperIndexInclusive,
@@ -263,6 +655,7 @@ namespace NStore.Persistence.Mongo
 
             var sort = Builders<TChunk>.Sort.Descending(x => x.Index);
             var options = new FindOptions<TChunk>() { Sort = sort, Limit = 1 };
+            ConfigureFindOptions(options);
 
             using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
             {
@@ -285,6 +678,7 @@ namespace NStore.Persistence.Mongo
             {
                 options.Limit = limit;
             }
+            ConfigureFindOptions(options);
 
             await PushToSubscriber(fromPositionInclusive, subscription, options, filter, true, cancellationToken)
                 .ConfigureAwait(false);
@@ -301,6 +695,7 @@ namespace NStore.Persistence.Mongo
                 Limit = 1,
                 Projection = projection
             };
+            ConfigureFindOptions(options);
 
             using (var cursor = await _chunks
                        .FindAsync(filter, options, cancellationToken)
@@ -358,13 +753,22 @@ namespace NStore.Persistence.Mongo
                 {
                     //Index violation, we do have a chunk that broke an unique index, we need to know if this is 
                     //at partitionId level (concurrency) or at position level (UseLocalSequence == false and multiple process/appdomain are appending to the stream).
+#if NET8_0_OR_GREATER
+                    var messageSpan = ex.Message.AsSpan();
+                    if (messageSpan.Contains(PartitionIndexIdx.AsSpan(), StringComparison.Ordinal))
+#else
                     if (ex.Message.Contains(PartitionIndexIdx))
+#endif
                     {
                         _logger.LogInformation($"DuplicateStreamIndexException: {ex.Message}.\n{ex.ToString()}");
                         throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
                     }
 
+#if NET8_0_OR_GREATER
+                    if (messageSpan.Contains(PartitionOperationIdx.AsSpan(), StringComparison.Ordinal))
+#else
                     if (ex.Message.Contains(PartitionOperationIdx))
+#endif
                     {
                         if (cancellationToken.IsCancellationRequested)
                         {
@@ -435,6 +839,7 @@ namespace NStore.Persistence.Mongo
             {
                 Sort = Builders<TChunk>.Sort.Ascending(x => x.Position)
             };
+            ConfigureFindOptions(options);
 
             await PushToSubscriber(0, subscription, options, filter, true, cancellationToken)
                 .ConfigureAwait(false);
@@ -497,15 +902,26 @@ namespace NStore.Persistence.Mongo
                     {
                         //Index violation, we do have a chunk that broke an unique index, we need to know if this is 
                         //at partitionId level (concurrency) or at position level (UseLocalSequence == false and multiple process/appdomain are appending to the stream).
+#if NET8_0_OR_GREATER
+                        var messageSpan = ex.Message.AsSpan();
+                        if (messageSpan.Contains(PartitionIndexIdx.AsSpan(), StringComparison.Ordinal))
+#else
                         if (ex.Message.Contains(PartitionIndexIdx))
+#endif
                         {
+                            // in this situation we have a concurrency exception, to avoid leaving a hole in the position sequence
+                            // we persist an empty chunk at this position
                             await PersistAsEmptyAsync(chunk, cancellationToken).ConfigureAwait(false);
                             _logger.LogInformation(
                                 $"DuplicateStreamIndexException: {ex.Message}.\n{ex.ToString()}");
                             throw new DuplicateStreamIndexException(chunk.PartitionId, chunk.Index);
                         }
 
+#if NET8_0_OR_GREATER
+                        if (messageSpan.Contains(PartitionOperationIdx.AsSpan(), StringComparison.Ordinal))
+#else
                         if (ex.Message.Contains(PartitionOperationIdx))
+#endif
                         {
                             if (cancellationToken.IsCancellationRequested)
                             {
@@ -517,14 +933,21 @@ namespace NStore.Persistence.Mongo
                             return null;
                         }
 
+#if NET8_0_OR_GREATER
+                        if (messageSpan.Contains("_id_".AsSpan(), StringComparison.Ordinal))
+#else
                         if (ex.Message.Contains("_id_"))
+#endif
                         {
                             if (cancellationToken.IsCancellationRequested)
                             {
                                 cancellationToken.ThrowIfCancellationRequested();
                             }
 
-                            //some other process steals the Position, we need to warn the user, because too many of this error could suggest to enable UseLocalSequence
+                            // some other process steals the Position, we need to warn the user,
+                            // because too many of this error could suggest to enable UseLocalSequence
+                            // but we can retry because this is not an error at application level
+                            // it is only that mongodb have no way to generate a sqlserver identity like field
                             _logger.LogWarning(
                                 $@"Error writing chunk #{chunk.Position} - Some other process already wrote position {chunk.Position}. 
 Operation will be retried. 
@@ -547,7 +970,7 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
         {
             if (_options.DropOnInit)
             {
-                Drop(cancellationToken).Wait(cancellationToken);
+                await Drop(cancellationToken).ConfigureAwait(false);
             }
 
             _chunks = _partitionsDb.GetCollection<TChunk>(_options.PartitionsCollectionName);
@@ -645,7 +1068,7 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
             }
         }
 
-        private async Task<long> GetNextId(int size, CancellationToken cancellationToken = default)
+        private async ValueTask<long> GetNextId(int size, CancellationToken cancellationToken = default)
         {
             if (_options.UseLocalSequence)
             {
@@ -698,70 +1121,198 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
 
         public async Task AppendBatchAsync(WriteJob[] queue, CancellationToken cancellationToken)
         {
+            int retry = 0;
             var insertCount = queue.Length;
             var lastId = await GetNextId(insertCount, cancellationToken)
                 .ConfigureAwait(false);
 
             var firstId = lastId - insertCount + 1;
-
-            var chunks = new TChunk[insertCount];
-
-            for (var currentIdx = 0; currentIdx < insertCount; currentIdx++)
-            {
-                var current = queue[currentIdx];
-                long id = firstId + currentIdx;
-
-                var chunk = new TChunk();
-                chunk.Init(
-                    id,
-                    current.PartitionId,
-                    current.Index,
-                    _mongoPayloadSerializer.Serialize(current.Payload),
-                    current.OperationId ?? Guid.NewGuid().ToString()
-                );
-
-                chunks[currentIdx] = chunk;
-            }
+            List<WriteJob> writeJobs = CreateWriteJobs(queue, insertCount, firstId);
 
             var options = new InsertManyOptions()
             {
                 IsOrdered = false,
             };
 
-            try
+            // Simple retry loop: continue while there are jobs to save and retry count is less than max retries
+            while (writeJobs.Count > 0 && retry < _options.BatchAppendMaxRetries)
             {
-                await _chunks
-                    .InsertManyAsync(chunks, options, cancellationToken)
-                    .ConfigureAwait(false);
-            }
-            catch (MongoBulkWriteException<TChunk> e)
-            {
-                foreach (var err in e.WriteErrors)
+                try
                 {
-                    if (err.Category == ServerErrorCategory.DuplicateKey)
+                    await _chunks
+                        .InsertManyAsync(writeJobs.Select(j => (TChunk)j.Chunk).ToArray(), options, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    // All succeeded, mark all jobs as committed
+                    foreach (var job in writeJobs)
                     {
-                        if (err.Message.Contains(PartitionIndexIdx))
+                        job.Succeeded();
+                    }
+
+                    // Clear the list - all jobs succeeded we can exit.
+                    writeJobs.Clear();
+                }
+                catch (MongoBulkWriteException<TChunk> e)
+                {
+                    retry++;
+                    var hasRecoverableError = false;
+                    var jobsToRetry = new List<WriteJob>();
+                    var jobsToRemove = new HashSet<WriteJob>();
+
+                    foreach (var err in e.WriteErrors)
+                    {
+                        var failedJob = writeJobs[err.Index];
+                        if (err.Category == ServerErrorCategory.DuplicateKey)
                         {
-                            queue[err.Index].Failed(WriteJob.WriteResult.DuplicatedIndex);
-                            continue;
+#if NET8_0_OR_GREATER
+                            var errorMessageSpan = err.Message.AsSpan();
+                            if (errorMessageSpan.Contains(PartitionIndexIdx.AsSpan(), StringComparison.Ordinal))
+#else
+                            if (err.Message.Contains(PartitionIndexIdx))
+#endif
+                            {
+                                // Non-recoverable: duplicated index
+                                failedJob.Failed(WriteJob.WriteResult.DuplicatedIndex);
+                                jobsToRemove.Add(failedJob);
+                                continue;
+                            }
+
+#if NET8_0_OR_GREATER
+                            if (errorMessageSpan.Contains(PartitionOperationIdx.AsSpan(), StringComparison.Ordinal))
+#else
+                            if (err.Message.Contains(PartitionOperationIdx))
+#endif
+                            {
+                                // Non-recoverable: duplicated operation
+                                failedJob.Failed(WriteJob.WriteResult.DuplicatedOperation);
+                                jobsToRemove.Add(failedJob);
+                                continue;
+                            }
+
+#if NET8_0_OR_GREATER
+                            if (errorMessageSpan.Contains("_id_".AsSpan(), StringComparison.Ordinal))
+#else
+                            if (err.Message.Contains("_id_"))
+#endif
+                            {
+                                // Recoverable: duplicated position - can retry with new position
+                                failedJob.Failed(WriteJob.WriteResult.DuplicatedPosition);
+                                jobsToRetry.Add(failedJob);
+                                hasRecoverableError = true;
+                                continue;
+                            }
                         }
 
-                        if (err.Message.Contains(PartitionOperationIdx))
+                        // Any other error type marks the job as failed (non-recoverable)
+                        failedJob.Failed(WriteJob.WriteResult.Failed);
+                        jobsToRemove.Add(failedJob);
+                    }
+
+                    // Mark successfully written chunks
+                    for (var i = 0; i < writeJobs.Count; i++)
+                    {
+                        var job = writeJobs[i];
+                        // If the job is not in failed or retry lists, it succeeded
+                        if (!jobsToRemove.Contains(job) && !jobsToRetry.Contains(job))
                         {
-                            queue[err.Index].Failed(WriteJob.WriteResult.DuplicatedOperation);
+                            job.Succeeded();
+                            jobsToRemove.Add(job);
                         }
+                    }
+
+                    // Remove all succeeded and non-recoverable failed jobs from the list
+                    foreach (var job in jobsToRemove)
+                    {
+                        writeJobs.Remove(job);
+                    }
+
+                    if (hasRecoverableError && jobsToRetry.Count > 0)
+                    {
+                        await PrepareNewLoopData(writeJobs, jobsToRetry, cancellationToken).ConfigureAwait(false);
                     }
                 }
             }
 
-            for (var index = 0; index < queue.Length; index++)
+            // Check if we exited due to retry limit
+            if (retry >= _options.BatchAppendMaxRetries)
             {
-                var writeJob = queue[index];
-                if (writeJob.Result == WriteJob.WriteResult.None)
+                // Mark remaining jobs as failed with DuplicatedPosition before throwing
+                foreach (var job in writeJobs)
                 {
-                    writeJob.Succeeded(chunks[index]);
+                    if (job.Result == WriteJob.WriteResult.None || job.Result == WriteJob.WriteResult.DuplicatedPosition)
+                    {
+                        job.Failed(WriteJob.WriteResult.DuplicatedPosition);
+                    }
                 }
+
+                var failedJobsCount = writeJobs.Count;
+                _logger.LogError($"Error During AppendBatchAsync. Reached maximum retry limit of {_options.BatchAppendMaxRetries}. Failed jobs: {failedJobsCount}");
+                throw new BatchRetryLimitExceededException(retry, _options.BatchAppendMaxRetries, failedJobsCount);
             }
+        }
+
+        private async Task PrepareNewLoopData(List<WriteJob> writeJobs, List<WriteJob> jobsToRetry, CancellationToken cancellationToken)
+        {
+            // Reload sequence and prepare retry for failed chunks only
+            _logger.LogWarning($@"Error writing batch - Some positions were already taken.
+Operation will be retried for failed chunks only.
+If you see too many of this kind of errors, consider disabling UseLocalSequence because multiple processes are using the very same counter.");
+
+            await ReloadSequence(cancellationToken).ConfigureAwait(false);
+
+            // Get new positions for retry chunks
+            var newLastId = await GetNextId(jobsToRetry.Count, cancellationToken).ConfigureAwait(false);
+            var newFirstId = newLastId - jobsToRetry.Count + 1;
+
+            // Create new chunks with new positions for retry jobs
+            for (var i = 0; i < jobsToRetry.Count; i++)
+            {
+                var job = jobsToRetry[i];
+
+                var newChunk = new TChunk();
+                newChunk.Init(
+                    newFirstId + i,
+                    job.PartitionId,
+                    job.Index,
+                    _mongoPayloadSerializer.Serialize(job.Payload),
+                    job.OperationId
+                );
+
+                // Set new chunk and reset result to None for retry
+                job.SetChunk(newChunk);
+                job.Failed(WriteJob.WriteResult.None);
+            }
+
+            // Remove retry jobs from main list (they were marked as failed)
+            // and rebuild the writeJobs list with only retry jobs
+            writeJobs.Clear();
+            writeJobs.AddRange(jobsToRetry);
+        }
+
+        private List<WriteJob> CreateWriteJobs(WriteJob[] queue, int insertCount, long firstId)
+        {
+            // Create write jobs list and set chunks before saving
+            var writeJobs = new List<WriteJob>(insertCount);
+            for (var currentIdx = 0; currentIdx < insertCount; currentIdx++)
+            {
+                var job = queue[currentIdx];
+                long id = firstId + currentIdx;
+
+                var chunk = new TChunk();
+                chunk.Init(
+                    id,
+                    job.PartitionId,
+                    job.Index,
+                    _mongoPayloadSerializer.Serialize(job.Payload),
+                    job.OperationId ?? Guid.NewGuid().ToString()
+                );
+
+                // Set chunk before saving
+                job.SetChunk(chunk);
+                writeJobs.Add(job);
+            }
+
+            return writeJobs;
         }
     }
 }

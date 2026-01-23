@@ -18,10 +18,8 @@ namespace NStore.Persistence.Tests
             var pathToFile = $"{_testRunId}.db";
             ConnectionString = $"Data Source={pathToFile}";
 
-            if (File.Exists(pathToFile))
-            {
-                File.Delete(pathToFile);
-            }
+            var fileName = Path.GetFullPath(pathToFile);
+            FileUtils.SafeDelete(fileName);
         }
 
         protected IPersistence Create(bool dropOnInit)

@@ -1,6 +1,8 @@
 name: NStore CI
 
-on: [push]
+on:
+  push:
+  workflow_dispatch:
 
 permissions:
   id-token: write
@@ -9,39 +11,40 @@ permissions:
   
 jobs:
   build:
-    timeout-minutes: 8
+    timeout-minutes: 20
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        dotnet: [ '8.x' ] #, '2.2.301', '3.0.100-preview9-014004' ]
+        dotnet: [ '10.x' ] #, '2.2.301', '3.0.100-preview9-014004' ]
         os: ['ubuntu-latest'] #['windows-latest', 'ubuntu-latest', 'macOS-latest']
     name: Build for .NET ${{ matrix.dotnet }}
     steps:
       # We want the build to continue not to block at the very first error
       # continue-on-error: true 
       
-    - uses: actions/checkout@v1
+    - name: Checkout repository
+      uses: actions/checkout@v1
     
-    - name: Setup dotnet 6
+    - name: Set up .NET 6
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 6.x
 
-    - name: Setup .NET Core
+    - name: Set up .NET 10
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: ${{ matrix.dotnet }}
+        dotnet-version: 10.x
          
-    - name: Start Docker for MSSSql
+    - name: Start SQL Server (MSSQL) Docker container
       run: docker run -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=sqlPw3$secure' -e 'MSSQL_PID=Developer' -p 1433:1433 --name msssql -d mcr.microsoft.com/mssql/server:2017-latest-ubuntu
       
-    - name: Start Docker for Mongodb
+    - name: Start MongoDB Docker container
       run: docker run -d -p 27017:27017 mongo
       
-    - name: Dump mssql docker logs
+    - name: Dump SQL Server container logs
       run: docker logs msssql
       
-    - name: Running Build script
+    - name: Run build script (newbuild.ps1)
       shell: pwsh
       env:
         NSTORE_MONGODB: mongodb://localhost/nstore
@@ -49,16 +52,33 @@ jobs:
       run: |
         ./newbuild.ps1 -nugetPublish $true -nugetApiKey ${{ secrets.NUGET_API_KEY }}
 
-    - name: Generate artifact attestation
+    - name: Generate artifact attestation (attest-build-provenance)
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
       uses: actions/attest-build-provenance@v1
       with:
         subject-path: 'artifacts/NuGet'
           
-    - name: Upload Artifact
+    - name: Upload NuGet packages artifact
       uses: actions/upload-artifact@v4
       with:
         name: nuget-packages
         path: artifacts/NuGet
+
+    - name: Flatten all TRX files
+      shell: bash
+      if: ${{ always() }}
+      run: |
+        mkdir -p flattened-trx
+        find TestResults -name "*.trx" -type f -exec cp {} flattened-trx/ \;
+        echo "Found $(find flattened-trx -name '*.trx' | wc -l) TRX files"
+
+    - name: Upload Test results artifact (always)
+      uses: actions/upload-artifact@v4
+      if: ${{ always() }}
+      with:
+        name: TestResults
+        path: flattened-trx/
+        retention-days: 7
+
 
