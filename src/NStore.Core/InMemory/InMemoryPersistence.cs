@@ -256,6 +256,106 @@ namespace NStore.Core.InMemory
             }
         }
 
+        public async Task ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            if (partitionRequests is null)
+                throw new ArgumentNullException(nameof(partitionRequests));
+
+            var requestsList = partitionRequests.ToList();
+            if (!requestsList.Any())
+                return;
+
+            // Group requests by partition id and preserve the order of ranges for each partition.
+            var grouped = requestsList.GroupBy(r => r.PartitionId);
+
+            foreach (var group in grouped)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var partitionId = group.Key;
+                if (!_partitions.TryGetValue(partitionId, out var partition))
+                {
+                    continue; // ignore non existing partitions
+                }
+
+                // Keep track of seen indices for this partition to avoid duplicates across ranges.
+                var seen = new HashSet<long>();
+                var wrapper = new PartitionSubscriptionWrapper(subscription, seen);
+
+                // Sort ranges by upper bound descending for backward reading.
+                var ranges = group.Select(r => (from: r.FromPartitionIndexInclusive, to: r.ToPartitionIndexInclusive))
+                                  .OrderByDescending(t => t.to)
+                                  .ToList();
+
+                foreach (var (from, to) in ranges)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    await partition.ReadBackward(to, wrapper, from, Int32.MaxValue, cancellationToken).ConfigureAwait(false);
+
+                    if (wrapper.ShouldStop)
+                    {
+                        // upstream indicated to stop (OnNextAsync returned false). Stop processing further ranges/partitions.
+                        return;
+                    }
+                }
+            }
+        }
+
+        public async IAsyncEnumerable<IChunk> ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            if (partitionRequests is null)
+                throw new ArgumentNullException(nameof(partitionRequests));
+
+            var requestsList = partitionRequests.ToList();
+            if (!requestsList.Any())
+                yield break;
+
+            var grouped = requestsList.GroupBy(r => r.PartitionId);
+
+            foreach (var group in grouped)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var partitionId = group.Key;
+                if (!_partitions.TryGetValue(partitionId, out var partition))
+                {
+                    continue; // no such partition
+                }
+
+                // Track seen indices per partition to avoid duplicates across ranges.
+                var seen = new HashSet<long>();
+
+                // Sort ranges by upper bound descending for backward reading.
+                var ranges = group.Select(r => (from: r.FromPartitionIndexInclusive, to: r.ToPartitionIndexInclusive))
+                                  .OrderByDescending(t => t.to)
+                                  .ToList();
+
+                foreach (var (from, to) in ranges)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    // Use a recorder to collect chunks for this range and then yield them.
+                    var recorder = new Recorder();
+                    await partition.ReadBackward(to, recorder, from, Int32.MaxValue, cancellationToken).ConfigureAwait(false);
+
+                    foreach (var chunk in recorder.Chunks)
+                    {
+                        if (seen.Add(chunk.Index))
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            yield return Clone((MemoryChunk)chunk);
+                        }
+                    }
+                }
+            }
+        }
+
         private class PartitionSubscriptionWrapper : ISubscription
         {
             private readonly ISubscription _inner;

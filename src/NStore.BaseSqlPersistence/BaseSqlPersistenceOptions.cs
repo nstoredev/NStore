@@ -173,5 +173,52 @@ namespace NStore.BaseSqlPersistence
 
             return sb.ToString();
         }
+
+        /// <summary>
+        /// Generates a SQL query to read multiple partitions backward where each partition can have its own index range.
+        /// Uses UNION ALL to combine results from different partitions while maintaining per-partition descending ordering.
+        /// </summary>
+        /// <param name="partitionRequests">Collection of partition read requests with individual ranges</param>
+        /// <returns>SQL query string with UNION ALL clauses and descending order</returns>
+        public virtual string GetRangeMultiplePartitionWithRangesSelectChunksSqlBackward(
+            IEnumerable<PartitionReadRequest> partitionRequests)
+        {
+            var requests = partitionRequests.ToList();
+            if (!requests.Any())
+            {
+                return string.Empty;
+            }
+
+            var sb = new StringBuilder();
+
+            for (int i = 0; i < requests.Count; i++)
+            {
+                if (i > 0)
+                {
+                    sb.Append(" UNION ALL ");
+                }
+
+                sb.Append("SELECT [Position], [PartitionId], [Index], [Payload], [OperationId], [SerializerInfo] ");
+                sb.Append($"FROM {StreamsTableName} ");
+                sb.Append($"WHERE [PartitionId] = @p{i} ");
+
+                var request = requests[i];
+
+                if (request.FromPartitionIndexInclusive > 0)
+                {
+                    sb.Append($"AND [Index] >= @from{i} ");
+                }
+
+                if (request.ToPartitionIndexInclusive != long.MaxValue)
+                {
+                    sb.Append($"AND [Index] <= @to{i} ");
+                }
+            }
+
+            // Order by Index descending for backward reading
+            sb.Append(" ORDER BY [Index] DESC");
+
+            return sb.ToString();
+        }
     }
 }

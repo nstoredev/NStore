@@ -311,6 +311,120 @@ namespace NStore.Persistence.Mongo
         }
 #endif
 
+        public async Task ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            if (partitionRequests is null)
+            {
+                throw new ArgumentNullException(nameof(partitionRequests));
+            }
+
+            var requests = partitionRequests.ToList();
+            if (!requests.Any())
+            {
+                return;
+            }
+
+            // Validate partition requests
+            ValidatePartitionRequest(requests, nameof(partitionRequests));
+
+            // Build filter for each partition request and combine them with OR
+            var requestCount = requests.Count;
+            var partitionFiltersArray = ArrayPool<FilterDefinition<TChunk>>.Shared.Rent(requestCount);
+            try
+            {
+                var (filter, options) = PrepareFilteringForMultiPartitionBackwardRequest(requests, requestCount, partitionFiltersArray);
+                ConfigureFindOptions(options);
+
+                // Use the maximum upper index as the starting position for subscription
+                var startIndex = requests.Max(r => r.ToPartitionIndexInclusive);
+
+                await PushToSubscriber(
+                    startIndex,
+                    subscription,
+                    options,
+                    filter,
+                    false,
+                    cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                ArrayPool<FilterDefinition<TChunk>>.Shared.Return(partitionFiltersArray, clearArray: false);
+            }
+        }
+
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            if (partitionRequests is null)
+            {
+                throw new ArgumentNullException(nameof(partitionRequests));
+            }
+
+            var requests = partitionRequests.ToList();
+            if (!requests.Any())
+            {
+                yield break;
+            }
+
+            // Validate partition requests
+            ValidatePartitionRequest(requests, nameof(partitionRequests));
+
+            // Build filter for each partition request and combine them with OR
+            var requestCount = requests.Count;
+            var partitionFiltersArray = ArrayPool<FilterDefinition<TChunk>>.Shared.Rent(requestCount);
+            try
+            {
+                var (filter, options) = PrepareFilteringForMultiPartitionBackwardRequest(requests, requestCount, partitionFiltersArray);
+                ConfigureFindOptions(options);
+
+                using (var cursor = await _chunks.FindAsync(filter, options, cancellationToken).ConfigureAwait(false))
+                {
+                    while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(false))
+                    {
+                        foreach (var chunk in cursor.Current)
+                        {
+                            _mongoPayloadSerializer.ApplyDeserialization(chunk);
+                            yield return chunk;
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                ArrayPool<FilterDefinition<TChunk>>.Shared.Return(partitionFiltersArray, clearArray: false);
+            }
+        }
+#endif
+
+        private static (FilterDefinition<TChunk>, FindOptions<TChunk>) PrepareFilteringForMultiPartitionBackwardRequest(List<PartitionReadRequest> requests, int requestCount, FilterDefinition<TChunk>[] partitionFiltersArray)
+        {
+            for (int i = 0; i < requestCount; i++)
+            {
+                var request = requests[i];
+                partitionFiltersArray[i] = Builders<TChunk>.Filter.And(
+                    Builders<TChunk>.Filter.Eq(x => x.PartitionId, request.PartitionId),
+                    Builders<TChunk>.Filter.Gte(x => x.Index, request.FromPartitionIndexInclusive),
+                    Builders<TChunk>.Filter.Lte(x => x.Index, request.ToPartitionIndexInclusive)
+                );
+            }
+
+            var filter = Builders<TChunk>.Filter.Or(partitionFiltersArray.AsSpan(0, requestCount).ToArray());
+
+            // Sort by partitionId ascending first, then by index descending for backward reading
+            var sort = Builders<TChunk>.Sort.Combine(
+                Builders<TChunk>.Sort.Ascending(x => x.PartitionId),
+                Builders<TChunk>.Sort.Descending(x => x.Index)
+            );
+            var options = new FindOptions<TChunk>() { Sort = sort };
+
+            return (filter, options);
+        }
+
         private static void ValidatePartitionRequest(List<PartitionReadRequest> requests, string propertyName)
         {
             foreach (var request in requests)

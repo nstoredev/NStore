@@ -140,5 +140,47 @@ namespace NStore.Core.Persistence
             CancellationToken cancellationToken = default
         );
 #endif
+
+        /// <summary>
+        /// Reads multiple partitions backward where each partition can have its own index range.
+        /// This is the multi-partition companion to <see cref="IPartitionPersistence.ReadSingleBackwardAsync"/>.
+        /// </summary>
+        /// <param name="partitionRequests">List of partition read requests, each with its own range.</param>
+        /// <param name="subscription">Subscriber that will receive chunks.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <remarks>
+        /// <para>
+        /// <strong>Index Semantics:</strong> All index values (FromPartitionIndexInclusive, ToPartitionIndexInclusive)
+        /// refer to the <strong>partition-local index</strong>, NOT the global position in the store.
+        /// For backward reading, FromPartitionIndexInclusive is the upper bound and ToPartitionIndexInclusive is the lower bound.
+        /// </para>
+        /// <para>
+        /// <strong>Ordering Guarantees:</strong> Chunks within the SAME partition are ordered by partition index in descending order.
+        /// NO temporal ordering is guaranteed between different partitions.
+        /// </para>
+        /// <para>
+        /// <strong>Use Case:</strong> Designed for scenarios where you need to read the most recent events from multiple
+        /// aggregates, such as loading the latest state snapshots or recent activity across multiple entities.
+        /// </para>
+        /// </remarks>
+        Task ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken
+        );
+
+#if NET8_0_OR_GREATER
+        /// <summary>
+        /// Asynchronously enumerates chunks backward for multiple partitions where each partition can have its own index range.
+        /// Consumers can use `await foreach` and stop enumeration early to signal the producer to stop.
+        /// </summary>
+        /// <param name="partitionRequests">List of partition read requests, each with its own range.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>An async sequence of <see cref="IChunk"/> instances in descending order per partition.</returns>
+        IAsyncEnumerable<IChunk> ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            CancellationToken cancellationToken = default
+        );
+#endif
     }
 }

@@ -730,6 +730,26 @@ namespace NStore.Core.Tests.Tpl
                 return Task.CompletedTask;
             }
 
+            public Task ReadManyBackwardAsync(IEnumerable<PartitionReadRequest> partitionRequests, ISubscription subscription, CancellationToken cancellationToken)
+            {
+                lock (_lock)
+                {
+                    var items = partitionRequests
+                        .SelectMany(request => _chunks
+                            .Where(c => c.PartitionId == request.PartitionId &&
+                                       c.Index >= request.FromPartitionIndexInclusive &&
+                                       c.Index <= request.ToPartitionIndexInclusive))
+                        .OrderByDescending(c => c.Index)
+                        .ToList();
+
+                    foreach (var item in items)
+                    {
+                        subscription.OnNextAsync(item).GetAwaiter().GetResult();
+                    }
+                }
+                return Task.CompletedTask;
+            }
+
 #if NET8_0_OR_GREATER
             public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
                 IEnumerable<PartitionReadRequest> partitionRequests,
@@ -755,7 +775,7 @@ namespace NStore.Core.Tests.Tpl
             }
 
             public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsAsyncEnumerable(
-                IEnumerable<string> partitionIdsList, 
+                IEnumerable<string> partitionIdsList,
                 long fromLowerIndexInclusive,
                 long toUpperIndexInclusive,
                 [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
@@ -766,6 +786,29 @@ namespace NStore.Core.Tests.Tpl
                     items = _chunks
                         .Where(c => partitionIdsList.Contains(c.PartitionId) && c.Index >= fromLowerIndexInclusive && c.Index <= toUpperIndexInclusive)
                         .OrderBy(c => c.Index)
+                        .ToList();
+                }
+
+                await Task.Delay(0, cancellationToken);
+                foreach (var item in items)
+                {
+                    yield return item;
+                }
+            }
+
+            public async IAsyncEnumerable<IChunk> ReadManyBackwardAsync(
+                IEnumerable<PartitionReadRequest> partitionRequests,
+                [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+            {
+                List<TestChunk> items;
+                lock (_lock)
+                {
+                    items = partitionRequests
+                        .SelectMany(request => _chunks
+                            .Where(c => c.PartitionId == request.PartitionId &&
+                                       c.Index >= request.FromPartitionIndexInclusive &&
+                                       c.Index <= request.ToPartitionIndexInclusive))
+                        .OrderByDescending(c => c.Index)
                         .ToList();
                 }
 

@@ -120,6 +120,23 @@ namespace NStore.Tpl
         }
 #endif
 
+        public Task ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            return _persistence.ReadManyBackwardAsync(partitionRequests, subscription, cancellationToken);
+        }
+
+#if NET8_0_OR_GREATER
+        public IAsyncEnumerable<IChunk> ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            CancellationToken cancellationToken = default)
+        {
+            return _persistence.ReadManyBackwardAsync(partitionRequests, cancellationToken);
+        }
+#endif
+
         public Task ReadBackwardAsync(string partitionId, long fromUpperIndexInclusive, ISubscription subscription,
             long toLowerIndexInclusive, int limit, CancellationToken cancellationToken)
         {

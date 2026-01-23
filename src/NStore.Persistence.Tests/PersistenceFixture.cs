@@ -1677,6 +1677,249 @@ namespace NStore.Persistence.Tests
         }
 #endif
 
+        [Fact]
+        public async Task read_many_backward_subscription()
+        {
+            var requests = new[]
+            {
+                new PartitionReadRequest("mbpra", 1, long.MaxValue),
+                new PartitionReadRequest("mbprb", 1, long.MaxValue)
+            };
+
+            var recorder = new Recorder();
+            await Store.ReadManyBackwardAsync(requests, recorder, CancellationToken.None);
+
+            Assert.Equal(5, recorder.Chunks.Count());
+            AssertPerPartitionDescendingOrdering(recorder.Chunks, "mbpra", "mbprb");
+        }
+
+        [Fact]
+        public async Task read_many_backward_specific_ranges_subscription()
+        {
+            var requests = new[]
+            {
+                new PartitionReadRequest("mbpra", 2, 3),
+                new PartitionReadRequest("mbprb", 1, 1)
+            };
+
+            var recorder = new Recorder();
+            await Store.ReadManyBackwardAsync(requests, recorder, CancellationToken.None);
+
+            Assert.Equal(3, recorder.Chunks.Count());
+            AssertPerPartitionDescendingOrdering(recorder.Chunks, "mbpra", "mbprb");
+
+            // Verify we got the right chunks
+            var mbpraChunks = recorder.Chunks.Where(c => c.PartitionId == "mbpra").ToList();
+            var mbprbChunks = recorder.Chunks.Where(c => c.PartitionId == "mbprb").ToList();
+
+            Assert.Equal(2, mbpraChunks.Count);
+            Assert.All(mbpraChunks, c => Assert.InRange(c.Index, 2, 3));
+
+            Assert.Single(mbprbChunks);
+            Assert.Equal(1, mbprbChunks[0].Index);
+        }
+
+        [Fact]
+        public async Task read_many_backward_empty_partition_requests_subscription()
+        {
+            var requests = Array.Empty<PartitionReadRequest>();
+
+            var recorder = new Recorder();
+            await Store.ReadManyBackwardAsync(requests, recorder, CancellationToken.None);
+
+            Assert.Empty(recorder.Chunks);
+        }
+
+        [Fact]
+        public async Task read_many_backward_non_existing_partition_subscription()
+        {
+            var requests = new[]
+            {
+                new PartitionReadRequest("mbpra", 2, 2),
+                new PartitionReadRequest("does-not-exist", 1, long.MaxValue)
+            };
+
+            var recorder = new Recorder();
+            await Store.ReadManyBackwardAsync(requests, recorder, CancellationToken.None);
+
+            Assert.Single(recorder.Chunks);
+            Assert.Equal("mbpra", recorder.Chunks.First().PartitionId);
+            Assert.Equal(2, recorder.Chunks.First().Index);
+        }
+
+        [Fact]
+        public async Task read_many_backward_single_partition_subscription()
+        {
+            var requests = new[]
+            {
+                new PartitionReadRequest("mbpra", 1, 3)
+            };
+
+            var recorder = new Recorder();
+            await Store.ReadManyBackwardAsync(requests, recorder, CancellationToken.None);
+
+            Assert.Equal(3, recorder.Chunks.Count());
+            Assert.All(recorder.Chunks, c => Assert.Equal("mbpra", c.PartitionId));
+            AssertPerPartitionDescendingOrdering(recorder.Chunks, "mbpra");
+        }
+
+        [Fact]
+        public async Task read_many_backward_subscription_honors_stop_signal()
+        {
+            var requests = new[]
+            {
+                new PartitionReadRequest("mbpra", 1, long.MaxValue),
+                new PartitionReadRequest("mbprb", 1, long.MaxValue)
+            };
+
+            var subscription = new StopAfterNSubscription(2);
+            await Store.ReadManyBackwardAsync(requests, subscription, CancellationToken.None);
+
+            Assert.True(subscription.Chunks.Count <= 2, "Should stop after receiving 2 chunks");
+            Assert.True(subscription.WasStopped || subscription.WasCompleted, "Should have called Stopped or Completed");
+        }
+
+        [Fact]
+        public async Task read_many_backward_with_duplicate_partition_requests_subscription()
+        {
+            // Same partition with different ranges - should get union of ranges
+            var requests = new[]
+            {
+                new PartitionReadRequest("mbpra", 1, 1),
+                new PartitionReadRequest("mbpra", 3, 3)
+            };
+
+            var recorder = new Recorder();
+            await Store.ReadManyBackwardAsync(requests, recorder, CancellationToken.None);
+
+            var mbpraChunks = recorder.Chunks.Where(c => c.PartitionId == "mbpra").ToList();
+
+            // Should get chunks from both ranges
+            Assert.Contains(mbpraChunks, c => c.Index == 1);
+            Assert.Contains(mbpraChunks, c => c.Index == 3);
+
+            // Ensure no duplicates - each index should appear only once
+            var indices = mbpraChunks.Select(c => c.Index).ToList();
+            Assert.Equal(indices.Distinct().Count(), indices.Count);
+        }
+
+#if NET8_0_OR_GREATER
+        [Fact]
+        public async Task read_many_backward_async_enumerable()
+        {
+            var requests = new[]
+            {
+                new PartitionReadRequest("mbpra", 1, long.MaxValue),
+                new PartitionReadRequest("mbprb", 1, long.MaxValue)
+            };
+
+            var chunks = new List<IChunk>();
+            await foreach (var chunk in Store.ReadManyBackwardAsync(requests, CancellationToken.None))
+            {
+                chunks.Add(chunk);
+            }
+
+            Assert.Equal(5, chunks.Count);
+            AssertPerPartitionDescendingOrdering(chunks, "mbpra", "mbprb");
+        }
+
+        [Fact]
+        public async Task read_many_backward_specific_ranges_async_enumerable()
+        {
+            var requests = new[]
+            {
+                new PartitionReadRequest("mbpra", 2, 3),
+                new PartitionReadRequest("mbprb", 1, 1)
+            };
+
+            var chunks = new List<IChunk>();
+            await foreach (var chunk in Store.ReadManyBackwardAsync(requests, CancellationToken.None))
+            {
+                chunks.Add(chunk);
+            }
+
+            Assert.Equal(3, chunks.Count);
+            AssertPerPartitionDescendingOrdering(chunks, "mbpra", "mbprb");
+
+            var mbpraChunks = chunks.Where(c => c.PartitionId == "mbpra").ToList();
+            var mbprbChunks = chunks.Where(c => c.PartitionId == "mbprb").ToList();
+
+            Assert.Equal(2, mbpraChunks.Count);
+            Assert.All(mbpraChunks, c => Assert.InRange(c.Index, 2, 3));
+
+            Assert.Single(mbprbChunks);
+            Assert.Equal(1, mbprbChunks[0].Index);
+        }
+
+        [Fact]
+        public async Task read_many_backward_empty_partition_requests_async_enumerable()
+        {
+            var requests = Array.Empty<PartitionReadRequest>();
+
+            var chunks = new List<IChunk>();
+            await foreach (var chunk in Store.ReadManyBackwardAsync(requests, CancellationToken.None))
+            {
+                chunks.Add(chunk);
+            }
+
+            Assert.Empty(chunks);
+        }
+
+        [Fact]
+        public async Task read_many_backward_async_enumerable_honors_early_break()
+        {
+            var requests = new[]
+            {
+                new PartitionReadRequest("mbpra", 1, long.MaxValue),
+                new PartitionReadRequest("mbprb", 1, long.MaxValue)
+            };
+
+            var chunks = new List<IChunk>();
+            await foreach (var chunk in Store.ReadManyBackwardAsync(requests, CancellationToken.None))
+            {
+                chunks.Add(chunk);
+                if (chunks.Count >= 2)
+                    break;
+            }
+
+            Assert.Equal(2, chunks.Count);
+        }
+
+        [Fact]
+        public async Task read_many_backward_cancellation_token_cancels_enumeration()
+        {
+            var requests = new[]
+            {
+                new PartitionReadRequest("mbpra", 1, long.MaxValue),
+                new PartitionReadRequest("mbprb", 1, long.MaxValue)
+            };
+
+            using var cts = new CancellationTokenSource();
+            cts.Cancel(); // Cancel immediately
+
+            var chunks = new List<IChunk>();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            {
+                await foreach (var chunk in Store.ReadManyBackwardAsync(requests, cts.Token))
+                {
+                    chunks.Add(chunk);
+                }
+            });
+        }
+#endif
+
+        private static void AssertPerPartitionDescendingOrdering(IEnumerable<IChunk> chunks, params string[] partitions)
+        {
+            var map = partitions.ToDictionary(p => p, _ => long.MaxValue);
+
+            foreach (var chunk in chunks.Where(c => map.ContainsKey(c.PartitionId)))
+            {
+                Assert.True(chunk.Index < map[chunk.PartitionId],
+                    $"Partition {chunk.PartitionId}: chunk index {chunk.Index} is not less than previous {map[chunk.PartitionId]}");
+                map[chunk.PartitionId] = chunk.Index;
+            }
+        }
+
         private static void AssertPerPartitionOrdering(IEnumerable<IChunk> chunks, params string[] partitions)
         {
             var map = partitions.ToDictionary(p => p, _ => 0L);

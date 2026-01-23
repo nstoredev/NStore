@@ -474,6 +474,180 @@ namespace NStore.BaseSqlPersistence
         }
 #endif
 
+        public async Task ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            if (partitionRequests is null)
+            {
+                throw new ArgumentNullException(nameof(partitionRequests));
+            }
+
+            var requests = partitionRequests.ToList();
+            if (!requests.Any())
+            {
+                return;
+            }
+
+            var sql = Options.GetRangeMultiplePartitionWithRangesSelectChunksSql(requests);
+            var startIndex = requests.Min(r => r.FromPartitionIndexInclusive);
+
+            using var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false);
+            using var command = context.CreateCommand(sql);
+
+            for (int i = 0; i < requests.Count; i++)
+            {
+                var request = requests[i];
+                context.AddParam(command, $"@p{i}", request.PartitionId);
+
+                if (request.FromPartitionIndexInclusive > 0)
+                {
+                    context.AddParam(command, $"@from{i}", request.FromPartitionIndexInclusive);
+                }
+
+                if (request.ToPartitionIndexInclusive != long.MaxValue)
+                {
+                    context.AddParam(command, $"@to{i}", request.ToPartitionIndexInclusive);
+                }
+            }
+
+            await PushToSubscriber(command, startIndex, subscription, false, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadForwardMultiplePartitionsWithRangesAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            if (partitionRequests is null)
+            {
+                throw new ArgumentNullException(nameof(partitionRequests));
+            }
+
+            var requests = partitionRequests.ToList();
+            if (!requests.Any())
+            {
+                yield break;
+            }
+
+            var sql = Options.GetRangeMultiplePartitionWithRangesSelectChunksSql(requests);
+
+            using var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false);
+            using var command = context.CreateCommand(sql);
+
+            for (int i = 0; i < requests.Count; i++)
+            {
+                var request = requests[i];
+                context.AddParam(command, $"@p{i}", request.PartitionId);
+
+                if (request.FromPartitionIndexInclusive > 0)
+                {
+                    context.AddParam(command, $"@from{i}", request.FromPartitionIndexInclusive);
+                }
+
+                if (request.ToPartitionIndexInclusive != long.MaxValue)
+                {
+                    context.AddParam(command, $"@to{i}", request.ToPartitionIndexInclusive);
+                }
+            }
+
+            using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                yield return ReadChunk(reader);
+            }
+        }
+#endif
+
+        public async Task ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            if (partitionRequests is null)
+            {
+                throw new ArgumentNullException(nameof(partitionRequests));
+            }
+
+            var requests = partitionRequests.ToList();
+            if (!requests.Any())
+            {
+                return;
+            }
+
+            var sql = Options.GetRangeMultiplePartitionWithRangesSelectChunksSqlBackward(requests);
+            var startIndex = requests.Max(r => r.ToPartitionIndexInclusive);
+
+            using var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false);
+            using var command = context.CreateCommand(sql);
+
+            for (int i = 0; i < requests.Count; i++)
+            {
+                var request = requests[i];
+                context.AddParam(command, $"@p{i}", request.PartitionId);
+
+                if (request.FromPartitionIndexInclusive > 0)
+                {
+                    context.AddParam(command, $"@from{i}", request.FromPartitionIndexInclusive);
+                }
+
+                if (request.ToPartitionIndexInclusive != long.MaxValue)
+                {
+                    context.AddParam(command, $"@to{i}", request.ToPartitionIndexInclusive);
+                }
+            }
+
+            await PushToSubscriber(command, startIndex, subscription, false, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            if (partitionRequests is null)
+            {
+                throw new ArgumentNullException(nameof(partitionRequests));
+            }
+
+            var requests = partitionRequests.ToList();
+            if (!requests.Any())
+            {
+                yield break;
+            }
+
+            var sql = Options.GetRangeMultiplePartitionWithRangesSelectChunksSqlBackward(requests);
+
+            using var context = await Options.GetContextAsync(cancellationToken).ConfigureAwait(false);
+            using var command = context.CreateCommand(sql);
+
+            for (int i = 0; i < requests.Count; i++)
+            {
+                var request = requests[i];
+                context.AddParam(command, $"@p{i}", request.PartitionId);
+
+                if (request.FromPartitionIndexInclusive > 0)
+                {
+                    context.AddParam(command, $"@from{i}", request.FromPartitionIndexInclusive);
+                }
+
+                if (request.ToPartitionIndexInclusive != long.MaxValue)
+                {
+                    context.AddParam(command, $"@to{i}", request.ToPartitionIndexInclusive);
+                }
+            }
+
+            using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            {
+                yield return ReadChunk(reader);
+            }
+        }
+#endif
+
         public async Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,

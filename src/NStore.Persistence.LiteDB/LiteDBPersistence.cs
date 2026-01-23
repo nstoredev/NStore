@@ -179,6 +179,122 @@ namespace NStore.Persistence.LiteDB
             }
         }
 
+        public async Task ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            var chunks = GatherChunksFromPartitionRequestsBackward(partitionRequests);
+            var startIndex = partitionRequests.Any()
+                ? partitionRequests.Max(r => r.ToPartitionIndexInclusive)
+                : 0L;
+
+            await PublishAsync(chunks, startIndex, subscription, false, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        public async IAsyncEnumerable<IChunk> ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            var requestsList = partitionRequests.ToList();
+            if (!requestsList.Any())
+            {
+                yield break;
+            }
+
+            // Group requests by partition to preserve per-partition ordering and handle duplicates
+            var partitionGroups = requestsList
+                .GroupBy(r => r.PartitionId)
+                .Select(g => new
+                {
+                    PartitionId = g.Key,
+                    Ranges = OptimizeRanges(g.Select(r => (r.FromPartitionIndexInclusive, r.ToPartitionIndexInclusive)).ToList())
+                })
+                .ToList();
+
+            var seenChunks = new HashSet<(string PartitionId, long Index)>();
+
+            await Task.CompletedTask;
+
+            foreach (var partitionGroup in partitionGroups)
+            {
+                // Query each optimized range for this partition, sorted descending for backward reading
+                foreach (var (fromIndex, toIndex) in partitionGroup.Ranges.OrderByDescending(r => r.ToIndex))
+                {
+                    var rangeChunks = _streams.Query()
+                        .Where(x => x.PartitionId == partitionGroup.PartitionId
+                                    && x.Index >= fromIndex
+                                    && x.Index <= toIndex)
+                        .OrderByDescending(x => x.Index)
+                        .ToEnumerable();
+
+                    foreach (var chunk in rangeChunks)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var key = (chunk.PartitionId, chunk.Index);
+                        if (seenChunks.Add(key))
+                        {
+                            yield return chunk;
+                        }
+                    }
+                }
+            }
+        }
+
+        private List<LiteDBChunk> GatherChunksFromPartitionRequestsBackward(
+            IEnumerable<PartitionReadRequest> partitionRequests)
+        {
+            var requestsList = partitionRequests.ToList();
+            if (!requestsList.Any())
+            {
+                return new List<LiteDBChunk>();
+            }
+
+            // Group requests by partition to preserve per-partition ordering and handle duplicates
+            var partitionGroups = requestsList
+                .GroupBy(r => r.PartitionId)
+                .Select(g => new
+                {
+                    PartitionId = g.Key,
+                    Ranges = OptimizeRanges(g.Select(r => (r.FromPartitionIndexInclusive, r.ToPartitionIndexInclusive)).ToList())
+                })
+                .ToList();
+
+            var allChunks = new List<LiteDBChunk>();
+            var seenChunks = new HashSet<(string PartitionId, long Index)>();
+
+            foreach (var partitionGroup in partitionGroups)
+            {
+                var partitionChunks = new List<LiteDBChunk>();
+
+                // Query each optimized range for this partition
+                foreach (var (fromIndex, toIndex) in partitionGroup.Ranges)
+                {
+                    var rangeChunks = _streams.Query()
+                        .Where(x => x.PartitionId == partitionGroup.PartitionId
+                                    && x.Index >= fromIndex
+                                    && x.Index <= toIndex)
+                        .OrderByDescending(x => x.Index)
+                        .ToList();
+
+                    partitionChunks.AddRange(rangeChunks);
+                }
+
+                // Deduplicate and maintain descending ordering within partition
+                foreach (var chunk in partitionChunks.OrderByDescending(c => c.Index))
+                {
+                    var key = (chunk.PartitionId, chunk.Index);
+                    if (seenChunks.Add(key))
+                    {
+                        allChunks.Add(chunk);
+                    }
+                }
+            }
+
+            return allChunks;
+        }
+
         /// <summary>
         /// Helper method to gather chunks from partition requests with range optimization and deduplication.
         /// </summary>

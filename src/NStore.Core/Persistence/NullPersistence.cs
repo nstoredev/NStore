@@ -98,6 +98,24 @@ namespace NStore.Core.Persistence
             throw new System.NotImplementedException();
         }
 
+        public Task ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+#if NET8_0_OR_GREATER
+        public async IAsyncEnumerable<IChunk> ReadManyBackwardAsync(
+            IEnumerable<PartitionReadRequest> partitionRequests,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await Task.CompletedTask;
+            yield break;
+        }
+#endif
+
         public Task ReadBackwardAsync(
             string partitionId,
             long fromUpperIndexInclusive,
