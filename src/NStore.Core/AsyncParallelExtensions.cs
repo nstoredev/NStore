@@ -27,22 +27,36 @@ namespace NStore.Core
             Func<T, CancellationToken, Task> body,
             CancellationToken cancellationToken)
         {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var throttler = new SemaphoreSlim(maxDegreeOfParallelism);
             var tasks = new List<Task>();
-            List<Exception> exceptions = null;
+            Exception firstException = null;
             OperationCanceledException cancellation = null;
 
             try
             {
                 foreach (var item in source)
                 {
-                    await throttler.WaitAsync(cancellationToken).ConfigureAwait(false);
+                    await throttler.WaitAsync(cts.Token).ConfigureAwait(false);
+
+                    // If a previous task has failed, stop scheduling new work
+                    if (Volatile.Read(ref firstException) != null)
+                    {
+                        break;
+                    }
 
                     tasks.Add(Task.Run(async () =>
                     {
                         try
                         {
-                            await body(item, cancellationToken).ConfigureAwait(false);
+                            await body(item, cts.Token).ConfigureAwait(false);
+                        }
+                        catch (Exception ex) when (!(ex is OperationCanceledException))
+                        {
+                            // Record the first failure and cancel remaining work
+                            Interlocked.CompareExchange(ref firstException, ex, null);
+                            cts.Cancel();
+                            throw;
                         }
                         finally
                         {
@@ -55,12 +69,8 @@ namespace NStore.Core
             {
                 cancellation = ex;
             }
-            catch (Exception ex)
-            {
-                exceptions ??= new List<Exception>();
-                exceptions.Add(ex);
-            }
 
+            // Wait for all already-running tasks to complete
             foreach (var task in tasks)
             {
                 try
@@ -71,23 +81,23 @@ namespace NStore.Core
                 {
                     cancellation ??= ex;
                 }
-                catch (Exception ex)
+                catch
                 {
-                    exceptions ??= new List<Exception>();
-                    exceptions.Add(ex);
+                    // already captured via Interlocked.CompareExchange
                 }
             }
 
             throttler.Dispose();
 
-            if (exceptions != null)
+            // Task failure takes priority over cancellation
+            if (firstException != null)
             {
-                throw new AggregateException(exceptions);
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(firstException).Throw();
             }
 
             if (cancellation != null)
             {
-                throw cancellation;
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(cancellation).Throw();
             }
         }
     }
