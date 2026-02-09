@@ -214,8 +214,8 @@ namespace NStore.Domain
             IReadOnlyList<IAggregate> aggregates,
             string operationId,
             Action<IHeadersAccessor> headers = null,
-            CancellationToken cancellationToken = default,
-            ParallelBatchAppendOptions parallelBatchAppendOptions = null)
+            ParallelBatchAppendOptions parallelBatchAppendOptions = null,
+            CancellationToken cancellationToken = default)
         {
             if (!aggregates.Any())
             {
