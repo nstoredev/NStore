@@ -89,9 +89,14 @@ namespace NStore.Core
 
             throttler.Dispose();
 
-            // Task failure takes priority over cancellation
+            // If both happened, surface both failure and cancellation context.
             if (firstException != null)
             {
+                if (cancellation != null)
+                {
+                    throw new AggregateException(firstException, cancellation);
+                }
+
                 System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(firstException).Throw();
             }
 
