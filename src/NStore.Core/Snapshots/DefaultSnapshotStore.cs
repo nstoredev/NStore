@@ -64,12 +64,28 @@ namespace NStore.Core.Snapshots
                     .ToArray();
 
                 await enhancedPersistence.AppendBatchAsync(jobs, cancellationToken).ConfigureAwait(false);
+                EnsureBatchResultsAreSuccessfulOrDuplicatedIndex(jobs);
                 return;
             }
 
             foreach (var kvp in validSnapshots)
             {
                 await AddAsync(kvp.Key, kvp.Value, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        private static void EnsureBatchResultsAreSuccessfulOrDuplicatedIndex(IEnumerable<WriteJob> jobs)
+        {
+            foreach (var job in jobs)
+            {
+                if (job.Result == WriteJob.WriteResult.Committed ||
+                    job.Result == WriteJob.WriteResult.DuplicatedIndex)
+                {
+                    continue;
+                }
+
+                throw new InvalidOperationException(
+                    $"Snapshot batch append failed for partition '{job.PartitionId}' at index {job.Index}. Result: {job.Result}.");
             }
         }
 
