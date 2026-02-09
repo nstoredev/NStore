@@ -181,9 +181,8 @@ namespace NStore.Core.Snapshots
                 }
 
                 _isDisposing = true;
+                _pendingSnapshotSignal.Release();
             }
-
-            _pendingSnapshotSignal.Release();
 
             try
             {
@@ -198,9 +197,8 @@ namespace NStore.Core.Snapshots
                 lock (_lifecycleLock)
                 {
                     _isDisposed = true;
+                    _pendingSnapshotSignal.Dispose();
                 }
-
-                _pendingSnapshotSignal.Dispose();
             }
         }
 
