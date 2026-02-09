@@ -84,6 +84,65 @@ namespace NStore.Domain.Tests
             Assert.Equal(AggregateSaveOutcome.InvariantFailure, res.Outcome);
             Assert.Null(res.Chunk);
         }
+
+        [Fact]
+        public async Task SaveManyAsync_should_remove_aggregate_from_tracking_after_invariant_failure()
+        {
+            var counters = await BatchRepository.GetManyByIdAsync<CounterAggregate>(Counter1).ConfigureAwait(false);
+            var staleCounter = counters["Counter_1"];
+
+            staleCounter.Decrement();
+            var failure = await BatchRepository.SaveManyAsync(counters.Values.ToList(), "inv_op").ConfigureAwait(false);
+            Assert.False(failure.Success);
+
+            var reloadedCounters = await BatchRepository.GetManyByIdAsync<CounterAggregate>(Counter1).ConfigureAwait(false);
+            var reloadedCounter = reloadedCounters["Counter_1"];
+            Assert.NotSame(staleCounter, reloadedCounter);
+
+            reloadedCounter.Increment();
+            var retry = await BatchRepository.SaveManyAsync(reloadedCounters.Values.ToList(), "inv_retry").ConfigureAwait(false);
+            Assert.True(retry.Success);
+
+            var chunk = await Persistence.ReadSingleBackwardAsync("Counter_1").ConfigureAwait(false);
+            var changeSet = Assert.IsType<Changeset>(chunk.Payload);
+            Assert.Single(changeSet.Events);
+            Assert.IsType<CounterIncremented>(changeSet.Events[0]);
+        }
+
+        [Fact]
+        public async Task SaveManyAsync_should_throw_when_aggregate_is_not_event_sourced()
+        {
+            var aggregate = new NonEventSourcedAggregate("Legacy_1");
+
+            var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
+                    BatchRepository.SaveManyAsync(new[] { (IAggregate)aggregate }, "legacy_op"))
+                .ConfigureAwait(false);
+
+            Assert.Contains("must implement IEventSourcedAggregate", ex.Message);
+            Assert.Contains("Legacy_1", ex.Message);
+        }
+
+        private sealed class NonEventSourcedAggregate : IAggregate
+        {
+            public NonEventSourcedAggregate(string id)
+            {
+                Id = id;
+                IsInitialized = true;
+            }
+
+            public string Id { get; private set; }
+            public long Version => 0;
+            public bool IsInitialized { get; private set; }
+            public bool IsDirty => false;
+            public bool IsNew => true;
+
+            public void Init(string id)
+            {
+                Id = id;
+                IsInitialized = true;
+            }
+        }
+
         [Fact]
         public async Task loading_multiple_aggregates_should_return_all_as_new()
         {

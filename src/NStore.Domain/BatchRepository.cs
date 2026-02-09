@@ -243,7 +243,8 @@ namespace NStore.Domain
 
                     if (job.Result == WriteJob.WriteResult.Committed)
                     {
-                        ((IEventSourcedAggregate)aggregate).Persisted(((IEventSourcedAggregate)aggregate).GetChangeSet());
+                        var persister = GetEventSourcedAggregateOrThrow(aggregate);
+                        persister.Persisted(persister.GetChangeSet());
                         if (_snapshotBatchStore != null && aggregate is ISnapshottable snapshottable)
                         {
                             snapshotsToSave[aggregate.Id] = snapshottable.GetSnapshot();
@@ -346,7 +347,7 @@ namespace NStore.Domain
                     throw new RepositoryMismatchException($"Aggregate {aggregate.Id} was not loaded by this batch repository");
             }
 
-            var persister = (IEventSourcedAggregate)aggregate;
+            var persister = GetEventSourcedAggregateOrThrow(aggregate);
             var changeSet = persister.GetChangeSet();
 
             // Skip empty changesets unless configured to persist them
@@ -355,7 +356,11 @@ namespace NStore.Domain
 
             // Check invariants if supported
             if (aggregate is IInvariantsChecker checker && checker.CheckInvariants().IsInvalid)
+            {
+                // Keep failure handling consistent with concurrency failures: remove stale aggregate from tracking.
+                _trackingAggregates.TryRemove(aggregate.Id, out _);
                 return (AggregateSaveResult.InvariantFailure(aggregate.Id), null);
+            }
 
             // Apply headers if provided
             headers?.Invoke(changeSet);
@@ -368,6 +373,17 @@ namespace NStore.Domain
             );
 
             return (null, job);
+        }
+
+        private static IEventSourcedAggregate GetEventSourcedAggregateOrThrow(IAggregate aggregate)
+        {
+            if (aggregate is IEventSourcedAggregate persister)
+            {
+                return persister;
+            }
+
+            throw new ArgumentException(
+                $"Aggregate '{aggregate?.Id}' of type '{aggregate?.GetType().FullName ?? "<null>"}' must implement {nameof(IEventSourcedAggregate)}.");
         }
 
         private static AggregateSaveResult MapJobResult(WriteJob job, string aggregateId)
