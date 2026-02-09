@@ -122,18 +122,11 @@ namespace NStore.Core.Tests.Persistence
                 .Setup(x => x.AppendBatchAsync(It.IsAny<WriteJob[]>(), It.IsAny<CancellationToken>()))
                 .ThrowsAsync(expected);
 
-            var exception = await Assert.ThrowsAnyAsync<Exception>(async () =>
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                     await persistence.Object.AppendBatchAsync(queue, options, CancellationToken.None).ConfigureAwait(false))
                 .ConfigureAwait(false);
 
-            if (exception is AggregateException aggregate)
-            {
-                Assert.Contains(aggregate.InnerExceptions, x => x is InvalidOperationException && x.Message == expected.Message);
-                return;
-            }
-
-            var invalid = Assert.IsType<InvalidOperationException>(exception);
-            Assert.Equal(expected.Message, invalid.Message);
+            Assert.Equal(expected.Message, exception.Message);
         }
 
         [Fact]

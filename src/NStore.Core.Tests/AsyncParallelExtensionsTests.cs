@@ -41,11 +41,11 @@ namespace NStore.Core.Tests
         }
 
         [Fact]
-        public async Task foreach_async_should_aggregate_worker_exceptions()
+        public async Task foreach_async_should_fail_fast_on_first_exception()
         {
             var source = new[] { 1, 2, 3 };
 
-            var error = await Assert.ThrowsAsync<AggregateException>(async () =>
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 await AsyncParallelExtensions.ForEachAsync(
                         source,
                         maxDegreeOfParallelism: 3,
@@ -62,8 +62,7 @@ namespace NStore.Core.Tests
                     .ConfigureAwait(false))
                 .ConfigureAwait(false);
 
-            Assert.Contains(error.InnerExceptions, x =>
-                x is InvalidOperationException && x.Message == "boom-2");
+            Assert.Equal("boom-2", error.Message);
         }
     }
 }
