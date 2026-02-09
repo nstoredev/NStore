@@ -14,7 +14,7 @@ This project contains MongoDB integration tests and Mongo batch performance benc
 Config sources loaded by tests:
 
 - `appsettings.json` (in this project)
-- optional `appsettings.Local.json`
+- optional `appsettings.local.json`
 - user secrets (`UserSecretsId: nstore-persistence-mongo-tests`)
 
 Connection string resolution order:
@@ -114,7 +114,7 @@ The script enables perf mode for the test process via:
 
 Scenarios are read from:
 
-- `NStore:Mongo:Performance:TestParameters` in `appsettings.json` / `appsettings.Local.json` / user secrets
+- `NStore:Mongo:Performance:TestParameters` in `appsettings.json` / `appsettings.local.json` / user secrets
 
 Each scenario supports:
 
