@@ -55,15 +55,17 @@ namespace NStore.Core
             {
                 cancellation = ex;
             }
-
-            while (tasks.Count > 0)
+            catch (Exception ex)
             {
-                var completed = await Task.WhenAny(tasks).ConfigureAwait(false);
-                tasks.Remove(completed);
+                exceptions ??= new List<Exception>();
+                exceptions.Add(ex);
+            }
 
+            foreach (var task in tasks)
+            {
                 try
                 {
-                    await completed.ConfigureAwait(false);
+                    await task.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException ex)
                 {
