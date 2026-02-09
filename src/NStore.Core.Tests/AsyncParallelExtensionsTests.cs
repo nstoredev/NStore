@@ -64,5 +64,35 @@ namespace NStore.Core.Tests
 
             Assert.Equal("boom-2", error.Message);
         }
+
+        [Fact]
+        public async Task foreach_async_should_include_cancellation_when_worker_failure_cancels_running_work()
+        {
+            var source = new[] { 1, 2 };
+            var firstItemStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            var error = await Assert.ThrowsAsync<AggregateException>(async () =>
+                await AsyncParallelExtensions.ForEachAsync(
+                        source,
+                        maxDegreeOfParallelism: 2,
+                        async (item, ct) =>
+                        {
+                            if (item == 1)
+                            {
+                                firstItemStarted.TrySetResult(true);
+                                await Task.Delay(Timeout.Infinite, ct).ConfigureAwait(false);
+                                return;
+                            }
+
+                            await firstItemStarted.Task.ConfigureAwait(false);
+                            throw new InvalidOperationException("boom");
+                        },
+                        CancellationToken.None)
+                    .ConfigureAwait(false))
+                .ConfigureAwait(false);
+
+            Assert.Contains(error.InnerExceptions, ex => ex is InvalidOperationException invalid && invalid.Message == "boom");
+            Assert.Contains(error.InnerExceptions, ex => ex is OperationCanceledException);
+        }
     }
 }
