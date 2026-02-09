@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Threading;
@@ -11,9 +12,8 @@ using NStore.Persistence.Mongo;
 using Xunit;
 
 #if MAP_DOMAIN
-using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Options;
-using MongoDB.Bson.Serialization.Serializers;
+using NStore.Domain;
 #endif
 
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
@@ -47,23 +47,24 @@ namespace NStore.Persistence.Tests
             // https://github.com/mongodb/mongo-csharp-driver/releases/tag/v2.19.0 
             var objectSerializer = new ObjectSerializer(type => ObjectSerializer.AllAllowedTypes(type));
             BsonSerializer.RegisterSerializer(objectSerializer);
-        }
 
 #if MAP_DOMAIN
-        static BasePersistenceTest()
-        {
             // enable support for dots in key names
-            BsonClassMap.RegisterClassMap<Changeset>(map =>
+            if (!BsonClassMap.IsClassMapRegistered(typeof(Changeset)))
             {
-                map.AutoMap();
-                map.MapProperty(x => x.Headers).SetSerializer(
-                    new DictionaryInterfaceImplementerSerializer<
-                        Dictionary<String, Object>
-                    >(DictionaryRepresentation.ArrayOfArrays)
-                );
-            });
-        }
+                BsonClassMap.RegisterClassMap<Changeset>(map =>
+                {
+                    map.AutoMap();
+                    map.MapProperty(x => x.Headers).SetSerializer(
+                        new DictionaryInterfaceImplementerSerializer<
+                            Dictionary<string, object>
+                        >(DictionaryRepresentation.ArrayOfArrays)
+                    );
+                });
+            }
 #endif
+        }
+
         protected internal IPersistence Create(bool dropOnInit)
         {
             _mongoConnectionString = GetPartitionsConnectionString();
