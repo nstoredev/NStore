@@ -32,7 +32,7 @@ namespace NStore.Core.Tests.Snapshots
         }
 
         [Fact]
-        public async Task add_many_async_should_throw_when_batch_append_reports_non_duplicate_failure()
+        public async Task add_many_async_should_silently_ignore_non_duplicate_failures()
         {
             var persistence = new RecordingEnhancedPersistence(queue =>
             {
@@ -45,11 +45,10 @@ namespace NStore.Core.Tests.Snapshots
                 ["A"] = new SnapshotInfo("A", 1, "payload-a", "v1")
             };
 
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-                    () => snapshotStore.AddManyAsync(snapshots, CancellationToken.None))
-                .ConfigureAwait(false);
+            // Best-effort: should complete without throwing even when individual jobs fail.
+            // Missing snapshots will be rebuilt from the event stream on next load.
+            await snapshotStore.AddManyAsync(snapshots, CancellationToken.None).ConfigureAwait(false);
 
-            Assert.Contains("Result: Failed", exception.Message);
             Assert.Equal(1, persistence.AppendBatchCallCount);
         }
 

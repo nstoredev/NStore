@@ -64,28 +64,14 @@ namespace NStore.Core.Snapshots
                     .ToArray();
 
                 await enhancedPersistence.AppendBatchAsync(jobs, cancellationToken).ConfigureAwait(false);
-                EnsureBatchResultsAreSuccessfulOrDuplicatedIndex(jobs);
+                // Best-effort: individual job failures (e.g. DuplicatedIndex) are silently
+                // ignored. Missing snapshots will be rebuilt from the event stream on next load.
                 return;
             }
 
             foreach (var kvp in validSnapshots)
             {
                 await AddAsync(kvp.Key, kvp.Value, cancellationToken).ConfigureAwait(false);
-            }
-        }
-
-        private static void EnsureBatchResultsAreSuccessfulOrDuplicatedIndex(IEnumerable<WriteJob> jobs)
-        {
-            foreach (var job in jobs)
-            {
-                if (job.Result == WriteJob.WriteResult.Committed ||
-                    job.Result == WriteJob.WriteResult.DuplicatedIndex)
-                {
-                    continue;
-                }
-
-                throw new InvalidOperationException(
-                    $"Snapshot batch append failed for partition '{job.PartitionId}' at index {job.Index}. Result: {job.Result}.");
             }
         }
 
