@@ -60,7 +60,7 @@ namespace NStore.Persistence.Mongo.Tests
             }
 
             _output.WriteLine(
-                $"Skipping: set {PerfEnabledConfigKey}=true in appsettings/appsettings.Local.json/user-secrets to run this test.");
+                $"Skipping: set {PerfEnabledConfigKey}=true in appsettings/appsettings.local.json/user-secrets to run this test.");
             return true;
         }
 

@@ -261,4 +261,4 @@ paket-files/
 *.sln.iml
 
 # Local test overrides
-**/appsettings.Local.json
+**/appsettings.local.json
