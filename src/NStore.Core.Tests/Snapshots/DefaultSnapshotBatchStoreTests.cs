@@ -739,7 +739,8 @@ namespace NStore.Core.Tests.Snapshots
                             CancellationToken.None).ConfigureAwait(false);
                         return true;
                     }
-                    catch (ObjectDisposedException)
+                    catch (ObjectDisposedException ex) when (
+                        string.Equals(ex.ObjectName, nameof(DefaultSnapshotBatchStore), StringComparison.Ordinal))
                     {
                         // Expected for writes that lose the race after dispose has started.
                         return false;
