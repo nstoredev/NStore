@@ -166,9 +166,8 @@ namespace NStore.Core.Snapshots
             {
                 ThrowIfDisposedOrDisposing();
                 _pendingSnapshotWrites.Enqueue(snapshotsToQueue);
+                _pendingSnapshotSignal.Release();
             }
-
-            _pendingSnapshotSignal.Release();
             return Task.CompletedTask;
         }
 
