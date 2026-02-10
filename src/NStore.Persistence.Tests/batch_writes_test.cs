@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using NStore.Core.Persistence;
 using NStore.Tpl;
 using Xunit;
+using Xunit.Sdk;
 
 #pragma warning disable S101 // Types should be named in camel case
 #pragma warning disable IDE1006 // Naming Styles
@@ -13,12 +14,20 @@ namespace NStore.Persistence.Tests
 {
     public class batch_writes_test : BasePersistenceTest
     {
+        private IEnhancedPersistence RequireBatcher()
+        {
+            if (Batcher != null)
+            {
+                return Batcher;
+            }
+
+            throw SkipException.ForSkip("Batch append tests require an IEnhancedPersistence implementation.");
+        }
+
         [Fact]
         public async Task should_add_many()
         {
-            //@@TODO enable test discovery 
-            if (Batcher == null)
-                return;
+            var batcher = RequireBatcher();
 
             var jobs = new[]
             {
@@ -26,7 +35,7 @@ namespace NStore.Persistence.Tests
                 new WriteJob("a", 2, "second", null),
             };
 
-            await Batcher.AppendBatchAsync(jobs, CancellationToken.None).ConfigureAwait(false);
+            await batcher.AppendBatchAsync(jobs, CancellationToken.None).ConfigureAwait(false);
 
             Assert.InRange(jobs[0].Position, 1, 2);
             Assert.InRange(jobs[1].Position, 1, 2);
@@ -35,8 +44,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_fail_on_adding_many()
         {
-            if (Batcher == null)
-                return;
+            var batcher = RequireBatcher();
 
             var jobs = new[]
             {
@@ -46,7 +54,7 @@ namespace NStore.Persistence.Tests
                 new WriteJob("a", 3, "me too", "fail"),
             };
 
-            await Batcher.AppendBatchAsync(jobs, CancellationToken.None);
+            await batcher.AppendBatchAsync(jobs, CancellationToken.None);
 
             Assert.NotEqual(0, jobs[0].Position);
             Assert.Equal(0, jobs[1].Position);
@@ -72,12 +80,10 @@ namespace NStore.Persistence.Tests
             Assert.Equal<object>("me too", a2.Payload);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Await.Warning", "CS4014:Await.Warning")]
         [Fact]
         public async Task async_write_jobs()
         {
-            if (Batcher == null)
-                return;
+            var batcher = RequireBatcher();
 
             // note: insert order is not guaranteed, failures can appen on odd rows
             var jobs = new[]
@@ -88,10 +94,11 @@ namespace NStore.Persistence.Tests
                 new AsyncWriteJob("a", 3, "fail here too", "fail"),
             };
 
-            var forget = Batcher.AppendBatchAsync(jobs, CancellationToken.None);
+            var appendTask = batcher.AppendBatchAsync(jobs, CancellationToken.None);
 
             var allTasks = jobs.Select(x => x.Task).ToArray();
             var written = await Task.WhenAll(allTasks);
+            await appendTask.ConfigureAwait(false);
 
             Assert.Equal(4, written.Length);
             Assert.NotNull(written[0]);
@@ -103,8 +110,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task write_with_batcher()
         {
-            if (Batcher == null)
-                return;
+            _ = RequireBatcher();
 
             using var cts = new CancellationTokenSource(10_000);
             await using var batcher = new PersistenceBatchAppendDecorator(_persistence, _logger, 512, 10);
@@ -121,8 +127,7 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task should_add_many_with_parallel_batch_extension()
         {
-            if (Batcher == null)
-                return;
+            var batcher = RequireBatcher();
 
             var jobs = Enumerable.Range(0, 200)
                 .Select(i => new WriteJob(
@@ -138,7 +143,7 @@ namespace NStore.Persistence.Tests
                 MaxWriters = 4,
             };
 
-            await Batcher.AppendBatchAsync(jobs, options, CancellationToken.None).ConfigureAwait(false);
+            await batcher.AppendBatchAsync(jobs, options, CancellationToken.None).ConfigureAwait(false);
 
             Assert.All(jobs, job =>
             {
