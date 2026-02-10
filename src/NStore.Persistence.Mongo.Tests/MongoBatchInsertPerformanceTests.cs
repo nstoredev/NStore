@@ -34,6 +34,8 @@ namespace NStore.Persistence.Mongo.Tests
         private const string PerfMongoConnectionConfigKey = PerformanceConfigPath + ":ConnectionString";
         protected const int InterScenarioDelaySeconds = 5;
         protected const int WorkerShutdownTimeoutSeconds = 30;
+        protected const int PerformanceTestTimeoutMilliseconds = 10 * 60 * 1000;
+        protected static readonly TimeSpan PerformanceTestTimeout = TimeSpan.FromMilliseconds(PerformanceTestTimeoutMilliseconds);
 
         private static readonly string[] MongoConnectionConfigKeys =
         {

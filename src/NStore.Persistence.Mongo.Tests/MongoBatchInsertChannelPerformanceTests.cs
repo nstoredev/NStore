@@ -19,10 +19,13 @@ namespace NStore.Persistence.Mongo.Tests
         {
         }
 
-        [Fact]
+        [Fact(Timeout = PerformanceTestTimeoutMilliseconds)]
         [Trait("Category", "Performance")]
         public async Task should_measure_batch_insert_performance_degradation()
         {
+            using var testTimeoutCts = new CancellationTokenSource(PerformanceTestTimeout);
+            var testTimeoutToken = testTimeoutCts.Token;
+
             var perfSettings = ReadPerformanceSettings();
             if (TrySkipWhenPerfDisabled(perfSettings))
             {
@@ -74,7 +77,8 @@ namespace NStore.Persistence.Mongo.Tests
                     warmupBatches,
                     configuredProgressEveryBatches,
                     mongoTargetUrl,
-                    scenarioLogFile).ConfigureAwait(false);
+                    scenarioLogFile,
+                    testTimeoutToken).ConfigureAwait(false);
 
                 runResults.Add(result);
                 var suiteLine = await suiteWriter.WriteSuiteResultAsync(result).ConfigureAwait(false);
@@ -86,7 +90,7 @@ namespace NStore.Persistence.Mongo.Tests
                     var cooldownMessage =
                         $"Mongo batch benchmark cooldown: waiting {InterScenarioDelaySeconds}s before next scenario to reduce server oplog pressure.";
                     Output.WriteLine(cooldownMessage);
-                    await Task.Delay(TimeSpan.FromSeconds(InterScenarioDelaySeconds)).ConfigureAwait(false);
+                    await Task.Delay(TimeSpan.FromSeconds(InterScenarioDelaySeconds), testTimeoutToken).ConfigureAwait(false);
                 }
             }
 
@@ -102,7 +106,8 @@ namespace NStore.Persistence.Mongo.Tests
             int warmupBatches,
             int? configuredProgressEveryBatches,
             string mongoTargetUrl,
-            string logFile)
+            string logFile,
+            CancellationToken testCancellationToken)
         {
             var totalBatches = CalculateTotalBatches(scenario);
 
@@ -153,7 +158,7 @@ namespace NStore.Persistence.Mongo.Tests
                     nextId += scenario.BatchSize;
                     warmupInserted += scenario.BatchSize;
 
-                    await batcher.AppendBatchAsync(warmupJobs, CancellationToken.None).ConfigureAwait(false);
+                    await batcher.AppendBatchAsync(warmupJobs, testCancellationToken).ConfigureAwait(false);
                     Assert.All(warmupJobs, job => Assert.Equal(WriteJob.WriteResult.Committed, job.Result));
                 }
 
@@ -242,7 +247,7 @@ namespace NStore.Persistence.Mongo.Tests
                 });
 
                 var nextPayloadId = nextId;
-                workerCancellation = new CancellationTokenSource();
+                workerCancellation = CancellationTokenSource.CreateLinkedTokenSource(testCancellationToken);
                 var workerCancellationToken = workerCancellation.Token;
 
                 long nextBatchNumber = 0;
@@ -298,7 +303,7 @@ namespace NStore.Persistence.Mongo.Tests
                     }
                 });
 
-                await foreach (var result in batchResults.Reader.ReadAllAsync().ConfigureAwait(false))
+                await foreach (var result in batchResults.Reader.ReadAllAsync(testCancellationToken).ConfigureAwait(false))
                 {
                     await ProcessBatchResultAsync(result).ConfigureAwait(false);
                 }
