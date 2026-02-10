@@ -49,26 +49,12 @@ public static class PersistenceExtensions
 
         var batches = SplitInBatches(queue, options.BatchSize);
 
-#if NET6_0_OR_GREATER
-        var parallelOptions = new ParallelOptions
-        {
-            MaxDegreeOfParallelism = options.MaxWriters,
-            CancellationToken = cancellationToken
-        };
-
-        await Parallel.ForEachAsync(
-                batches,
-                parallelOptions,
-                async (batch, ct) => { await persistence.AppendBatchAsync(batch, ct).ConfigureAwait(false); })
-            .ConfigureAwait(false);
-#else
         await NStore.Core.AsyncParallelExtensions.ForEachAsync(
                 batches,
                 options.MaxWriters,
                 (batch, ct) => persistence.AppendBatchAsync(batch, ct),
                 cancellationToken)
             .ConfigureAwait(false);
-#endif
     }
 
     private static List<WriteJob[]> SplitInBatches(WriteJob[] queue, int batchSize)

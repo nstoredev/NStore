@@ -148,6 +148,44 @@ namespace NStore.Core.Tests.Persistence
                 .ConfigureAwait(false);
         }
 
+        [Fact]
+        public async Task append_batch_async_should_include_cancellation_context_when_failure_cancels_running_batches()
+        {
+            var queue = new[]
+            {
+                new WriteJob("p1", 1, "payload-1", "op-1"),
+                new WriteJob("p2", 2, "payload-2", "op-2")
+            };
+
+            var options = new ParallelBatchAppendOptions { BatchSize = 1, MaxWriters = 2 };
+            var persistence = new Mock<IEnhancedPersistence>();
+            var slowBatchStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            persistence
+                .Setup(x => x.AppendBatchAsync(It.IsAny<WriteJob[]>(), It.IsAny<CancellationToken>()))
+                .Returns<WriteJob[], CancellationToken>(async (batch, ct) =>
+                {
+                    var partitionId = batch[0].PartitionId;
+
+                    if (partitionId == "p2")
+                    {
+                        slowBatchStarted.TrySetResult(true);
+                        await Task.Delay(Timeout.Infinite, ct).ConfigureAwait(false);
+                        return;
+                    }
+
+                    await slowBatchStarted.Task.ConfigureAwait(false);
+                    throw new InvalidOperationException("boom");
+                });
+
+            var error = await Assert.ThrowsAsync<AggregateException>(async () =>
+                    await persistence.Object.AppendBatchAsync(queue, options, CancellationToken.None).ConfigureAwait(false))
+                .ConfigureAwait(false);
+
+            Assert.Contains(error.InnerExceptions, ex => ex is InvalidOperationException invalid && invalid.Message == "boom");
+            Assert.Contains(error.InnerExceptions, ex => ex is OperationCanceledException);
+        }
+
         private static void UpdateMax(ref int target, int value)
         {
             while (true)
