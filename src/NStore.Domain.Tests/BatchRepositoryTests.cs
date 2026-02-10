@@ -1,4 +1,5 @@
 using NStore.Core.InMemory;
+using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using NStore.Core.Snapshots;
 using System;
@@ -1145,10 +1146,26 @@ namespace NStore.Domain.Tests
         private static readonly string[] Ticket1 = new[] { "Ticket_1" };
 
         private readonly ThrowingSnapshotBatchStore _snapshotBatchStore = new ThrowingSnapshotBatchStore();
+        private readonly RecordingLoggerFactory _loggerFactory = new RecordingLoggerFactory();
 
         public batch_snapshot_failures_are_best_effort()
         {
             SnapshotBatchStore = _snapshotBatchStore;
+        }
+
+        protected override IBatchRepository CreateBatchRepository()
+        {
+            if (!(Persistence is IEnhancedPersistence enhancedPersistence))
+            {
+                throw new InvalidOperationException("Persistence must implement IEnhancedPersistence");
+            }
+
+            return new BatchRepository(
+                AggregateFactory,
+                enhancedPersistence,
+                SnapshotBatchStore,
+                _loggerFactory
+            );
         }
 
         [Fact]
@@ -1161,6 +1178,10 @@ namespace NStore.Domain.Tests
 
             Assert.True(result.Success);
             Assert.Equal(1, _snapshotBatchStore.AddManyCallCount);
+            Assert.Single(_loggerFactory.Logger.WarningMessages);
+            Assert.Contains("Snapshot persistence failed", _loggerFactory.Logger.WarningMessages[0]);
+            Assert.Single(_loggerFactory.Logger.WarningArgs);
+            Assert.Equal("InvalidOperationException", _loggerFactory.Logger.WarningArgs[0][2]);
 
             var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
             Assert.NotNull(chunk);
@@ -1179,6 +1200,10 @@ namespace NStore.Domain.Tests
 
             Assert.True(result.Success);
             Assert.Equal(1, _snapshotBatchStore.AddManyCallCount);
+            Assert.Single(_loggerFactory.Logger.WarningMessages);
+            Assert.Contains("Snapshot persistence failed", _loggerFactory.Logger.WarningMessages[0]);
+            Assert.Single(_loggerFactory.Logger.WarningArgs);
+            Assert.Equal("OperationCanceledException", _loggerFactory.Logger.WarningArgs[0][2]);
 
             var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
             Assert.NotNull(chunk);
@@ -1214,6 +1239,58 @@ namespace NStore.Domain.Tests
             public ValueTask DisposeAsync()
             {
                 return default;
+            }
+        }
+
+        private sealed class RecordingLoggerFactory : INStoreLoggerFactory
+        {
+            public RecordingLogger Logger { get; } = new RecordingLogger();
+
+            public INStoreLogger CreateLogger(string categoryName)
+            {
+                return Logger;
+            }
+        }
+
+        private sealed class RecordingLogger : INStoreLogger
+        {
+            private sealed class NoopScope : IDisposable
+            {
+                public void Dispose()
+                {
+                }
+            }
+
+            private static readonly IDisposable Scope = new NoopScope();
+
+            public List<string> WarningMessages { get; } = new List<string>();
+            public List<object[]> WarningArgs { get; } = new List<object[]>();
+
+            public bool IsDebugEnabled => false;
+            public bool IsWarningEnabled => true;
+            public bool IsInformationEnabled => false;
+
+            public void LogDebug(string message, params object[] args)
+            {
+            }
+
+            public void LogWarning(string message, params object[] args)
+            {
+                WarningMessages.Add(message);
+                WarningArgs.Add(args ?? Array.Empty<object>());
+            }
+
+            public void LogInformation(string message, params object[] args)
+            {
+            }
+
+            public void LogError(string message, params object[] args)
+            {
+            }
+
+            public IDisposable BeginScope<TState>(TState state)
+            {
+                return Scope;
             }
         }
     }
