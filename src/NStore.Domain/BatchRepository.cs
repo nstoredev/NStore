@@ -264,7 +264,15 @@ namespace NStore.Domain
                 // Step 4: Save snapshots in batch (best-effort)
                 if (_snapshotBatchStore != null && snapshotsToSave.Count > 0)
                 {
-                    await _snapshotBatchStore.AddManyAsync(snapshotsToSave, cancellationToken).ConfigureAwait(false);
+                    try
+                    {
+                        await _snapshotBatchStore.AddManyAsync(snapshotsToSave, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // Snapshot persistence is an optimization only; event commits are already durable.
+                        // Keep SaveManyAsync successful even when snapshot storage is unavailable.
+                    }
                 }
             }
 

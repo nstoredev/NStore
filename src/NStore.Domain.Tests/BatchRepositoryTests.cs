@@ -1140,6 +1140,84 @@ namespace NStore.Domain.Tests
         }
     }
 
+    public class batch_snapshot_failures_are_best_effort : BaseBatchRepositoryTest
+    {
+        private static readonly string[] Ticket1 = new[] { "Ticket_1" };
+
+        private readonly ThrowingSnapshotBatchStore _snapshotBatchStore = new ThrowingSnapshotBatchStore();
+
+        public batch_snapshot_failures_are_best_effort()
+        {
+            SnapshotBatchStore = _snapshotBatchStore;
+        }
+
+        [Fact]
+        public async Task SaveManyAsync_should_succeed_when_snapshot_store_throws()
+        {
+            var tickets = await BatchRepository.GetManyByIdAsync<Ticket>(Ticket1).ConfigureAwait(false);
+            tickets["Ticket_1"].Sale();
+
+            var result = await BatchRepository.SaveManyAsync(tickets.Values.ToList(), "snapshot_failure").ConfigureAwait(false);
+
+            Assert.True(result.Success);
+            Assert.Equal(1, _snapshotBatchStore.AddManyCallCount);
+
+            var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
+            Assert.NotNull(chunk);
+            Assert.IsType<Changeset>(chunk.Payload);
+        }
+
+        [Fact]
+        public async Task SaveManyAsync_should_succeed_when_snapshot_store_throws_cancellation()
+        {
+            _snapshotBatchStore.ThrowCancellation = true;
+
+            var tickets = await BatchRepository.GetManyByIdAsync<Ticket>(Ticket1).ConfigureAwait(false);
+            tickets["Ticket_1"].Sale();
+
+            var result = await BatchRepository.SaveManyAsync(tickets.Values.ToList(), "snapshot_cancel").ConfigureAwait(false);
+
+            Assert.True(result.Success);
+            Assert.Equal(1, _snapshotBatchStore.AddManyCallCount);
+
+            var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
+            Assert.NotNull(chunk);
+            Assert.IsType<Changeset>(chunk.Payload);
+        }
+
+        private sealed class ThrowingSnapshotBatchStore : ISnapshotBatchStore
+        {
+            public int AddManyCallCount { get; private set; }
+            public bool ThrowCancellation { get; set; }
+
+            public Task<IReadOnlyDictionary<string, SnapshotInfo>> GetManyAsync(
+                IEnumerable<string> snapshotPartitionIds,
+                CancellationToken cancellationToken)
+            {
+                return Task.FromResult<IReadOnlyDictionary<string, SnapshotInfo>>(new Dictionary<string, SnapshotInfo>());
+            }
+
+            public Task AddManyAsync(
+                IReadOnlyDictionary<string, SnapshotInfo> snapshots,
+                CancellationToken cancellationToken)
+            {
+                AddManyCallCount++;
+
+                if (ThrowCancellation)
+                {
+                    throw new OperationCanceledException(cancellationToken);
+                }
+
+                throw new InvalidOperationException("Simulated snapshot write failure.");
+            }
+
+            public ValueTask DisposeAsync()
+            {
+                return default;
+            }
+        }
+    }
+
     public class batch_constructor_validation : BaseBatchRepositoryTest
     {
         [Fact]
