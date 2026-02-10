@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using NStore.Core.Persistence;
 using NStore.Tpl;
 using Xunit;
-using Xunit.Sdk;
 
 #pragma warning disable S101 // Types should be named in camel case
 #pragma warning disable IDE1006 // Naming Styles
@@ -14,20 +13,17 @@ namespace NStore.Persistence.Tests
 {
     public class batch_writes_test : BasePersistenceTest
     {
-        private IEnhancedPersistence RequireBatcher()
-        {
-            if (Batcher != null)
-            {
-                return Batcher;
-            }
+#if NO_BATCHER_SUPPORT
+        private const string BatcherSkipReason = "Batch append tests require an IEnhancedPersistence implementation.";
+#else
+        private const string BatcherSkipReason = null;
+#endif
 
-            throw SkipException.ForSkip("Batch append tests require an IEnhancedPersistence implementation.");
-        }
-
-        [Fact]
+        [Fact(Skip = BatcherSkipReason)]
         public async Task should_add_many()
         {
-            var batcher = RequireBatcher();
+            var batcher = Batcher;
+            Assert.NotNull(batcher);
 
             var jobs = new[]
             {
@@ -41,10 +37,11 @@ namespace NStore.Persistence.Tests
             Assert.InRange(jobs[1].Position, 1, 2);
         }
 
-        [Fact]
+        [Fact(Skip = BatcherSkipReason)]
         public async Task should_fail_on_adding_many()
         {
-            var batcher = RequireBatcher();
+            var batcher = Batcher;
+            Assert.NotNull(batcher);
 
             var jobs = new[]
             {
@@ -80,10 +77,11 @@ namespace NStore.Persistence.Tests
             Assert.Equal<object>("me too", a2.Payload);
         }
 
-        [Fact]
+        [Fact(Skip = BatcherSkipReason)]
         public async Task async_write_jobs()
         {
-            var batcher = RequireBatcher();
+            var batcher = Batcher;
+            Assert.NotNull(batcher);
 
             // note: insert order is not guaranteed, failures can appen on odd rows
             var jobs = new[]
@@ -107,11 +105,9 @@ namespace NStore.Persistence.Tests
             Assert.Null(written[3]);
         }
 
-        [Fact]
+        [Fact(Skip = BatcherSkipReason)]
         public async Task write_with_batcher()
         {
-            _ = RequireBatcher();
-
             using var cts = new CancellationTokenSource(10_000);
             await using var batcher = new PersistenceBatchAppendDecorator(_persistence, _logger, 512, 10);
             //            batcher.Cancel(10_000);
@@ -124,10 +120,11 @@ namespace NStore.Persistence.Tests
             Assert.Equal(1, lastPos);
         }
 
-        [Fact]
+        [Fact(Skip = BatcherSkipReason)]
         public async Task should_add_many_with_parallel_batch_extension()
         {
-            var batcher = RequireBatcher();
+            var batcher = Batcher;
+            Assert.NotNull(batcher);
 
             var jobs = Enumerable.Range(0, 200)
                 .Select(i => new WriteJob(
