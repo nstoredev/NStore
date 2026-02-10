@@ -13,6 +13,7 @@ namespace NStore.Core.Tests
             var source = new[] { 1, 2, 3 };
             var firstItemStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             var releaseFirstItem = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var firstItemExited = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             using var cts = new CancellationTokenSource();
 
             var execution = AsyncParallelExtensions.ForEachAsync(
@@ -24,6 +25,7 @@ namespace NStore.Core.Tests
                     {
                         firstItemStarted.TrySetResult(true);
                         await releaseFirstItem.Task.ConfigureAwait(false);
+                        firstItemExited.TrySetResult(true);
                     }
                 },
                 cts.Token);
@@ -31,7 +33,7 @@ namespace NStore.Core.Tests
             await firstItemStarted.Task.ConfigureAwait(false);
             cts.Cancel();
 
-            await Task.Delay(100).ConfigureAwait(false);
+            Assert.False(firstItemExited.Task.IsCompleted);
             Assert.False(execution.IsCompleted);
 
             releaseFirstItem.TrySetResult(true);
