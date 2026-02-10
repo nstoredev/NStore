@@ -1,5 +1,6 @@
 using NStore.Core.Persistence;
 using NStore.Core.Snapshots;
+using NStore.Core.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -20,6 +21,7 @@ namespace NStore.Domain
         private readonly IAggregateFactory _factory;
         private readonly IEnhancedPersistence _persistence;
         private readonly ISnapshotBatchStore _snapshotBatchStore;
+        private readonly INStoreLogger _logger;
 
         private readonly ConcurrentDictionary<string, IAggregate> _trackingAggregates = new ConcurrentDictionary<string, IAggregate>();
 
@@ -28,11 +30,13 @@ namespace NStore.Domain
         public BatchRepository(
             IAggregateFactory factory,
             IEnhancedPersistence persistence,
-            ISnapshotBatchStore snapshotStore)
+            ISnapshotBatchStore snapshotStore,
+            INStoreLoggerFactory loggerFactory = null)
         {
             _factory = factory ?? throw new ArgumentNullException(nameof(factory));
             _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
             _snapshotBatchStore = snapshotStore;
+            _logger = (loggerFactory ?? NStoreNullLoggerFactory.Instance).CreateLogger(nameof(BatchRepository));
         }
 
         public async Task<IReadOnlyDictionary<string, T>> GetManyByIdAsync<T>(
@@ -268,10 +272,19 @@ namespace NStore.Domain
                     {
                         await _snapshotBatchStore.AddManyAsync(snapshotsToSave, cancellationToken).ConfigureAwait(false);
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         // Snapshot persistence is an optimization only; event commits are already durable.
                         // Keep SaveManyAsync successful even when snapshot storage is unavailable.
+                        if (_logger.IsWarningEnabled)
+                        {
+                            _logger.LogWarning(
+                                "Snapshot persistence failed for {SnapshotCount} aggregate(s) after successful event commits. Aggregate IDs: [{AggregateIds}]. Error: {ErrorType}: {ErrorMessage}",
+                                snapshotsToSave.Count,
+                                string.Join(", ", snapshotsToSave.Keys),
+                                ex.GetType().Name,
+                                ex.Message);
+                        }
                     }
                 }
             }
