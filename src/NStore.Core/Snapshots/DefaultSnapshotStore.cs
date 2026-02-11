@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using NStore.Core.Persistence;
 
 namespace NStore.Core.Snapshots
 {
-    public class DefaultSnapshotStore : ISnapshotStore, ISnapshotStoreBatchWriter
+    public class DefaultSnapshotStore : ISnapshotStore
     {
         private readonly IPersistence _store;
 
@@ -40,38 +37,6 @@ namespace NStore.Core.Snapshots
             catch (DuplicateStreamIndexException)
             {
                 // already stored
-            }
-        }
-
-        public async Task AddManyAsync(
-            IReadOnlyDictionary<string, SnapshotInfo> snapshots,
-            CancellationToken cancellationToken)
-        {
-            if (snapshots == null)
-                throw new ArgumentNullException(nameof(snapshots));
-
-            var validSnapshots = snapshots
-                .Where(kvp => kvp.Value != null && !kvp.Value.IsEmpty)
-                .ToArray();
-
-            if (validSnapshots.Length == 0)
-                return;
-
-            if (_store is IEnhancedPersistence enhancedPersistence)
-            {
-                var jobs = validSnapshots
-                    .Select(kvp => new WriteJob(kvp.Key, kvp.Value.SourceVersion, kvp.Value, null))
-                    .ToArray();
-
-                await enhancedPersistence.AppendBatchAsync(jobs, cancellationToken).ConfigureAwait(false);
-                // Best-effort: individual job failures (e.g. DuplicatedIndex) are silently
-                // ignored. Missing snapshots will be rebuilt from the event stream on next load.
-                return;
-            }
-
-            foreach (var kvp in validSnapshots)
-            {
-                await AddAsync(kvp.Key, kvp.Value, cancellationToken).ConfigureAwait(false);
             }
         }
 
