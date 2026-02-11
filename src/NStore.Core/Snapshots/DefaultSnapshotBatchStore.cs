@@ -136,8 +136,7 @@ namespace NStore.Core.Snapshots
         /// </para>
         /// <list type="number">
         /// <item><description>Filters out null or empty snapshots and enqueues them for background processing.</description></item>
-        /// <item><description>The background worker prefers <see cref="ISnapshotStoreBatchWriter"/> when available.</description></item>
-        /// <item><description>Otherwise executes <see cref="ISnapshotStore.AddAsync"/> for each snapshot in parallel.</description></item>
+        /// <item><description>Executes <see cref="ISnapshotStore.AddAsync"/> for each snapshot in parallel.</description></item>
         /// <item><description>Ignores individual failures (best-effort semantics).</description></item>
         /// <item><description>Does not throw exceptions for snapshot save failures.</description></item>
         /// </list>
@@ -253,24 +252,6 @@ namespace NStore.Core.Snapshots
             if (snapshots.Count == 0)
             {
                 return;
-            }
-
-            if (_snapshotStore is ISnapshotStoreBatchWriter batchWriter)
-            {
-                try
-                {
-                    await batchWriter.AddManyAsync(snapshots, cancellationToken).ConfigureAwait(false);
-                    return;
-                }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    // Fallback to per-snapshot writes when optimized path fails.
-                    _logger.LogError($"Batch AddManyAsync optimization failed. Falling back to per-snapshot writes. Exception: {ex.Message}.\n{ex}");
-                }
             }
 
             var dop = Math.Min(Environment.ProcessorCount, snapshots.Count);
