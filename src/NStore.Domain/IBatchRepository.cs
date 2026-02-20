@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using NStore.Core.Persistence;
 
 namespace NStore.Domain
 {
@@ -46,13 +47,17 @@ namespace NStore.Domain
         /// very same operation id for a full idempotency: e.g., the caller calls an API, a transport error arises, he/she can
         /// request the same batch of operation with the same id for full idempotency.</param>
         /// <param name="headers">Optional action to add headers to changesets</param>
+        /// <param name="parallelBatchAppendOptions">
+        /// Optional options to enable split/parallel append for this save call only.
+        /// When null, SaveManyAsync uses a single AppendBatchAsync call.
+        /// </param>
         /// <param name="cancellationToken">Cancellation token</param>
         Task<BatchSaveResult> SaveManyAsync(
             IReadOnlyList<IAggregate> aggregates,
             string operationId,
             Action<IHeadersAccessor> headers = null,
-            CancellationToken cancellationToken = default
-        );
+            ParallelBatchAppendOptions parallelBatchAppendOptions = null,
+            CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Clears all internal tracking state.

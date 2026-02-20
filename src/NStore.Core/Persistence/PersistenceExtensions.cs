@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,6 +11,81 @@ namespace NStore.Core.Persistence;
 /// </summary>
 public static class PersistenceExtensions
 {
+    public static async Task AppendBatchAsync(
+        this IEnhancedPersistence persistence,
+        WriteJob[] queue,
+        ParallelBatchAppendOptions options,
+        CancellationToken cancellationToken = default)
+    {
+#if NET6_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(persistence);
+        ArgumentNullException.ThrowIfNull(queue);
+        ArgumentNullException.ThrowIfNull(options);
+#else
+        if (persistence == null)
+        {
+            throw new ArgumentNullException(nameof(persistence));
+        }
+
+        if (queue == null)
+        {
+            throw new ArgumentNullException(nameof(queue));
+        }
+
+        if (options == null)
+        {
+            throw new ArgumentNullException(nameof(options));
+        }
+#endif
+
+        if (options.BatchSize <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(options), options.BatchSize, "BatchSize must be greater than zero.");
+        }
+
+        if (options.MaxWriters <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(options), options.MaxWriters, "MaxWriters must be greater than zero.");
+        }
+
+        if (queue.Length == 0)
+        {
+            return;
+        }
+
+        var batches = SplitInBatches(queue, options.BatchSize);
+#if NET6_0_OR_GREATER
+        await Parallel.ForEachAsync(
+                batches,
+                new ParallelOptions { MaxDegreeOfParallelism = options.MaxWriters, CancellationToken = cancellationToken },
+                async (batch, ct) => await persistence.AppendBatchAsync(batch, ct).ConfigureAwait(false))
+            .ConfigureAwait(false);
+#else
+        await NStore.Core.AsyncParallelExtensions.ForEachAsync(
+                batches,
+                options.MaxWriters,
+                (batch, ct) => persistence.AppendBatchAsync(batch, ct),
+                cancellationToken)
+            .ConfigureAwait(false);
+#endif
+    }
+
+    private static List<WriteJob[]> SplitInBatches(WriteJob[] queue, int batchSize)
+    {
+        var batchCount = (queue.Length + batchSize - 1) / batchSize;
+        var batches = new List<WriteJob[]>(batchCount);
+
+        for (var offset = 0; offset < queue.Length; offset += batchSize)
+        {
+            var currentBatchSize = Math.Min(batchSize, queue.Length - offset);
+            var batch = new WriteJob[currentBatchSize];
+            Array.Copy(queue, offset, batch, 0, currentBatchSize);
+            batches.Add(batch);
+        }
+
+        return batches;
+    }
+
     public static Task ReadForwardAsync(
         this IPersistence persistence,
         string partitionId,

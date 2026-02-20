@@ -87,7 +87,7 @@ namespace NStore.Core.Tests.Snapshots
         {
             // Arrange
             var store = new FakeSnapshotStore();
-            var batchStore = new DefaultSnapshotBatchStore(store);
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
 
             // Act & Assert
             await Assert.ThrowsAsync<ArgumentNullException>(
@@ -100,7 +100,7 @@ namespace NStore.Core.Tests.Snapshots
         {
             // Arrange
             var store = new FakeSnapshotStore();
-            var batchStore = new DefaultSnapshotBatchStore(store);
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
 
             // Act
             var result = await batchStore.GetManyAsync(new string[0], CancellationToken.None);
@@ -123,7 +123,7 @@ namespace NStore.Core.Tests.Snapshots
             store.AddSnapshot("Order-2", snapshot2);
             store.AddSnapshot("Order-3", snapshot3);
 
-            var batchStore = new DefaultSnapshotBatchStore(store);
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
             var partitionIds = new[] { "Order-1", "Order-2", "Order-3" };
 
             // Act
@@ -148,7 +148,7 @@ namespace NStore.Core.Tests.Snapshots
             // Order-2 has no snapshot
             store.AddSnapshot("Order-3", snapshot3);
 
-            var batchStore = new DefaultSnapshotBatchStore(store);
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
             var partitionIds = new[] { "Order-1", "Order-2", "Order-3" };
 
             // Act
@@ -171,7 +171,7 @@ namespace NStore.Core.Tests.Snapshots
             var snapshot = new SnapshotInfo("Order-1", 5, "payload1", "v1");
             store.AddSnapshot("Order-1", snapshot);
 
-            var batchStore = new DefaultSnapshotBatchStore(store);
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
             // Pass duplicate partition IDs
             var partitionIds = new[] { "Order-1", "Order-1", "Order-1" };
 
@@ -195,7 +195,7 @@ namespace NStore.Core.Tests.Snapshots
             // Order-2, Order-3, Order-4 have no snapshots
             store.AddSnapshot("Order-5", snapshot5);
 
-            var batchStore = new DefaultSnapshotBatchStore(store);
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
             var partitionIds = new[] { "Order-1", "Order-2", "Order-3", "Order-4", "Order-5" };
 
             // Act
@@ -223,7 +223,7 @@ namespace NStore.Core.Tests.Snapshots
                 .Returns(loggerMock.Object);
 
             var store = new ThrowingSnapshotStore();
-            var batchStore = new DefaultSnapshotBatchStore(store, loggerFactoryMock.Object);
+            await using var batchStore = new DefaultSnapshotBatchStore(store, loggerFactoryMock.Object);
 
             // Act
             var result = await batchStore.GetManyAsync(new[] { "Order-1" }, CancellationToken.None);
@@ -242,7 +242,7 @@ namespace NStore.Core.Tests.Snapshots
                 cts.Cancel(); // Cancel immediately
 
                 var store = new FakeSnapshotStore();
-                var batchStore = new DefaultSnapshotBatchStore(store);
+                await using var batchStore = new DefaultSnapshotBatchStore(store);
                 var partitionIds = new[] { "Order-1" };
 
                 // Act & Assert
@@ -263,7 +263,7 @@ namespace NStore.Core.Tests.Snapshots
                 .Returns(loggerMock.Object);
 
             var store = new ThrowingSnapshotStore();
-            var batchStore = new DefaultSnapshotBatchStore(store, loggerFactoryMock.Object);
+            await using var batchStore = new DefaultSnapshotBatchStore(store, loggerFactoryMock.Object);
 
             var snapshots = new Dictionary<string, SnapshotInfo>
             {
@@ -272,6 +272,7 @@ namespace NStore.Core.Tests.Snapshots
 
             // Act
             await batchStore.AddManyAsync(snapshots, CancellationToken.None);
+            await batchStore.DisposeAsync();
 
             // Assert
             loggerMock.Verify(l => l.LogError(It.IsAny<string>(), It.IsAny<object[]>()), Times.AtLeastOnce);
@@ -291,7 +292,7 @@ namespace NStore.Core.Tests.Snapshots
                 store.AddSnapshot(snapshot.SourceId, snapshot);
             }
 
-            var batchStore = new DefaultSnapshotBatchStore(store);
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
             var partitionIds = snapshots.Select(s => s.SourceId).ToArray();
 
             // Act
@@ -314,7 +315,7 @@ namespace NStore.Core.Tests.Snapshots
             var snapshot = new SnapshotInfo("Order-1", 5, "payload1", "v1");
             store.AddSnapshot("Order-1", snapshot);
 
-            var batchStore = new DefaultSnapshotBatchStore(store);
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
             var partitionIds = new[] { "Order-1" };
 
             // Act - Use the extension method without cancellation token
@@ -331,7 +332,7 @@ namespace NStore.Core.Tests.Snapshots
         {
             // Arrange
             var store = new FakeSnapshotStore();
-            var batchStore = new DefaultSnapshotBatchStore(store);
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
 
             // Act & Assert
             await Assert.ThrowsAsync<ArgumentNullException>(
@@ -344,11 +345,12 @@ namespace NStore.Core.Tests.Snapshots
         {
             // Arrange
             var store = new FakeSnapshotStore();
-            var batchStore = new DefaultSnapshotBatchStore(store);
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
             var snapshots = new Dictionary<string, SnapshotInfo>();
 
             // Act
             await batchStore.AddManyAsync(snapshots, CancellationToken.None);
+            await batchStore.DisposeAsync();
 
             // Assert
             Assert.Equal(0, store.AddAsyncCallCount);
@@ -359,7 +361,7 @@ namespace NStore.Core.Tests.Snapshots
         {
             // Arrange
             var store = new FakeSnapshotStore();
-            var batchStore = new DefaultSnapshotBatchStore(store);
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
             
             var snapshot1 = new SnapshotInfo("Order-1", 5, "payload1", "v1");
             var snapshot2 = new SnapshotInfo("Order-2", 10, "payload2", "v1");
@@ -374,6 +376,7 @@ namespace NStore.Core.Tests.Snapshots
 
             // Act
             await batchStore.AddManyAsync(snapshots, CancellationToken.None);
+            await batchStore.DisposeAsync();
 
             // Assert
             Assert.Equal(3, store.AddAsyncCallCount);
@@ -386,11 +389,40 @@ namespace NStore.Core.Tests.Snapshots
         }
 
         [Fact]
+        public async Task add_many_async_should_persist_original_values_when_input_is_mutated_after_enqueue()
+        {
+            // Arrange
+            var store = new FakeSnapshotStore();
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
+
+            var originalSnapshot = new SnapshotInfo("Order-1", 5, "payload-original", "v1");
+            var mutatedSnapshot = new SnapshotInfo("Order-1", 6, "payload-mutated", "v2");
+            var snapshots = new Dictionary<string, SnapshotInfo>
+            {
+                { "Order-1", originalSnapshot }
+            };
+
+            // Act: enqueue, then mutate caller-owned dictionary before queue flush
+            await batchStore.AddManyAsync(snapshots, CancellationToken.None);
+            snapshots["Order-1"] = mutatedSnapshot;
+            snapshots["Order-2"] = new SnapshotInfo("Order-2", 10, "payload-new", "v1");
+
+            await batchStore.DisposeAsync();
+
+            // Assert: persisted values come from the enqueue-time copy
+            Assert.Equal(1, store.AddAsyncCallCount);
+            var persistedOrder1 = await store.GetLastAsync("Order-1", CancellationToken.None);
+            var persistedOrder2 = await store.GetLastAsync("Order-2", CancellationToken.None);
+            Assert.Same(originalSnapshot, persistedOrder1);
+            Assert.Null(persistedOrder2);
+        }
+
+        [Fact]
         public async Task add_many_async_should_filter_out_null_snapshots()
         {
             // Arrange
             var store = new FakeSnapshotStore();
-            var batchStore = new DefaultSnapshotBatchStore(store);
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
             
             var snapshot1 = new SnapshotInfo("Order-1", 5, "payload1", "v1");
             
@@ -403,6 +435,7 @@ namespace NStore.Core.Tests.Snapshots
 
             // Act
             await batchStore.AddManyAsync(snapshots, CancellationToken.None);
+            await batchStore.DisposeAsync();
 
             // Assert
             Assert.Equal(1, store.AddAsyncCallCount);
@@ -415,7 +448,7 @@ namespace NStore.Core.Tests.Snapshots
         {
             // Arrange
             var store = new FakeSnapshotStore();
-            var batchStore = new DefaultSnapshotBatchStore(store);
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
             
             var validSnapshot = new SnapshotInfo("Order-1", 5, "payload1", "v1");
             var emptySnapshot = new SnapshotInfo(null, 0, null, null); // Empty snapshot
@@ -428,6 +461,7 @@ namespace NStore.Core.Tests.Snapshots
 
             // Act
             await batchStore.AddManyAsync(snapshots, CancellationToken.None);
+            await batchStore.DisposeAsync();
 
             // Assert
             Assert.Equal(1, store.AddAsyncCallCount);
@@ -438,7 +472,7 @@ namespace NStore.Core.Tests.Snapshots
         {
             // Arrange
             var store = new FailingSnapshotStore();
-            var batchStore = new DefaultSnapshotBatchStore(store);
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
             
             var snapshot1 = new SnapshotInfo("Order-1", 5, "payload1", "v1");
             var snapshot2 = new SnapshotInfo("fail", 10, "payload2", "v1");
@@ -453,6 +487,7 @@ namespace NStore.Core.Tests.Snapshots
 
             // Act - Should not throw despite individual failure
             await batchStore.AddManyAsync(snapshots, CancellationToken.None);
+            await batchStore.DisposeAsync();
 
             // Assert - Verify method completed without exception
             Assert.True(true);
@@ -463,7 +498,7 @@ namespace NStore.Core.Tests.Snapshots
         {
             // Arrange
             var store = new FakeSnapshotStore();
-            var batchStore = new DefaultSnapshotBatchStore(store);
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
             
             var snapshot = new SnapshotInfo("Order-1", 5, "payload1", "v1");
             var snapshots = new Dictionary<string, SnapshotInfo>
@@ -473,20 +508,24 @@ namespace NStore.Core.Tests.Snapshots
 
             // Act - Use extension method without cancellation token
             await batchStore.AddManyAsync(snapshots);
+            await batchStore.DisposeAsync();
 
             // Assert
             Assert.Equal(1, store.AddAsyncCallCount);
         }
 
         [Fact]
-        public async Task add_many_async_should_throw_operation_cancelled_exception()
+        public async Task add_many_async_should_throw_operation_cancelled_exception_when_token_is_cancelled()
         {
             // Arrange
-            var store = new CancellingSnapshotStore();
-            var batchStore = new DefaultSnapshotBatchStore(store);
+            using var cts = new CancellationTokenSource();
+            cts.Cancel();
+
+            var store = new FakeSnapshotStore();
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
             
             var snapshot1 = new SnapshotInfo("Order-1", 5, "payload1", "v1");
-            var snapshot2 = new SnapshotInfo("cancel", 10, "payload2", "v1");
+            var snapshot2 = new SnapshotInfo("Order-2", 10, "payload2", "v1");
             var snapshot3 = new SnapshotInfo("Order-3", 15, "payload3", "v1");
             
             var snapshots = new Dictionary<string, SnapshotInfo>
@@ -498,8 +537,92 @@ namespace NStore.Core.Tests.Snapshots
 
             // Act & Assert - Should throw OperationCanceledException
             await Assert.ThrowsAsync<OperationCanceledException>(
-                async () => await batchStore.AddManyAsync(snapshots, CancellationToken.None)
+                async () => await batchStore.AddManyAsync(snapshots, cts.Token)
             );
+        }
+
+        [Fact]
+        public async Task add_many_async_should_be_thread_safe_under_concurrent_enqueues()
+        {
+            // Arrange
+            var store = new FakeSnapshotStore();
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
+
+            var writes = Enumerable.Range(1, 100)
+                .Select(i => batchStore.AddManyAsync(
+                    new Dictionary<string, SnapshotInfo>
+                    {
+                        { $"Order-{i}", new SnapshotInfo($"Order-{i}", i, $"payload{i}", "v1") }
+                    },
+                    CancellationToken.None))
+                .ToArray();
+
+            // Act
+            await Task.WhenAll(writes);
+            await batchStore.DisposeAsync();
+
+            // Assert
+            Assert.Equal(100, store.AddAsyncCallCount);
+        }
+
+        [Fact]
+        public async Task add_many_async_should_throw_after_dispose()
+        {
+            // Arrange
+            var store = new FakeSnapshotStore();
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
+            await batchStore.DisposeAsync();
+
+            var snapshots = new Dictionary<string, SnapshotInfo>
+            {
+                { "Order-1", new SnapshotInfo("Order-1", 1, "payload", "v1") }
+            };
+
+            // Act & Assert
+            await Assert.ThrowsAsync<ObjectDisposedException>(
+                async () => await batchStore.AddManyAsync(snapshots, CancellationToken.None));
+        }
+
+        [Fact]
+        public async Task add_many_async_should_flush_all_successfully_enqueued_items_when_dispose_races_with_writers()
+        {
+            // Arrange
+            var store = new FakeSnapshotStore();
+            var batchStore = new DefaultSnapshotBatchStore(store);
+            var startGate = new ManualResetEventSlim(false);
+
+            var writeTasks = Enumerable.Range(1, 200)
+                .Select(i => Task.Run(async () =>
+                {
+                    startGate.Wait();
+
+                    try
+                    {
+                        await batchStore.AddManyAsync(
+                            new Dictionary<string, SnapshotInfo>
+                            {
+                                { $"Order-{i}", new SnapshotInfo($"Order-{i}", i, $"payload-{i}", "v1") }
+                            },
+                            CancellationToken.None).ConfigureAwait(false);
+                        return true;
+                    }
+                    catch (ObjectDisposedException ex) when (ex.ObjectName.Contains(nameof(DefaultSnapshotBatchStore)))
+                    {
+                        // Expected for writes that lose the race after dispose has started.
+                        return false;
+                    }
+                }))
+                .ToArray();
+
+            // Act: start writers and begin disposal concurrently
+            startGate.Set();
+            var disposeTask = batchStore.DisposeAsync().AsTask();
+            var enqueueResults = await Task.WhenAll(writeTasks).ConfigureAwait(false);
+            await disposeTask.ConfigureAwait(false);
+
+            // Assert: every successfully enqueued write is flushed exactly once
+            var successfulEnqueues = enqueueResults.Count(x => x);
+            Assert.Equal(successfulEnqueues, store.AddAsyncCallCount);
         }
 
         private class FailingSnapshotStore : ISnapshotStore
@@ -538,7 +661,7 @@ namespace NStore.Core.Tests.Snapshots
             store.AddSnapshot("Order-1", snapshot1);
             store.AddSnapshot("Order-3", snapshot3);
 
-            var batchStore = new DefaultSnapshotBatchStore(store);
+            await using var batchStore = new DefaultSnapshotBatchStore(store);
             // "fail" will throw, but Order-1 and Order-3 should succeed
             var partitionIds = new[] { "Order-1", "fail", "Order-3" };
 
@@ -580,24 +703,5 @@ namespace NStore.Core.Tests.Snapshots
                 => throw new NotImplementedException();
         }
 
-        private class CancellingSnapshotStore : ISnapshotStore
-        {
-            public Task<SnapshotInfo> GetLastAsync(string snapshotPartitionId, CancellationToken cancellationToken)
-                => Task.FromResult<SnapshotInfo>(null);
-
-            public Task<SnapshotInfo> GetAsync(string snapshotPartitionId, long version, CancellationToken cancellationToken)
-                => throw new NotImplementedException();
-
-            public Task AddAsync(string snapshotPartitionId, SnapshotInfo snapshot, CancellationToken cancellationToken)
-            {
-                if (snapshotPartitionId == "cancel")
-                    throw new OperationCanceledException("Simulated cancellation");
-
-                return Task.CompletedTask;
-            }
-
-            public Task DeleteAsync(string snapshotPartitionId, long fromVersionInclusive, long toVersionInclusive, CancellationToken cancellationToken)
-                => throw new NotImplementedException();
-        }
     }
 }

@@ -1,7 +1,9 @@
 using NStore.Core.InMemory;
+using NStore.Core.Logging;
 using NStore.Core.Persistence;
 using NStore.Core.Snapshots;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -83,6 +85,65 @@ namespace NStore.Domain.Tests
             Assert.Equal(AggregateSaveOutcome.InvariantFailure, res.Outcome);
             Assert.Null(res.Chunk);
         }
+
+        [Fact]
+        public async Task SaveManyAsync_should_remove_aggregate_from_tracking_after_invariant_failure()
+        {
+            var counters = await BatchRepository.GetManyByIdAsync<CounterAggregate>(Counter1).ConfigureAwait(false);
+            var staleCounter = counters["Counter_1"];
+
+            staleCounter.Decrement();
+            var failure = await BatchRepository.SaveManyAsync(counters.Values.ToList(), "inv_op").ConfigureAwait(false);
+            Assert.False(failure.Success);
+
+            var reloadedCounters = await BatchRepository.GetManyByIdAsync<CounterAggregate>(Counter1).ConfigureAwait(false);
+            var reloadedCounter = reloadedCounters["Counter_1"];
+            Assert.NotSame(staleCounter, reloadedCounter);
+
+            reloadedCounter.Increment();
+            var retry = await BatchRepository.SaveManyAsync(reloadedCounters.Values.ToList(), "inv_retry").ConfigureAwait(false);
+            Assert.True(retry.Success);
+
+            var chunk = await Persistence.ReadSingleBackwardAsync("Counter_1").ConfigureAwait(false);
+            var changeSet = Assert.IsType<Changeset>(chunk.Payload);
+            Assert.Single(changeSet.Events);
+            Assert.IsType<CounterIncremented>(changeSet.Events[0]);
+        }
+
+        [Fact]
+        public async Task SaveManyAsync_should_throw_when_aggregate_is_not_event_sourced()
+        {
+            var aggregate = new NonEventSourcedAggregate("Legacy_1");
+
+            var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
+                    BatchRepository.SaveManyAsync(new[] { (IAggregate)aggregate }, "legacy_op"))
+                .ConfigureAwait(false);
+
+            Assert.Contains("must implement IEventSourcedAggregate", ex.Message);
+            Assert.Contains("Legacy_1", ex.Message);
+        }
+
+        private sealed class NonEventSourcedAggregate : IAggregate
+        {
+            public NonEventSourcedAggregate(string id)
+            {
+                Id = id;
+                IsInitialized = true;
+            }
+
+            public string Id { get; private set; }
+            public long Version => 0;
+            public bool IsInitialized { get; private set; }
+            public bool IsDirty => false;
+            public bool IsNew => true;
+
+            public void Init(string id)
+            {
+                Id = id;
+                IsInitialized = true;
+            }
+        }
+
         [Fact]
         public async Task loading_multiple_aggregates_should_return_all_as_new()
         {
@@ -499,6 +560,8 @@ namespace NStore.Domain.Tests
             var saveSnapResult = await BatchRepository.SaveManyAsync(tickets.Values.ToList(), "save_snap").ConfigureAwait(false);
             Assert.NotNull(saveSnapResult);
 
+            await SnapshotBatchStore.DisposeAsync().ConfigureAwait(false);
+
             var snapshot1 = await _snapshotStore.GetAsync("Ticket_1", int.MaxValue).ConfigureAwait(false);
             var snapshot2 = await _snapshotStore.GetAsync("Ticket_2", int.MaxValue).ConfigureAwait(false);
 
@@ -519,6 +582,7 @@ namespace NStore.Domain.Tests
             tickets["Ticket_2"].Refund();
             var saveSnapResult2 = await BatchRepository.SaveManyAsync(tickets.Values.ToList(), "save_snap").ConfigureAwait(false);
             Assert.NotNull(saveSnapResult2);
+            await SnapshotBatchStore.DisposeAsync().ConfigureAwait(false);
 
             // Add more events
             await Persistence.AppendAsync("Ticket_1", 4, new Changeset(4, new object[] { new TicketSomethingHappened() }));
@@ -1060,6 +1124,8 @@ namespace NStore.Domain.Tests
             // Assert - partial failure
             Assert.False(result.Success);
 
+            await SnapshotBatchStore.DisposeAsync().ConfigureAwait(false);
+
             // Check snapshots - only Ticket_2 should have a snapshot from repo2
             // Note: repo1 also saved a snapshot for Ticket_1 at version 2
             var snap1 = await _snapshotStore.GetAsync("Ticket_1", int.MaxValue).ConfigureAwait(false);
@@ -1072,6 +1138,160 @@ namespace NStore.Domain.Tests
             // Ticket_2 snapshot should be from repo2 (version 2)
             Assert.NotNull(snap2);
             Assert.Equal(2, snap2.SourceVersion);
+        }
+    }
+
+    public class batch_snapshot_failures_are_best_effort : BaseBatchRepositoryTest
+    {
+        private static readonly string[] Ticket1 = new[] { "Ticket_1" };
+
+        private readonly ThrowingSnapshotBatchStore _snapshotBatchStore = new ThrowingSnapshotBatchStore();
+        private readonly RecordingLoggerFactory _loggerFactory = new RecordingLoggerFactory();
+
+        public batch_snapshot_failures_are_best_effort()
+        {
+            SnapshotBatchStore = _snapshotBatchStore;
+        }
+
+        protected override IBatchRepository CreateBatchRepository()
+        {
+            if (!(Persistence is IEnhancedPersistence enhancedPersistence))
+            {
+                throw new InvalidOperationException("Persistence must implement IEnhancedPersistence");
+            }
+
+            return new BatchRepository(
+                AggregateFactory,
+                enhancedPersistence,
+                SnapshotBatchStore,
+                _loggerFactory
+            );
+        }
+
+        [Fact]
+        public async Task SaveManyAsync_should_succeed_when_snapshot_store_throws()
+        {
+            var tickets = await BatchRepository.GetManyByIdAsync<Ticket>(Ticket1).ConfigureAwait(false);
+            tickets["Ticket_1"].Sale();
+
+            var result = await BatchRepository.SaveManyAsync(tickets.Values.ToList(), "snapshot_failure").ConfigureAwait(false);
+
+            Assert.True(result.Success);
+            Assert.Equal(1, _snapshotBatchStore.AddManyCallCount);
+            Assert.Single(_loggerFactory.Logger.WarningMessages);
+            Assert.Contains("Snapshot persistence failed", _loggerFactory.Logger.WarningMessages[0]);
+            Assert.Single(_loggerFactory.Logger.WarningArgs);
+            Assert.Equal("InvalidOperationException", _loggerFactory.Logger.WarningArgs[0][2]);
+
+            var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
+            Assert.NotNull(chunk);
+            Assert.IsType<Changeset>(chunk.Payload);
+        }
+
+        [Fact]
+        public async Task SaveManyAsync_should_succeed_when_snapshot_store_throws_cancellation()
+        {
+            _snapshotBatchStore.ThrowCancellation = true;
+
+            var tickets = await BatchRepository.GetManyByIdAsync<Ticket>(Ticket1).ConfigureAwait(false);
+            tickets["Ticket_1"].Sale();
+
+            var result = await BatchRepository.SaveManyAsync(tickets.Values.ToList(), "snapshot_cancel").ConfigureAwait(false);
+
+            Assert.True(result.Success);
+            Assert.Equal(1, _snapshotBatchStore.AddManyCallCount);
+            Assert.Single(_loggerFactory.Logger.WarningMessages);
+            Assert.Contains("Snapshot persistence failed", _loggerFactory.Logger.WarningMessages[0]);
+            Assert.Single(_loggerFactory.Logger.WarningArgs);
+            Assert.Equal("OperationCanceledException", _loggerFactory.Logger.WarningArgs[0][2]);
+
+            var chunk = await Persistence.ReadSingleBackwardAsync("Ticket_1").ConfigureAwait(false);
+            Assert.NotNull(chunk);
+            Assert.IsType<Changeset>(chunk.Payload);
+        }
+
+        private sealed class ThrowingSnapshotBatchStore : ISnapshotBatchStore
+        {
+            public int AddManyCallCount { get; private set; }
+            public bool ThrowCancellation { get; set; }
+
+            public Task<IReadOnlyDictionary<string, SnapshotInfo>> GetManyAsync(
+                IEnumerable<string> snapshotPartitionIds,
+                CancellationToken cancellationToken)
+            {
+                return Task.FromResult<IReadOnlyDictionary<string, SnapshotInfo>>(new Dictionary<string, SnapshotInfo>());
+            }
+
+            public Task AddManyAsync(
+                IReadOnlyDictionary<string, SnapshotInfo> snapshots,
+                CancellationToken cancellationToken)
+            {
+                AddManyCallCount++;
+
+                if (ThrowCancellation)
+                {
+                    throw new OperationCanceledException(cancellationToken);
+                }
+
+                throw new InvalidOperationException("Simulated snapshot write failure.");
+            }
+
+            public ValueTask DisposeAsync()
+            {
+                return default;
+            }
+        }
+
+        private sealed class RecordingLoggerFactory : INStoreLoggerFactory
+        {
+            public RecordingLogger Logger { get; } = new RecordingLogger();
+
+            public INStoreLogger CreateLogger(string categoryName)
+            {
+                return Logger;
+            }
+        }
+
+        private sealed class RecordingLogger : INStoreLogger
+        {
+            private sealed class NoopScope : IDisposable
+            {
+                public void Dispose()
+                {
+                }
+            }
+
+            private static readonly IDisposable Scope = new NoopScope();
+
+            public List<string> WarningMessages { get; } = new List<string>();
+            public List<object[]> WarningArgs { get; } = new List<object[]>();
+
+            public bool IsDebugEnabled => false;
+            public bool IsWarningEnabled => true;
+            public bool IsInformationEnabled => false;
+
+            public void LogDebug(string message, params object[] args)
+            {
+            }
+
+            public void LogWarning(string message, params object[] args)
+            {
+                WarningMessages.Add(message);
+                WarningArgs.Add(args ?? Array.Empty<object>());
+            }
+
+            public void LogInformation(string message, params object[] args)
+            {
+            }
+
+            public void LogError(string message, params object[] args)
+            {
+            }
+
+            public IDisposable BeginScope<TState>(TState state)
+            {
+                return Scope;
+            }
         }
     }
 
@@ -1156,6 +1376,106 @@ namespace NStore.Domain.Tests
             Assert.Same(first["Ticket_1"], second["Ticket_1"]); // Cached
             Assert.NotNull(second["Ticket_2"]); // Newly loaded
             Assert.Equal(1, second["Ticket_2"].Version);
+        }
+    }
+
+    public class batch_repository_parallel_append : BaseBatchRepositoryTest
+    {
+        private static readonly int[] ExpectedSingleBatchSizes = { 10 };
+        private static readonly int[] ExpectedSplitBatchSizes = { 1, 3, 3, 3 };
+
+        private readonly TrackingEnhancedPersistence _trackingPersistence = new TrackingEnhancedPersistence();
+
+        protected override IPersistence CreatePersistence()
+        {
+            return _trackingPersistence;
+        }
+
+        [Fact]
+        public async Task SaveManyAsync_should_use_single_append_call_when_parallel_batch_options_are_not_configured()
+        {
+            var repository = (BatchRepository)BatchRepository;
+            var aggregates = CreateChangedTickets(10);
+
+            var result = await repository.SaveManyAsync(aggregates, "single_call").ConfigureAwait(false);
+
+            Assert.True(result.Success);
+            Assert.Equal(1, _trackingPersistence.AppendBatchCallCount);
+            Assert.Equal(ExpectedSingleBatchSizes, _trackingPersistence.ObservedBatchSizes.OrderBy(x => x).ToArray());
+        }
+
+        [Fact]
+        public async Task SaveManyAsync_should_use_single_append_call_when_batch_does_not_exceed_configured_batch_size()
+        {
+            var repository = (BatchRepository)BatchRepository;
+            var options = new ParallelBatchAppendOptions
+            {
+                BatchSize = 10,
+                MaxWriters = 4
+            };
+
+            var aggregates = CreateChangedTickets(10);
+            var result = await repository
+                .SaveManyAsync(aggregates, "no_split", parallelBatchAppendOptions: options)
+                .ConfigureAwait(false);
+
+            Assert.True(result.Success);
+            Assert.Equal(1, _trackingPersistence.AppendBatchCallCount);
+            Assert.Equal(ExpectedSingleBatchSizes, _trackingPersistence.ObservedBatchSizes.OrderBy(x => x).ToArray());
+        }
+
+        [Fact]
+        public async Task SaveManyAsync_should_split_batches_when_parallel_batch_options_are_configured()
+        {
+            var repository = (BatchRepository)BatchRepository;
+            var options = new ParallelBatchAppendOptions
+            {
+                BatchSize = 3,
+                MaxWriters = 2
+            };
+
+            var aggregates = CreateChangedTickets(10);
+            var result = await repository
+                .SaveManyAsync(aggregates, "split_call", parallelBatchAppendOptions: options)
+                .ConfigureAwait(false);
+
+            Assert.True(result.Success);
+            Assert.Equal(4, _trackingPersistence.AppendBatchCallCount);
+            Assert.Equal(ExpectedSplitBatchSizes, _trackingPersistence.ObservedBatchSizes.OrderBy(x => x).ToArray());
+        }
+
+        private static List<IAggregate> CreateChangedTickets(int count)
+        {
+            var aggregates = new List<IAggregate>(count);
+            for (var i = 0; i < count; i++)
+            {
+                var ticket = Ticket.CreateNew($"Parallel_{i}");
+                ticket.Sale();
+                aggregates.Add(ticket);
+            }
+
+            return aggregates;
+        }
+
+        private sealed class TrackingEnhancedPersistence : NullPersistence, IEnhancedPersistence
+        {
+            private int _appendBatchCallCount;
+
+            public int AppendBatchCallCount => Volatile.Read(ref _appendBatchCallCount);
+            public ConcurrentBag<int> ObservedBatchSizes { get; } = new ConcurrentBag<int>();
+
+            public Task AppendBatchAsync(WriteJob[] queue, CancellationToken cancellationToken)
+            {
+                Interlocked.Increment(ref _appendBatchCallCount);
+                ObservedBatchSizes.Add(queue.Length);
+
+                foreach (var writeJob in queue)
+                {
+                    writeJob.Succeeded();
+                }
+
+                return Task.CompletedTask;
+            }
         }
     }
 }

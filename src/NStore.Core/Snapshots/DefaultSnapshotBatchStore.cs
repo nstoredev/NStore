@@ -30,6 +30,14 @@ namespace NStore.Core.Snapshots
     {
         private readonly ISnapshotStore _snapshotStore;
         private readonly INStoreLogger _logger;
+        private readonly ConcurrentQueue<IReadOnlyDictionary<string, SnapshotInfo>> _pendingSnapshotWrites =
+            new ConcurrentQueue<IReadOnlyDictionary<string, SnapshotInfo>>();
+        private readonly SemaphoreSlim _pendingSnapshotSignal = new SemaphoreSlim(0);
+        private readonly object _lifecycleLock = new object();
+        private readonly Task _queueProcessor;
+
+        private bool _isDisposing;
+        private bool _isDisposed;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DefaultSnapshotBatchStore"/> class.
@@ -41,6 +49,7 @@ namespace NStore.Core.Snapshots
             _snapshotStore = snapshotStore ?? throw new ArgumentNullException(nameof(snapshotStore));
             _logger = (loggerFactory ?? NStoreNullLoggerFactory.Instance)
                 .CreateLogger(typeof(DefaultSnapshotBatchStore).FullName);
+            _queueProcessor = ProcessQueueAsync();
         }
 
         /// <summary>
@@ -116,8 +125,7 @@ namespace NStore.Core.Snapshots
         }
 
         /// <summary>
-        /// Stores multiple snapshots in parallel using best-effort semantics.
-        /// Individual failures are silently ignored as snapshots are an optimization.
+        /// Queues multiple snapshots for background persistence using best-effort semantics.
         /// </summary>
         /// <param name="snapshots">Dictionary mapping partition IDs to their snapshot information.</param>
         /// <param name="cancellationToken">Cancellation token to cancel the operation.</param>
@@ -127,7 +135,7 @@ namespace NStore.Core.Snapshots
         /// <strong>Implementation Details:</strong>
         /// </para>
         /// <list type="number">
-        /// <item><description>Filters out null or empty snapshots.</description></item>
+        /// <item><description>Filters out null or empty snapshots and enqueues them for background processing.</description></item>
         /// <item><description>Executes <see cref="ISnapshotStore.AddAsync"/> for each snapshot in parallel.</description></item>
         /// <item><description>Ignores individual failures (best-effort semantics).</description></item>
         /// <item><description>Does not throw exceptions for snapshot save failures.</description></item>
@@ -140,28 +148,121 @@ namespace NStore.Core.Snapshots
         /// </para>
         /// </remarks>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="snapshots"/> is null.</exception>
-        public async Task AddManyAsync(
+        public Task AddManyAsync(
             IReadOnlyDictionary<string, SnapshotInfo> snapshots,
             CancellationToken cancellationToken)
         {
             if (snapshots == null)
                 throw new ArgumentNullException(nameof(snapshots));
 
-            // Filter out null or empty snapshots
-            var validSnapshots = snapshots
-                .Where(kvp => kvp.Value != null && !kvp.Value.IsEmpty)
-                .ToList();
+            cancellationToken.ThrowIfCancellationRequested();
 
-            if (validSnapshots.Count == 0)
+            var snapshotsToQueue = PrepareSnapshotsForQueue(snapshots);
+            if (snapshotsToQueue.Count == 0)
+                return Task.CompletedTask;
+
+            lock (_lifecycleLock)
+            {
+                ThrowIfDisposedOrDisposing();
+                _pendingSnapshotWrites.Enqueue(snapshotsToQueue);
+                _pendingSnapshotSignal.Release();
+            }
+            return Task.CompletedTask;
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            GC.SuppressFinalize(this);
+
+            lock (_lifecycleLock)
+            {
+                if (_isDisposed || _isDisposing)
+                {
+                    return;
+                }
+
+                _isDisposing = true;
+                _pendingSnapshotSignal.Release();
+            }
+
+            try
+            {
+                await _queueProcessor.ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error flushing snapshot queue during dispose. Exception: {ex.Message}.\n{ex}");
+            }
+            finally
+            {
+                lock (_lifecycleLock)
+                {
+                    _isDisposed = true;
+                    _pendingSnapshotSignal.Dispose();
+                }
+            }
+        }
+
+        private async Task ProcessQueueAsync()
+        {
+            while (true)
+            {
+                await _pendingSnapshotSignal.WaitAsync().ConfigureAwait(false);
+
+                while (_pendingSnapshotWrites.TryDequeue(out var queuedSnapshots))
+                {
+                    try
+                    {
+                        await PersistSnapshotsAsync(queuedSnapshots, CancellationToken.None).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Best-effort: snapshot writes are optimization-only.
+                        _logger.LogError($"Snapshot queue worker failed to persist a batch. Exception: {ex.Message}.\n{ex}");
+                    }
+                }
+
+                lock (_lifecycleLock)
+                {
+                    if (_isDisposing && _pendingSnapshotWrites.IsEmpty)
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+
+        private static Dictionary<string, SnapshotInfo> PrepareSnapshotsForQueue(
+            IReadOnlyDictionary<string, SnapshotInfo> snapshots)
+        {
+            var validSnapshots = new Dictionary<string, SnapshotInfo>();
+            foreach (var snapshot in snapshots)
+            {
+                if (snapshot.Value != null && !snapshot.Value.IsEmpty)
+                {
+                    validSnapshots[snapshot.Key] = snapshot.Value;
+                }
+            }
+
+            return validSnapshots;
+        }
+
+        private async Task PersistSnapshotsAsync(
+            IReadOnlyDictionary<string, SnapshotInfo> snapshots,
+            CancellationToken cancellationToken)
+        {
+            if (snapshots.Count == 0)
+            {
                 return;
+            }
 
-            var dop = Math.Min(Environment.ProcessorCount, validSnapshots.Count);
+            var dop = Math.Min(Environment.ProcessorCount, snapshots.Count);
 
-            await ForEachAsync(dop, validSnapshots, async (kvp, ct) =>
+            await ForEachAsync(dop, snapshots, async (snapshot, ct) =>
             {
                 try
                 {
-                    await _snapshotStore.AddAsync(kvp.Key, kvp.Value, ct).ConfigureAwait(false);
+                    await _snapshotStore.AddAsync(snapshot.Key, snapshot.Value, ct).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -170,11 +271,21 @@ namespace NStore.Core.Snapshots
                 catch (Exception ex)
                 {
                     // Best-effort: silently ignore failures
-                    // Snapshots are an optimization, not critical
-                    // OperationCanceledException is re-thrown to respect cancellation
-                    _logger.LogError($"AddAsync failed for partition {kvp.Key}. Exception: {ex.Message}.\n{ex}");
+                    _logger.LogError($"AddAsync failed for partition {snapshot.Key}. Exception: {ex.Message}.\n{ex}");
                 }
             }, cancellationToken).ConfigureAwait(false);
+        }
+
+        private void ThrowIfDisposedOrDisposing()
+        {
+#if NET8_0_OR_GREATER
+            ObjectDisposedException.ThrowIf(_isDisposed || _isDisposing, this);
+#else
+            if (_isDisposed || _isDisposing)
+            {
+                throw new ObjectDisposedException(nameof(DefaultSnapshotBatchStore));
+            }
+#endif
         }
 
         private static Task ForEachAsync<T>(
@@ -183,66 +294,15 @@ namespace NStore.Core.Snapshots
             Func<T, CancellationToken, Task> body,
             CancellationToken cancellationToken)
         {
-            if (source == null) throw new ArgumentNullException(nameof(source));
-            if (body == null) throw new ArgumentNullException(nameof(body));
-            if (maxDegreeOfParallelism <= 0)
-                throw new ArgumentOutOfRangeException(nameof(maxDegreeOfParallelism));
-
-            return ForEachAsyncCore(source, maxDegreeOfParallelism, body, cancellationToken);
-        }
-
-        private static async Task ForEachAsyncCore<T>(
-            IEnumerable<T> source,
-            int maxDegreeOfParallelism,
-            Func<T, CancellationToken, Task> body,
-            CancellationToken cancellationToken)
-        {
-            using var throttler = new SemaphoreSlim(maxDegreeOfParallelism);
-            var tasks = new List<Task>();
-
-            foreach (var item in source)
+#if NET6_0_OR_GREATER
+            return Parallel.ForEachAsync(source, new ParallelOptions
             {
-                await throttler.WaitAsync(cancellationToken).ConfigureAwait(false);
-
-                tasks.Add(Task.Run(async () =>
-                {
-                    try
-                    {
-                        await body(item, cancellationToken).ConfigureAwait(false);
-                    }
-                    finally
-                    {
-                        throttler.Release();
-                    }
-                }, cancellationToken));
-            }
-
-            List<Exception> exceptions = null;
-
-            while (tasks.Count > 0)
-            {
-                var completed = await Task.WhenAny(tasks).ConfigureAwait(false);
-                tasks.Remove(completed);
-
-                try
-                {
-                    await completed.ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    exceptions ??= new List<Exception>();
-                    exceptions.Add(ex);
-                }
-            }
-
-            if (exceptions != null)
-            {
-                throw new AggregateException(exceptions);
-            }
+                MaxDegreeOfParallelism = maxDegreeOfParallelism,
+                CancellationToken = cancellationToken
+            }, async (item, ct) => await body(item, cancellationToken));   
+#else
+            return AsyncParallelExtensions.ForEachAsync(source, maxDegreeOfParallelism, body, cancellationToken);
+#endif
         }
     }
 }

@@ -1,5 +1,6 @@
 using NStore.Core.Persistence;
 using NStore.Core.Snapshots;
+using NStore.Core.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -20,6 +21,7 @@ namespace NStore.Domain
         private readonly IAggregateFactory _factory;
         private readonly IEnhancedPersistence _persistence;
         private readonly ISnapshotBatchStore _snapshotBatchStore;
+        private readonly INStoreLogger _logger;
 
         private readonly ConcurrentDictionary<string, IAggregate> _trackingAggregates = new ConcurrentDictionary<string, IAggregate>();
 
@@ -28,11 +30,13 @@ namespace NStore.Domain
         public BatchRepository(
             IAggregateFactory factory,
             IEnhancedPersistence persistence,
-            ISnapshotBatchStore snapshotStore)
+            ISnapshotBatchStore snapshotStore,
+            INStoreLoggerFactory loggerFactory = null)
         {
             _factory = factory ?? throw new ArgumentNullException(nameof(factory));
             _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
             _snapshotBatchStore = snapshotStore;
+            _logger = (loggerFactory ?? NStoreNullLoggerFactory.Instance).CreateLogger(nameof(BatchRepository));
         }
 
         public async Task<IReadOnlyDictionary<string, T>> GetManyByIdAsync<T>(
@@ -214,6 +218,7 @@ namespace NStore.Domain
             IReadOnlyList<IAggregate> aggregates,
             string operationId,
             Action<IHeadersAccessor> headers = null,
+            ParallelBatchAppendOptions parallelBatchAppendOptions = null,
             CancellationToken cancellationToken = default)
         {
             if (!aggregates.Any())
@@ -229,18 +234,21 @@ namespace NStore.Domain
 
             if (writeJobs.Count > 0)
             {
+                var writeJobsArray = writeJobs.ToArray();
+
                 // Step 2: Execute batch append
-                await _persistence.AppendBatchAsync(writeJobs.ToArray(), cancellationToken).ConfigureAwait(false);
+                await AppendWriteJobsAsync(writeJobsArray, parallelBatchAppendOptions, cancellationToken).ConfigureAwait(false);
                 var snapshotsToSave = new Dictionary<string, SnapshotInfo>();
 
-                foreach (var job in writeJobs)
+                foreach (var job in writeJobsArray)
                 {
                     var aggregate = aggregateByPartitionId[job.PartitionId];
                     listOfAggregateSaveResult.Add(MapJobResult(job, aggregate.Id));
 
                     if (job.Result == WriteJob.WriteResult.Committed)
                     {
-                        ((IEventSourcedAggregate)aggregate).Persisted(((IEventSourcedAggregate)aggregate).GetChangeSet());
+                        var persister = GetEventSourcedAggregateOrThrow(aggregate);
+                        persister.Persisted(persister.GetChangeSet());
                         if (_snapshotBatchStore != null && aggregate is ISnapshottable snapshottable)
                         {
                             snapshotsToSave[aggregate.Id] = snapshottable.GetSnapshot();
@@ -260,7 +268,24 @@ namespace NStore.Domain
                 // Step 4: Save snapshots in batch (best-effort)
                 if (_snapshotBatchStore != null && snapshotsToSave.Count > 0)
                 {
-                    await _snapshotBatchStore.AddManyAsync(snapshotsToSave, cancellationToken).ConfigureAwait(false);
+                    try
+                    {
+                        await _snapshotBatchStore.AddManyAsync(snapshotsToSave, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Snapshot persistence is an optimization only; event commits are already durable.
+                        // Keep SaveManyAsync successful even when snapshot storage is unavailable.
+                        if (_logger.IsWarningEnabled)
+                        {
+                            _logger.LogWarning(
+                                "Snapshot persistence failed for {SnapshotCount} aggregate(s) after successful event commits. Aggregate IDs: [{AggregateIds}]. Error: {ErrorType}: {ErrorMessage}",
+                                snapshotsToSave.Count,
+                                string.Join(", ", snapshotsToSave.Keys),
+                                ex.GetType().Name,
+                                ex.Message);
+                        }
+                    }
                 }
             }
 
@@ -269,6 +294,32 @@ namespace NStore.Domain
             {
                 Results = listOfAggregateSaveResult
             };
+        }
+
+        private Task AppendWriteJobsAsync(
+            WriteJob[] writeJobs,
+            ParallelBatchAppendOptions options,
+            CancellationToken cancellationToken)
+        {
+            if (options == null)
+            {
+                return _persistence.AppendBatchAsync(writeJobs, cancellationToken);
+            }
+
+            if (options.BatchSize <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.BatchSize, "BatchSize must be greater than zero.");
+            }
+
+            if (options.MaxWriters <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(options), options.MaxWriters, "MaxWriters must be greater than zero.");
+            }
+
+            var shouldUseParallelAppend = options.MaxWriters > 1 && writeJobs.Length > options.BatchSize;
+            return shouldUseParallelAppend
+                ? _persistence.AppendBatchAsync(writeJobs, options, cancellationToken)
+                : _persistence.AppendBatchAsync(writeJobs, cancellationToken);
         }
 
         private void PrepareAggregates(IEnumerable<IAggregate> aggregates, string operationId, Action<IHeadersAccessor> headers, List<WriteJob> writeJobs, Dictionary<string, IAggregate> aggregateByPartitionId, List<AggregateSaveResult> listOfAggregateSaveResult)
@@ -317,7 +368,7 @@ namespace NStore.Domain
                     throw new RepositoryMismatchException($"Aggregate {aggregate.Id} was not loaded by this batch repository");
             }
 
-            var persister = (IEventSourcedAggregate)aggregate;
+            var persister = GetEventSourcedAggregateOrThrow(aggregate);
             var changeSet = persister.GetChangeSet();
 
             // Skip empty changesets unless configured to persist them
@@ -326,7 +377,11 @@ namespace NStore.Domain
 
             // Check invariants if supported
             if (aggregate is IInvariantsChecker checker && checker.CheckInvariants().IsInvalid)
+            {
+                // Keep failure handling consistent with concurrency failures: remove stale aggregate from tracking.
+                _trackingAggregates.TryRemove(aggregate.Id, out _);
                 return (AggregateSaveResult.InvariantFailure(aggregate.Id), null);
+            }
 
             // Apply headers if provided
             headers?.Invoke(changeSet);
@@ -339,6 +394,17 @@ namespace NStore.Domain
             );
 
             return (null, job);
+        }
+
+        private static IEventSourcedAggregate GetEventSourcedAggregateOrThrow(IAggregate aggregate)
+        {
+            if (aggregate is IEventSourcedAggregate persister)
+            {
+                return persister;
+            }
+
+            throw new ArgumentException(
+                $"Aggregate '{aggregate?.Id}' of type '{aggregate?.GetType().FullName ?? "<null>"}' must implement {nameof(IEventSourcedAggregate)}.");
         }
 
         private static AggregateSaveResult MapJobResult(WriteJob job, string aggregateId)

@@ -13,12 +13,17 @@ namespace NStore.Persistence.Tests
 {
     public class batch_writes_test : BasePersistenceTest
     {
-        [Fact]
+#if NO_BATCHER_SUPPORT
+        private const string BatcherSkipReason = "Batch append tests require an IEnhancedPersistence implementation.";
+#else
+        private const string BatcherSkipReason = null;
+#endif
+
+        [Fact(Skip = BatcherSkipReason)]
         public async Task should_add_many()
         {
-            //@@TODO enable test discovery 
-            if (Batcher == null)
-                return;
+            var batcher = Batcher;
+            Assert.NotNull(batcher);
 
             var jobs = new[]
             {
@@ -26,17 +31,17 @@ namespace NStore.Persistence.Tests
                 new WriteJob("a", 2, "second", null),
             };
 
-            await Batcher.AppendBatchAsync(jobs, CancellationToken.None).ConfigureAwait(false);
+            await batcher.AppendBatchAsync(jobs, CancellationToken.None).ConfigureAwait(false);
 
             Assert.InRange(jobs[0].Position, 1, 2);
             Assert.InRange(jobs[1].Position, 1, 2);
         }
 
-        [Fact]
+        [Fact(Skip = BatcherSkipReason)]
         public async Task should_fail_on_adding_many()
         {
-            if (Batcher == null)
-                return;
+            var batcher = Batcher;
+            Assert.NotNull(batcher);
 
             var jobs = new[]
             {
@@ -46,7 +51,7 @@ namespace NStore.Persistence.Tests
                 new WriteJob("a", 3, "me too", "fail"),
             };
 
-            await Batcher.AppendBatchAsync(jobs, CancellationToken.None);
+            await batcher.AppendBatchAsync(jobs, CancellationToken.None);
 
             Assert.NotEqual(0, jobs[0].Position);
             Assert.Equal(0, jobs[1].Position);
@@ -72,12 +77,11 @@ namespace NStore.Persistence.Tests
             Assert.Equal<object>("me too", a2.Payload);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Await.Warning", "CS4014:Await.Warning")]
-        [Fact]
+        [Fact(Skip = BatcherSkipReason)]
         public async Task async_write_jobs()
         {
-            if (Batcher == null)
-                return;
+            var batcher = Batcher;
+            Assert.NotNull(batcher);
 
             // note: insert order is not guaranteed, failures can appen on odd rows
             var jobs = new[]
@@ -88,10 +92,11 @@ namespace NStore.Persistence.Tests
                 new AsyncWriteJob("a", 3, "fail here too", "fail"),
             };
 
-            var forget = Batcher.AppendBatchAsync(jobs, CancellationToken.None);
+            var appendTask = batcher.AppendBatchAsync(jobs, CancellationToken.None);
 
             var allTasks = jobs.Select(x => x.Task).ToArray();
             var written = await Task.WhenAll(allTasks);
+            await appendTask.ConfigureAwait(false);
 
             Assert.Equal(4, written.Length);
             Assert.NotNull(written[0]);
@@ -100,22 +105,51 @@ namespace NStore.Persistence.Tests
             Assert.Null(written[3]);
         }
 
-        [Fact]
+        [Fact(Skip = BatcherSkipReason)]
         public async Task write_with_batcher()
         {
-            if (Batcher == null)
-                return;
-
             using var cts = new CancellationTokenSource(10_000);
-            using var batcher = new PersistenceBatchAppendDecorator(_persistence, _logger, 512, 10);
+            await using var batcher = new PersistenceBatchAppendDecorator(_persistence, _logger, 512, 10);
             //            batcher.Cancel(10_000);
 
             await batcher.AppendAsync("a", 1, "first", null, cts.Token);
             //            await Assert.ThrowsAsync<DuplicateStreamIndexException>(() => batcher.AppendAsync("a", 1, "fail here"));
 
-            var lastPos = await Store.ReadLastPositionAsync();
+            var lastPos = await Store.ReadLastPositionAsync(cancellationToken: cts.Token);
 
             Assert.Equal(1, lastPos);
+        }
+
+        [Fact(Skip = BatcherSkipReason)]
+        public async Task should_add_many_with_parallel_batch_extension()
+        {
+            var batcher = Batcher;
+            Assert.NotNull(batcher);
+
+            var jobs = Enumerable.Range(0, 200)
+                .Select(i => new WriteJob(
+                    partitionId: $"p{i % 5}",
+                    index: i / 5 + 1,
+                    payload: $"payload-{i}",
+                    operationId: $"op-{i}"))
+                .ToArray();
+
+            var options = new ParallelBatchAppendOptions
+            {
+                BatchSize = 17,
+                MaxWriters = 4,
+            };
+
+            await batcher.AppendBatchAsync(jobs, options, CancellationToken.None).ConfigureAwait(false);
+
+            Assert.All(jobs, job =>
+            {
+                Assert.Equal(WriteJob.WriteResult.Committed, job.Result);
+                Assert.NotEqual(0, job.Position);
+            });
+
+            var lastPosition = await Store.ReadLastPositionAsync(CancellationToken.None).ConfigureAwait(false);
+            Assert.Equal(jobs.Length, lastPosition);
         }
     }
 }

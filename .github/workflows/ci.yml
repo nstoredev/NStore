@@ -23,10 +23,13 @@ jobs:
       # continue-on-error: true 
       
     - name: Checkout repository
-      uses: actions/checkout@v1
+      uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+        fetch-depth: 0
     
     - name: Set up .NET 6
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v3
       with:
         dotnet-version: 6.x
 
@@ -49,8 +52,9 @@ jobs:
       env:
         NSTORE_MONGODB: mongodb://localhost/nstore
         NSTORE_MSSQL: Server=localhost;user id=sa;password=sqlPw3$secure
+        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
       run: |
-        ./newbuild.ps1 -nugetPublish $true -nugetApiKey ${{ secrets.NUGET_API_KEY }}
+        ./newbuild.ps1 -nugetPublish $true -nugetApiKey $env:NUGET_API_KEY
 
     - name: Generate artifact attestation (attest-build-provenance)
       env:

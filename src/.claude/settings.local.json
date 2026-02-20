@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(git rev-parse:*)",
-      "Bash(dotnet build:*)"
-    ]
-  }
-}

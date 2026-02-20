@@ -14,15 +14,17 @@ concurrency:
   cancel-in-progress: true
 jobs:
   report:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event != 'pull_request'
     runs-on: ubuntu-latest
     steps:
 
     - name: Checkout code
       uses: actions/checkout@v4
-      
       with:
         ref: ${{ github.event.workflow_run.head_sha }}
+        persist-credentials: false
     - name: Log Triggering Workflow
       run: |
         echo "Triggered by original workflow run:"

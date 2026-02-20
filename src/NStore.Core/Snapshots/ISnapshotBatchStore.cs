@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,15 @@ namespace NStore.Core.Snapshots
     /// (e.g., using database batch queries) or execute individual operations in parallel.
     /// </para>
     /// <para>
+    /// This contract intentionally extends <see cref="IAsyncDisposable"/>. Batch implementations
+    /// are allowed to buffer or defer writes for throughput and use <see cref="IAsyncDisposable.DisposeAsync"/>
+    /// as the flush point.
+    /// </para>
+    /// <para>
+    /// Implementations that do not buffer/defer writes should still implement
+    /// <see cref="IAsyncDisposable.DisposeAsync"/> and return <see cref="ValueTask.CompletedTask"/>.
+    /// </para>
+    /// <para>
     /// Typical use cases include:
     /// - Loading snapshots for multiple aggregates during query processing
     /// - Bulk snapshot retrieval for reporting or analysis
@@ -23,7 +33,7 @@ namespace NStore.Core.Snapshots
     /// - Batch saving snapshots after processing multiple aggregates
     /// </para>
     /// </remarks>
-    public interface ISnapshotBatchStore
+    public interface ISnapshotBatchStore : IAsyncDisposable
     {
         /// <summary>
         /// Retrieves the most recent snapshots for multiple partitions in a single operation.
@@ -85,6 +95,12 @@ namespace NStore.Core.Snapshots
         /// but does not fail if individual snapshots cannot be saved. Failed snapshot saves are logged
         /// or silently ignored, as snapshot persistence is an optimization and not critical to system
         /// correctness. The system can always rebuild state from the event stream if a snapshot is missing.
+        /// </para>
+        /// <para>
+        /// <strong>Deferred Execution:</strong> Implementations may buffer snapshot writes asynchronously
+        /// for throughput reasons. Callers should dispose the batch store (via <see cref="IAsyncDisposable.DisposeAsync"/>)
+        /// to flush any pending snapshot writes before shutdown. Implementations that write immediately should
+        /// still provide a no-op dispose implementation.
         /// </para>
         /// <para>
         /// <strong>Performance:</strong> Implementations may execute writes in parallel or use batch

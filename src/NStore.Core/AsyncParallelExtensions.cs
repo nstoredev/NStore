@@ -1,5 +1,9 @@
+#if NET6_0_OR_GREATER
+// this is an utility only for older version of .NET
+#else
 using System;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -27,52 +31,93 @@ namespace NStore.Core
             Func<T, CancellationToken, Task> body,
             CancellationToken cancellationToken)
         {
-            using var throttler = new SemaphoreSlim(maxDegreeOfParallelism);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var throttler = new SemaphoreSlim(maxDegreeOfParallelism);
             var tasks = new List<Task>();
+            Exception firstException = null;
+            OperationCanceledException cancellation = null;
 
-            foreach (var item in source)
+            try
             {
-                await throttler.WaitAsync(cancellationToken).ConfigureAwait(false);
-
-                tasks.Add(Task.Run(async () =>
+                foreach (var item in source)
                 {
-                    try
+                    await throttler.WaitAsync(cts.Token).ConfigureAwait(false);
+
+                    // If a previous task has failed, stop scheduling new work
+                    if (Volatile.Read(ref firstException) != null)
                     {
-                        await body(item, cancellationToken).ConfigureAwait(false);
+                        break;
                     }
-                    finally
+
+                    tasks.Add(Task.Run(async () =>
                     {
-                        throttler.Release();
-                    }
-                }, cancellationToken));
+                        try
+                        {
+                            await body(item, cts.Token).ConfigureAwait(false);
+                        }
+                        catch (Exception ex) when (!(ex is OperationCanceledException))
+                        {
+                            // Record the first failure and cancel remaining work
+                            Interlocked.CompareExchange(ref firstException, ex, null);
+                            cts.Cancel();
+                            throw;
+                        }
+                        finally
+                        {
+                            throttler.Release();
+                        }
+                    }, cts.Token));
+                }
+            }
+            catch (OperationCanceledException ex)
+            {
+                cancellation = ex;
             }
 
-            List<Exception> exceptions = null;
+            // Wait for all already-running tasks to complete
+            cancellation = await AwaitAllTasksAsync(tasks, cancellation).ConfigureAwait(false);
 
-            while (tasks.Count > 0)
+            throttler.Dispose();
+
+            ThrowIfFailed(firstException, cancellation);
+        }
+
+        private static async Task<OperationCanceledException> AwaitAllTasksAsync(
+            List<Task> tasks, OperationCanceledException cancellation)
+        {
+            foreach (var task in tasks)
             {
-                var completed = await Task.WhenAny(tasks).ConfigureAwait(false);
-                tasks.Remove(completed);
-
                 try
                 {
-                    await completed.ConfigureAwait(false);
+                    await task.ConfigureAwait(false);
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException ex)
                 {
-                    throw;
+                    cancellation ??= ex;
                 }
-                catch (Exception ex)
+                catch
                 {
-                    exceptions ??= new List<Exception>();
-                    exceptions.Add(ex);
+                    // already captured via Interlocked.CompareExchange
                 }
             }
 
-            if (exceptions != null)
+            return cancellation;
+        }
+
+        private static void ThrowIfFailed(Exception firstException, OperationCanceledException cancellation)
+        {
+            // Match Parallel.ForEachAsync behavior: surface the real failure,
+            // not the cancellation it triggered in sibling tasks.
+            if (firstException != null)
             {
-                throw new AggregateException(exceptions);
+                ExceptionDispatchInfo.Capture(firstException).Throw();
+            }
+
+            if (cancellation != null)
+            {
+                ExceptionDispatchInfo.Capture(cancellation).Throw();
             }
         }
     }
 }
+#endif
