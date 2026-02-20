@@ -23,7 +23,10 @@ if (Test-Path $nugetTempDir) {
 dotnet tool restore
 Assert-LastExecution -message "Unable to restore tooling." -haltExecution $true
 
-$version = dotnet tool run dotnet-gitversion /config .config/gitversion.yml | Out-String | ConvertFrom-Json
+$versionString = dotnet tool run dotnet-gitversion /config .config/gitversion.yml | Out-String
+Write-Host "GitVersion raw output: $versionString"
+
+$version = $versionString | ConvertFrom-Json
 Write-host "GitVersion output: $version"
 
 Write-Verbose "Parsed value to be returned"

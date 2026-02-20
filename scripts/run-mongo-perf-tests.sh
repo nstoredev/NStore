@@ -7,7 +7,7 @@ RESULTS_DIR="$ROOT_DIR/TestResults"
 CONFIGURATION="${CONFIGURATION:-Release}"
 TARGET_FRAMEWORK="${TARGET_FRAMEWORK:-net10.0}"
 
-if [ ! -f "$PROJECT_PATH" ]; then
+if [[ ! -f "$PROJECT_PATH" ]]; then
   echo "Project file not found: $PROJECT_PATH" >&2
   exit 1
 fi
@@ -24,6 +24,7 @@ file_mtime_epoch() {
   else
     stat -c %Y "$file"
   fi
+  return 0
 }
 
 latest_suite_file() {
@@ -35,6 +36,7 @@ latest_suite_file() {
     "$RESULTS_DIR"/"$prefix"-*/suite.csv \
     "$build_results_dir"/"$prefix"-*/suite.csv \
     2>/dev/null | head -n 1 || true
+  return 0
 }
 
 append_rows_from_suite() {
@@ -62,6 +64,7 @@ append_rows_from_suite() {
       print mode, scenario, batch, writers, effective_writers, elapsed_s, throughput, median_ms, worst_degradation
     }
   ' "$suite_file" >> "$TMP_ROWS"
+  return 0
 }
 
 run_single_perf_test() {
@@ -83,13 +86,14 @@ run_single_perf_test() {
 
   local suite_file
   suite_file="$(latest_suite_file "$suite_prefix")"
-  if [ -z "$suite_file" ] || [ "$(file_mtime_epoch "$suite_file")" -lt "$started_at" ]; then
+  if [[ -z "$suite_file" ]] || [[ "$(file_mtime_epoch "$suite_file")" -lt "$started_at" ]]; then
     echo "No suite.csv produced for $mode." >&2
     echo "Perf mode should be enabled by script via NStore__Mongo__Performance__Enabled=true." >&2
     exit 1
   fi
 
   append_rows_from_suite "$mode" "$suite_file"
+  return 0
 }
 
 run_single_perf_test \
@@ -102,7 +106,7 @@ run_single_perf_test \
   "extension-method" \
   "FullyQualifiedName~mongodb_parallel_extension_batch_insert_performance_tests.should_measure_parallel_extension_batch_insert_performance_degradation"
 
-if [ ! -s "$TMP_ROWS" ]; then
+if [[ ! -s "$TMP_ROWS" ]]; then
   echo "No scenario rows found in suite output." >&2
   exit 1
 fi

@@ -172,6 +172,8 @@ namespace NStore.Core.Snapshots
 
         public async ValueTask DisposeAsync()
         {
+            GC.SuppressFinalize(this);
+
             lock (_lifecycleLock)
             {
                 if (_isDisposed || _isDisposing)
@@ -230,7 +232,7 @@ namespace NStore.Core.Snapshots
             }
         }
 
-        private static IReadOnlyDictionary<string, SnapshotInfo> PrepareSnapshotsForQueue(
+        private static Dictionary<string, SnapshotInfo> PrepareSnapshotsForQueue(
             IReadOnlyDictionary<string, SnapshotInfo> snapshots)
         {
             var validSnapshots = new Dictionary<string, SnapshotInfo>();
@@ -276,10 +278,14 @@ namespace NStore.Core.Snapshots
 
         private void ThrowIfDisposedOrDisposing()
         {
+#if NET8_0_OR_GREATER
+            ObjectDisposedException.ThrowIf(_isDisposed || _isDisposing, this);
+#else
             if (_isDisposed || _isDisposing)
             {
                 throw new ObjectDisposedException(nameof(DefaultSnapshotBatchStore));
             }
+#endif
         }
 
         private static Task ForEachAsync<T>(

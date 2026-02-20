@@ -308,12 +308,12 @@ namespace NStore.Domain
 
             if (options.BatchSize <= 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(options.BatchSize), "BatchSize must be greater than zero.");
+                throw new ArgumentOutOfRangeException(nameof(options), options.BatchSize, "BatchSize must be greater than zero.");
             }
 
             if (options.MaxWriters <= 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(options.MaxWriters), "MaxWriters must be greater than zero.");
+                throw new ArgumentOutOfRangeException(nameof(options), options.MaxWriters, "MaxWriters must be greater than zero.");
             }
 
             var shouldUseParallelAppend = options.MaxWriters > 1 && writeJobs.Length > options.BatchSize;

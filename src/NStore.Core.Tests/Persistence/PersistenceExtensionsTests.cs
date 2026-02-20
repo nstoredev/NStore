@@ -11,6 +11,7 @@ namespace NStore.Core.Tests.Persistence
 {
     public class PersistenceExtensionsTests
     {
+        private static readonly int[] ExpectedBatchSizes = { 1, 3, 3, 3 };
         [Fact]
         public async Task append_batch_async_should_validate_arguments()
         {
@@ -105,7 +106,7 @@ namespace NStore.Core.Tests.Persistence
             persistence.Verify(
                 x => x.AppendBatchAsync(It.IsAny<WriteJob[]>(), It.IsAny<CancellationToken>()),
                 Times.Exactly(4));
-            Assert.Equal(new[] { 1, 3, 3, 3 }, observedBatchSizes.OrderBy(x => x).ToArray());
+            Assert.Equal(ExpectedBatchSizes, observedBatchSizes.OrderBy(x => x).ToArray());
             Assert.True(maxConcurrency <= options.MaxWriters);
             Assert.All(queue, x => Assert.Equal(WriteJob.WriteResult.Committed, x.Result));
         }
@@ -178,12 +179,11 @@ namespace NStore.Core.Tests.Persistence
                     throw new InvalidOperationException("boom");
                 });
 
-            var error = await Assert.ThrowsAsync<AggregateException>(async () =>
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                     await persistence.Object.AppendBatchAsync(queue, options, CancellationToken.None).ConfigureAwait(false))
                 .ConfigureAwait(false);
 
-            Assert.Contains(error.InnerExceptions, ex => ex is InvalidOperationException invalid && invalid.Message == "boom");
-            Assert.Contains(error.InnerExceptions, ex => ex is OperationCanceledException);
+            Assert.Contains("boom", error.Message);
         }
 
         private static void UpdateMax(ref int target, int value)

@@ -124,7 +124,8 @@ namespace NStore.Persistence.Mongo.Tests
             if (scenario.TotalChunks > int.MaxValue)
             {
                 throw new ArgumentOutOfRangeException(
-                    nameof(scenario.TotalChunks),
+                    nameof(scenario),
+                    scenario.TotalChunks,
                     $"Scenario '{scenario.Name}' requires {scenario.TotalChunks} jobs, which exceeds the maximum supported queue size ({int.MaxValue}).");
             }
 

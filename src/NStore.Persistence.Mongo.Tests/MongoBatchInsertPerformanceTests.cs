@@ -87,7 +87,7 @@ namespace NStore.Persistence.Mongo.Tests
             if (!string.IsNullOrWhiteSpace(scenarioFilter))
             {
                 var selectedNames = scenarioFilter
-                    .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
                     .Select(x => x.Trim())
                     .Where(x => !string.IsNullOrWhiteSpace(x))
                     .ToArray();
@@ -109,7 +109,8 @@ namespace NStore.Persistence.Mongo.Tests
                 if (scenario.Writers > 0 && scenario.Writers > partitionCount)
                 {
                     throw new ArgumentOutOfRangeException(
-                        PerformanceProfilesConfigPath,
+                        nameof(settings),
+                        scenario.Writers,
                         $"Scenario '{scenario.Name}' has writers={scenario.Writers}, but {PartitionCountConfigKey} is {partitionCount}. Writers must be <= partitions.");
                 }
             }
@@ -933,8 +934,8 @@ namespace NStore.Persistence.Mongo.Tests
                     return string.Empty;
                 }
 
-                if (!value.Contains(",") &&
-                    !value.Contains("\"") &&
+                if (!value.Contains(',') &&
+                    !value.Contains('"') &&
                     !value.Contains('\n') &&
                     !value.Contains('\r'))
                 {
