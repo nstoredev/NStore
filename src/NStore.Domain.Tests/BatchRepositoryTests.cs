@@ -1381,6 +1381,9 @@ namespace NStore.Domain.Tests
 
     public class batch_repository_parallel_append : BaseBatchRepositoryTest
     {
+        private static readonly int[] ExpectedSingleBatchSizes = { 10 };
+        private static readonly int[] ExpectedSplitBatchSizes = { 1, 3, 3, 3 };
+
         private readonly TrackingEnhancedPersistence _trackingPersistence = new TrackingEnhancedPersistence();
 
         protected override IPersistence CreatePersistence()
@@ -1398,7 +1401,7 @@ namespace NStore.Domain.Tests
 
             Assert.True(result.Success);
             Assert.Equal(1, _trackingPersistence.AppendBatchCallCount);
-            Assert.Equal(new[] { 10 }, _trackingPersistence.ObservedBatchSizes.OrderBy(x => x).ToArray());
+            Assert.Equal(ExpectedSingleBatchSizes, _trackingPersistence.ObservedBatchSizes.OrderBy(x => x).ToArray());
         }
 
         [Fact]
@@ -1418,7 +1421,7 @@ namespace NStore.Domain.Tests
 
             Assert.True(result.Success);
             Assert.Equal(1, _trackingPersistence.AppendBatchCallCount);
-            Assert.Equal(new[] { 10 }, _trackingPersistence.ObservedBatchSizes.OrderBy(x => x).ToArray());
+            Assert.Equal(ExpectedSingleBatchSizes, _trackingPersistence.ObservedBatchSizes.OrderBy(x => x).ToArray());
         }
 
         [Fact]
@@ -1438,10 +1441,10 @@ namespace NStore.Domain.Tests
 
             Assert.True(result.Success);
             Assert.Equal(4, _trackingPersistence.AppendBatchCallCount);
-            Assert.Equal(new[] { 1, 3, 3, 3 }, _trackingPersistence.ObservedBatchSizes.OrderBy(x => x).ToArray());
+            Assert.Equal(ExpectedSplitBatchSizes, _trackingPersistence.ObservedBatchSizes.OrderBy(x => x).ToArray());
         }
 
-        private static IReadOnlyList<IAggregate> CreateChangedTickets(int count)
+        private static List<IAggregate> CreateChangedTickets(int count)
         {
             var aggregates = new List<IAggregate>(count);
             for (var i = 0; i < count; i++)

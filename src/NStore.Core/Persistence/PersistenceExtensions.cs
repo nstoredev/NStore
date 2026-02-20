@@ -17,6 +17,11 @@ public static class PersistenceExtensions
         ParallelBatchAppendOptions options,
         CancellationToken cancellationToken = default)
     {
+#if NET6_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(persistence);
+        ArgumentNullException.ThrowIfNull(queue);
+        ArgumentNullException.ThrowIfNull(options);
+#else
         if (persistence == null)
         {
             throw new ArgumentNullException(nameof(persistence));
@@ -31,15 +36,16 @@ public static class PersistenceExtensions
         {
             throw new ArgumentNullException(nameof(options));
         }
+#endif
 
         if (options.BatchSize <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(options.BatchSize), "BatchSize must be greater than zero.");
+            throw new ArgumentOutOfRangeException(nameof(options), options.BatchSize, "BatchSize must be greater than zero.");
         }
 
         if (options.MaxWriters <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(options.MaxWriters), "MaxWriters must be greater than zero.");
+            throw new ArgumentOutOfRangeException(nameof(options), options.MaxWriters, "MaxWriters must be greater than zero.");
         }
 
         if (queue.Length == 0)
@@ -48,13 +54,20 @@ public static class PersistenceExtensions
         }
 
         var batches = SplitInBatches(queue, options.BatchSize);
-
+#if NET6_0_OR_GREATER
+        await Parallel.ForEachAsync(
+                batches,
+                new ParallelOptions { MaxDegreeOfParallelism = options.MaxWriters, CancellationToken = cancellationToken },
+                async (batch, ct) => await persistence.AppendBatchAsync(batch, ct).ConfigureAwait(false))
+            .ConfigureAwait(false);
+#else
         await NStore.Core.AsyncParallelExtensions.ForEachAsync(
                 batches,
                 options.MaxWriters,
                 (batch, ct) => persistence.AppendBatchAsync(batch, ct),
                 cancellationToken)
             .ConfigureAwait(false);
+#endif
     }
 
     private static List<WriteJob[]> SplitInBatches(WriteJob[] queue, int batchSize)

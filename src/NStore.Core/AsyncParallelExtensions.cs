@@ -1,5 +1,9 @@
+#if NET6_0_OR_GREATER
+// this is an utility only for older version of .NET
+#else
 using System;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -62,7 +66,7 @@ namespace NStore.Core
                         {
                             throttler.Release();
                         }
-                    }));
+                    }, cts.Token));
                 }
             }
             catch (OperationCanceledException ex)
@@ -71,6 +75,16 @@ namespace NStore.Core
             }
 
             // Wait for all already-running tasks to complete
+            cancellation = await AwaitAllTasksAsync(tasks, cancellation).ConfigureAwait(false);
+
+            throttler.Dispose();
+
+            ThrowIfFailed(firstException, cancellation);
+        }
+
+        private static async Task<OperationCanceledException> AwaitAllTasksAsync(
+            List<Task> tasks, OperationCanceledException cancellation)
+        {
             foreach (var task in tasks)
             {
                 try
@@ -87,23 +101,23 @@ namespace NStore.Core
                 }
             }
 
-            throttler.Dispose();
+            return cancellation;
+        }
 
-            // If both happened, surface both failure and cancellation context.
+        private static void ThrowIfFailed(Exception firstException, OperationCanceledException cancellation)
+        {
+            // Match Parallel.ForEachAsync behavior: surface the real failure,
+            // not the cancellation it triggered in sibling tasks.
             if (firstException != null)
             {
-                if (cancellation != null)
-                {
-                    throw new AggregateException(firstException, cancellation);
-                }
-
-                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(firstException).Throw();
+                ExceptionDispatchInfo.Capture(firstException).Throw();
             }
 
             if (cancellation != null)
             {
-                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(cancellation).Throw();
+                ExceptionDispatchInfo.Capture(cancellation).Throw();
             }
         }
     }
 }
+#endif

@@ -301,7 +301,7 @@ namespace NStore.Persistence.Mongo.Tests
                     {
                         batchResults.Writer.TryComplete(completionError);
                     }
-                });
+                }, workerCancellationToken);
 
                 await foreach (var result in batchResults.Reader.ReadAllAsync(testCancellationToken).ConfigureAwait(false))
                 {
@@ -356,7 +356,7 @@ namespace NStore.Persistence.Mongo.Tests
                 // avoids hanging the test host if a MongoDB operation ignores the token.
                 var completed = await Task.WhenAny(
                     workersCompletionTask,
-                    Task.Delay(TimeSpan.FromSeconds(WorkerShutdownTimeoutSeconds))
+                    Task.Delay(TimeSpan.FromSeconds(WorkerShutdownTimeoutSeconds), CancellationToken.None)
                 ).ConfigureAwait(false);
 
                 if (completed != workersCompletionTask)
