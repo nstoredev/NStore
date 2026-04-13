@@ -553,6 +553,10 @@ namespace NStore.Core.InMemory
                     await subscription.CompletedAsync(position).ConfigureAwait(false);
                 }
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                await subscription.StoppedAsync(position).ConfigureAwait(false);
+            }
             catch (Exception e)
             {
                 await subscription.OnErrorAsync(position, e).ConfigureAwait(false);

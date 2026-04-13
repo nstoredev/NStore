@@ -148,6 +148,10 @@ namespace NStore.BaseSqlPersistence
 
                 await subscription.CompletedAsync(indexOrPosition).ConfigureAwait(false);
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                await subscription.StoppedAsync(indexOrPosition).ConfigureAwait(false);
+            }
             catch (Exception e)
             {
                 await subscription.OnErrorAsync(indexOrPosition, e).ConfigureAwait(false);

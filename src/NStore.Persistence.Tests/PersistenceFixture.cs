@@ -780,6 +780,41 @@ namespace NStore.Persistence.Tests
         }
     }
 
+    public class cancellation_during_subscription_tests : BasePersistenceTest
+    {
+        [Fact]
+        public async Task read_all_with_cancelled_token_should_stop_subscription_without_error()
+        {
+            await Store.AppendAsync("a", 1, "1").ConfigureAwait(false);
+
+            using var cts = new CancellationTokenSource();
+            cts.Cancel();
+
+            var stopped = false;
+            var onErrorCalled = false;
+            var subscription = new LambdaSubscription(_ => Task.FromResult(true))
+            {
+                OnStop = _ =>
+                {
+                    stopped = true;
+                    return Task.CompletedTask;
+                },
+                OnError = (_, __) =>
+                {
+                    onErrorCalled = true;
+                    return Task.CompletedTask;
+                }
+            };
+
+            await Store.ReadAllAsync(0, subscription, 100, cts.Token).ConfigureAwait(false);
+
+            Assert.True(stopped);
+            Assert.False(onErrorCalled);
+            Assert.True(subscription.ReadCompleted);
+            Assert.False(subscription.Failed);
+        }
+    }
+
     public class large_payload_tests : BasePersistenceTest
     {
         [Fact]

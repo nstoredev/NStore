@@ -125,13 +125,65 @@ namespace NStore.Persistence.Mongo
 
         public async Task DropAsync(CancellationToken cancellationToken)
         {
-            await this._partitionsDb
-                .DropCollectionAsync(_options.PartitionsCollectionName, cancellationToken)
+            await ResetCollectionAsync(
+                    _partitionsDb,
+                    _options.PartitionsCollectionName,
+                    _partitionsDb.GetCollection<TChunk>(_options.PartitionsCollectionName),
+                    cancellationToken)
                 .ConfigureAwait(false);
 
-            await this._countersDb
-                .DropCollectionAsync(_options.SequenceCollectionName, cancellationToken)
+            await ResetCollectionAsync(
+                    _countersDb,
+                    _options.SequenceCollectionName,
+                    _countersDb.GetCollection<Counter>(_options.SequenceCollectionName),
+                    cancellationToken)
                 .ConfigureAwait(false);
+        }
+
+        private async Task ResetCollectionAsync<TDocument>(
+            IMongoDatabase database,
+            string collectionName,
+            IMongoCollection<TDocument> collection,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                await database
+                    .DropCollectionAsync(collectionName, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (MongoCommandException ex) when (IsNamespaceMissing(ex))
+            {
+                // Treat missing collections as already clean.
+            }
+            catch (MongoCommandException ex) when (CanDeleteInsteadOfDrop(ex))
+            {
+                _logger.LogDebug(
+                    "DropCollectionAsync is not permitted for {CollectionName}; deleting documents instead. {Message}",
+                    collectionName,
+                    ex.Message);
+
+                await collection
+                    .DeleteManyAsync(Builders<TDocument>.Filter.Empty, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        private static bool IsNamespaceMissing(MongoCommandException ex)
+        {
+            return ex.Code == 26 ||
+                   string.Equals(ex.CodeName, "NamespaceNotFound", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool CanDeleteInsteadOfDrop(MongoCommandException ex)
+        {
+            if (ex.Code == 13)
+            {
+                return true;
+            }
+
+            return ex.Message.IndexOf("requires authentication", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   ex.Message.IndexOf("not authorized", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         public void Drop()
@@ -605,9 +657,11 @@ namespace NStore.Persistence.Mongo
 
                 await subscription.CompletedAsync(positionOrIndex).ConfigureAwait(false);
             }
-            catch (TaskCanceledException ex)
+            catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
             {
-                _logger.LogWarning($"PushToSubscriber: {ex.Message}.\n{ex.StackTrace}");
+                _logger.LogDebug("PushToSubscriber cancelled at {PositionOrIndex}: {Message}",
+                    positionOrIndex,
+                    ex.Message);
                 await subscription.StoppedAsync(positionOrIndex).ConfigureAwait(false);
             }
             catch (Exception e)

@@ -119,6 +119,11 @@ namespace NStore.Core.InMemory
                     }
                 }
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                await subscription.StoppedAsync(index).ConfigureAwait(false);
+                return;
+            }
             catch (Exception e)
             {
                 await subscription.OnErrorAsync(index, e).ConfigureAwait(false);
