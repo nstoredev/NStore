@@ -84,23 +84,30 @@ namespace NStore.Persistence.MsSql
             int limit,
             CancellationToken cancellationToken)
         {
-            await ExecuteWithRetryAsync(async () =>
+            try
             {
-                var sql = _options.GetReadAllChunksSql(limit);
-
-                using (var context = await _options.GetContextAsync(cancellationToken).ConfigureAwait(false))
+                await ExecuteWithRetryAsync(async () =>
                 {
-                    using (var command = context.CreateCommand(sql))
-                    {
-                        command.CommandTimeout = _options.CommandTimeoutSeconds;
-                        context.AddParam(command, "@fromPositionInclusive", fromPositionInclusive);
+                    var sql = _options.GetReadAllChunksSql(limit);
 
-                        await PushToSubscriber(command, fromPositionInclusive, subscription, true, cancellationToken)
-                            .ConfigureAwait(false);
+                    using (var context = await _options.GetContextAsync(cancellationToken).ConfigureAwait(false))
+                    {
+                        using (var command = context.CreateCommand(sql))
+                        {
+                            command.CommandTimeout = _options.CommandTimeoutSeconds;
+                            context.AddParam(command, "@fromPositionInclusive", fromPositionInclusive);
+
+                            await PushToSubscriber(command, fromPositionInclusive, subscription, true, cancellationToken)
+                                .ConfigureAwait(false);
+                        }
                     }
-                }
-                return true;
-            }, cancellationToken, "ReadAllAsync").ConfigureAwait(false);
+                    return true;
+                }, cancellationToken, "ReadAllAsync").ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                await subscription.StoppedAsync(fromPositionInclusive).ConfigureAwait(false);
+            }
         }
 
         public async Task InitAsync(CancellationToken cancellationToken)

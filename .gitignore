@@ -263,3 +263,4 @@ paket-files/
 
 # Local test overrides
 **/appsettings.local.json
+.tokensave

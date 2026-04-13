@@ -119,6 +119,10 @@ namespace NStore.Persistence.Sqlite
                     fromPositionInclusive = lastPosition + 1;
                 }
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                await subscription.StoppedAsync(lastPosition).ConfigureAwait(false);
+            }
             catch (Exception e)
             {
                 await subscription.OnErrorAsync(lastPosition, e).ConfigureAwait(false);

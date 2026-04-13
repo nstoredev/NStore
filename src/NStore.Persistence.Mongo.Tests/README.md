@@ -27,6 +27,8 @@ Connection string resolution order:
   2. `NStore:Mongo:ConnectionString`
 
 Note: perf mode is config-driven; environment variables are not required to run perf tests.
+If `NSTORE_MONGODB` is exported in your shell, it overrides `NStore:Mongo:ConnectionString` from user secrets.
+That is the first thing to check if tests unexpectedly connect without authentication or ignore your local secrets.
 
 ## Durable Writes (Flush Guarantees)
 
@@ -41,6 +43,12 @@ Example local user secret:
 ```bash
 dotnet user-secrets --project src/NStore.Persistence.Mongo.Tests/NStore.Persistence.Mongo.Tests.csproj \
   set "NStore:Mongo:ConnectionString" "mongodb://localhost:27017/nstoredev?w=1&journal=true&wtimeoutMS=30000"
+```
+
+Example auth-enabled local connection string:
+
+```bash
+export NSTORE_MONGODB="mongodb://<user>:<password>@localhost:27017/nstoredev?authSource=admin&w=1&journal=true&wtimeoutMS=30000"
 ```
 
 ## Local Mongo Setup
@@ -129,7 +137,7 @@ Execution order is:
 2. `BatchSize` ascending
 3. `TotalChunks` ascending
 
-Each scenario starts from an empty test database (`Create(true)` / `DropOnInit`).
+Each scenario starts from fresh unique test collections, so runs do not reuse state from previous scenarios.
 The suite waits 5 seconds between scenarios to reduce transient server/oplog pressure.
 
 ### Run One Scenario

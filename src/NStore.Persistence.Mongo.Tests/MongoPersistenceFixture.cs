@@ -10,6 +10,7 @@ using MongoDB.Driver;
 using NStore.Core.Persistence;
 using NStore.Persistence.Mongo;
 using Xunit;
+using Xunit.Sdk;
 
 #if MAP_DOMAIN
 using MongoDB.Bson.Serialization.Options;
@@ -40,6 +41,8 @@ namespace NStore.Persistence.Tests
         protected string _mongoConnectionString;
         protected IMongoPersistence _mongoPersistence;
         private MongoPersistenceOptions _options;
+        private string _mongoStoreScope;
+        private int _mongoStoreScopeVersion;
         private const string TestSuitePrefix = "Mongo";
 
         static BasePersistenceTest()
@@ -67,21 +70,60 @@ namespace NStore.Persistence.Tests
 
         protected internal IPersistence Create(bool dropOnInit)
         {
-            _mongoConnectionString = GetPartitionsConnectionString();
-            _options = GetMongoPersistenceOptions();
-            if (dropOnInit)
+            try
             {
-                _options.DropOnInit = true;
+                _mongoConnectionString = GetPartitionsConnectionString();
+                if (dropOnInit || string.IsNullOrWhiteSpace(_mongoStoreScope))
+                {
+                    _mongoStoreScopeVersion++;
+                    _mongoStoreScope = _testRunId + "_" + Environment.Version.Major + "_" + _mongoStoreScopeVersion;
+                }
+
+                _options = GetMongoPersistenceOptions();
+                ApplyMongoStoreScope(_options, _mongoStoreScope);
+                if (dropOnInit)
+                {
+                    _options.SetDropOnInit();
+                }
+                _mongoPersistence = CreatePersistence(_options);
+
+                _mongoPersistence.InitAsync(CancellationToken.None).GetAwaiter().GetResult();
+
+                return _mongoPersistence;
             }
-            _mongoPersistence = CreatePersistence(_options);
+            catch (TestMisconfiguredException ex)
+            {
+                throw SkipException.ForSkip("Mongo integration tests skipped: " + ex.Message);
+            }
+            catch (MongoAuthenticationException ex)
+            {
+                throw SkipException.ForSkip("Mongo integration tests skipped: " + ex.Message);
+            }
+            catch (MongoCommandException ex) when (RequiresAuthenticatedMongoConnection(ex))
+            {
+                throw SkipException.ForSkip("Mongo integration tests skipped: " + ex.Message);
+            }
+        }
 
-            _mongoPersistence.InitAsync(CancellationToken.None).Wait();
+        private static void ApplyMongoStoreScope(MongoPersistenceOptions options, string storeScope)
+        {
+            options.PartitionsCollectionName = options.PartitionsCollectionName + "_" + storeScope;
+            options.SequenceCollectionName = options.SequenceCollectionName + "_" + storeScope;
+        }
 
-            return _mongoPersistence;
+        private static bool RequiresAuthenticatedMongoConnection(MongoCommandException ex)
+        {
+            return ex.Message.IndexOf("requires authentication", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   ex.Message.IndexOf("not authorized", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         protected virtual internal MongoPersistenceOptions GetMongoPersistenceOptions()
         {
+            if (string.IsNullOrWhiteSpace(_mongoConnectionString))
+            {
+                _mongoConnectionString = GetPartitionsConnectionString();
+            }
+
             return new MongoPersistenceOptions
             {
                 PartitionsConnectionString = _mongoConnectionString,

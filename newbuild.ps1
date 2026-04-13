@@ -104,7 +104,6 @@ dotnet pack "$runningDirectory/src/NStore.Tpl/NStore.Tpl.csproj" --configuration
 dotnet pack "$runningDirectory/src/NStore.BaseSqlPersistence/NStore.BaseSqlPersistence.csproj" --configuration release -o "$runningDirectory/artifacts/NuGet" /p:PackageVersion=$nugetPackageVersion /p:AssemblyVersion=$assemblyVer /p:FileVersion=$assemblyFileVer /p:InformationalVersion=$assemblyInformationalVersion
 dotnet pack "$runningDirectory/src/NStore.Persistence.Mongo/NStore.Persistence.Mongo.csproj" --configuration release -o "$runningDirectory/artifacts/NuGet" /p:PackageVersion=$nugetPackageVersion /p:AssemblyVersion=$assemblyVer /p:FileVersion=$assemblyFileVer /p:InformationalVersion=$assemblyInformationalVersion
 dotnet pack "$runningDirectory/src/NStore.Persistence.MsSql/NStore.Persistence.MsSql.csproj" --configuration release -o "$runningDirectory/artifacts/NuGet" /p:PackageVersion=$nugetPackageVersion /p:AssemblyVersion=$assemblyVer /p:FileVersion=$assemblyFileVer /p:InformationalVersion=$assemblyInformationalVersion
-dotnet pack "$runningDirectory/src/NStore.Persistence.LiteDB/NStore.Persistence.LiteDB.csproj" --configuration release -o "$runningDirectory/artifacts/NuGet" /p:PackageVersion=$nugetPackageVersion /p:AssemblyVersion=$assemblyVer /p:FileVersion=$assemblyFileVer /p:InformationalVersion=$assemblyInformationalVersion
 dotnet pack "$runningDirectory/src/NStore.Persistence.Sqlite/NStore.Persistence.Sqlite.csproj" --configuration release -o "$runningDirectory/artifacts/NuGet" /p:PackageVersion=$nugetPackageVersion /p:AssemblyVersion=$assemblyVer /p:FileVersion=$assemblyFileVer /p:InformationalVersion=$assemblyInformationalVersion
 
 Assert-LastExecution -message "Error in creating nuget packages.." -haltExecution $true
@@ -114,4 +113,3 @@ if ($true -eq $nugetPublish) {
     dotnet nuget push .\artifacts\NuGet\** --source https://api.nuget.org/v3/index.json --api-key $nugetApiKey --skip-duplicate
     Assert-LastExecution -message "Error pushing nuget packages to nuget.org." -haltExecution $true
 }
-
