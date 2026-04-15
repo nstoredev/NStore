@@ -320,6 +320,76 @@ namespace NStore.Persistence.Mongo.Tests
         }
     }
 
+    public class synchronous_init_with_local_sequence : BasePersistenceTest
+    {
+        public synchronous_init_with_local_sequence() : base(autoCreateStore: false)
+        {
+        }
+
+        [Fact]
+        public async Task can_write_and_read_after_sync_init()
+        {
+            var options = GetMongoPersistenceOptions();
+            options.UseLocalSequence = true;
+            options.DropOnInit = true;
+            var persistence = new MongoPersistence(options);
+            persistence.Init();
+
+            await persistence.AppendAsync("a", 1, "data").ConfigureAwait(false);
+            var chunk = await persistence.ReadSingleBackwardAsync("a").ConfigureAwait(false);
+            Assert.Equal("data", chunk.Payload);
+
+            await persistence.DropAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+    }
+
+    public class synchronous_init_with_db_sequence : BasePersistenceTest
+    {
+        public synchronous_init_with_db_sequence() : base(autoCreateStore: false)
+        {
+        }
+
+        [Fact]
+        public async Task sequence_collection_is_populated_after_sync_init()
+        {
+            var options = GetMongoPersistenceOptions();
+            options.UseLocalSequence = false;
+            options.SequenceCollectionName = "sequence_sync_test";
+            options.DropOnInit = true;
+            var persistence = new MongoPersistence(options);
+            persistence.Init();
+
+            var url = new MongoUrl(options.PartitionsConnectionString);
+            var client = new MongoClient(url);
+            var db = client.GetDatabase(url.DatabaseName);
+            var coll = db.GetCollection<BsonDocument>(options.SequenceCollectionName);
+
+            var sequenceDocument = coll.AsQueryable().SingleOrDefault();
+            Assert.NotNull(sequenceDocument);
+            Assert.Equal("streams", sequenceDocument["_id"].AsString);
+            Assert.Equal(0L, sequenceDocument["LastValue"].AsInt64);
+
+            await persistence.DropAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+
+        [Fact]
+        public async Task can_write_and_read_after_sync_init()
+        {
+            var options = GetMongoPersistenceOptions();
+            options.UseLocalSequence = false;
+            options.SequenceCollectionName = "sequence_sync_rw_test";
+            options.DropOnInit = true;
+            var persistence = new MongoPersistence(options);
+            persistence.Init();
+
+            await persistence.AppendAsync("a", 1, "data").ConfigureAwait(false);
+            var chunk = await persistence.ReadSingleBackwardAsync("a").ConfigureAwait(false);
+            Assert.Equal("data", chunk.Payload);
+
+            await persistence.DropAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+    }
+
     public abstract class batch_append_with_position_conflict_base : BasePersistenceTest
     {
         protected internal override MongoPersistenceOptions GetMongoPersistenceOptions()

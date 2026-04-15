@@ -17,6 +17,8 @@ namespace NStore.Persistence.Mongo
     public interface IMongoPersistence : IPersistence
     {
         Task InitAsync(CancellationToken cancellationToken);
+
+        void Init();
     }
 
     public class MongoPersistence : MongoPersistence<MongoChunk>
@@ -121,7 +123,7 @@ namespace NStore.Persistence.Mongo
             }
         }
 
-        public async Task Drop(CancellationToken cancellationToken)
+        public async Task DropAsync(CancellationToken cancellationToken)
         {
             await this._partitionsDb
                 .DropCollectionAsync(_options.PartitionsCollectionName, cancellationToken)
@@ -130,6 +132,12 @@ namespace NStore.Persistence.Mongo
             await this._countersDb
                 .DropCollectionAsync(_options.SequenceCollectionName, cancellationToken)
                 .ConfigureAwait(false);
+        }
+
+        public void Drop()
+        {
+            this._partitionsDb.DropCollection(_options.PartitionsCollectionName);
+            this._countersDb.DropCollection(_options.SequenceCollectionName);
         }
 
         public async Task ReadForwardAsync(
@@ -954,7 +962,7 @@ Operation will be retried.
 If you see too many of this kind of errors, consider disabling UseLocalSequence because multiple processes are using the very same counter.
 Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.OperationId} chunk payload {chunk.Payload?.GetType().Name}
 {ex.Message} - {ex.GetType().FullName} ");
-                            await ReloadSequence(cancellationToken).ConfigureAwait(false);
+                            await ReloadSequenceAsync(cancellationToken).ConfigureAwait(false);
                             chunk.RewritePosition(await GetNextId(1, cancellationToken).ConfigureAwait(false));
                             continue;
                         }
@@ -970,7 +978,7 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
         {
             if (_options.DropOnInit)
             {
-                await Drop(cancellationToken).ConfigureAwait(false);
+                await DropAsync(cancellationToken).ConfigureAwait(false);
             }
 
             _chunks = _partitionsDb.GetCollection<TChunk>(_options.PartitionsCollectionName);
@@ -980,11 +988,33 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
 
             if (_options.UseLocalSequence)
             {
-                await ReloadSequence(cancellationToken).ConfigureAwait(false);
+                await ReloadSequenceAsync(cancellationToken).ConfigureAwait(false);
             }
             else
             {
-                await EnsureFirstSequenceRecord().ConfigureAwait(false);
+                await EnsureFirstSequenceRecordAsync().ConfigureAwait(false);
+            }
+        }
+
+        public void Init()
+        {
+            if (_options.DropOnInit)
+            {
+                Drop();
+            }
+
+            _chunks = _partitionsDb.GetCollection<TChunk>(_options.PartitionsCollectionName);
+            _counters = _countersDb.GetCollection<Counter>(_options.SequenceCollectionName);
+
+            CreateIndex();
+
+            if (_options.UseLocalSequence)
+            {
+                ReloadSequence();
+            }
+            else
+            {
+                EnsureFirstSequenceRecord();
             }
         }
 
@@ -1024,7 +1054,36 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
             }
         }
 
-        private async Task ReloadSequence(CancellationToken cancellationToken = default)
+        private void CreateIndex()
+        {
+            if (!_options.ReadonlyUser)
+            {
+                var partitionIndex = new CreateIndexModel<TChunk>(Builders<TChunk>.IndexKeys
+                        .Ascending(x => x.PartitionId)
+                        .Ascending(x => x.Index),
+                    new CreateIndexOptions()
+                    {
+                        Unique = true,
+                        Name = PartitionIndexIdx
+                    });
+
+                var partitionOperation = new CreateIndexModel<TChunk>(
+                    Builders<TChunk>.IndexKeys
+                        .Ascending(x => x.PartitionId)
+                        .Ascending(x => x.OperationId),
+                    new CreateIndexOptions()
+                    {
+                        Unique = true,
+                        Name = PartitionOperationIdx
+                    });
+
+                _chunks.Indexes.CreateOne(partitionIndex);
+
+                _chunks.Indexes.CreateOne(partitionOperation);
+            }
+        }
+
+        private async Task ReloadSequenceAsync(CancellationToken cancellationToken = default)
         {
             var filter = Builders<TChunk>.Filter.Empty;
             var lastRecord = await _chunks
@@ -1040,7 +1099,22 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
             this._sequence = record == null ? 0 : record["_id"].AsInt64;
         }
 
-        private async Task EnsureFirstSequenceRecord()
+        private void ReloadSequence()
+        {
+            var filter = Builders<TChunk>.Filter.Empty;
+            var lastRecord = _chunks
+                .Find(filter)
+                .SortByDescending(x => x.Position)
+                .Project(Builders<TChunk>.Projection.Include("_id"))
+                .Limit(1)
+                .ToCursor();
+
+            var record = lastRecord.FirstOrDefault();
+
+            this._sequence = record == null ? 0 : record["_id"].AsInt64;
+        }
+
+        private async Task EnsureFirstSequenceRecordAsync()
         {
             //initialize if needed
             var existing = _counters.AsQueryable().SingleOrDefault(c => c.Id == _options.SequenceId);
@@ -1053,6 +1127,33 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
                         Id = _options.SequenceId,
                         LastValue = 0L
                     }).ConfigureAwait(false);
+                }
+                catch (MongoWriteException ex)
+                {
+                    if (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
+                    {
+                        //ignore the error, in the meanwhile between loading existing value and inserting someone else already inserted the record, everything is normal.
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+            }
+        }
+
+        private void EnsureFirstSequenceRecord()
+        {
+            var existing = _counters.AsQueryable().SingleOrDefault(c => c.Id == _options.SequenceId);
+            if (existing == null)
+            {
+                try
+                {
+                    _counters.InsertOne(new Counter()
+                    {
+                        Id = _options.SequenceId,
+                        LastValue = 0L
+                    });
                 }
                 catch (MongoWriteException ex)
                 {
@@ -1258,7 +1359,7 @@ Chunk partition {chunk.PartitionId} index {chunk.Index} operationId {chunk.Opera
 Operation will be retried for failed chunks only.
 If you see too many of this kind of errors, consider disabling UseLocalSequence because multiple processes are using the very same counter.");
 
-            await ReloadSequence(cancellationToken).ConfigureAwait(false);
+            await ReloadSequenceAsync(cancellationToken).ConfigureAwait(false);
 
             // Get new positions for retry chunks
             var newLastId = await GetNextId(jobsToRetry.Count, cancellationToken).ConfigureAwait(false);
