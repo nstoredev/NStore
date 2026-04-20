@@ -19,6 +19,8 @@ namespace NStore.Persistence.Mongo
         Task InitAsync(CancellationToken cancellationToken);
 
         void Init();
+
+        Task DropAsync(CancellationToken cancellationToken);
     }
 
     public class MongoPersistence : MongoPersistence<MongoChunk>

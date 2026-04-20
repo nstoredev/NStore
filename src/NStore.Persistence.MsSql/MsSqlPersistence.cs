@@ -84,6 +84,7 @@ namespace NStore.Persistence.MsSql
             int limit,
             CancellationToken cancellationToken)
         {
+            bool pushStarted = false;
             try
             {
                 await ExecuteWithRetryAsync(async () =>
@@ -97,6 +98,7 @@ namespace NStore.Persistence.MsSql
                             command.CommandTimeout = _options.CommandTimeoutSeconds;
                             context.AddParam(command, "@fromPositionInclusive", fromPositionInclusive);
 
+                            pushStarted = true;
                             await PushToSubscriber(command, fromPositionInclusive, subscription, true, cancellationToken)
                                 .ConfigureAwait(false);
                         }
@@ -104,8 +106,12 @@ namespace NStore.Persistence.MsSql
                     return true;
                 }, cancellationToken, "ReadAllAsync").ConfigureAwait(false);
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested && !pushStarted)
             {
+                // Cancellation happened before PushToSubscriber ran, so OnStartAsync was never
+                // invoked. Signal the subscriber with a matching start/stop pair to keep the
+                // callback contract consistent.
+                await subscription.OnStartAsync(fromPositionInclusive).ConfigureAwait(false);
                 await subscription.StoppedAsync(fromPositionInclusive).ConfigureAwait(false);
             }
         }
