@@ -1,3 +1,9 @@
+## 1.1.0
+
+- Added synchronous Mongo persistence initialization support with `Init()`, plus safer Mongo cleanup via `DropAsync()` when collection drop permissions are limited.
+- Improved cancellation handling across persistence implementations so cancelled subscriptions stop cleanly instead of surfacing errors.
+- Removed LiteDB persistence and related tests/build packaging from the solution.
+
 ## 0.21.0
 
 - Introduced BatchRepository for batch operations.
