@@ -280,7 +280,29 @@ namespace NStore.Persistence.Tests
 
         protected void Clear(IPersistence persistence, bool drop)
         {
-            // nothing to do
+            if (!drop)
+            {
+                return;
+            }
+
+            // Each Create() with dropOnInit or an unset scope bumps the scope version so
+            // collections are uniquely named per test. Without this cleanup, every run
+            // would leak scoped collections on local MongoDB instances.
+            if (persistence is IMongoPersistence mongo)
+            {
+                try
+                {
+                    mongo.DropAsync(CancellationToken.None).GetAwaiter().GetResult();
+                }
+                catch (MongoAuthenticationException)
+                {
+                    // Integration test environment without write access - skip cleanup.
+                }
+                catch (MongoCommandException ex) when (RequiresAuthenticatedMongoConnection(ex))
+                {
+                    // Integration test environment without write access - skip cleanup.
+                }
+            }
         }
     }
 }
