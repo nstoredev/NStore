@@ -859,6 +859,66 @@ namespace NStore.Core.InMemory
             }
         }
 
+        #region IPartitionPersistenceSync
+
+        public IReadOnlyList<IChunk> ReadForward(
+            string partitionId,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            int limit)
+        {
+            if (partitionId == null)
+                throw new ArgumentNullException(nameof(partitionId));
+
+            if (!_partitions.TryGetValue(partitionId, out var partition))
+                return Array.Empty<IChunk>();
+
+            return partition.ReadForwardSync(fromLowerIndexInclusive, toUpperIndexInclusive, limit, Clone);
+        }
+
+        public IReadOnlyList<IChunk> ReadBackward(
+            string partitionId,
+            long fromUpperIndexInclusive,
+            long toLowerIndexInclusive,
+            int limit)
+        {
+            if (partitionId == null)
+                throw new ArgumentNullException(nameof(partitionId));
+
+            if (!_partitions.TryGetValue(partitionId, out var partition))
+                return Array.Empty<IChunk>();
+
+            return partition.ReadBackwardSync(fromUpperIndexInclusive, toLowerIndexInclusive, limit, Clone);
+        }
+
+        public IChunk ReadSingleBackward(
+            string partitionId,
+            long fromUpperIndexInclusive)
+        {
+            if (partitionId == null)
+                throw new ArgumentNullException(nameof(partitionId));
+
+            if (!_partitions.TryGetValue(partitionId, out var partition))
+                return null;
+
+            return partition.PeekSync(fromUpperIndexInclusive, Clone);
+        }
+
+        public IChunk ReadByOperationId(
+            string partitionId,
+            string operationId)
+        {
+            if (partitionId == null)
+                throw new ArgumentNullException(nameof(partitionId));
+
+            if (!_partitions.TryGetValue(partitionId, out var partition))
+                return null;
+
+            return partition.GetByOperationIdSync(operationId, Clone);
+        }
+
+        #endregion
+
         protected virtual void Dispose(bool disposing)
         {
             if (_disposed) return;

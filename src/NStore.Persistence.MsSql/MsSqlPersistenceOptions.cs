@@ -181,6 +181,37 @@ namespace NStore.Persistence.MsSql
             return new MsSqlContext(connection);
         }
 
+        public override AbstractSqlContext GetContext()
+        {
+            var connectionStringBuilder = new SqlConnectionStringBuilder(ConnectionString);
+
+            if (MaxPoolSize.HasValue)
+            {
+                connectionStringBuilder.MaxPoolSize = MaxPoolSize.Value;
+            }
+
+            if (MinPoolSize.HasValue)
+            {
+                connectionStringBuilder.MinPoolSize = MinPoolSize.Value;
+            }
+
+            connectionStringBuilder.ConnectTimeout = Math.Max(15, CommandTimeoutSeconds);
+
+            var connection = new SqlConnection(connectionStringBuilder.ConnectionString);
+
+            try
+            {
+                connection.Open();
+            }
+            catch (Exception)
+            {
+                connection.Dispose();
+                throw;
+            }
+
+            return new MsSqlContext(connection);
+        }
+
         public virtual string GetDropTableSql()
         {
             return

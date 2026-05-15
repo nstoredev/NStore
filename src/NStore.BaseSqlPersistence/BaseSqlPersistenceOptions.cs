@@ -82,6 +82,8 @@ namespace NStore.BaseSqlPersistence
 
         public abstract Task<AbstractSqlContext> GetContextAsync(CancellationToken cancellationToken);
 
+        public abstract AbstractSqlContext GetContext();
+
         /// <summary>
         /// Generating a multi-partition range select SQL query, that is common between the various implementations
         /// because it is created using standard SQL syntax.

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -6,6 +7,26 @@ namespace NStore.Core.Persistence
 {
     public class NullPersistence : IPersistence
     {
+        public IReadOnlyList<IChunk> ReadForward(string partitionId, long fromLowerIndexInclusive, long toUpperIndexInclusive, int limit)
+        {
+            return Array.Empty<IChunk>();
+        }
+
+        public IReadOnlyList<IChunk> ReadBackward(string partitionId, long fromUpperIndexInclusive, long toLowerIndexInclusive, int limit)
+        {
+            return Array.Empty<IChunk>();
+        }
+
+        public IChunk ReadSingleBackward(string partitionId, long fromUpperIndexInclusive)
+        {
+            return null;
+        }
+
+        public IChunk ReadByOperationId(string partitionId, string operationId)
+        {
+            return null;
+        }
+
         public Task<IChunk> ReplaceOneAsync(long position, string partitionId, long index, object payload,
             string operationId,
             CancellationToken cancellationToken)

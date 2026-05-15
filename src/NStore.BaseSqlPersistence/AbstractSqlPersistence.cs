@@ -722,5 +722,112 @@ namespace NStore.BaseSqlPersistence
 
             return null;
         }
+
+        #region IPartitionPersistenceSync
+
+        public IReadOnlyList<IChunk> ReadForward(
+            string partitionId,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            int limit)
+        {
+            var sql = Options.GetRangeSelectChunksSql(
+                lowerIndexInclusive: fromLowerIndexInclusive,
+                upperIndexInclusive: toUpperIndexInclusive,
+                limit: limit,
+                descending: false);
+
+            using var context = Options.GetContext();
+            using var command = context.CreateCommand(sql);
+            context.AddParam(command, "@PartitionId", partitionId);
+
+            if (fromLowerIndexInclusive > 0 && fromLowerIndexInclusive != long.MaxValue)
+            {
+                context.AddParam(command, "@lowerIndexInclusive", fromLowerIndexInclusive);
+            }
+
+            if (toUpperIndexInclusive > 0 && toUpperIndexInclusive != long.MaxValue)
+            {
+                context.AddParam(command, "@upperIndexInclusive", toUpperIndexInclusive);
+            }
+
+            return ReadChunks(command);
+        }
+
+        public IReadOnlyList<IChunk> ReadBackward(
+            string partitionId,
+            long fromUpperIndexInclusive,
+            long toLowerIndexInclusive,
+            int limit)
+        {
+            var sql = Options.GetRangeSelectChunksSql(
+                lowerIndexInclusive: toLowerIndexInclusive,
+                upperIndexInclusive: fromUpperIndexInclusive,
+                limit: limit,
+                descending: true);
+
+            using var context = Options.GetContext();
+            using var command = context.CreateCommand(sql);
+            context.AddParam(command, "@PartitionId", partitionId);
+
+            if (toLowerIndexInclusive > 0 && toLowerIndexInclusive != long.MaxValue)
+            {
+                context.AddParam(command, "@lowerIndexInclusive", toLowerIndexInclusive);
+            }
+
+            if (fromUpperIndexInclusive > 0 && fromUpperIndexInclusive != long.MaxValue)
+            {
+                context.AddParam(command, "@upperIndexInclusive", fromUpperIndexInclusive);
+            }
+
+            return ReadChunks(command);
+        }
+
+        public IChunk ReadSingleBackward(
+            string partitionId,
+            long fromUpperIndexInclusive)
+        {
+            using var context = Options.GetContext();
+            using var command = context.CreateCommand(Options.GetSelectLastChunkSql());
+            context.AddParam(command, "@PartitionId", partitionId);
+            context.AddParam(command, "@toUpperIndexInclusive", fromUpperIndexInclusive);
+
+            using var reader = command.ExecuteReader();
+            if (!reader.HasRows)
+                return null;
+
+            reader.Read();
+            return ReadChunk(reader);
+        }
+
+        public IChunk ReadByOperationId(
+            string partitionId,
+            string operationId)
+        {
+            using var context = Options.GetContext();
+            using var command = context.CreateCommand(Options.GetSelectChunkByStreamAndOperation());
+            context.AddParam(command, "@PartitionId", partitionId);
+            context.AddParam(command, "@OperationId", operationId);
+
+            using var reader = command.ExecuteReader();
+            if (!reader.HasRows)
+                return null;
+
+            reader.Read();
+            return ReadChunk(reader);
+        }
+
+        private IReadOnlyList<IChunk> ReadChunks(DbCommand command)
+        {
+            var result = new List<IChunk>();
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                result.Add(ReadChunk(reader));
+            }
+            return result;
+        }
+
+        #endregion
     }
 }

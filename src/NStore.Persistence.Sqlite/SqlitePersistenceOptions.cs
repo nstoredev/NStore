@@ -101,7 +101,7 @@ namespace NStore.Persistence.Sqlite
                 sb.Append("AND [Index] <= @upperIndexInclusive ");
             }
 
-            sb.Append(descending ? "ORDER BY [Index] DESC" : "ORDER BY [Index]");
+            sb.Append(descending ? "ORDER BY [Index] DESC " : "ORDER BY [Index] ");
 
             if (limit > 0 && limit != int.MaxValue)
             {
@@ -126,13 +126,28 @@ namespace NStore.Persistence.Sqlite
             return new SqliteContext(connection, true);
         }
 
+        public override AbstractSqlContext GetContext()
+        {
+            var connection = new SqliteConnection(ConnectionString);
+            try
+            {
+                connection.Open();
+            }
+            catch (Exception)
+            {
+                connection.Dispose();
+                throw;
+            }
+            return new SqliteContext(connection, true);
+        }
+
         public override string GetSelectLastPositionSql()
         {
-            return $@"SELECT 
+            return $@"SELECT
                         [Position]
-                      FROM 
-                        [{StreamsTableName}] 
-                      ORDER BY 
+                      FROM
+                        [{StreamsTableName}]
+                      ORDER BY
                           [Position] DESC
                       LIMIT 1";
         }
