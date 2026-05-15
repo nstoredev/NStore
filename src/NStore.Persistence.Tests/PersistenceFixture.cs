@@ -293,6 +293,32 @@ namespace NStore.Persistence.Tests
         }
 
         [Fact]
+        public async Task read_forward_with_zero_limit_returns_empty()
+        {
+            var recorder = new Recorder();
+
+            await Store.ReadForwardAsync(
+                "Stream_1", 0, recorder, long.MaxValue, 0, CancellationToken.None
+            ).ConfigureAwait(false);
+
+            Assert.Equal(0, recorder.Length);
+            Assert.True(recorder.ReadCompleted);
+        }
+
+        [Fact]
+        public async Task read_forward_with_negative_limit_returns_empty()
+        {
+            var recorder = new Recorder();
+
+            await Store.ReadForwardAsync(
+                "Stream_1", 0, recorder, long.MaxValue, -1, CancellationToken.None
+            ).ConfigureAwait(false);
+
+            Assert.Equal(0, recorder.Length);
+            Assert.True(recorder.ReadCompleted);
+        }
+
+        [Fact]
         public async Task read_forward_should_call_complete_on_consumer()
         {
             var recorder = new Recorder();
@@ -331,6 +357,32 @@ namespace NStore.Persistence.Tests
             Assert.Equal(2, tape.Length);
             Assert.Equal("c", tape[0].Payload);
             Assert.Equal("b", tape[1].Payload);
+        }
+
+        [Fact]
+        public async Task read_backward_with_zero_limit_returns_empty()
+        {
+            var recorder = new Recorder();
+
+            await Store.ReadBackwardAsync(
+                "Stream_1", long.MaxValue, recorder, 0, 0, CancellationToken.None
+            ).ConfigureAwait(false);
+
+            Assert.Equal(0, recorder.Length);
+            Assert.True(recorder.ReadCompleted);
+        }
+
+        [Fact]
+        public async Task read_backward_with_negative_limit_returns_empty()
+        {
+            var recorder = new Recorder();
+
+            await Store.ReadBackwardAsync(
+                "Stream_1", long.MaxValue, recorder, 0, -1, CancellationToken.None
+            ).ConfigureAwait(false);
+
+            Assert.Equal(0, recorder.Length);
+            Assert.True(recorder.ReadCompleted);
         }
 
         [Fact]
