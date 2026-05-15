@@ -158,6 +158,28 @@ namespace NStore.BaseSqlPersistence
             }
         }
 
+        private static async Task CompleteEmptySubscription(
+            long start,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            await subscription.OnStartAsync(start).ConfigureAwait(false);
+
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await subscription.CompletedAsync(start).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                await subscription.StoppedAsync(start).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                await subscription.OnErrorAsync(start, e).ConfigureAwait(false);
+            }
+        }
+
         public async Task<IChunk> AppendAsync(
             string partitionId,
             long index,
@@ -322,6 +344,13 @@ namespace NStore.BaseSqlPersistence
             ISubscription subscription,
             CancellationToken cancellationToken)
         {
+            var start = descending ? upperIndexInclusive : lowerIndexInclusive;
+            if (limit <= 0)
+            {
+                await CompleteEmptySubscription(start, subscription, cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
             var sql = Options.GetRangeSelectChunksSql(
                 lowerIndexInclusive: lowerIndexInclusive,
                 upperIndexInclusive: upperIndexInclusive,
@@ -342,7 +371,7 @@ namespace NStore.BaseSqlPersistence
                 context.AddParam(command, "@upperIndexInclusive", upperIndexInclusive);
             }
 
-            await PushToSubscriber(command, descending ? upperIndexInclusive : lowerIndexInclusive,
+            await PushToSubscriber(command, start,
                     subscription, false, cancellationToken)
                 .ConfigureAwait(false);
         }

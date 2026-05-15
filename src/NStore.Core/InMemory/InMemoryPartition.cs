@@ -36,6 +36,12 @@ namespace NStore.Core.InMemory
             int limit,
             CancellationToken cancellationToken)
         {
+            if (limit <= 0)
+            {
+                await PushToSubscriber(fromLowerIndexInclusive, subscription, Array.Empty<MemoryChunk>(), cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
             _lockSlim.EnterReadLock();
 
             var result = Chunks
@@ -55,6 +61,11 @@ namespace NStore.Core.InMemory
             CancellationToken cancellationToken
         )
         {
+            if (limit <= 0)
+            {
+                return PushToSubscriber(fromUpperIndexInclusive, subscription, Array.Empty<MemoryChunk>(), cancellationToken);
+            }
+
             _lockSlim.EnterReadLock();
 
             var result = Chunks.Reverse()

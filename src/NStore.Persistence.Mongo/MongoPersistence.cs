@@ -203,6 +203,13 @@ namespace NStore.Persistence.Mongo
             CancellationToken cancellationToken
         )
         {
+            if (limit <= 0)
+            {
+                await CompleteEmptySubscription(fromLowerIndexInclusive, subscription, cancellationToken)
+                    .ConfigureAwait(false);
+                return;
+            }
+
             var filter = Builders<TChunk>.Filter.And(
                 Builders<TChunk>.Filter.Eq(x => x.PartitionId, partitionId),
                 Builders<TChunk>.Filter.Gte(x => x.Index, fromLowerIndexInclusive),
@@ -682,6 +689,13 @@ namespace NStore.Persistence.Mongo
             CancellationToken cancellationToken
         )
         {
+            if (limit <= 0)
+            {
+                await CompleteEmptySubscription(fromUpperIndexInclusive, subscription, cancellationToken)
+                    .ConfigureAwait(false);
+                return;
+            }
+
             var filter = Builders<TChunk>.Filter.And(
                 Builders<TChunk>.Filter.Eq(x => x.PartitionId, partitionId),
                 Builders<TChunk>.Filter.Lte(x => x.Index, fromUpperIndexInclusive),
@@ -704,6 +718,28 @@ namespace NStore.Persistence.Mongo
                 false,
                 cancellationToken
             ).ConfigureAwait(false);
+        }
+
+        private static async Task CompleteEmptySubscription(
+            long start,
+            ISubscription subscription,
+            CancellationToken cancellationToken)
+        {
+            await subscription.OnStartAsync(start).ConfigureAwait(false);
+
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await subscription.CompletedAsync(start).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                await subscription.StoppedAsync(start).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                await subscription.OnErrorAsync(start, e).ConfigureAwait(false);
+            }
         }
 
         public async Task<IChunk> ReadSingleBackwardAsync(

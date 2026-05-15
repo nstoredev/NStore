@@ -328,6 +328,63 @@ namespace NStore.Core.Tests.Tpl
         }
 
         [Fact]
+        public async Task AsyncPartitionReads_ShouldNotObserveQueuedWritesBeforeBatchFlush()
+        {
+            // Arrange
+            _decorator = new PersistenceBatchAppendDecorator(_persistence, _loggerMock.Object, batchSize: 100, flushTimeout: 10000);
+            var writeTask = _decorator.AppendAsync("partition1", 1, "payload1", "operation1", CancellationToken.None);
+            await Task.Delay(50);
+
+            Assert.False(writeTask.IsCompleted);
+
+            var forward = new Recorder();
+            var backward = new Recorder();
+
+            // Act
+            await _decorator.ReadForwardAsync("partition1", 0, forward, long.MaxValue, int.MaxValue, CancellationToken.None);
+            await _decorator.ReadBackwardAsync("partition1", long.MaxValue, backward, 0, int.MaxValue, CancellationToken.None);
+            var single = await _decorator.ReadSingleBackwardAsync("partition1", long.MaxValue, CancellationToken.None);
+            var byOperation = await _decorator.ReadByOperationIdAsync("partition1", "operation1", CancellationToken.None);
+
+            // Assert
+            Assert.Equal(0, forward.Length);
+            Assert.Equal(0, backward.Length);
+            Assert.Null(single);
+            Assert.Null(byOperation);
+
+            await _decorator.DisposeAsync();
+            _decorator = null;
+            Assert.NotNull(await writeTask);
+        }
+
+        [Fact]
+        public async Task SyncPartitionReads_ShouldNotObserveQueuedWritesBeforeBatchFlush()
+        {
+            // Arrange
+            _decorator = new PersistenceBatchAppendDecorator(_persistence, _loggerMock.Object, batchSize: 100, flushTimeout: 10000);
+            var writeTask = _decorator.AppendAsync("partition1", 1, "payload1", "operation1", CancellationToken.None);
+            await Task.Delay(50);
+
+            Assert.False(writeTask.IsCompleted);
+
+            // Act
+            var forward = _decorator.ReadForward("partition1", 0, long.MaxValue, int.MaxValue);
+            var backward = _decorator.ReadBackward("partition1", long.MaxValue, 0, int.MaxValue);
+            var single = _decorator.ReadSingleBackward("partition1", long.MaxValue);
+            var byOperation = _decorator.ReadByOperationId("partition1", "operation1");
+
+            // Assert
+            Assert.Empty(forward);
+            Assert.Empty(backward);
+            Assert.Null(single);
+            Assert.Null(byOperation);
+
+            await _decorator.DisposeAsync();
+            _decorator = null;
+            Assert.NotNull(await writeTask);
+        }
+
+        [Fact]
         public async Task ReadAllAsync_ShouldDelegateToUnderlyingPersistence()
         {
             // Arrange
