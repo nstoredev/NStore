@@ -30,7 +30,7 @@ namespace NStore.Persistence.Mongo
         }
     }
 
-    public class MongoPersistence<TChunk> : IMongoPersistence, IEnhancedPersistence
+    public class MongoPersistence<TChunk> : IMongoPersistence, IEnhancedPersistence, IPartitionPersistenceSync
         where TChunk : class, IMongoChunk, new()
     {
         private IMongoDatabase _partitionsDb;
@@ -1471,5 +1471,96 @@ If you see too many of this kind of errors, consider disabling UseLocalSequence 
 
             return writeJobs;
         }
+
+        #region IPartitionPersistenceSync
+
+        public IReadOnlyList<IChunk> ReadForward(
+            string partitionId,
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            int limit
+        )
+        {
+            var filter = Builders<TChunk>.Filter.And(
+                Builders<TChunk>.Filter.Eq(x => x.PartitionId, partitionId),
+                Builders<TChunk>.Filter.Gte(x => x.Index, fromLowerIndexInclusive),
+                Builders<TChunk>.Filter.Lte(x => x.Index, toUpperIndexInclusive)
+            );
+
+            var sort = Builders<TChunk>.Sort.Ascending(x => x.Index);
+            var findFluent = _chunks.Find(filter).Sort(sort);
+            if (limit != int.MaxValue)
+            {
+                findFluent = findFluent.Limit(limit);
+            }
+
+            var chunks = findFluent.ToList();
+            foreach (var chunk in chunks)
+            {
+                _mongoPayloadSerializer.ApplyDeserialization(chunk);
+            }
+
+            return chunks.Cast<IChunk>().ToList();
+        }
+
+        public IReadOnlyList<IChunk> ReadBackward(
+            string partitionId,
+            long fromUpperIndexInclusive,
+            long toLowerIndexInclusive,
+            int limit
+        )
+        {
+            var filter = Builders<TChunk>.Filter.And(
+                Builders<TChunk>.Filter.Eq(x => x.PartitionId, partitionId),
+                Builders<TChunk>.Filter.Lte(x => x.Index, fromUpperIndexInclusive),
+                Builders<TChunk>.Filter.Gte(x => x.Index, toLowerIndexInclusive)
+            );
+
+            var sort = Builders<TChunk>.Sort.Descending(x => x.Index);
+            var findFluent = _chunks.Find(filter).Sort(sort);
+            if (limit != int.MaxValue)
+            {
+                findFluent = findFluent.Limit(limit);
+            }
+
+            var chunks = findFluent.ToList();
+            foreach (var chunk in chunks)
+            {
+                _mongoPayloadSerializer.ApplyDeserialization(chunk);
+            }
+
+            return chunks.Cast<IChunk>().ToList();
+        }
+
+        public IChunk ReadSingleBackward(
+            string partitionId,
+            long fromUpperIndexInclusive
+        )
+        {
+            var filter = Builders<TChunk>.Filter.And(
+                Builders<TChunk>.Filter.Eq(x => x.PartitionId, partitionId),
+                Builders<TChunk>.Filter.Lte(x => x.Index, fromUpperIndexInclusive)
+            );
+
+            var sort = Builders<TChunk>.Sort.Descending(x => x.Index);
+            var chunk = _chunks.Find(filter).Sort(sort).Limit(1).FirstOrDefault();
+            return _mongoPayloadSerializer.ApplyDeserialization(chunk);
+        }
+
+        public IChunk ReadByOperationId(
+            string partitionId,
+            string operationId
+        )
+        {
+            var filter = Builders<TChunk>.Filter.And(
+                Builders<TChunk>.Filter.Eq(x => x.PartitionId, partitionId),
+                Builders<TChunk>.Filter.Eq(x => x.OperationId, operationId)
+            );
+
+            var chunk = _chunks.Find(filter).FirstOrDefault();
+            return _mongoPayloadSerializer.ApplyDeserialization(chunk);
+        }
+
+        #endregion
     }
 }

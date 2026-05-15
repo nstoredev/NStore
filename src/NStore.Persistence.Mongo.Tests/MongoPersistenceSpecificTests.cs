@@ -218,6 +218,153 @@ namespace NStore.Persistence.Mongo.Tests
         }
     }
 
+    public class sync_partition_persistence_reads : BasePersistenceTest
+    {
+        private TestMongoPayloadSerializer _testMongoPayloadSerializer;
+
+        private IPartitionPersistenceSync SyncStore => (IPartitionPersistenceSync)_persistence;
+
+        protected internal override MongoPersistenceOptions GetMongoPersistenceOptions()
+        {
+            var options = base.GetMongoPersistenceOptions();
+            _testMongoPayloadSerializer ??= new TestMongoPayloadSerializer();
+            options.MongoPayloadSerializer = _testMongoPayloadSerializer;
+            return options;
+        }
+
+        [Fact]
+        public void mongo_persistence_exposes_sync_partition_reader()
+        {
+            Assert.IsAssignableFrom<IPartitionPersistenceSync>(_persistence);
+        }
+
+        [Fact]
+        public async Task read_forward_returns_requested_range_in_ascending_order()
+        {
+            await Store.AppendAsync("sync-forward", 1, "one").ConfigureAwait(false);
+            await Store.AppendAsync("sync-forward", 2, "two").ConfigureAwait(false);
+            await Store.AppendAsync("sync-forward", 3, "three").ConfigureAwait(false);
+            await Store.AppendAsync("sync-other", 2, "other").ConfigureAwait(false);
+
+            var chunks = SyncStore.ReadForward("sync-forward", 2, 3, int.MaxValue);
+
+            Assert.Collection(chunks,
+                chunk =>
+                {
+                    Assert.Equal(2, chunk.Index);
+                    Assert.Equal("two", chunk.Payload);
+                },
+                chunk =>
+                {
+                    Assert.Equal(3, chunk.Index);
+                    Assert.Equal("three", chunk.Payload);
+                });
+            Assert.Equal(new object[] { "two", "three" }, _testMongoPayloadSerializer.DeserializedPayloads);
+        }
+
+        [Fact]
+        public async Task read_forward_honors_limit()
+        {
+            await Store.AppendAsync("sync-forward-limit", 1, "one").ConfigureAwait(false);
+            await Store.AppendAsync("sync-forward-limit", 2, "two").ConfigureAwait(false);
+            await Store.AppendAsync("sync-forward-limit", 3, "three").ConfigureAwait(false);
+
+            var chunks = SyncStore.ReadForward("sync-forward-limit", 1, long.MaxValue, 2);
+
+            Assert.Collection(chunks,
+                chunk => Assert.Equal("one", chunk.Payload),
+                chunk => Assert.Equal("two", chunk.Payload));
+        }
+
+        [Fact]
+        public async Task read_backward_returns_requested_range_in_descending_order()
+        {
+            await Store.AppendAsync("sync-backward", 1, "one").ConfigureAwait(false);
+            await Store.AppendAsync("sync-backward", 2, "two").ConfigureAwait(false);
+            await Store.AppendAsync("sync-backward", 3, "three").ConfigureAwait(false);
+            await Store.AppendAsync("sync-other", 2, "other").ConfigureAwait(false);
+
+            var chunks = SyncStore.ReadBackward("sync-backward", 3, 2, int.MaxValue);
+
+            Assert.Collection(chunks,
+                chunk =>
+                {
+                    Assert.Equal(3, chunk.Index);
+                    Assert.Equal("three", chunk.Payload);
+                },
+                chunk =>
+                {
+                    Assert.Equal(2, chunk.Index);
+                    Assert.Equal("two", chunk.Payload);
+                });
+            Assert.Equal(new object[] { "three", "two" }, _testMongoPayloadSerializer.DeserializedPayloads);
+        }
+
+        [Fact]
+        public async Task read_backward_honors_limit()
+        {
+            await Store.AppendAsync("sync-backward-limit", 1, "one").ConfigureAwait(false);
+            await Store.AppendAsync("sync-backward-limit", 2, "two").ConfigureAwait(false);
+            await Store.AppendAsync("sync-backward-limit", 3, "three").ConfigureAwait(false);
+
+            var chunks = SyncStore.ReadBackward("sync-backward-limit", long.MaxValue, 1, 2);
+
+            Assert.Collection(chunks,
+                chunk => Assert.Equal("three", chunk.Payload),
+                chunk => Assert.Equal("two", chunk.Payload));
+        }
+
+        [Fact]
+        public async Task read_single_backward_returns_latest_at_or_before_requested_index()
+        {
+            await Store.AppendAsync("sync-single", 1, "one").ConfigureAwait(false);
+            await Store.AppendAsync("sync-single", 3, "three").ConfigureAwait(false);
+
+            var chunk = SyncStore.ReadSingleBackward("sync-single", 2);
+
+            Assert.NotNull(chunk);
+            Assert.Equal(1, chunk.Index);
+            Assert.Equal("one", chunk.Payload);
+            Assert.Equal(new object[] { "one" }, _testMongoPayloadSerializer.DeserializedPayloads);
+        }
+
+        [Fact]
+        public async Task read_single_backward_returns_null_for_missing_partition()
+        {
+            await Store.AppendAsync("sync-single-missing", 1, "one").ConfigureAwait(false);
+
+            var chunk = SyncStore.ReadSingleBackward("missing", long.MaxValue);
+
+            Assert.Null(chunk);
+            Assert.Empty(_testMongoPayloadSerializer.DeserializedPayloads);
+        }
+
+        [Fact]
+        public async Task read_by_operation_id_returns_matching_partition_operation()
+        {
+            await Store.AppendAsync("sync-operation", 1, "one", "same-operation").ConfigureAwait(false);
+            await Store.AppendAsync("sync-operation-other", 1, "other", "same-operation").ConfigureAwait(false);
+
+            var chunk = SyncStore.ReadByOperationId("sync-operation", "same-operation");
+
+            Assert.NotNull(chunk);
+            Assert.Equal("sync-operation", chunk.PartitionId);
+            Assert.Equal("one", chunk.Payload);
+            Assert.Equal(new object[] { "one" }, _testMongoPayloadSerializer.DeserializedPayloads);
+        }
+
+        [Fact]
+        public async Task read_by_operation_id_returns_null_for_missing_operation()
+        {
+            await Store.AppendAsync("sync-operation-missing", 1, "one", "existing-operation").ConfigureAwait(false);
+
+            var chunk = SyncStore.ReadByOperationId("sync-operation-missing", "missing-operation");
+
+            Assert.Null(chunk);
+            Assert.Empty(_testMongoPayloadSerializer.DeserializedPayloads);
+        }
+    }
+
     public class Can_intercept_mongo_query_with_options : BasePersistenceTest
     {
         private Int32 callCount;

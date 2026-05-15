@@ -10,7 +10,7 @@ tmp/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
-
+**/**.csproj.lscache
 # Sonarqube
 .sonarqube/
 
