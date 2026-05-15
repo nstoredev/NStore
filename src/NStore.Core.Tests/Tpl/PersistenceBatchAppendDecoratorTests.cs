@@ -264,6 +264,70 @@ namespace NStore.Core.Tests.Tpl
         }
 
         [Fact]
+        public async Task ReadForward_ShouldDelegateToUnderlyingPersistence()
+        {
+            // Arrange
+            _decorator = new PersistenceBatchAppendDecorator(_persistence, _loggerMock.Object, batchSize: 10, flushTimeout: 100);
+            await _persistence.AppendAsync("partition1", 1, "payload1", null, CancellationToken.None);
+            await _persistence.AppendAsync("partition1", 2, "payload2", null, CancellationToken.None);
+
+            // Act
+            var chunks = _decorator.ReadForward("partition1", 0, long.MaxValue, int.MaxValue);
+
+            // Assert
+            Assert.Equal(2, chunks.Count);
+            Assert.Equal(1L, chunks[0].Index);
+            Assert.Equal(2L, chunks[1].Index);
+        }
+
+        [Fact]
+        public async Task ReadBackward_ShouldDelegateToUnderlyingPersistence()
+        {
+            // Arrange
+            _decorator = new PersistenceBatchAppendDecorator(_persistence, _loggerMock.Object, batchSize: 10, flushTimeout: 100);
+            await _persistence.AppendAsync("partition1", 1, "payload1", null, CancellationToken.None);
+            await _persistence.AppendAsync("partition1", 2, "payload2", null, CancellationToken.None);
+
+            // Act
+            var chunks = _decorator.ReadBackward("partition1", long.MaxValue, 0, int.MaxValue);
+
+            // Assert
+            Assert.Equal(2, chunks.Count);
+            Assert.Equal(2L, chunks[0].Index);
+            Assert.Equal(1L, chunks[1].Index);
+        }
+
+        [Fact]
+        public async Task ReadSingleBackward_ShouldDelegateToUnderlyingPersistence()
+        {
+            // Arrange
+            _decorator = new PersistenceBatchAppendDecorator(_persistence, _loggerMock.Object, batchSize: 10, flushTimeout: 100);
+            await _persistence.AppendAsync("partition1", 1, "payload1", null, CancellationToken.None);
+
+            // Act
+            var chunk = _decorator.ReadSingleBackward("partition1", 1);
+
+            // Assert
+            Assert.NotNull(chunk);
+            Assert.Equal("payload1", chunk.Payload);
+        }
+
+        [Fact]
+        public async Task ReadByOperationId_ShouldDelegateToUnderlyingPersistence()
+        {
+            // Arrange
+            _decorator = new PersistenceBatchAppendDecorator(_persistence, _loggerMock.Object, batchSize: 10, flushTimeout: 100);
+            await _persistence.AppendAsync("partition1", 1, "payload1", "operation1", CancellationToken.None);
+
+            // Act
+            var chunk = _decorator.ReadByOperationId("partition1", "operation1");
+
+            // Assert
+            Assert.NotNull(chunk);
+            Assert.Equal("payload1", chunk.Payload);
+        }
+
+        [Fact]
         public async Task ReadAllAsync_ShouldDelegateToUnderlyingPersistence()
         {
             // Arrange

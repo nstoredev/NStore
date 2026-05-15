@@ -118,5 +118,41 @@ namespace NStore.Core.Tests.Persistence
             Assert.Equal(0, _profile.ReadBackwardCounter.Calls);
             Assert.Equal(1, _profile.ReadSingleBackwardCounter.Calls);
         }
+
+        [Fact]
+        public void sync_scan_partition_should_be_recorded()
+        {
+            _store.ReadForward("empty", 0, long.MaxValue, 10);
+            Assert.Equal(0, _profile.PersistCounter.Calls);
+            Assert.Equal(0, _profile.DeleteCounter.Calls);
+            Assert.Equal(0, _profile.StoreScanCounter.Calls);
+            Assert.Equal(1, _profile.ReadForwardCounter.Calls);
+            Assert.Equal(0, _profile.ReadBackwardCounter.Calls);
+            Assert.Equal(0, _profile.ReadSingleBackwardCounter.Calls);
+        }
+
+        [Fact]
+        public void sync_scan_partition_backward_should_be_recorded()
+        {
+            _store.ReadBackward("empty", long.MaxValue, 0, 10);
+            Assert.Equal(0, _profile.PersistCounter.Calls);
+            Assert.Equal(0, _profile.DeleteCounter.Calls);
+            Assert.Equal(0, _profile.StoreScanCounter.Calls);
+            Assert.Equal(0, _profile.ReadForwardCounter.Calls);
+            Assert.Equal(1, _profile.ReadBackwardCounter.Calls);
+            Assert.Equal(0, _profile.ReadSingleBackwardCounter.Calls);
+        }
+
+        [Fact]
+        public void sync_peek_partition_should_be_recorded()
+        {
+            _store.ReadSingleBackward("empty", 1);
+            Assert.Equal(0, _profile.PersistCounter.Calls);
+            Assert.Equal(0, _profile.DeleteCounter.Calls);
+            Assert.Equal(0, _profile.StoreScanCounter.Calls);
+            Assert.Equal(0, _profile.ReadForwardCounter.Calls);
+            Assert.Equal(0, _profile.ReadBackwardCounter.Calls);
+            Assert.Equal(1, _profile.ReadSingleBackwardCounter.Calls);
+        }
     }
 }

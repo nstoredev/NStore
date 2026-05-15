@@ -277,6 +277,28 @@ namespace NStore.Persistence.Mongo.Tests
         }
 
         [Fact]
+        public async Task read_forward_with_zero_limit_returns_empty()
+        {
+            await Store.AppendAsync("sync-forward-zero-limit", 1, "one").ConfigureAwait(false);
+
+            var chunks = SyncStore.ReadForward("sync-forward-zero-limit", 1, long.MaxValue, 0);
+
+            Assert.Empty(chunks);
+            Assert.Empty(_testMongoPayloadSerializer.DeserializedPayloads);
+        }
+
+        [Fact]
+        public async Task read_forward_with_negative_limit_returns_empty()
+        {
+            await Store.AppendAsync("sync-forward-negative-limit", 1, "one").ConfigureAwait(false);
+
+            var chunks = SyncStore.ReadForward("sync-forward-negative-limit", 1, long.MaxValue, -1);
+
+            Assert.Empty(chunks);
+            Assert.Empty(_testMongoPayloadSerializer.DeserializedPayloads);
+        }
+
+        [Fact]
         public async Task read_backward_returns_requested_range_in_descending_order()
         {
             await Store.AppendAsync("sync-backward", 1, "one").ConfigureAwait(false);
@@ -312,6 +334,28 @@ namespace NStore.Persistence.Mongo.Tests
             Assert.Collection(chunks,
                 chunk => Assert.Equal("three", chunk.Payload),
                 chunk => Assert.Equal("two", chunk.Payload));
+        }
+
+        [Fact]
+        public async Task read_backward_with_zero_limit_returns_empty()
+        {
+            await Store.AppendAsync("sync-backward-zero-limit", 1, "one").ConfigureAwait(false);
+
+            var chunks = SyncStore.ReadBackward("sync-backward-zero-limit", long.MaxValue, 1, 0);
+
+            Assert.Empty(chunks);
+            Assert.Empty(_testMongoPayloadSerializer.DeserializedPayloads);
+        }
+
+        [Fact]
+        public async Task read_backward_with_negative_limit_returns_empty()
+        {
+            await Store.AppendAsync("sync-backward-negative-limit", 1, "one").ConfigureAwait(false);
+
+            var chunks = SyncStore.ReadBackward("sync-backward-negative-limit", long.MaxValue, 1, -1);
+
+            Assert.Empty(chunks);
+            Assert.Empty(_testMongoPayloadSerializer.DeserializedPayloads);
         }
 
         [Fact]

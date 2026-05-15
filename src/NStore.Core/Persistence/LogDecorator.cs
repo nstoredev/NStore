@@ -219,22 +219,34 @@ namespace NStore.Core.Persistence
 
         public IReadOnlyList<IChunk> ReadForward(string partitionId, long fromLowerIndexInclusive, long toUpperIndexInclusive, int limit)
         {
-            return _persistence.ReadForward(partitionId, fromLowerIndexInclusive, toUpperIndexInclusive, limit);
+            _logger.LogDebug("Start ReadPartitionForward(Partition {PartitionId}, from: {from})", partitionId, fromLowerIndexInclusive);
+            var result = _persistence.ReadForward(partitionId, fromLowerIndexInclusive, toUpperIndexInclusive, limit);
+            _logger.LogDebug("End ReadPartitionForward(Partition {PartitionId}, from: {from})", partitionId, fromLowerIndexInclusive);
+            return result;
         }
 
         public IReadOnlyList<IChunk> ReadBackward(string partitionId, long fromUpperIndexInclusive, long toLowerIndexInclusive, int limit)
         {
-            return _persistence.ReadBackward(partitionId, fromUpperIndexInclusive, toLowerIndexInclusive, limit);
+            _logger.LogDebug("Start ReadPartitionBackward(Partition {PartitionId}, from: {from})", partitionId, fromUpperIndexInclusive);
+            var result = _persistence.ReadBackward(partitionId, fromUpperIndexInclusive, toLowerIndexInclusive, limit);
+            _logger.LogDebug("End ReadPartitionBackward(Partition {PartitionId}, from: {from})", partitionId, fromUpperIndexInclusive);
+            return result;
         }
 
         public IChunk ReadSingleBackward(string partitionId, long fromUpperIndexInclusive)
         {
-            return _persistence.ReadSingleBackward(partitionId, fromUpperIndexInclusive);
+            _logger.LogDebug("Start ReadLast(partitionId:{partitionId}, to:{to})", partitionId, fromUpperIndexInclusive);
+            var result = _persistence.ReadSingleBackward(partitionId, fromUpperIndexInclusive);
+            _logger.LogDebug("End ReadLast(partitionId:{partitionId}, to:{to})", partitionId, fromUpperIndexInclusive);
+            return result;
         }
 
         public IChunk ReadByOperationId(string partitionId, string operationId)
         {
-            return _persistence.ReadByOperationId(partitionId, operationId);
+            _logger.LogDebug("Start ReadByOperationId(partitionId:{partitionId}, operationId:{operationId})", partitionId, operationId);
+            var result = _persistence.ReadByOperationId(partitionId, operationId);
+            _logger.LogDebug("End ReadByOperationId(partitionId:{partitionId}, operationId:{operationId})", partitionId, operationId);
+            return result;
         }
     }
 }

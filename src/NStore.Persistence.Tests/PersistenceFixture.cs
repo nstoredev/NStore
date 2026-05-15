@@ -2160,6 +2160,22 @@ namespace NStore.Persistence.Tests
         }
 
         [Fact]
+        public void read_forward_with_zero_limit_returns_empty()
+        {
+            var chunks = Store.ReadForward("Stream_1", 0, long.MaxValue, 0);
+
+            Assert.Empty(chunks);
+        }
+
+        [Fact]
+        public void read_forward_with_negative_limit_returns_empty()
+        {
+            var chunks = Store.ReadForward("Stream_1", 0, long.MaxValue, -1);
+
+            Assert.Empty(chunks);
+        }
+
+        [Fact]
         public void read_forward_with_index_range()
         {
             var chunks = Store.ReadForward("Stream_1", 2, 3, int.MaxValue);
@@ -2167,6 +2183,14 @@ namespace NStore.Persistence.Tests
             Assert.Equal(2, chunks.Count);
             Assert.Equal("b", chunks[0].Payload);
             Assert.Equal("c", chunks[1].Payload);
+        }
+
+        [Fact]
+        public void read_forward_with_inverted_index_range_returns_empty()
+        {
+            var chunks = Store.ReadForward("Stream_1", 3, 2, int.MaxValue);
+
+            Assert.Empty(chunks);
         }
 
         [Fact]
@@ -2196,6 +2220,40 @@ namespace NStore.Persistence.Tests
             Assert.Equal(2, chunks.Count);
             Assert.Equal("c", chunks[0].Payload);
             Assert.Equal("b", chunks[1].Payload);
+        }
+
+        [Fact]
+        public void read_backward_with_zero_limit_returns_empty()
+        {
+            var chunks = Store.ReadBackward("Stream_1", long.MaxValue, 0, 0);
+
+            Assert.Empty(chunks);
+        }
+
+        [Fact]
+        public void read_backward_with_negative_limit_returns_empty()
+        {
+            var chunks = Store.ReadBackward("Stream_1", long.MaxValue, 0, -1);
+
+            Assert.Empty(chunks);
+        }
+
+        [Fact]
+        public void read_backward_with_index_range()
+        {
+            var chunks = Store.ReadBackward("Stream_1", 3, 2, int.MaxValue);
+
+            Assert.Equal(2, chunks.Count);
+            Assert.Equal("c", chunks[0].Payload);
+            Assert.Equal("b", chunks[1].Payload);
+        }
+
+        [Fact]
+        public void read_backward_with_inverted_index_range_returns_empty()
+        {
+            var chunks = Store.ReadBackward("Stream_1", 2, 3, int.MaxValue);
+
+            Assert.Empty(chunks);
         }
 
         [Fact]
@@ -2278,6 +2336,23 @@ namespace NStore.Persistence.Tests
         }
 
         [Fact]
+        public async Task sync_and_async_read_backward_return_same_results()
+        {
+            var syncChunks = Store.ReadBackward("Stream_1", long.MaxValue, 0, int.MaxValue);
+
+            var recorder = new Recorder();
+            await Store.ReadBackwardAsync("Stream_1", long.MaxValue, recorder).ConfigureAwait(false);
+
+            Assert.Equal(recorder.Length, syncChunks.Count);
+            for (int i = 0; i < syncChunks.Count; i++)
+            {
+                Assert.Equal(recorder[i].Payload, syncChunks[i].Payload);
+                Assert.Equal(recorder[i].Index, syncChunks[i].Index);
+                Assert.Equal(recorder[i].PartitionId, syncChunks[i].PartitionId);
+            }
+        }
+
+        [Fact]
         public async Task sync_and_async_read_single_backward_return_same_result()
         {
             var syncChunk = Store.ReadSingleBackward("Stream_1", long.MaxValue);
@@ -2289,6 +2364,22 @@ namespace NStore.Persistence.Tests
             Assert.NotNull(asyncChunk);
             Assert.Equal(asyncChunk.Payload, syncChunk.Payload);
             Assert.Equal(asyncChunk.Index, syncChunk.Index);
+        }
+
+        [Fact]
+        public async Task sync_and_async_read_by_operation_id_return_same_result()
+        {
+            var syncChunk = Store.ReadByOperationId("Stream_1", "op_2");
+
+            var asyncChunk = await Store.ReadByOperationIdAsync("Stream_1", "op_2", CancellationToken.None)
+                .ConfigureAwait(false);
+
+            Assert.NotNull(syncChunk);
+            Assert.NotNull(asyncChunk);
+            Assert.Equal(asyncChunk.Payload, syncChunk.Payload);
+            Assert.Equal(asyncChunk.Index, syncChunk.Index);
+            Assert.Equal(asyncChunk.PartitionId, syncChunk.PartitionId);
+            Assert.Equal(asyncChunk.OperationId, syncChunk.OperationId);
         }
     }
 }

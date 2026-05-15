@@ -731,6 +731,11 @@ namespace NStore.BaseSqlPersistence
             long toUpperIndexInclusive,
             int limit)
         {
+            if (limit <= 0)
+            {
+                return Array.Empty<IChunk>();
+            }
+
             var sql = Options.GetRangeSelectChunksSql(
                 lowerIndexInclusive: fromLowerIndexInclusive,
                 upperIndexInclusive: toUpperIndexInclusive,
@@ -760,6 +765,11 @@ namespace NStore.BaseSqlPersistence
             long toLowerIndexInclusive,
             int limit)
         {
+            if (limit <= 0)
+            {
+                return Array.Empty<IChunk>();
+            }
+
             var sql = Options.GetRangeSelectChunksSql(
                 lowerIndexInclusive: toLowerIndexInclusive,
                 upperIndexInclusive: fromUpperIndexInclusive,
