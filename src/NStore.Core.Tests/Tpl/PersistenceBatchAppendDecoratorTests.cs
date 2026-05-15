@@ -842,6 +842,52 @@ namespace NStore.Core.Tests.Tpl
             }
 #endif
 
+            public IReadOnlyList<IChunk> ReadForward(string partitionId, long fromLowerIndexInclusive, long toUpperIndexInclusive, int limit)
+            {
+                lock (_lock)
+                {
+                    return _chunks
+                        .Where(c => c.PartitionId == partitionId && c.Index >= fromLowerIndexInclusive && c.Index <= toUpperIndexInclusive)
+                        .OrderBy(c => c.Index)
+                        .Take(limit)
+                        .Cast<IChunk>()
+                        .ToList();
+                }
+            }
+
+            public IReadOnlyList<IChunk> ReadBackward(string partitionId, long fromUpperIndexInclusive, long toLowerIndexInclusive, int limit)
+            {
+                lock (_lock)
+                {
+                    return _chunks
+                        .Where(c => c.PartitionId == partitionId && c.Index <= fromUpperIndexInclusive && c.Index >= toLowerIndexInclusive)
+                        .OrderByDescending(c => c.Index)
+                        .Take(limit)
+                        .Cast<IChunk>()
+                        .ToList();
+                }
+            }
+
+            public IChunk ReadSingleBackward(string partitionId, long fromUpperIndexInclusive)
+            {
+                lock (_lock)
+                {
+                    return _chunks
+                        .Where(c => c.PartitionId == partitionId && c.Index <= fromUpperIndexInclusive)
+                        .OrderByDescending(c => c.Index)
+                        .FirstOrDefault();
+                }
+            }
+
+            public IChunk ReadByOperationId(string partitionId, string operationId)
+            {
+                lock (_lock)
+                {
+                    return _chunks
+                        .FirstOrDefault(c => c.PartitionId == partitionId && c.OperationId == operationId);
+                }
+            }
+
             private class TestChunk : IChunk
             {
                 public long Position { get; set; }

@@ -175,6 +175,79 @@ namespace NStore.Core.InMemory
             }
         }
 
+        public IReadOnlyList<IChunk> ReadForwardSync(
+            long fromLowerIndexInclusive,
+            long toUpperIndexInclusive,
+            int limit,
+            Func<MemoryChunk, MemoryChunk> clone)
+        {
+            _lockSlim.EnterReadLock();
+            try
+            {
+                return Chunks
+                    .Where(x => x.Index >= fromLowerIndexInclusive && x.Index <= toUpperIndexInclusive)
+                    .Take(limit)
+                    .Select(x => (IChunk)clone(x))
+                    .ToList();
+            }
+            finally
+            {
+                _lockSlim.ExitReadLock();
+            }
+        }
+
+        public IReadOnlyList<IChunk> ReadBackwardSync(
+            long fromUpperIndexInclusive,
+            long toLowerIndexInclusive,
+            int limit,
+            Func<MemoryChunk, MemoryChunk> clone)
+        {
+            _lockSlim.EnterReadLock();
+            try
+            {
+                return Chunks.Reverse()
+                    .Where(x => x.Index <= fromUpperIndexInclusive && x.Index >= toLowerIndexInclusive)
+                    .Take(limit)
+                    .Select(x => (IChunk)clone(x))
+                    .ToList();
+            }
+            finally
+            {
+                _lockSlim.ExitReadLock();
+            }
+        }
+
+        public IChunk PeekSync(long maxValue, Func<MemoryChunk, MemoryChunk> clone)
+        {
+            _lockSlim.EnterReadLock();
+            try
+            {
+                var chunk = Chunks.Reverse()
+                    .Where(x => x.Index <= maxValue)
+                    .Take(1)
+                    .SingleOrDefault();
+                return clone(chunk);
+            }
+            finally
+            {
+                _lockSlim.ExitReadLock();
+            }
+        }
+
+        public IChunk GetByOperationIdSync(string operationId, Func<MemoryChunk, MemoryChunk> clone)
+        {
+            _lockSlim.EnterReadLock();
+            try
+            {
+                _operations.TryGetValue(operationId, out MemoryChunk chunk);
+                return clone(chunk);
+            }
+            finally
+            {
+                _lockSlim.ExitReadLock();
+            }
+        }
+
         public Task<IChunk> GetByOperationId(string operationId)
         {
             _lockSlim.EnterReadLock();

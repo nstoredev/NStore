@@ -268,5 +268,25 @@ namespace NStore.Core.Persistence
         {
             return _persistence.ReadAllByOperationIdAsync(operationId, subscription, cancellationToken);
         }
+
+        public IReadOnlyList<IChunk> ReadForward(string partitionId, long fromLowerIndexInclusive, long toUpperIndexInclusive, int limit)
+        {
+            return _persistence.ReadForward(partitionId, fromLowerIndexInclusive, toUpperIndexInclusive, limit);
+        }
+
+        public IReadOnlyList<IChunk> ReadBackward(string partitionId, long fromUpperIndexInclusive, long toLowerIndexInclusive, int limit)
+        {
+            return _persistence.ReadBackward(partitionId, fromUpperIndexInclusive, toLowerIndexInclusive, limit);
+        }
+
+        public IChunk ReadSingleBackward(string partitionId, long fromUpperIndexInclusive)
+        {
+            return _persistence.ReadSingleBackward(partitionId, fromUpperIndexInclusive);
+        }
+
+        public IChunk ReadByOperationId(string partitionId, string operationId)
+        {
+            return _persistence.ReadByOperationId(partitionId, operationId);
+        }
     }
 }

@@ -2117,4 +2117,178 @@ namespace NStore.Persistence.Tests
             }
         }
     }
+
+    public class SyncReadTests : BasePersistenceTest
+    {
+        public SyncReadTests() : base()
+        {
+            try
+            {
+                Store.AppendAsync("Stream_1", 1, "a", "op_1").ConfigureAwait(false).GetAwaiter().GetResult();
+                Store.AppendAsync("Stream_1", 2, "b", "op_2").ConfigureAwait(false).GetAwaiter().GetResult();
+                Store.AppendAsync("Stream_1", 3, "c", "op_3").ConfigureAwait(false).GetAwaiter().GetResult();
+
+                Store.AppendAsync("Stream_2", 1, "d", "op_4").ConfigureAwait(false).GetAwaiter().GetResult();
+                Store.AppendAsync("Stream_2", 2, "e", "op_5").ConfigureAwait(false).GetAwaiter().GetResult();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("SyncReadTests setup failed: {message}", e.Message);
+                throw;
+            }
+        }
+
+        [Fact]
+        public void read_forward_returns_all_chunks()
+        {
+            var chunks = Store.ReadForward("Stream_1", 0, long.MaxValue, int.MaxValue);
+
+            Assert.Equal(3, chunks.Count);
+            Assert.Equal("a", chunks[0].Payload);
+            Assert.Equal("b", chunks[1].Payload);
+            Assert.Equal("c", chunks[2].Payload);
+        }
+
+        [Fact]
+        public void read_forward_with_limit()
+        {
+            var chunks = Store.ReadForward("Stream_1", 0, long.MaxValue, 2);
+
+            Assert.Equal(2, chunks.Count);
+            Assert.Equal("a", chunks[0].Payload);
+            Assert.Equal("b", chunks[1].Payload);
+        }
+
+        [Fact]
+        public void read_forward_with_index_range()
+        {
+            var chunks = Store.ReadForward("Stream_1", 2, 3, int.MaxValue);
+
+            Assert.Equal(2, chunks.Count);
+            Assert.Equal("b", chunks[0].Payload);
+            Assert.Equal("c", chunks[1].Payload);
+        }
+
+        [Fact]
+        public void read_forward_on_empty_partition_returns_empty()
+        {
+            var chunks = Store.ReadForward("not_exists", 0, long.MaxValue, int.MaxValue);
+
+            Assert.Empty(chunks);
+        }
+
+        [Fact]
+        public void read_backward_returns_chunks_in_reverse()
+        {
+            var chunks = Store.ReadBackward("Stream_1", long.MaxValue, 0, int.MaxValue);
+
+            Assert.Equal(3, chunks.Count);
+            Assert.Equal("c", chunks[0].Payload);
+            Assert.Equal("b", chunks[1].Payload);
+            Assert.Equal("a", chunks[2].Payload);
+        }
+
+        [Fact]
+        public void read_backward_with_limit()
+        {
+            var chunks = Store.ReadBackward("Stream_1", long.MaxValue, 0, 2);
+
+            Assert.Equal(2, chunks.Count);
+            Assert.Equal("c", chunks[0].Payload);
+            Assert.Equal("b", chunks[1].Payload);
+        }
+
+        [Fact]
+        public void read_backward_on_empty_partition_returns_empty()
+        {
+            var chunks = Store.ReadBackward("not_exists", long.MaxValue, 0, int.MaxValue);
+
+            Assert.Empty(chunks);
+        }
+
+        [Fact]
+        public void read_single_backward_returns_last_chunk()
+        {
+            var chunk = Store.ReadSingleBackward("Stream_1", long.MaxValue);
+
+            Assert.NotNull(chunk);
+            Assert.Equal("c", chunk.Payload);
+            Assert.Equal(3, chunk.Index);
+        }
+
+        [Fact]
+        public void read_single_backward_with_upper_bound()
+        {
+            var chunk = Store.ReadSingleBackward("Stream_1", 2);
+
+            Assert.NotNull(chunk);
+            Assert.Equal("b", chunk.Payload);
+            Assert.Equal(2, chunk.Index);
+        }
+
+        [Fact]
+        public void read_single_backward_on_empty_partition_returns_null()
+        {
+            var chunk = Store.ReadSingleBackward("not_exists", long.MaxValue);
+
+            Assert.Null(chunk);
+        }
+
+        [Fact]
+        public void read_by_operation_id_returns_correct_chunk()
+        {
+            var chunk = Store.ReadByOperationId("Stream_1", "op_2");
+
+            Assert.NotNull(chunk);
+            Assert.Equal("b", chunk.Payload);
+            Assert.Equal(2, chunk.Index);
+        }
+
+        [Fact]
+        public void read_by_operation_id_returns_null_on_missing()
+        {
+            var chunk = Store.ReadByOperationId("Stream_1", "nonexistent");
+
+            Assert.Null(chunk);
+        }
+
+        [Fact]
+        public void read_by_operation_id_returns_null_on_missing_partition()
+        {
+            var chunk = Store.ReadByOperationId("not_exists", "op_1");
+
+            Assert.Null(chunk);
+        }
+
+        [Fact]
+        public async Task sync_and_async_read_forward_return_same_results()
+        {
+            var syncChunks = Store.ReadForward("Stream_1", 0, long.MaxValue, int.MaxValue);
+
+            var recorder = new Recorder();
+            await Store.ReadForwardAsync("Stream_1", 0, recorder).ConfigureAwait(false);
+
+            Assert.Equal(recorder.Length, syncChunks.Count);
+            for (int i = 0; i < syncChunks.Count; i++)
+            {
+                Assert.Equal(recorder[i].Payload, syncChunks[i].Payload);
+                Assert.Equal(recorder[i].Index, syncChunks[i].Index);
+                Assert.Equal(recorder[i].PartitionId, syncChunks[i].PartitionId);
+            }
+        }
+
+        [Fact]
+        public async Task sync_and_async_read_single_backward_return_same_result()
+        {
+            var syncChunk = Store.ReadSingleBackward("Stream_1", long.MaxValue);
+
+            var asyncChunk = await Store.ReadSingleBackwardAsync("Stream_1", long.MaxValue, CancellationToken.None)
+                .ConfigureAwait(false);
+
+            Assert.NotNull(syncChunk);
+            Assert.NotNull(asyncChunk);
+            Assert.Equal(asyncChunk.Payload, syncChunk.Payload);
+            Assert.Equal(asyncChunk.Index, syncChunk.Index);
+        }
+    }
 }
