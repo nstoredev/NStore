@@ -271,17 +271,35 @@ namespace NStore.Core.Persistence
 
         public IReadOnlyList<IChunk> ReadForward(string partitionId, long fromLowerIndexInclusive, long toUpperIndexInclusive, int limit)
         {
-            return _persistence.ReadForward(partitionId, fromLowerIndexInclusive, toUpperIndexInclusive, limit);
+            return ReadForwardCounter.Capture(() =>
+            {
+                var chunks = _persistence.ReadForward(partitionId, fromLowerIndexInclusive, toUpperIndexInclusive, limit);
+                for (var i = 0; i < chunks.Count; i++)
+                {
+                    ReadForwardCounter.IncCounter1();
+                }
+                return chunks;
+            });
         }
 
         public IReadOnlyList<IChunk> ReadBackward(string partitionId, long fromUpperIndexInclusive, long toLowerIndexInclusive, int limit)
         {
-            return _persistence.ReadBackward(partitionId, fromUpperIndexInclusive, toLowerIndexInclusive, limit);
+            return ReadBackwardCounter.Capture(() =>
+            {
+                var chunks = _persistence.ReadBackward(partitionId, fromUpperIndexInclusive, toLowerIndexInclusive, limit);
+                for (var i = 0; i < chunks.Count; i++)
+                {
+                    ReadBackwardCounter.IncCounter1();
+                }
+                return chunks;
+            });
         }
 
         public IChunk ReadSingleBackward(string partitionId, long fromUpperIndexInclusive)
         {
-            return _persistence.ReadSingleBackward(partitionId, fromUpperIndexInclusive);
+            return ReadSingleBackwardCounter.Capture(() =>
+                _persistence.ReadSingleBackward(partitionId, fromUpperIndexInclusive)
+            );
         }
 
         public IChunk ReadByOperationId(string partitionId, string operationId)

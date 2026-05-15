@@ -867,6 +867,9 @@ namespace NStore.Core.InMemory
             long toUpperIndexInclusive,
             int limit)
         {
+            if (limit <= 0)
+                return Array.Empty<IChunk>();
+
             if (partitionId == null)
                 throw new ArgumentNullException(nameof(partitionId));
 
@@ -882,6 +885,9 @@ namespace NStore.Core.InMemory
             long toLowerIndexInclusive,
             int limit)
         {
+            if (limit <= 0)
+                return Array.Empty<IChunk>();
+
             if (partitionId == null)
                 throw new ArgumentNullException(nameof(partitionId));
 

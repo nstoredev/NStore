@@ -1481,6 +1481,11 @@ If you see too many of this kind of errors, consider disabling UseLocalSequence 
             int limit
         )
         {
+            if (limit <= 0)
+            {
+                return Array.Empty<IChunk>();
+            }
+
             var filter = Builders<TChunk>.Filter.And(
                 Builders<TChunk>.Filter.Eq(x => x.PartitionId, partitionId),
                 Builders<TChunk>.Filter.Gte(x => x.Index, fromLowerIndexInclusive),
@@ -1510,6 +1515,11 @@ If you see too many of this kind of errors, consider disabling UseLocalSequence 
             int limit
         )
         {
+            if (limit <= 0)
+            {
+                return Array.Empty<IChunk>();
+            }
+
             var filter = Builders<TChunk>.Filter.And(
                 Builders<TChunk>.Filter.Eq(x => x.PartitionId, partitionId),
                 Builders<TChunk>.Filter.Lte(x => x.Index, fromUpperIndexInclusive),
