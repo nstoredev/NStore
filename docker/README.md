@@ -20,6 +20,24 @@ Forward extra arguments straight to `dotnet test`:
 ./test-with-docker.sh --filter "FullyQualifiedName~Polling"
 ```
 
+## Where to see failures
+
+Results are written to `./TestResults/` (on the host, so they survive container
+teardown; the directory is git-ignored):
+
+- `run.log` — the full runner console output (clean; no DB server noise).
+- `<Suite>.trx` — one structured result file per suite, e.g.
+  `NStore.Persistence.Mongo.Tests.trx`, openable in Visual Studio / Rider or any
+  `.trx` viewer.
+
+Quick triage:
+
+```bash
+grep -E "Failed|error|FAILED suites" TestResults/run.log
+```
+
+The script also prints the results location and failing-suite hints when it finishes.
+
 ## What runs
 
 | Suite                            | Provider   | Backing container                         |
