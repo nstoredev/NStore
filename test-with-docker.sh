@@ -31,9 +31,23 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# --exit-code-from tests makes this script exit with the test runner's status
-# and tears down the DB containers as soon as the runner finishes.
+mkdir -p TestResults
+
+# --exit-code-from tests makes the run exit with the test runner's status and tears
+# down the DB containers as soon as the runner finishes. Capture the status so we can
+# always point at the results, whether the run passed or failed.
+rc=0
 docker compose -f "$COMPOSE_FILE" up \
   --build \
   --abort-on-container-exit \
-  --exit-code-from tests
+  --exit-code-from tests || rc=$?
+
+echo ""
+if [ "$rc" -eq 0 ]; then
+  echo "PASSED. Results in ./TestResults (run.log + one .trx per suite)."
+else
+  echo "FAILED (exit ${rc}). Inspect ./TestResults/run.log or the per-suite .trx files:"
+  echo "  - grep -E 'Failed|error|FAILED suites' TestResults/run.log"
+  ls -1 TestResults/*.trx 2>/dev/null | sed 's/^/  - /' || true
+fi
+exit "$rc"

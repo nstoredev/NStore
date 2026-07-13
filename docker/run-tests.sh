@@ -6,6 +6,15 @@ set -uo pipefail
 
 TFM="${NSTORE_TEST_TFM:-net10.0}"
 
+# Structured results (.trx) and the console log are written here. This lives on the
+# bind-mounted workspace, so the files survive container teardown and are readable on
+# the host (matches the repo's ignored [Tt]est[Rr]esult*/ convention).
+RESULTS_DIR="${NSTORE_TEST_RESULTS_DIR:-/workspace/TestResults}"
+
+# Extra args forwarded to `dotnet test` (e.g. --filter "FullyQualifiedName~Polling"),
+# passed in via the NSTORE_TEST_ARGS environment variable. Word-split on spaces.
+read -r -a EXTRA_ARGS <<< "${NSTORE_TEST_ARGS:-}"
+
 # Provider test projects to run (in-memory is covered by NStore.Core.Tests and is
 # intentionally excluded here - these are the projects that need real providers).
 PROJECTS=(
@@ -14,42 +23,54 @@ PROJECTS=(
   "src/NStore.Persistence.MsSql.Tests/NStore.Persistence.MsSql.Tests.csproj"
 )
 
-echo "=================================================================="
-echo " NStore provider tests"
-echo "   framework : ${TFM}"
-echo "   mongodb   : ${NSTORE_MONGODB:-<unset>}"
-echo "   mssql     : ${NSTORE_MSSQL:+<set>}"
-echo "=================================================================="
-
-# Extra args forwarded to `dotnet test` (e.g. --filter "FullyQualifiedName~Polling"),
-# passed in via the NSTORE_TEST_ARGS environment variable. Word-split on spaces.
-read -r -a EXTRA_ARGS <<< "${NSTORE_TEST_ARGS:-}"
-
-failed=()
-for project in "${PROJECTS[@]}"; do
-  name="$(basename "$(dirname "$project")")"
-  echo ""
-  echo ">>> Testing ${name} (${TFM})"
-  if dotnet test "$project" \
-      --framework "$TFM" \
-      --nologo \
-      --logger "console;verbosity=normal" \
-      "${EXTRA_ARGS[@]}"; then
-    echo "<<< ${name}: PASSED"
-  else
-    echo "<<< ${name}: FAILED"
-    failed+=("$name")
-  fi
-done
-
-echo ""
-echo "=================================================================="
-if [ ${#failed[@]} -eq 0 ]; then
-  echo " All provider test suites passed."
+run_all() {
   echo "=================================================================="
-  exit 0
-fi
+  echo " NStore provider tests"
+  echo "   framework : ${TFM}"
+  echo "   mongodb   : ${NSTORE_MONGODB:-<unset>}"
+  echo "   mssql     : ${NSTORE_MSSQL:+<set>}"
+  echo "   results   : ${RESULTS_DIR}"
+  echo "=================================================================="
 
-echo " FAILED suites: ${failed[*]}"
-echo "=================================================================="
-exit 1
+  local failed=()
+  for project in "${PROJECTS[@]}"; do
+    local name
+    name="$(basename "$(dirname "$project")")"
+    echo ""
+    echo ">>> Testing ${name} (${TFM})"
+    if dotnet test "$project" \
+        --framework "$TFM" \
+        --nologo \
+        --logger "console;verbosity=normal" \
+        --logger "trx;LogFileName=${name}.trx" \
+        --results-directory "$RESULTS_DIR" \
+        "${EXTRA_ARGS[@]}"; then
+      echo "<<< ${name}: PASSED"
+    else
+      echo "<<< ${name}: FAILED"
+      failed+=("$name")
+    fi
+  done
+
+  echo ""
+  echo "=================================================================="
+  if [ ${#failed[@]} -eq 0 ]; then
+    echo " All provider test suites passed."
+    echo " Results (console log + .trx per suite): ${RESULTS_DIR}"
+    echo "=================================================================="
+    return 0
+  fi
+
+  echo " FAILED suites: ${failed[*]}"
+  echo " See ${RESULTS_DIR}/run.log and the per-suite .trx files for details."
+  echo "=================================================================="
+  return 1
+}
+
+mkdir -p "$RESULTS_DIR"
+rm -f "$RESULTS_DIR"/*.trx "$RESULTS_DIR"/run.log 2>/dev/null || true
+
+# Tee the whole run to run.log while keeping live console output. Piping (rather than
+# exec redirection) guarantees tee flushes before the script exits.
+run_all | tee "$RESULTS_DIR/run.log"
+exit "${PIPESTATUS[0]}"
