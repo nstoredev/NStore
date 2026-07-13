@@ -17,13 +17,22 @@ namespace NStore.Core.Persistence
 
         /// <summary>
         /// <para>
-        /// Handles the next <see cref="IChunk"/> in the persistence layer, and returns true
-        /// if it want the caller to read again next data.
+        /// Handles the next <see cref="IChunk"/> in the persistence layer.
+        /// Normal task completion acknowledges the current chunk. Return
+        /// <see cref="Subscription.Continue"/> to acknowledge it and continue reading, or
+        /// <see cref="Subscription.Stop"/> to acknowledge it and stop before the next chunk.
+        /// Fault or cancel the task when the current chunk was not processed successfully.
+        /// A polling caller can then retain its previous position and redeliver the chunk.
+        /// Consumers must not swallow transient failures or advance durable checkpoints before
+        /// all required side effects have completed.
+        /// </para>
+        /// <para>
+        /// Delivery can be repeated when the processing outcome is ambiguous, so consumers
+        /// should use a stable chunk identity and make side effects idempotent.
         /// </para>
         /// </summary>
         /// <param name="chunk"></param>
-        /// <returns><see cref="Subscription.Stop"/> if this component does not want any more <see cref="IChunk"/> to be
-        /// dispatched, <see cref="Subscription.Continue"/> if it is everything ok and the caller should continue reading next <see cref="IChunk"/></returns>
+        /// <returns>The acknowledgement and continuation decision for the current chunk.</returns>
         Task<bool> OnNextAsync(IChunk chunk);
 
         /// <summary>
@@ -49,7 +58,9 @@ namespace NStore.Core.Persistence
         /// <para>
         /// Called when there is an exception reading or dispatching the next chunk. The real
         /// concrete subscription can then take any action it determines to be done to recover
-        /// from the error.
+        /// from the error. The failed chunk has not been acknowledged by
+        /// <see cref="PollingClient"/> and can be delivered again. Implementations must not
+        /// advance a durable checkpoint for that chunk from this callback.
         /// </para>
         /// </summary>
         /// <param name="indexOrPosition"></param>

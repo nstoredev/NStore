@@ -1,3 +1,10 @@
+## 1.2.0
+
+- **Breaking (delivery semantics):** `PollingClient` now advances its position only **after** `ISubscription.OnNextAsync` completes successfully. A faulted or cancelled `OnNextAsync` no longer advances the checkpoint, so the chunk is retained and redelivered on the next poll (and after a restart from the last acknowledged position). Previously the position was advanced *before* dispatch, which permanently skipped any chunk whose consumer threw.
+- **Behavioral change to be aware of when upgrading:** consumers that previously threw from `OnNextAsync` had that chunk silently skipped and processing continued; they will now see the chunk retried instead. Delivery is **at least once** — make side effects idempotent using a stable chunk identity. A chunk that always fails will be retried indefinitely (there is no dead-letter/max-retry for consumer failures, unlike the existing five-attempt hole-skip policy), so a permanently failing chunk blocks the projection and re-invokes `OnErrorAsync` each poll.
+- `Subscription.Stop` semantics are unchanged: the current chunk is acknowledged, then polling stops before the next chunk.
+- `ISubscription` documentation updated to describe the acknowledgement contract; `OnErrorAsync` now explicitly states the failed chunk is not acknowledged and durable checkpoints must not be advanced from that callback.
+
 ## 1.1.0
 
 - Added synchronous Mongo persistence initialization support with `Init()`, plus safer Mongo cleanup via `DropAsync()` when collection drop permissions are limited.
