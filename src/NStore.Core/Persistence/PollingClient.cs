@@ -38,11 +38,49 @@ namespace NStore.Core.Persistence
                     _logger.LogWarning("Skipping hole on {Position}", chunk.Position);
                 }
 
+                // At-least-once delivery: dispatch the chunk to the consumer FIRST and only
+                // advance our position once it completes successfully. If OnNextAsync faults
+                // or is cancelled we deliberately leave Position untouched so the next poll
+                // re-reads (redelivers) this same chunk instead of skipping it.
+                var processing = _subscription.OnNextAsync(chunk);
+                if (processing.Status == TaskStatus.RanToCompletion)
+                {
+                    // Fast path: the consumer completed synchronously (e.g. a cached
+                    // Subscription.Continue/Stop task). Acknowledge inline and reuse the cached
+                    // result task to keep this common path allocation-free.
+                    return Acknowledge(chunk, processing.Result);
+                }
+
+                // The consumer is running asynchronously, or already faulted/cancelled. Await it
+                // so that acknowledgement happens only after a successful completion; a faulted
+                // or cancelled task rethrows here before MarkProcessed runs.
+                return AwaitAndAcknowledge(processing, chunk);
+            }
+
+            private Task<bool> Acknowledge(IChunk chunk, bool shouldContinue)
+            {
+                MarkProcessed(chunk);
+                return shouldContinue ? Subscription.Continue : Subscription.Stop;
+            }
+
+            // Commits the chunk as processed: advances the position (so it will not be
+            // redelivered) and resets hole-detection state. Called only after the consumer has
+            // successfully handled the chunk.
+            private void MarkProcessed(IChunk chunk)
+            {
                 RetriesOnHole = 0;
                 _stopOnHole = true;
                 Position = chunk.Position;
                 Processed++;
-                return _subscription.OnNextAsync(chunk);
+            }
+
+            private async Task<bool> AwaitAndAcknowledge(Task<bool> processing, IChunk chunk)
+            {
+                // If the consumer faults or cancels, the await rethrows and MarkProcessed is
+                // skipped, so Position stays on the previous chunk and delivery is retried.
+                var shouldContinue = await processing.ConfigureAwait(false);
+                MarkProcessed(chunk);
+                return shouldContinue;
             }
 
             public Task OnStartAsync(long indexOrPosition)
