@@ -26,9 +26,9 @@ Results are written to `./TestResults/` (on the host, so they survive container
 teardown; the directory is git-ignored):
 
 - `run.log` — the full runner console output (clean; no DB server noise).
-- `<Suite>.trx` — one structured result file per suite, e.g.
-  `NStore.Persistence.Mongo.Tests.trx`, openable in Visual Studio / Rider or any
-  `.trx` viewer.
+- `<Suite>.<tfm>.trx` — one structured result file per suite **and framework**, e.g.
+  `NStore.Persistence.Mongo.Tests.net10.0.trx`, openable in Visual Studio / Rider or
+  any `.trx` viewer.
 
 Quick triage:
 
@@ -56,19 +56,23 @@ Set via environment variables (or a `.env` file next to the compose file):
 | Variable            | Default                 | Purpose                                   |
 | ------------------- | ----------------------- | ----------------------------------------- |
 | `MSSQL_SA_PASSWORD` | `NStore_Test_Passw0rd!` | SQL Server `sa` password                  |
-| `NSTORE_TEST_TFM`   | `net10.0`               | Target framework to run                   |
+| `NSTORE_TEST_TFM`   | `net6.0 net10.0`        | Space-separated frameworks to run         |
 
-`net10.0` is the default because the `dotnet/sdk:10.0` image ships only the .NET 10
-runtime; the projects also target `net6.0`, but running that here would need the .NET 6
-runtime added to the image.
+Both target frameworks run by default. The runner image (`docker/Dockerfile.tests`)
+is the .NET 10 SDK plus the .NET 6 shared runtime, so the `net6.0` test hosts can
+execute. To run a single framework:
+
+```bash
+NSTORE_TEST_TFM=net10.0 ./test-with-docker.sh
+```
 
 ## Notes / troubleshooting
 
 - **Requirements:** Docker with the Compose plugin. SQL Server needs ~2 GB of RAM
   available to Docker.
-- **First run is slow** — it pulls the MongoDB, SQL Server, and .NET SDK images and
-  restores NuGet packages. The NuGet cache and SQLite build output are kept in named
-  volumes so later runs are faster.
+- **First run is slow** — it pulls the MongoDB and SQL Server images, builds the
+  runner image (SDK 10 + .NET 6 runtime), and restores NuGet packages. The NuGet cache
+  and SQLite build output are kept in named volumes so later runs are faster.
 - **SQLite on a bind mount:** the SQLite `.db` file is written to a container-local
   Docker volume rather than the bind-mounted source tree, because SQLite's POSIX file
   locking is unreliable over the host bind-mount (macOS/Windows) and would otherwise

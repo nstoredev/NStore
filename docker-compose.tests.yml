@@ -35,7 +35,9 @@ services:
       start_period: 20s
 
   tests:
-    image: mcr.microsoft.com/dotnet/sdk:10.0
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.tests   # SDK 10 + .NET 6 runtime (for the net6.0 target)
     depends_on:
       mongo:
         condition: service_healthy
@@ -46,7 +48,8 @@ services:
       # Connection strings consumed by the test fixtures (NSTORE_MONGODB / NSTORE_MSSQL).
       NSTORE_MONGODB: "mongodb://mongo:27017/nstoredev"
       NSTORE_MSSQL: "Server=mssql,1433;User Id=sa;Password=${MSSQL_SA_PASSWORD:-NStore_Test_Passw0rd!};Encrypt=False;TrustServerCertificate=True;"
-      NSTORE_TEST_TFM: "${NSTORE_TEST_TFM:-net10.0}"
+      # Space-separated list of target frameworks to run (both by default).
+      NSTORE_TEST_TFM: "${NSTORE_TEST_TFM:-net6.0 net10.0}"
       # Extra arguments forwarded to `dotnet test` (e.g. --filter ...).
       NSTORE_TEST_ARGS: "${NSTORE_TEST_ARGS:-}"
       # Quiet the poller/log noise during the run (matches CI).

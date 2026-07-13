@@ -4,7 +4,8 @@
 # Not meant to be run directly on the host - use ./test-with-docker.sh instead.
 set -uo pipefail
 
-TFM="${NSTORE_TEST_TFM:-net10.0}"
+# One or more target frameworks to run (space-separated), e.g. "net6.0 net10.0".
+read -r -a FRAMEWORKS <<< "${NSTORE_TEST_TFM:-net6.0 net10.0}"
 
 # Structured results (.trx) and the console log are written here. This lives on the
 # bind-mounted workspace, so the files survive container teardown and are readable on
@@ -26,7 +27,7 @@ PROJECTS=(
 run_all() {
   echo "=================================================================="
   echo " NStore provider tests"
-  echo "   framework : ${TFM}"
+  echo "   frameworks: ${FRAMEWORKS[*]}"
   echo "   mongodb   : ${NSTORE_MONGODB:-<unset>}"
   echo "   mssql     : ${NSTORE_MSSQL:+<set>}"
   echo "   results   : ${RESULTS_DIR}"
@@ -36,20 +37,22 @@ run_all() {
   for project in "${PROJECTS[@]}"; do
     local name
     name="$(basename "$(dirname "$project")")"
-    echo ""
-    echo ">>> Testing ${name} (${TFM})"
-    if dotnet test "$project" \
-        --framework "$TFM" \
-        --nologo \
-        --logger "console;verbosity=normal" \
-        --logger "trx;LogFileName=${name}.trx" \
-        --results-directory "$RESULTS_DIR" \
-        "${EXTRA_ARGS[@]}"; then
-      echo "<<< ${name}: PASSED"
-    else
-      echo "<<< ${name}: FAILED"
-      failed+=("$name")
-    fi
+    for tfm in "${FRAMEWORKS[@]}"; do
+      echo ""
+      echo ">>> Testing ${name} (${tfm})"
+      if dotnet test "$project" \
+          --framework "$tfm" \
+          --nologo \
+          --logger "console;verbosity=normal" \
+          --logger "trx;LogFileName=${name}.${tfm}.trx" \
+          --results-directory "$RESULTS_DIR" \
+          "${EXTRA_ARGS[@]}"; then
+        echo "<<< ${name} (${tfm}): PASSED"
+      else
+        echo "<<< ${name} (${tfm}): FAILED"
+        failed+=("${name} (${tfm})")
+      fi
+    done
   done
 
   echo ""
@@ -61,6 +64,7 @@ run_all() {
     return 0
   fi
 
+  local IFS=,
   echo " FAILED suites: ${failed[*]}"
   echo " See ${RESULTS_DIR}/run.log and the per-suite .trx files for details."
   echo "=================================================================="
