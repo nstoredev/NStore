@@ -1,0 +1,71 @@
+# Runs the NStore persistence test suites against real providers (MongoDB, SQL
+# Server, SQLite) inside containers, so every developer tests against the same
+# provider versions with only Docker installed.
+#
+# Usage:  ./test-with-docker.sh          (recommended wrapper)
+#     or: docker compose -f docker-compose.tests.yml up --build --exit-code-from tests
+#
+# Overridable via environment / .env:
+#   MSSQL_SA_PASSWORD  SQL Server 'sa' password (must meet SQL complexity rules)
+#   NSTORE_TEST_TFM    target framework to run (default net10.0)
+
+services:
+  mongo:
+    image: mongo:7
+    tmpfs:
+      - /data/db            # keep test data in RAM; nothing to clean up on disk
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:-NStore_Test_Passw0rd!}"
+      MSSQL_PID: "Developer"
+    healthcheck:
+      # 2022-latest ships sqlcmd under mssql-tools18; -C trusts the self-signed cert.
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' -b"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  tests:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    depends_on:
+      mongo:
+        condition: service_healthy
+      mssql:
+        condition: service_healthy
+    working_dir: /workspace
+    environment:
+      # Connection strings consumed by the test fixtures (NSTORE_MONGODB / NSTORE_MSSQL).
+      NSTORE_MONGODB: "mongodb://mongo:27017/nstoredev"
+      NSTORE_MSSQL: "Server=mssql,1433;User Id=sa;Password=${MSSQL_SA_PASSWORD:-NStore_Test_Passw0rd!};Encrypt=False;TrustServerCertificate=True;"
+      NSTORE_TEST_TFM: "${NSTORE_TEST_TFM:-net10.0}"
+      # Extra arguments forwarded to `dotnet test` (e.g. --filter ...).
+      NSTORE_TEST_ARGS: "${NSTORE_TEST_ARGS:-}"
+      # Quiet the poller/log noise during the run (matches CI).
+      NSTORE_LOG_POLLER: "none"
+      NSTORE_LOG_LEVEL: "none"
+      # Skip the first-run .NET welcome/telemetry chatter.
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+    volumes:
+      - .:/workspace
+      - nuget-cache:/root/.nuget/packages   # cache restores between runs
+      # SQLite tests create their .db file in the test assembly's output directory.
+      # On a host bind-mount (macOS/Windows) SQLite's POSIX file locking is unreliable
+      # and yields spurious "database is locked" errors, so keep that output on a
+      # container-local (native, exec-capable) volume instead. A plain tmpfs would be
+      # mounted noexec and break loading of the native e_sqlite3.so, so use a volume.
+      - sqlite-bin:/workspace/src/NStore.Persistence.Sqlite.Tests/bin
+    entrypoint: ["bash", "/workspace/docker/run-tests.sh"]
+
+volumes:
+  nuget-cache:
+  sqlite-bin:
