@@ -168,15 +168,15 @@ namespace NStore.BaseSqlPersistence
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await subscription.CompletedAsync(start).ConfigureAwait(false);
+                await subscription.CompletedAsync(0).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                await subscription.StoppedAsync(start).ConfigureAwait(false);
+                await subscription.StoppedAsync(0).ConfigureAwait(false);
             }
             catch (Exception e)
             {
-                await subscription.OnErrorAsync(start, e).ConfigureAwait(false);
+                await subscription.OnErrorAsync(0, e).ConfigureAwait(false);
             }
         }
 

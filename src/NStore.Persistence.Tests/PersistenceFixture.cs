@@ -244,6 +244,46 @@ namespace NStore.Persistence.Tests
             _logger.LogDebug("Scan test data written");
         }
 
+        private sealed class TerminalCheckpointRecorder : ISubscription
+        {
+            public bool Delivered { get; private set; }
+            public bool ReadCompleted { get; private set; }
+            public long StartCheckpoint { get; private set; } = long.MinValue;
+            public long TerminalCheckpoint { get; private set; } = long.MinValue;
+
+            public Task<bool> OnNextAsync(IChunk chunk)
+            {
+                Delivered = true;
+                return Task.FromResult(true);
+            }
+
+            public Task OnStartAsync(long indexOrPosition)
+            {
+                StartCheckpoint = indexOrPosition;
+                return Task.CompletedTask;
+            }
+
+            public Task CompletedAsync(long indexOrPosition)
+            {
+                ReadCompleted = true;
+                TerminalCheckpoint = indexOrPosition;
+                return Task.CompletedTask;
+            }
+
+            public Task StoppedAsync(long indexOrPosition)
+            {
+                ReadCompleted = true;
+                TerminalCheckpoint = indexOrPosition;
+                return Task.CompletedTask;
+            }
+
+            public Task OnErrorAsync(long indexOrPosition, Exception ex)
+            {
+                TerminalCheckpoint = indexOrPosition;
+                return Task.FromException(ex);
+            }
+        }
+
         [Fact]
         public async Task ReadFirst()
         {
@@ -295,27 +335,31 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_forward_with_zero_limit_returns_empty()
         {
-            var recorder = new Recorder();
+            var recorder = new TerminalCheckpointRecorder();
 
             await Store.ReadForwardAsync(
-                "Stream_1", 0, recorder, long.MaxValue, 0, CancellationToken.None
+                "Stream_1", 2, recorder, long.MaxValue, 0, CancellationToken.None
             ).ConfigureAwait(false);
 
-            Assert.Equal(0, recorder.Length);
+            Assert.False(recorder.Delivered);
             Assert.True(recorder.ReadCompleted);
+            Assert.Equal(2L, recorder.StartCheckpoint);
+            Assert.Equal(0L, recorder.TerminalCheckpoint);
         }
 
         [Fact]
         public async Task read_forward_with_negative_limit_returns_empty()
         {
-            var recorder = new Recorder();
+            var recorder = new TerminalCheckpointRecorder();
 
             await Store.ReadForwardAsync(
-                "Stream_1", 0, recorder, long.MaxValue, -1, CancellationToken.None
+                "Stream_1", 2, recorder, long.MaxValue, -1, CancellationToken.None
             ).ConfigureAwait(false);
 
-            Assert.Equal(0, recorder.Length);
+            Assert.False(recorder.Delivered);
             Assert.True(recorder.ReadCompleted);
+            Assert.Equal(2L, recorder.StartCheckpoint);
+            Assert.Equal(0L, recorder.TerminalCheckpoint);
         }
 
         [Fact]
@@ -362,27 +406,47 @@ namespace NStore.Persistence.Tests
         [Fact]
         public async Task read_backward_with_zero_limit_returns_empty()
         {
-            var recorder = new Recorder();
+            var recorder = new TerminalCheckpointRecorder();
 
             await Store.ReadBackwardAsync(
                 "Stream_1", long.MaxValue, recorder, 0, 0, CancellationToken.None
             ).ConfigureAwait(false);
 
-            Assert.Equal(0, recorder.Length);
+            Assert.False(recorder.Delivered);
             Assert.True(recorder.ReadCompleted);
+            Assert.Equal(long.MaxValue, recorder.StartCheckpoint);
+            Assert.Equal(0L, recorder.TerminalCheckpoint);
         }
 
         [Fact]
         public async Task read_backward_with_negative_limit_returns_empty()
         {
-            var recorder = new Recorder();
+            var recorder = new TerminalCheckpointRecorder();
 
             await Store.ReadBackwardAsync(
                 "Stream_1", long.MaxValue, recorder, 0, -1, CancellationToken.None
             ).ConfigureAwait(false);
 
-            Assert.Equal(0, recorder.Length);
+            Assert.False(recorder.Delivered);
             Assert.True(recorder.ReadCompleted);
+            Assert.Equal(long.MaxValue, recorder.StartCheckpoint);
+            Assert.Equal(0L, recorder.TerminalCheckpoint);
+        }
+
+        [Fact]
+        public async Task read_backward_with_zero_limit_and_cancelled_token_reports_neutral_checkpoint()
+        {
+            var recorder = new TerminalCheckpointRecorder();
+            using var cancellation = new CancellationTokenSource();
+            cancellation.Cancel();
+
+            await Store.ReadBackwardAsync(
+                "Stream_1", long.MaxValue, recorder, 0, 0, cancellation.Token
+            ).ConfigureAwait(false);
+
+            Assert.True(recorder.ReadCompleted);
+            Assert.Equal(long.MaxValue, recorder.StartCheckpoint);
+            Assert.Equal(0L, recorder.TerminalCheckpoint);
         }
 
         [Fact]
