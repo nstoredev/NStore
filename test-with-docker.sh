@@ -7,7 +7,7 @@
 #
 # Environment overrides:
 #   MSSQL_SA_PASSWORD   SQL Server 'sa' password (default: NStore_Test_Passw0rd!)
-#   NSTORE_TEST_TFM     target framework (default: net10.0)
+#   NSTORE_TEST_TFM     target frameworks (default: net8.0 net10.0)
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -44,7 +44,7 @@ docker compose -f "$COMPOSE_FILE" up \
 
 echo ""
 if [ "$rc" -eq 0 ]; then
-  echo "PASSED. Results in ./TestResults (run.log + one .trx per suite)."
+  echo "PASSED. Results in ./TestResults (run.log + one .trx per suite/framework)."
 else
   echo "FAILED (exit ${rc}). Inspect ./TestResults/run.log or the per-suite .trx files:"
   echo "  - grep -E 'Failed|error|FAILED suites' TestResults/run.log"

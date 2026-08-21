@@ -7,7 +7,7 @@
 #
 # Overridable via environment / .env:
 #   MSSQL_SA_PASSWORD  SQL Server 'sa' password (must meet SQL complexity rules)
-#   NSTORE_TEST_TFM    target framework to run (default net10.0)
+#   NSTORE_TEST_TFM    space-separated target frameworks (default net8.0 net10.0)
 
 services:
   mongo:
@@ -37,7 +37,7 @@ services:
   tests:
     build:
       context: .
-      dockerfile: docker/Dockerfile.tests   # SDK 10 + .NET 6 runtime (for the net6.0 target)
+      dockerfile: docker/Dockerfile.tests   # SDK 10 + .NET 8 runtime (for the net8.0 target)
     depends_on:
       mongo:
         condition: service_healthy
@@ -49,7 +49,7 @@ services:
       NSTORE_MONGODB: "mongodb://mongo:27017/nstoredev"
       NSTORE_MSSQL: "Server=mssql,1433;User Id=sa;Password=${MSSQL_SA_PASSWORD:-NStore_Test_Passw0rd!};Encrypt=False;TrustServerCertificate=True;"
       # Space-separated list of target frameworks to run (both by default).
-      NSTORE_TEST_TFM: "${NSTORE_TEST_TFM:-net6.0 net10.0}"
+      NSTORE_TEST_TFM: "${NSTORE_TEST_TFM:-net8.0 net10.0}"
       # Extra arguments forwarded to `dotnet test` (e.g. --filter ...).
       NSTORE_TEST_ARGS: "${NSTORE_TEST_ARGS:-}"
       # Quiet the poller/log noise during the run (matches CI).

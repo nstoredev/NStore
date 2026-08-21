@@ -1,16 +1,16 @@
-# Test runner image: .NET 10 SDK (to build everything) plus the .NET 6 runtime
-# (so the net6.0 target of the test projects can actually execute). The SDK image
-# only ships the .NET 10 runtime, so net6.0 test hosts would fail to start without
+# Test runner image: .NET 10 SDK (to build everything) plus the .NET 8 runtime
+# (so the net8.0 target of the test projects can actually execute). The SDK image
+# only ships the .NET 10 runtime, so net8.0 test hosts would fail to start without
 # this.
 FROM mcr.microsoft.com/dotnet/sdk:10.0
 
-# Install the .NET 6 shared runtime alongside the SDK. dotnet-install places it under
-# the same DOTNET_ROOT (/usr/share/dotnet) so `dotnet test -f net6.0` finds it.
+# Install the .NET 8 shared runtime alongside the SDK. dotnet-install places it under
+# the same DOTNET_ROOT (/usr/share/dotnet) so `dotnet test -f net8.0` finds it.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/* \
     && curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
     && chmod +x /tmp/dotnet-install.sh \
-    && /tmp/dotnet-install.sh --channel 6.0 --runtime dotnet --install-dir /usr/share/dotnet \
+    && /tmp/dotnet-install.sh --channel 8.0 --runtime dotnet --install-dir /usr/share/dotnet \
     && rm /tmp/dotnet-install.sh \
     && dotnet --list-runtimes

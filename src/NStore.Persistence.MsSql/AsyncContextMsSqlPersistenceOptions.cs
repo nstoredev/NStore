@@ -44,5 +44,15 @@ namespace NStore.Persistence.MsSql
             return base.GetContextAsync(cancellationToken);
         }
 
+        public override AbstractSqlContext GetContext()
+        {
+            if (_connection.Value != null)
+            {
+                return new MsSqlContext(_connection.Value, _transaction.Value);
+            }
+
+            return base.GetContext();
+        }
+
     }
 }

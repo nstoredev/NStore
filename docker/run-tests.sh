@@ -4,8 +4,8 @@
 # Not meant to be run directly on the host - use ./test-with-docker.sh instead.
 set -uo pipefail
 
-# One or more target frameworks to run (space-separated), e.g. "net6.0 net10.0".
-read -r -a FRAMEWORKS <<< "${NSTORE_TEST_TFM:-net6.0 net10.0}"
+# One or more target frameworks to run (space-separated), e.g. "net8.0 net10.0".
+read -r -a FRAMEWORKS <<< "${NSTORE_TEST_TFM:-net8.0 net10.0}"
 
 # Structured results (.trx) and the console log are written here. This lives on the
 # bind-mounted workspace, so the files survive container teardown and are readable on
@@ -59,7 +59,7 @@ run_all() {
   echo "=================================================================="
   if [ ${#failed[@]} -eq 0 ]; then
     echo " All provider test suites passed."
-    echo " Results (console log + .trx per suite): ${RESULTS_DIR}"
+    echo " Results (console log + .trx per suite/framework): ${RESULTS_DIR}"
     echo "=================================================================="
     return 0
   fi

@@ -58,6 +58,13 @@ namespace NStore.Persistence.MsSql.Tests
                     var contextrecorder = await this._persistence.RecordAsync("test").ConfigureAwait(false);
                     Assert.Equal(2, contextrecorder.Length);
 
+                    var synchronousChunks = this._persistence.ReadForward(
+                        "test",
+                        0,
+                        long.MaxValue,
+                        int.MaxValue);
+                    Assert.Equal(2, synchronousChunks.Count);
+
                     transaction.Rollback();
                 }
             }
