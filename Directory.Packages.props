@@ -4,31 +4,31 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Ben.Demystifier" Version="0.4.1" />
-    <PackageVersion Include="coverlet.collector" Version="6.0.2" />
-    <PackageVersion Include="coverlet.msbuild" Version="6.0.2" />
-    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="6.0.8" />
+    <PackageVersion Include="coverlet.collector" Version="10.0.1" />
+    <PackageVersion Include="coverlet.msbuild" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.CommandLineUtils" Version="1.1.1" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
-    <PackageVersion Include="MongoDB.Driver" Version="3.5.2" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.400" />
+    <PackageVersion Include="MongoDB.Driver" Version="3.9.0" />
     <PackageVersion Include="Moq" Version="4.20.72" />
-    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageVersion Include="Serilog.Extensions.Logging" Version="8.0.0" />
-    <PackageVersion Include="Serilog.Sinks.Console" Version="5.0.1" />
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageVersion Include="Serilog.Extensions.Logging" Version="10.0.0" />
+    <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.4" />
-    <PackageVersion Include="System.Data.SqlClient" Version="4.8.6" />
+    <PackageVersion Include="System.Data.SqlClient" Version="4.9.1" />
     <PackageVersion Include="System.Net.Http" Version="4.3.4" />
     <PackageVersion Include="System.Text.RegularExpressions" Version="4.3.1" />
-    <PackageVersion Include="System.Threading.Tasks.Dataflow" Version="8.0.1" />
-    <PackageVersion Include="xunit" Version="2.9.2" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.ObjectPool" Version="8.0.0" />
+    <PackageVersion Include="System.Threading.Tasks.Dataflow" Version="10.0.11" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.ObjectPool" Version="10.0.11" />
   </ItemGroup>
 </Project>
